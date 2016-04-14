@@ -5,7 +5,7 @@ import javax.crypto.spec.IvParameterSpec
 import com.keepit.common.cache._
 import com.keepit.common.crypto.{ ModelWithPublicId, PublicId, PublicIdConfiguration, PublicIdGenerator }
 import com.keepit.common.db._
-import com.keepit.common.json.{ EnumFormat, TraversableFormat }
+import com.keepit.common.json.{ SchemaReads, EnumFormat, TraversableFormat }
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.path.Path
@@ -14,7 +14,6 @@ import com.keepit.common.reflection.Enumerator
 import com.keepit.common.strings.StringWithNoLineBreaks
 import com.keepit.common.time._
 import com.keepit.discussion.Message
-import com.keepit.social.{ BasicAuthor }
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.http.Status._
@@ -207,6 +206,7 @@ object KeepSource {
     Reads { j => j.validate[String].map(KeepSource(_)) },
     Writes { o => JsString(o.value) }
   )
+  implicit val schemaReads: SchemaReads[KeepSource] = SchemaReads.trivial("keep_source")
 }
 
 case class KeepAndTags(keep: Keep, deprecated: (LibraryVisibility, Option[Id[Organization]]), source: Option[SourceAttribution], tags: Set[Hashtag])
@@ -354,7 +354,8 @@ sealed abstract class KeepFail(val status: Int, val err: String) extends Excepti
 }
 
 object KeepFail extends Enumerator[KeepFail] {
-  case object INVALID_ID extends KeepFail(BAD_REQUEST, "invalid_keep_id")
+  case object INVALID_KEEP_ID extends KeepFail(BAD_REQUEST, "invalid_keep_id")
+  case object LIMIT_TOO_LARGE extends KeepFail(BAD_REQUEST, "limit_too_large")
   case object KEEP_NOT_FOUND extends KeepFail(NOT_FOUND, "no_keep_found")
   case object INSUFFICIENT_PERMISSIONS extends KeepFail(FORBIDDEN, "insufficient_permissions")
   case object MALFORMED_URL extends KeepFail(BAD_REQUEST, "malformed_url")

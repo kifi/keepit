@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfProfileLhrLibrarySorting', [
-  'profileService',
-  function (profileService) {
+  '$rootScope', 'profileService',
+  function ($rootScope, profileService) {
     return {
       restrict: 'A',
       scope: {},
@@ -18,7 +18,7 @@ angular.module('kifi')
         };
 
         scope.saveSettings = function () {
-          profileService.setSettings(scope.userProfileSettings);
+          profileService.setSettings(scope.userProfileSettings).then(function (res) { $rootScope.$emit('profileSettingLhrLibrarySorting'); return res;});
         };
 
         profileService.getSettings().then(function (res) {

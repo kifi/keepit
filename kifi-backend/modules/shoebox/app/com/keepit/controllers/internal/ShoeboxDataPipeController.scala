@@ -194,7 +194,7 @@ class ShoeboxDataPipeController @Inject() (
   def getCrossServiceKeepsByIds() = Action(parse.tolerantJson) { request =>
     val ids = request.body.as[Set[Id[Keep]]]
     val (keeps, ktus, ktes, ktls) = db.readOnlyMaster { implicit s =>
-      val keepsById = keepRepo.getByIds(ids)
+      val keepsById = keepRepo.getActiveByIds(ids)
       val ktusByKeep = ktuRepo.getAllByKeepIds(keepsById.keySet)
       val ktlsByKeep = ktlRepo.getAllByKeepIds(keepsById.keySet)
       val ktesByKeep = kteRepo.getAllByKeepIds(keepsById.keySet)

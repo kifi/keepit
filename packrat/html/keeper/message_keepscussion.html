@@ -1,0 +1,36 @@
+<div class="kifi-message-sent" data-id="{{id}}">
+  <div class="kifi-message-status"></div>
+  {{#author.picture}}
+    <a class="kifi-message-pic-a" href="{{author.url}}" target="_blank">{{!
+    }}<img class="kifi-message-pic" src="{{author.picture}}">{{!
+  }}</a>
+  {{/author.picture}}
+  {{^author.picture}}
+    <span class="kifi-message-pic-email kifi-participant-background-{{author.color}}">{{author.initial}}</span>
+  {{/author.picture}}
+  <div class="kifi-message-body">
+    <div class="kifi-message-sent-header">{{!
+      }}{{#header}}{{!
+      }}<span class="kifi-message-sent-header-item" data-kind="{{kind}}">{{!
+      }}{{#url}}<a class="kifi-message-sent-header-link" href="{{url}}" target="_blank">{{/url}}{{!
+      }}{{#html}}{{>kifi_mustache_tags}}{{/html}}{{!
+        }}{{#url}}</a>{{/url}}{{!
+      }}</span>{{!
+      }}{{/header}}
+      <span class="kifi-message-sent-header-stamp">
+        <a class="kifi-message-tip-keep-link" href="https://www.kifi.com{{keep.path}}" target="_blank">
+          <time datetime="{{timestamp}}">{{#formatLocalDate}}{{timestamp}}{{/formatLocalDate}}</time>
+          {{#source}}
+            {{#url}}</a><a class="kifi-message-tip-keep-link" href="{{url}}" target="_blank">{{/url}}
+              <span class="kifi-message-source"> via {{kind}}</span>
+              <span class="kifi-message-source-icon kifi-message-source-icon-{{kind}}"></span>
+            {{#url}}</a>{{/url}}
+          {{/source}}
+        </a>
+      </span>
+    </div>
+    <div class="kifi-message-content">
+    {{#body}}{{#html}}{{>kifi_mustache_tags}}{{/html}}{{/body}}
+    </div>
+  </div>
+</div>

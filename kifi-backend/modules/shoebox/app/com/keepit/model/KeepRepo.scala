@@ -1,7 +1,7 @@
 package com.keepit.model
 
-import com.google.inject.{ Provider, ImplementedBy, Inject, Singleton }
-import com.keepit.commanders.{ KeepOrdering, KeepQuery, LibraryMetadataCache, LibraryMetadataKey }
+import com.google.inject.{ ImplementedBy, Inject, Provider, Singleton }
+import com.keepit.commanders.{ KeepQuery, LibraryMetadataCache }
 import com.keepit.common.core.anyExtensionOps
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
@@ -10,16 +10,16 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
 import com.keepit.discussion.Message
-import org.joda.time.DateTime
 import com.keepit.model.FeedFilter._
+import org.joda.time.DateTime
 
 import scala.slick.jdbc.{ GetResult, PositionedResult }
 
 @ImplementedBy(classOf[KeepRepoImpl])
 trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNumberFunction[Keep] {
   def saveAndIncrementSequenceNumber(model: Keep)(implicit session: RWSession): Keep // more expensive and deadlock-prone than `save`
-  def getOption(id: Id[Keep], excludeStates: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep]
-  def getByIds(ids: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Keep]
+  def getActive(id: Id[Keep])(implicit session: RSession): Option[Keep]
+  def getActiveByIds(ids: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Keep]
   def getByExtId(extId: ExternalId[Keep], excludeStates: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep]
   def getByExtIds(extIds: Set[ExternalId[Keep]])(implicit session: RSession): Map[ExternalId[Keep], Option[Keep]]
   def getByExtIdandLibraryId(extId: ExternalId[Keep], libraryId: Id[Library], excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep] // TODO(ryan)[2015-08-03]: deprecate ASAP!
@@ -69,7 +69,8 @@ class KeepRepoImpl @Inject() (
     libraryMembershipRepo: LibraryMembershipRepo, // implicit dependency on this repo via a plain SQL query getRecentKeeps
     organizationMembershipRepo: OrganizationMembershipRepo, // implicit dependency on this repo via a plain SQL query getRecentKeeps
     keepToLibraryRepoImpl: Provider[KeepToLibraryRepoImpl],
-    keepToUserRepo: KeepToUserRepo, // implicit dependency on this repo via a plain SQL query getRecentKeeps
+    keepToUserRepoImpl: Provider[KeepToUserRepoImpl],
+    keepToEmailRepoImpl: Provider[KeepToEmailRepoImpl],
     countCache: KeepCountCache,
     keepByIdCache: KeepByIdCache,
     keepUriUserCache: KeepUriUserCache,
@@ -77,6 +78,8 @@ class KeepRepoImpl @Inject() (
     countByLibraryCache: CountByLibraryCache) extends DbRepo[Keep] with KeepRepo with SeqNumberDbFunction[Keep] with ExternalIdColumnDbFunction[Keep] with Logging {
 
   private lazy val ktlRows = keepToLibraryRepoImpl.get.activeRows
+  private lazy val ktuRows = keepToUserRepoImpl.get.activeRows
+  private lazy val kteRows = keepToEmailRepoImpl.get.activeRows
   import db.Driver.simple._
 
   type First = (Option[Id[Keep]], // id
@@ -275,22 +278,25 @@ class KeepRepoImpl @Inject() (
   }
 
   override def get(id: Id[Keep])(implicit session: RSession): Keep = {
-    keepByIdCache.getOrElse(KeepIdKey(id)) {
-      getCompiled(id).firstOption.getOrElse(throw NotFoundException(id))
+    val cacheKeep = keepByIdCache.get(KeepIdKey(id))
+    cacheKeep.getOrElse {
+      val internalKeep = getCompiled(id).firstOption.getOrElse(throw NotFoundException(id))
+      if (internalKeep.isActive) keepByIdCache.set(KeepIdKey(id), internalKeep)
+      internalKeep
     }
   }
 
-  def getOption(id: Id[Keep], excludeStates: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep] = {
+  def getActive(id: Id[Keep])(implicit session: RSession): Option[Keep] = {
     keepByIdCache.getOrElseOpt(KeepIdKey(id)) {
-      getCompiled(id).firstOption.filter(keep => !excludeStates.contains(keep.state))
+      getCompiled(id).firstOption.filter(_.isActive)
     }
   }
 
-  def getByIds(ids: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Keep] = {
+  def getActiveByIds(ids: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Keep] = {
     keepByIdCache.bulkGetOrElse(ids.map(KeepIdKey)) { missingKeys =>
       val missingIds = missingKeys.map(_.id)
       activeRows.filter(_.id.inSet(missingIds)).list.map { k => KeepIdKey(k.id.get) -> k }.toMap
-    }.map { case (k, v) => k.id -> v }
+    }.collect { case (k, v) if v.isActive => k.id -> v }
   }
 
   def getByExtId(extId: ExternalId[Keep], excludeStates: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep] = {
@@ -516,6 +522,7 @@ class KeepRepoImpl @Inject() (
     import KeepQuery._
     type Rows = Query[KeepTable, Keep, Seq]
     val arrangement = query.arrangement.getOrElse(Arrangement.GLOBAL_DEFAULT)
+    val paging = query.paging
 
     def filterByTarget(rs: Rows): Rows = query.target match {
       case ForLibrary(targetLib) =>
@@ -525,8 +532,15 @@ class KeepRepoImpl @Inject() (
           if k.id === ktl.keepId &&
             ktl.libraryId === targetLib
         } yield k
+      case ForUri(uri, recips) =>
+        for {
+          k <- rs if k.uriId === uri &&
+            (if (recips.libraries.isEmpty) true else ktlRows.filter(ktl => ktl.keepId === k.id && ktl.libraryId.inSet(recips.libraries)).length === recips.libraries.size) &&
+            (if (recips.users.isEmpty) true else ktuRows.filter(ktu => ktu.keepId === k.id && ktu.userId.inSet(recips.users)).length === recips.users.size) &&
+            (if (recips.emails.isEmpty) true else kteRows.filter(kte => kte.keepId === k.id && kte.emailAddress.inSet(recips.emails)).length === recips.emails.size)
+        } yield k
     }
-    def filterByTime(rs: Rows): Rows = query.fromId.fold(rs) { fromId =>
+    def filterByTime(rs: Rows): Rows = paging.fromId.fold(rs) { fromId =>
       val fromKeep = get(fromId)
       arrangement.ordering match {
         case KeepOrdering.LAST_ACTIVITY_AT =>
@@ -549,9 +563,10 @@ class KeepRepoImpl @Inject() (
       case Arrangement(KeepOrdering.KEPT_AT, SortDirection.ASCENDING) => rs.sortBy(r => (r.keptAt asc, r.id asc))
       case Arrangement(KeepOrdering.KEPT_AT, SortDirection.DESCENDING) => rs.sortBy(r => (r.keptAt desc, r.id desc))
     }
-    def pageThroughOrderedRows(rs: Rows): Seq[Id[Keep]] = rs.map(_.id).drop(query.offset.value).take(query.limit.value).list
+    def pageThroughOrderedRows(rs: Rows) = rs.map(_.id).drop(paging.offset.value).take(paging.limit.value)
 
-    activeRows |> filterByTarget |> filterByTime |> orderByTime |> pageThroughOrderedRows
+    val q = activeRows |> filterByTarget |> filterByTime |> orderByTime |> pageThroughOrderedRows
+    q.list
   }
 
   def getByExtIdandLibraryId(extId: ExternalId[Keep], libraryId: Id[Library], excludeSet: Set[State[Keep]])(implicit session: RSession): Option[Keep] = {
@@ -627,7 +642,7 @@ class KeepRepoImpl @Inject() (
 
     val shouldFilterByUser = filterOpt.contains(OwnKeeps)
     val keepIds = keepsAndLastActivityAt.map { case (keepId, _) => keepId }
-    val keepsById = getByIds(keepIds.toSet)
+    val keepsById = getActiveByIds(keepIds.toSet)
     keepsAndLastActivityAt.map { case (keepId, lastActivityAt) => keepsById(keepId) -> lastActivityAt }
       .filter { case (keep, _) => !shouldFilterByUser || keep.userId.contains(userId) }
   }

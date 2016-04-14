@@ -3,6 +3,7 @@ package com.keepit.commanders
 import java.util.concurrent.TimeoutException
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.commanders.gen.KeepActivityGen.SerializationInfo
 import com.keepit.commanders.gen.{ BasicOrganizationGen, KeepActivityGen }
 import com.keepit.common.akka.TimeoutFuture
 import com.keepit.common.core._
@@ -87,16 +88,18 @@ class KeepDecoratorImpl @Inject() (
       }
       val emailParticipantsByKeepFuture = eliza.getEmailParticipantsForKeeps(keepIds)
 
-      val (ktusByKeep, ktlsByKeep) = db.readOnlyMaster { implicit s =>
-        (ktuRepo.getAllByKeepIds(keeps.map(_.id.get).toSet), ktlRepo.getAllByKeepIds(keepIds))
+      val (ktusByKeep, ktlsByKeep, eventsByKeep) = db.readOnlyMaster { implicit s =>
+        (ktuRepo.getAllByKeepIds(keeps.map(_.id.get).toSet), ktlRepo.getAllByKeepIds(keepIds), eventRepo.getForKeeps(keepIds, limit = Some(maxMessagesShown)))
       }
 
       val entitiesFutures = for {
         augmentationInfos <- augmentationFuture
         emailParticipantsByKeep <- emailParticipantsByKeepFuture
       } yield {
+        val (usersFromEvents, libsFromEvents) = KeepEvent.idsInvolved(eventsByKeep.values.flatten)
+
         val idToLibrary = {
-          val librariesShown = augmentationInfos.flatMap(_.libraries.map(_._1)).toSet ++ ktlsByKeep.values.flatMap(_.map(_.libraryId))
+          val librariesShown = augmentationInfos.flatMap(_.libraries.map(_._1)).toSet ++ ktlsByKeep.values.flatMap(_.map(_.libraryId)) ++ libsFromEvents
           db.readOnlyMaster { implicit s => libraryRepo.getActiveByIds(librariesShown) } //cached
         }
 
@@ -114,7 +117,7 @@ class KeepDecoratorImpl @Inject() (
           val keepers = keeps.flatMap(_.userId).toSet // is this needed? need to double check, it may be redundant
           val ktuUsers = ktusByKeep.values.flatten.map(_.userId) // may need to use .take(someLimit) for performance
           val emailParticipantsAddedBy = emailParticipantsByKeep.values.flatMap(_.values.map(_._1))
-          db.readOnlyMaster { implicit s => basicUserRepo.loadAll(keepersShown ++ libraryContributorsShown ++ libraryOwners ++ keepers ++ ktuUsers ++ emailParticipantsAddedBy) } //cached
+          db.readOnlyMaster { implicit s => basicUserRepo.loadAll(keepersShown ++ libraryContributorsShown ++ libraryOwners ++ keepers ++ ktuUsers ++ emailParticipantsAddedBy ++ usersFromEvents) } //cached
         }
         val idToBasicLibrary = idToLibrary.map {
           case (libId, library) =>
@@ -123,7 +126,7 @@ class KeepDecoratorImpl @Inject() (
             libId -> BasicLibrary(library, user, orgOpt.map(_.handle))
         }
         val libraryCardByLibId = {
-          val libraries = keeps.flatMap(_.lowestLibraryId.map(idToLibrary(_)))
+          val libraries = idToLibrary.values.toSeq
           val cards = db.readOnlyMaster { implicit s =>
             libraryCardCommander.createLibraryCardInfos(libraries, idToBasicUser, viewerIdOpt, withFollowing = true, idealSize = ProcessedImageSize.Medium.idealSize)
           }
@@ -151,7 +154,7 @@ class KeepDecoratorImpl @Inject() (
         db.readOnlyMaster { implicit session => libraryMembershipRepo.getLibrariesWithWriteAccess(userId) } //cached
       } getOrElse Set.empty
 
-      val discussionsByKeepFut = eliza.getDiscussionsForKeeps(keepIds, maxMessagesShown).recover {
+      val discussionsByKeepFut = eliza.getDiscussionsForKeeps(keepIds, fromTime = None, maxMessagesShown).recover {
         case fail =>
           airbrake.notify(s"[KEEP-DECORATOR] Failed to get discussions for keeps $keepIds", fail)
           Map.empty[Id[Keep], Discussion]
@@ -161,7 +164,6 @@ class KeepDecoratorImpl @Inject() (
           log.warn(s"[KEEP-DECORATOR] Timed out fetching discussions for keeps $keepIds")
           Map.empty[Id[Keep], Discussion]
       }
-      val eventsByKeep = db.readOnlyMaster(implicit s => keepIds.map(kid => kid -> eventRepo.pageForKeep(kid, fromTime = None, limit = maxMessagesShown)).toMap)
       val permissionsByKeep = db.readOnlyMaster(implicit s => permissionCommander.getKeepsPermissions(keepIds, viewerIdOpt))
 
       for {
@@ -214,9 +216,9 @@ class KeepDecoratorImpl @Inject() (
             }
             val keepActivity = {
               if (viewerIdOpt.exists(uid => db.readOnlyMaster(implicit s => userExperimentRepo.hasExperiment(uid, UserExperimentType.ACTIVITY_LOG)))) {
+                implicit val info = SerializationInfo(idToBasicUser, idToBasicLibrary, idToBasicOrg)
                 Some(KeepActivityGen.generateKeepActivity(keep, sourceAttrs.get(keepId), eventsByKeep.getOrElse(keepId, Seq.empty), discussionsByKeep.get(keepId),
-                  ktlsByKeep.getOrElse(keepId, Seq.empty), ktusByKeep.getOrElse(keepId, Seq.empty),
-                  idToBasicUser, idToBasicLibrary, idToBasicOrg, maxMessagesShown))
+                  ktlsByKeep.getOrElse(keepId, Seq.empty), ktusByKeep.getOrElse(keepId, Seq.empty), maxMessagesShown))
               } else None
             }
 
@@ -306,7 +308,7 @@ class KeepDecoratorImpl @Inject() (
       val direct = ktuRepo.getByUserIdAndUriIds(userId, uriIds).map(_.keepId)
       val indirectViaLibraries = ktlRepo.getVisibileFirstOrderImplicitKeeps(uriIds, writeableLibs).map(_.keepId)
       val keepIds = direct ++ indirectViaLibraries
-      val keepsById = keepRepo.getByIds(keepIds)
+      val keepsById = keepRepo.getActiveByIds(keepIds)
       val ktlsByKeep = ktlRepo.getAllByKeepIds(keepIds)
       (keepsById, ktlsByKeep)
     }

@@ -27,6 +27,7 @@ class ExtKeepController @Inject() (
     extends UserActions with ShoeboxServiceController {
 
   def createKeep() = UserAction(parse.tolerantJson) { implicit request =>
+    import com.keepit.common.http._
     implicit val context = contextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
     val rawBookmark = request.body.as[RawBookmarkRepresentation]
     val libIds = (request.body \ "libraries").as[Set[PublicId[Library]]]
@@ -70,7 +71,7 @@ class ExtKeepController @Inject() (
         val libraryIdMap = input.libraries.all.map(libPubId => libPubId -> Library.decodePublicId(libPubId).get).toMap
         KeepRecipientsDiff(users = input.users.map(userIdMap(_)), libraries = input.libraries.map(libraryIdMap(_)), emails = input.emails)
       }
-      _ <- if (diff.nonEmpty) discussionCommander.modifyConnectionsForKeep(request.userId, keepId, diff, input.source.orElse(request.userAgentOpt.flatMap(KeepEventSourceKind.fromUserAgent))) else Future.successful(())
+      _ <- if (diff.nonEmpty) discussionCommander.modifyConnectionsForKeep(request.userId, keepId, diff, input.source.orElse(request.userAgentOpt.flatMap(KeepEventSource.fromUserAgent))) else Future.successful(())
     } yield {
       NoContent
     }).recover {

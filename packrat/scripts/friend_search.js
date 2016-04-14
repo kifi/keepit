@@ -2,7 +2,10 @@
 // @require scripts/lib/mustache.js
 // @require scripts/lib/q.min.js
 // @require scripts/render.js
+// @require scripts/html/keeper/name_parts.js
 // @require scripts/html/keeper/keep_box_lib.js
+// @require styles/keeper/keep_box.css
+// @require scripts/html/keeper/friend_search_token.js
 // @require scripts/repair_inputs.js
 
 var initFriendSearch = (function () {
@@ -68,7 +71,7 @@ var initFriendSearch = (function () {
   }
 
   return function ($in, source, participants, includeSelf, options, searchFor) {
-    $in.tokenInput(search.bind(null, participants.map(getId), includeSelf, searchFor), $.extend({
+    $in.tokenInput(search.bind(null, participants.map(getIdOrEmail), includeSelf, searchFor), $.extend({
       preventDuplicates: true,
       tokenValue: 'id',
       classPrefix: 'kifi-ti-',
@@ -83,49 +86,13 @@ var initFriendSearch = (function () {
   };
 
   function search(excludeIds, includeSelf, searchFor, ids, query, withResults) {
-    searchFor = searchFor || { participants: true, libraries: false, objects: false };
-
+    searchFor = searchFor || { user: true, email: true, library: false };
     var n = Math.max(3, Math.min(8, Math.floor((window.innerHeight - 365) / 55)));  // quick rule of thumb
-    var deferreds = [ Q.defer(), Q.defer(), Q.defer() ];
-    var promises = [ deferreds[0].promise, deferreds[1].promise, deferreds[2].promise ];
-
-    if (searchFor.objects) {
-      api.port.emit('search_recipients', {q: query, n: n, exclude: excludeIds.concat(ids)}, function (recipients) {
-        deferreds[2].resolve(recipients);
-      });
-      deferreds[0].resolve([]);
-      deferreds[1].resolve([]);
-    } else {
-      deferreds[2].resolve([]);
-
-      if (searchFor.participants) {
-        api.port.emit('search_contacts', {q: query, n: n, includeSelf: includeSelf(ids.length), exclude: excludeIds.concat(ids)}, function (contacts) {
-          deferreds[0].resolve(contacts);
-        });
-      } else {
-        deferreds[0].resolve([]);
-      }
-
-      if (searchFor.libraries) {
-        api.port.emit('filter_libraries', query, function (results) {
-          results = results.filter(function (l) { return !~excludeIds.indexOf(l.id); }).slice(0, n);
-          deferreds[1].resolve(results);
-        });
-      } else {
-        deferreds[1].resolve([]);
-      }
-    }
-
-    Q.all(promises).done(function (vals) {
-      var contacts = vals[0];
-      var libraries = vals[1];
-      var mixedRecipients = vals[2];
-      contacts = contacts.concat(mixedRecipients.filter(function (r) { return r.id[0] !== 'l'; }));
-      libraries = libraries.concat(mixedRecipients.filter(function (r) { return r.id[0] === 'l'; })).map(function (l) {
-        l.kind = 'lib';
-        return l;
-      });
-      var percentContacts = contacts.length / (libraries.length + contacts.length);
+    api.port.emit('search_recipients', {q: query, n: n, exclude: excludeIds.concat(ids), searchFor: searchFor }, function (recipients) {
+      recipients = recipients || [];
+      var contacts = recipients.filter(function (r) { return r.id[0] !== 'l'; });
+      var libraries = recipients.filter(function (r) { return r.id[0] === 'l'; });
+      var percentContacts = contacts.length / (libraries.length + contacts.length); // keep it a good mix of users + libs
       var contactsCount = Math.floor(n * percentContacts);
       contacts = contacts.slice(0, contactsCount);
       libraries = libraries.slice(0, n - contactsCount);
@@ -134,29 +101,20 @@ var initFriendSearch = (function () {
   }
 
   function formatToken(item) {
-    var html = ['<li>'];
-    if (item.email) {
-      html.push('<span class="kifi-ti-email-token-icon"></span>', Mustache.escape(item.email));
-    } else if (item.kind === 'lib') {
-      html.push('<span class="kifi-ti-lib-token-icon" style="background-color:' + item.color + '"></span>', Mustache.escape(item.name));
-    } else if (item.kind === 'org') {
-      var pic = k.cdnBase + '/' + item.avatarPath;
-      html.push('<span class="kifi-ti-org-token-icon" style="background-image:url(' + pic + ')"></span>', Mustache.escape(item.name));
-    } else if (item.pictureName || item.kind === 'user') {
-      var pic = k.cdnBase + '/users/' + item.id + '/pics/100/' + item.pictureName;
-      html.push('<span class="kifi-ti-user-token-icon" style="background-image:url(' + pic + ')"></span>', Mustache.escape(item.name));
-    } else {
-      html.push(Mustache.escape(item.name));
-    }
-    html.push('</li>');
-    return html.join('');
+    var itemClone = JSON.parse(JSON.stringify(item));
+    itemClone.libKind = (item.kind === 'library');
+    itemClone.orgKind = (item.kind === 'org');
+    itemClone.userKind = !itemClone.orgKind && (item.pictureName || item.kind === 'user');
+    itemClone.cdnBase = k.cdnBase;
+
+    return k.render('html/keeper/friend_search_token', itemClone);
   }
 
   function formatResult(res) {
     var html;
     var pic;
 
-    if (res.kind === 'lib') {
+    if (res.kind === 'library') {
       if (typeof res.nameParts[0] === 'string') {
         annotateNameParts(res);
       }
@@ -320,8 +278,8 @@ var initFriendSearch = (function () {
     }
   }
 
-  function getId(o) {
-    return o.id;
+  function getIdOrEmail(o) {
+    return o.id || o.email;
   }
 
   function onBlur(item) {
@@ -331,7 +289,7 @@ var initFriendSearch = (function () {
   function onSelect(source, res, el) {
     if (res.isValidEmail) {
       res.id = res.email = res.q;
-    } else if (!res.pictureName && !res.email && res.kind !== 'lib') {
+    } else if (!res.pictureName && !res.email && res.kind !== 'library') {
       if (res === 'tip') {
         api.port.emit('import_contacts', {type: source, subsource: 'composeTypeahead'});
       }

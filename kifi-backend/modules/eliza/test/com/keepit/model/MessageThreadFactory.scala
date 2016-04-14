@@ -21,7 +21,8 @@ object MessageThreadFactory {
       pageTitle = Some(RandomStringUtils.randomAlphabetic(5).toUpperCase),
       startedBy = starter,
       participants = MessageThreadParticipants(Set(starter)),
-      keepId = Id(idx.incrementAndGet())
+      keepId = Id(idx.incrementAndGet()),
+      numMessages = 0
     ))
   }
 

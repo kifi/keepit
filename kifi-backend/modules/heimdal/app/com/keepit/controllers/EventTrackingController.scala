@@ -75,6 +75,7 @@ class EventTrackingController @Inject() (
     val augmentors = Seq(
       UserIdAugmentor,
       new UserAugmentor(shoeboxClient),
+      new UserExperimentAugmentor(shoeboxClient),
       new ExtensionVersionAugmentor(shoeboxClient),
       new UserSegmentAugmentor(shoeboxClient),
       new UserValuesAugmentor(shoeboxClient),

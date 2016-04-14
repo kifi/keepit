@@ -2,11 +2,13 @@ package com.keepit.shoebox.data.assemblers
 
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.commanders._
+import com.keepit.commanders.gen.KeepActivityGen.SerializationInfo
 import com.keepit.commanders.gen.{ BasicLibraryGen, BasicOrganizationGen, KeepActivityGen }
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.core.mapExtensionOps
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
+import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.performance.StatsdTimingAsync
@@ -23,6 +25,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 trait KeepActivityAssembler {
   def getActivityForKeeps(keepIds: Set[Id[Keep]], fromTime: Option[DateTime], numEventsPerKeep: Int): Future[Map[Id[Keep], KeepActivity]]
   def getActivityForKeep(keepId: Id[Keep], fromTime: Option[DateTime], limit: Int): Future[KeepActivity]
+  def assembleBasicKeepEvent(keepId: Id[Keep], event: KeepEvent)(implicit session: RSession): BasicKeepEvent
 }
 
 class KeepActivityAssemblerImpl @Inject() (
@@ -30,7 +33,7 @@ class KeepActivityAssemblerImpl @Inject() (
   keepRepo: KeepRepo,
   libRepo: LibraryRepo,
   basicUserRepo: BasicUserRepo,
-  basicLibGen: BasicLibraryGen, // This is not used, but I think it should be
+  basicLibGen: BasicLibraryGen,
   basicOrgGen: BasicOrganizationGen,
   ktlRepo: KeepToLibraryRepo,
   ktuRepo: KeepToUserRepo,
@@ -59,13 +62,14 @@ class KeepActivityAssemblerImpl @Inject() (
       val events = eventRepo.pageForKeep(keepId, fromTime, limit)
       (keep, sourceAttr, events, ktus, ktls)
     }
-    val elizaFut = eliza.getDiscussionsForKeeps(Set(keepId), limit).map(_.get(keepId))
+    val elizaFut = eliza.getDiscussionsForKeeps(Set(keepId), fromTime, limit).map(_.get(keepId))
 
     val basicModelFut = shoeboxFut.map {
       case (keep, sourceAttr, events, ktus, ktls) =>
-        val eventDatums = events.map(_.eventData)
         db.readOnlyMaster { implicit s =>
-          val libsNeeded: Seq[Id[Library]] = ktls.map(_.libraryId) ++ eventDatums.collect { case ModifyRecipients(_, KeepRecipientsDiff(_, libs, _)) => libs.added }.flatten
+          val (usersFromEvents, libsFromEvents) = KeepEvent.idsInvolved(events)
+
+          val libsNeeded: Seq[Id[Library]] = ktls.map(_.libraryId) ++ libsFromEvents
           val libById = libRepo.getActiveByIds(libsNeeded.toSet)
 
           val basicOrgById = basicOrgGen.getBasicOrganizations(libById.values.flatMap(_.organizationId).toSet)
@@ -76,11 +80,7 @@ class KeepActivityAssemblerImpl @Inject() (
           val basicUserById = {
             val ktuUsers = ktus.map(_.userId)
             val libOwners = libById.map { case (libId, library) => library.ownerId }
-            val recipients = eventDatums.collect {
-              case ModifyRecipients(_, KeepRecipientsDiff(users, _, _)) => users.added
-              case EditTitle(editor, _, _) => Set(editor)
-            }.flatten
-            basicUserRepo.loadAllActive((ktuUsers ++ libOwners ++ recipients).toSet)
+            basicUserRepo.loadAllActive((ktuUsers ++ libOwners ++ usersFromEvents).toSet)
           }
           val basicLibById = basicLibGen.getBasicLibraries(libById.keySet)
           (basicUserById, basicLibById, basicOrgByLibId)
@@ -92,7 +92,18 @@ class KeepActivityAssemblerImpl @Inject() (
       (elizaActivityOpt) <- elizaFut
       (userById, libById, orgByLibId) <- basicModelFut
     } yield {
-      KeepActivityGen.generateKeepActivity(keep, sourceAttrOpt, events, elizaActivityOpt, ktls, ktus, userById, libById, orgByLibId, limit)
+      implicit val info = SerializationInfo(userById, libById, orgByLibId)
+      KeepActivityGen.generateKeepActivity(keep, sourceAttrOpt, events, elizaActivityOpt, ktls, ktus, limit)
     }
+  }
+
+  def assembleBasicKeepEvent(keepId: Id[Keep], event: KeepEvent)(implicit session: RSession): BasicKeepEvent = {
+    val (userIds, libraries) = KeepEvent.idsInvolved(Seq(event))
+    implicit val info = KeepActivityGen.SerializationInfo(
+      userById = basicUserRepo.loadAllActive(userIds),
+      libById = basicLibGen.getBasicLibraries(libraries),
+      orgByLibraryId = Map.empty
+    )
+    KeepActivityGen.generateKeepEvent(keepId, event)
   }
 }

@@ -3,7 +3,6 @@ package com.keepit.controllers.client
 import com.google.inject.Inject
 import com.keepit.commanders.{ KeepQuery, KeepQueryCommander, PermissionCommander }
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
-import com.keepit.common.core.tryExtensionOps
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
@@ -30,24 +29,25 @@ class LibraryKeepsInfoController @Inject() (
   private implicit val publicIdConfig: PublicIdConfiguration)
     extends UserActions with ShoeboxServiceController {
 
-  def getKeepsInLibrary(libPubId: PublicId[Library], fromPubKeepIdOpt: Option[String]) = MaybeUserAction.async { implicit request =>
+  def getKeepsInLibrary(libPubId: PublicId[Library], order: Option[KeepOrdering], dir: Option[SortDirection], from: Option[String], offset: Int, limit: Int) = MaybeUserAction.async { implicit request =>
     val resultIfEverythingWentWell = for {
       libId <- Library.decodePublicId(libPubId).toOption.withLeft(LibraryFail.INVALID_LIBRARY_ID: LibraryFail)
-      fromIdOpt <- fromPubKeepIdOpt.filter(_.nonEmpty).fold[RightBias[LibraryFail, Option[Id[Keep]]]](RightBias.right(None)) { pubKeepId =>
-        Keep.decodePublicIdStr(pubKeepId).airbrakingOption.withLeft(LibraryFail.INVALID_KEEP_ID).map(Some(_))
+      fromId <- from.filter(_.nonEmpty).fold[RightBias[LibraryFail, Option[Id[Keep]]]](RightBias.right(None)) { pubKeepId =>
+        Keep.decodePublicIdStr(pubKeepId).toOption.withLeft(LibraryFail.INVALID_KEEP_ID: LibraryFail).map(Some(_))
       }
+      _ <- RightBias.unit.filter(_ => limit < 30, LibraryFail.LIMIT_TOO_LARGE: LibraryFail)
       permissions = db.readOnlyMaster { implicit s =>
         permissionCommander.getLibraryPermissions(libId, request.userIdOpt)
       }
       _ <- RightBias.unit.filter(_ => permissions.contains(LibraryPermission.VIEW_LIBRARY), LibraryFail.INSUFFICIENT_PERMISSIONS)
     } yield {
+      val arrangementOpt = KeepQuery.Arrangement.fromOptions(order, dir)
+      val paging = KeepQuery.Paging(fromId = fromId, offset = Offset(offset), limit = Limit(limit))
       val keepIds = db.readOnlyMaster { implicit s =>
         keepQueryCommander.getKeeps(request.userIdOpt, KeepQuery(
           target = KeepQuery.ForLibrary(libId),
-          arrangement = None,
-          fromId = fromIdOpt,
-          offset = Offset(0),
-          limit = Limit(10)
+          arrangement = arrangementOpt,
+          paging = paging
         ))
       }
       keepInfoAssembler.assembleKeepViews(request.userIdOpt, keepSet = keepIds.toSet).map { viewMap =>

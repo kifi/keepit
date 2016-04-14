@@ -46,7 +46,7 @@ import scala.util.{ Failure, Success, Try }
  */
 @ImplementedBy(classOf[KeepCommanderImpl])
 trait KeepCommander {
-  def updateKeepTitle(keepId: Id[Keep], userId: Id[User], title: String, source: Option[KeepEventSourceKind]): RightBias[KeepFail, Keep]
+  def updateKeepTitle(keepId: Id[Keep], userId: Id[User], title: String, source: Option[KeepEventSource]): RightBias[KeepFail, Keep]
 
   // Getting
   def getKeepsCountFuture: Future[Int]
@@ -162,7 +162,7 @@ class KeepCommanderImpl @Inject() (
   def getKeepInfo(internalOrExternalId: Either[Id[Keep], ExternalId[Keep]], userIdOpt: Option[Id[User]], maxMessagesShown: Int, authTokenOpt: Option[String]): Future[KeepInfo] = {
     val keepFut = db.readOnlyReplica { implicit s =>
       internalOrExternalId.fold[Option[Keep]](
-        { id: Id[Keep] => keepRepo.getOption(id) }, { extId: ExternalId[Keep] => keepRepo.getByExtId(extId) }
+        { id: Id[Keep] => keepRepo.getActive(id) }, { extId: ExternalId[Keep] => keepRepo.getByExtId(extId) }
       )
     } match {
       case None => Future.failed(KeepFail.KEEP_NOT_FOUND)
@@ -200,7 +200,7 @@ class KeepCommanderImpl @Inject() (
   def getPersonalKeepsOnUris(userId: Id[User], uriIds: Set[Id[NormalizedURI]], excludeAccess: Option[LibraryAccess] = None): Map[Id[NormalizedURI], Set[Keep]] = {
     db.readOnlyMaster { implicit session =>
       val keepIdsByUriIds = keepRepo.getPersonalKeepsOnUris(userId, uriIds, excludeAccess)
-      val keepsById = keepRepo.getByIds(keepIdsByUriIds.values.flatten.toSet)
+      val keepsById = keepRepo.getActiveByIds(keepIdsByUriIds.values.flatten.toSet)
       keepIdsByUriIds.map { case (uriId, keepIds) => uriId -> keepIds.flatMap(keepsById.get) }
     }
   }
@@ -350,19 +350,22 @@ class KeepCommanderImpl @Inject() (
     }
   }
 
-  def updateKeepTitle(keepId: Id[Keep], userId: Id[User], title: String, source: Option[KeepEventSourceKind]): RightBias[KeepFail, Keep] = {
+  def updateKeepTitle(keepId: Id[Keep], userId: Id[User], title: String, source: Option[KeepEventSource]): RightBias[KeepFail, Keep] = {
     val result = db.readWrite { implicit s =>
       def canEdit(keepId: Id[Keep]) = permissionCommander.getKeepPermissions(keepId, Some(userId)).contains(KeepPermission.EDIT_KEEP)
       for {
-        oldKeep <- keepRepo.getOption(keepId).withLeft(KeepFail.KEEP_NOT_FOUND: KeepFail)
+        oldKeep <- keepRepo.getActive(keepId).withLeft(KeepFail.KEEP_NOT_FOUND: KeepFail)
         _ <- RightBias.unit.filter(_ => canEdit(oldKeep.id.get), KeepFail.INSUFFICIENT_PERMISSIONS: KeepFail)
       } yield {
         (oldKeep, keepRepo.save(oldKeep.withTitle(Some(title.trim))))
       }
     }
-    result.getRight.foreach {
+    result.foreach {
       case (oldKeep, newKeep) =>
-        db.readWrite(implicit s => eventCommander.registerKeepEvent(keepId, KeepEventData.EditTitle(userId, oldKeep.title, newKeep.title), source, eventTime = None))
+        db.readWrite { implicit s =>
+          keepMutator.unsafeModifyKeepRecipients(keepId, KeepRecipientsDiff.addUser(userId), Some(userId))
+          eventCommander.persistKeepEventAndUpdateEliza(keepId, KeepEventData.EditTitle(userId, oldKeep.title, newKeep.title), source, eventTime = None)
+        }
     }
     result.map(_._2)
   }
@@ -439,7 +442,7 @@ class KeepCommanderImpl @Inject() (
       case Some(filter: ElizaFeedFilter) =>
         val beforeId = beforeExtId.flatMap(extId => db.readOnlyReplica(implicit s => keepRepo.get(extId).id))
         eliza.getElizaKeepStream(userId, limit, beforeId, filter).map { lastActivityByKeepId =>
-          val keepsByIds = db.readOnlyReplica(implicit s => keepRepo.getByIds(lastActivityByKeepId.keySet))
+          val keepsByIds = db.readOnlyReplica(implicit s => keepRepo.getActiveByIds(lastActivityByKeepId.keySet))
           keepsByIds.map { case (keepId, keep) => (keep, lastActivityByKeepId(keepId)) }.toList.sortBy(-_._2.getMillis)
         }
       case shoeboxFilterOpt: Option[ShoeboxFeedFilter @unchecked] =>

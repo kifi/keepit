@@ -19,7 +19,7 @@ DELETE  /api/1/keeps/:id/messages/:msgId          @com.keepit.controllers.client
 POST    /api/1/keeps/:id/messages/:msgId/edit     @com.keepit.controllers.client.KeepMutationController.editMessageOnKeep(id: PublicId[Keep], msgId: PublicId[Message])
 
 # Info
-GET    /api/1/keeps/stream           @com.keepit.controllers.client.KeepInfoController.getKeepStream(fromId: Option[String] ?= None)
+GET    /api/1/keeps/stream           @com.keepit.controllers.client.KeepInfoController.getKeepStream(fromId: Option[String] ?= None, limit: Int ?= 10)
 
 GET    /api/1/keeps/:id              @com.keepit.controllers.client.KeepInfoController.getKeepView(id: PublicId[Keep])
 GET    /api/1/keeps/:id/activity     @com.keepit.controllers.client.KeepInfoController.getActivityOnKeep(id: PublicId[Keep], limit: Int ?= 10, fromTime: Option[DateTime] ?= None)
@@ -32,7 +32,7 @@ GET    /api/1/keeps/export/org       @com.keepit.controllers.client.KeepExportCo
 # LIBRARIES
 ##
 
-GET    /api/1/libraries/:id/keeps              @com.keepit.controllers.client.LibraryKeepsInfoController.getKeepsInLibrary(id: PublicId[Library], fromId: Option[String] ?= None)
+GET    /api/1/libraries/:id/keeps              @com.keepit.controllers.client.LibraryKeepsInfoController.getKeepsInLibrary(id: PublicId[Library], order: Option[KeepOrdering] ?= None, dir: Option[SortDirection] ?= None, from: Option[String] ?= None, offset: Int ?= 0, limit: Int ?= 10)
 
 
 
@@ -40,7 +40,4 @@ GET    /api/1/libraries/:id/keeps              @com.keepit.controllers.client.Li
 # PAGES
 ##
 
-GET    /api/1/pages              @com.keepit.controllers.client.PageInfoController.getKeepsByUri(url: String)
-GET    /api/1/pages/library      @com.keepit.controllers.client.PageInfoController.getKeepsByUriAndLibrary(url: String, library: PublicId[Library])
-GET    /api/1/pages/user         @com.keepit.controllers.client.PageInfoController.getKeepsByUriAndUser(url: String, user: ExternalId[User])
-GET    /api/1/pages/email        @com.keepit.controllers.client.PageInfoController.getKeepsByUriAndEmail(url: String, email: EmailAddress)
+POST    /api/1/pages/query              @com.keepit.controllers.client.PageInfoController.getKeepsByUriAndRecipients()

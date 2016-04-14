@@ -284,15 +284,23 @@ class UserProfileCommander @Inject() (
     UserValueSettings.readFromJsValue(settingsJs)
   }
 
-  def getLeftHandRailResponse(userId: Id[User], numLibs: Int, arrangement: Option[Arrangement], windowSize: Option[Int]): LeftHandRailResponse = {
-    db.readOnlyMaster { implicit s =>
-      import LibraryQuery._
+  def getLHRSortingArrangement(userId: Id[User])(implicit session: RSession): Arrangement = {
+    import LibraryQuery._
+    val userSettings = UserValueSettings.readFromJsValue(userValueRepo.getValue(userId, UserValues.userProfileSettings))
+    userSettings.leftHandRailSort match {
+      case LibraryOrdering.LAST_KEPT_INTO => Arrangement(LibraryOrdering.LAST_KEPT_INTO, SortDirection.DESCENDING)
+      case LibraryOrdering.ALPHABETICAL => Arrangement(LibraryOrdering.ALPHABETICAL, SortDirection.ASCENDING)
+      case _ => throw new Exception(s"unknown sorting value ${userSettings.leftHandRailSort}")
+    }
+  }
 
-      val sortingArrangement = arrangement.getOrElse(Arrangement(LibraryOrdering.ALPHABETICAL, SortDirection.ASCENDING))
+  def getLeftHandRailResponse(userId: Id[User], numLibs: Int, windowSize: Option[Int]): LeftHandRailResponse = {
+    db.readOnlyMaster { implicit s =>
+      val sortingArrangement = getLHRSortingArrangement(userId)
       val orgIds = orgMembershipRepo.getAllByUserId(userId).map(_.organizationId)
 
-      val userLibs = libQueryCommander.getLHRLibrariesForUser(userId, Some(sortingArrangement), fromIdOpt = None, offset = Offset(0), limit = Limit(numLibs), windowSize)
-      val orgLibs = orgIds.map(orgId => orgId -> libQueryCommander.getLHRLibrariesForOrg(userId, orgId, Some(sortingArrangement), fromIdOpt = None, offset = Offset(0), limit = Limit(numLibs), windowSize)).toMap
+      val userLibs = libQueryCommander.getLHRLibrariesForUser(userId, sortingArrangement, fromIdOpt = None, offset = Offset(0), limit = Limit(numLibs), windowSize)
+      val orgLibs = orgIds.map(orgId => orgId -> libQueryCommander.getLHRLibrariesForOrg(userId, orgId, sortingArrangement, fromIdOpt = None, offset = Offset(0), limit = Limit(numLibs), windowSize)).toMap
 
       val basicOrgsWithTopLibs = basicOrganizationGen.getBasicOrganizations(orgIds.toSet).toSeq.sortBy(_._2.name)
         .map {

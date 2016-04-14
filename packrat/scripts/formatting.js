@@ -117,15 +117,17 @@ var formatMessage = (function () {
 
   var formatAsHtml =
     processLineBreaksThen.bind(null,
-      processKifiSelMarkdownToLinksThen.bind(null,
-        processUrlsThen.bind(null,
-          processEmailAddressesThen.bind(null,
-            processEmoji)),
-        processEmoji));
+        processKifiSelMarkdownToLinksThen.bind(null,
+          processUrlsThen.bind(null, // processBetween
+            processEmailAddressesThen.bind(null,
+              processHashtagsThen.bind(null,
+                processEmojiThen.bind(null, identity)))),
+          processHashtagsThen.bind(null, // processInside
+            processEmojiThen.bind(null, identity))));
 
   var formatAsHtmlSnippet =
       processKifiSelMarkdownToTextThen.bind(null,
-        processEmoji);
+        processEmojiThen.bind(null, identity));
 
   function renderAndFormatFull(text, render) {
     text = text || '';
@@ -221,8 +223,9 @@ var formatMessage = (function () {
       }
       var escapedUri = Mustache.escape(uri);
       var escapedUrl = (scheme ? '' : 'http://') + escapedUri;
+      var isTruncated = (escapedUri.length > 40);
       parts[i] = '<a target="_blank" href="' + escapedUrl + '">' +
-        (imageUrlRe.test(uri) ? '<img class="kifi-image-in-message" onerror="this.outerHTML=this.src" src="' + escapedUrl + '"/>' : escapedUri);
+        (imageUrlRe.test(uri) ? '<img class="kifi-image-in-message" onerror="this.outerHTML=this.src" src="' + escapedUrl + '"/>' : (isTruncated ? escapedUrl.slice(0, 40) + '…' : escapedUri));
       parts[i+1] = '</a>';
     }
     for (i = 0; i < parts.length; i += 3) {
@@ -231,9 +234,32 @@ var formatMessage = (function () {
     return parts.join('');
   }
 
-  function processEmoji(text) {
-    return Mustache.escape(emoji.supported() ? emoji.decode(text) : text);
+  function processEmojiThen(process, text) {
+    return process(Mustache.escape(emoji.supported() ? emoji.decode(text) : text));
   }
+
+  var hashTagMarkdownRe = /\[#((?:\\.|[^\]])*)\]/g;
+  var multipleBlankLinesRe = /\n(?:\s*\n)+/g;
+  var escapedLeftBracketHashOrAtRe = /\[\\([#@])/g;
+  var backslashUnescapeRe = /\\(.)/g;
+  function processHashtagsThen(process, text) {
+    var parts = text.replace(multipleBlankLinesRe, '\n\n').split(hashTagMarkdownRe);
+    var tag;
+    for (var i = 1; i < parts.length; i += 2) {
+      tag = Mustache.escape(parts[i].replace(backslashUnescapeRe, '$1'));
+      parts[i] = '<a class="kifi-tag" href="' + getTagUrl(tag) + '"target="_blank">#' + tag + '</a>';
+    }
+    for (i = 0; i < parts.length; i += 2) {
+      parts[i] = process(parts[i].replace(escapedLeftBracketHashOrAtRe, '[$1'));
+    }
+    return parts.join('');
+  }
+
+  function getTagUrl(tag) {
+    return 'https://www.kifi.com/find?q=tag:' + tag;
+  }
+
+  function identity(o) { return o; }
 
   return {
     full: function() {
@@ -309,14 +335,22 @@ function formatLocalDate() {
 }
 
 function formatParticipant(participant) {
-  participant.isUser = !participant.kind || participant.kind === 'user';
-  participant.isEmail = participant.kind === 'email';
+  participant.isEmail = participant.kind === 'email' || participant.email;
+  participant.isUser = !participant.isEmail && (!participant.kind || participant.kind === 'user' || participant.kind === 'kifi');
+  participant.isLibrary = participant.kind === 'library';
+
+  var id = participant.id || participant.email;
+
+  if (participant.isLibrary && !participant.color) {
+    participant.color = '#808080';
+  }
+
   if (participant.isEmail) {
-    participant.initial = participant.id[0].toUpperCase();
+    participant.initial = id[0].toUpperCase();
     // generate hashcode for background color
     var hash = 0, i, chr, len;
-    for (i = 0, len = participant.id.length; i < len; i++) {
-      chr = participant.id.charCodeAt(i);
+    for (i = 0, len = id.length; i < len; i++) {
+      chr = id.charCodeAt(i);
       hash = ((hash << 5) - hash) + chr;
       hash |= 0;
     }
@@ -359,71 +393,3 @@ function convertTextDraftToMarkdown(text) {
   'use strict';
   return emoji.encode(text).trim();
 }
-
-var formatAuxData = (function () {
-  'use strict';
-  var formatters = {
-    add_participants: function (actor, added) {
-      if (isMe(actor)) {
-        return 'You added ' + boldNamesOf(added) + '.';
-      }
-      if (added.some(isMe)) {
-        return boldNamesOf(meInFront(added)) + ' were added by ' + nameOf(actor) + '.';
-      }
-      return nameOf(actor) + ' added ' + boldNamesOf(added) + '.';
-    },
-    start_with_emails: function (actor, added) {
-      if (isMe(actor)) {
-        return 'You started a discussion with ' + boldNamesOf(added) + '.';
-      }
-      if (added.some(isMe)) {
-        return boldNamesOf(meInFront(added)) + ' were invited to a discussion by ' + nameOf(actor) + '.';
-      }
-      return nameOf(actor) + ' started a discussion with ' + boldNamesOf(added) + '.';
-    }
-  };
-
-  return function () {
-    var arr = this.auxData, formatter = formatters[arr[0]];
-    return k.formatting.jsonDom(formatter ? formatter.apply(null, arr.slice(1)) : '');
-  };
-
-  function isMe(user) {
-    return user.id === ((k.me && k.me.id) || '');
-  }
-
-  function bold(html) {
-    return '<b>' + html + '</b>';
-  }
-
-  function nameOf(user) {
-    if (user.kind === "email") {
-      return Mustache.escape(user.id);
-    } else {
-      return isMe(user) ? 'You' : Mustache.escape(user.firstName + ' ' + user.lastName);
-    }
-  }
-
-  function boldNamesOf(users) {
-    var names = users.map(nameOf).map(bold);
-    if (users.length <= 2) {
-      return names.join(' and ');
-    } else {
-      var last = names.pop();
-      return names.join(', ') + ' and ' + last;
-    }
-  }
-
-  function meInFront(users) {
-    var arr = users.slice();
-    for (var i = 1; i < arr.length; i++) {
-      var user = arr[i];
-      if (isMe(user)) {
-        arr.splice(i, 1);
-        arr.unshift(user);
-        break;
-      }
-    }
-    return arr;
-  }
-}());

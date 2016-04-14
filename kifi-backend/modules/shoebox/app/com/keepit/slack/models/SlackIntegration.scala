@@ -7,6 +7,7 @@ import com.keepit.common.json.{ EitherFormat, EnumFormat }
 import com.keepit.common.reflection.Enumerator
 import com.keepit.model._
 import com.kifi.macros.json
+import org.joda.time.DateTime
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
@@ -35,6 +36,7 @@ trait SlackIntegration {
   def slackChannelId: SlackChannelId
   def libraryId: Id[Library]
   def status: SlackIntegrationStatus
+  def changedStatusAt: DateTime
 }
 
 object SlackIntegration {

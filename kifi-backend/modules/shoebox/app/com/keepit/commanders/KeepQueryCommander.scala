@@ -7,55 +7,41 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.json.EnumFormat
-import com.keepit.common.reflection.Enumerator
 import com.keepit.model._
 import play.api.libs.json.{ Format, Json }
-import play.api.mvc.QueryStringBindable
 
 import scala.util.Try
 
 case class KeepQuery(
     target: KeepQuery.Target,
-    arrangement: Option[KeepQuery.Arrangement] = None,
-    fromId: Option[Id[Keep]],
-    offset: Offset,
-    limit: Limit) {
+    arrangement: Option[KeepQuery.Arrangement],
+    paging: KeepQuery.Paging) {
   def withArrangement(newArrangement: KeepQuery.Arrangement) = this.copy(arrangement = Some(newArrangement))
+  def withLimit(newLimit: Int) = this.copy(paging = paging.copy(limit = Limit(newLimit)))
+  def fromId(id: Id[Keep]) = this.copy(paging = paging.copy(fromId = Some(id)))
 }
 
 object KeepQuery {
   sealed abstract class Target
+  // ForLibrary(libId) => keeps in library `libId`
   case class ForLibrary(libId: Id[Library]) extends Target
+  // ForUri(uriId, recips) => keeps on `uriId` with k.recipients isSupersetOf recips
+  case class ForUri(uriId: Id[NormalizedURI], recipientSubset: KeepRecipients) extends Target
 
-  case class Arrangement(ordering: KeepOrdering, direction: SortDirection)
+  final case class Paging(fromId: Option[Id[Keep]], offset: Offset, limit: Limit)
+  final case class Arrangement(ordering: KeepOrdering, direction: SortDirection)
   object Arrangement {
     implicit val format: Format[Arrangement] = Json.format[Arrangement]
     val GLOBAL_DEFAULT = Arrangement(KeepOrdering.LAST_ACTIVITY_AT, SortDirection.DESCENDING)
-  }
-}
-
-sealed abstract class KeepOrdering(val value: String)
-
-object KeepOrdering extends Enumerator[KeepOrdering] {
-  case object LAST_ACTIVITY_AT extends KeepOrdering("last_activity_at")
-  case object KEPT_AT extends KeepOrdering("kept_at")
-
-  val all = _all
-  def fromStr(str: String): Option[KeepOrdering] = all.find(_.value == str)
-  def apply(str: String): KeepOrdering = fromStr(str).get
-
-  implicit val format: Format[KeepOrdering] = EnumFormat.format(fromStr, _.value)
-
-  implicit def queryStringBinder(implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[KeepOrdering] {
-    override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, KeepOrdering]] = {
-      stringBinder.bind(key, params).map {
-        case Left(_) => Left("Could not bind a KeepOrdering")
-        case Right(str) => fromStr(str).map(ord => Right(ord)).getOrElse(Left("Could not bind a KeepOrdering"))
-      }
+    def fromOptions(ord: Option[KeepOrdering], dir: Option[SortDirection]): Option[Arrangement] = (ord, dir) match {
+      case (None, None) => None
+      case (Some(o), None) => Some(Arrangement(o, GLOBAL_DEFAULT.direction))
+      case (None, Some(d)) => Some(Arrangement(GLOBAL_DEFAULT.ordering, d))
+      case (Some(o), Some(d)) => Some(Arrangement(o, d))
     }
-    override def unbind(key: String, ordering: KeepOrdering): String = {
-      stringBinder.unbind(key, ordering.value)
+    implicit class FromOrdering(ko: KeepOrdering) {
+      def desc = Arrangement(ko, SortDirection.DESCENDING)
+      def asc = Arrangement(ko, SortDirection.ASCENDING)
     }
   }
 }

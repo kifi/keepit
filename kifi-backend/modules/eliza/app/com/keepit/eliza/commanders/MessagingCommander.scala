@@ -12,12 +12,13 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.BasicContact
+import com.keepit.common.mail.{ EmailAddress, BasicContact }
 import com.keepit.common.net.URI
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.time._
 import com.keepit.common.util.DeltaSet
 import com.keepit.discussion.MessageSource
+import com.keepit.eliza.ElizaServiceClient
 import com.keepit.eliza.model._
 import com.keepit.eliza.model.SystemMessageData._
 import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilder }
@@ -76,7 +77,7 @@ trait MessagingCommander {
   def setUserThreadMuteState(userId: Id[User], keepId: Id[Keep], mute: Boolean)(implicit context: HeimdalContext): Boolean
   def setNonUserThreadMuteState(id: Id[NonUserThread], mute: Boolean): Boolean
   def addParticipantsToThread(adderUserId: Id[User], keepId: Id[Keep], newUsers: Seq[Id[User]], emailContacts: Seq[BasicContact],
-    orgIds: Seq[Id[Organization]], newLibs: Seq[Id[Library]], source: Option[KeepEventSourceKind], updateShoebox: Boolean)(implicit context: HeimdalContext): Future[Boolean]
+    orgIds: Seq[Id[Organization]], source: Option[KeepEventSource], updateShoebox: Boolean)(implicit context: HeimdalContext): Future[Boolean]
 
   def getChatter(userId: Id[User], urls: Seq[String]): Future[Map[String, Seq[Id[Keep]]]]
   def validateUsers(rawUsers: Seq[JsValue]): Seq[JsResult[ExternalId[User]]]
@@ -85,6 +86,7 @@ trait MessagingCommander {
 }
 
 class MessagingCommanderImpl @Inject() (
+    eliza: ElizaServiceClient,
     threadRepo: MessageThreadRepo,
     userThreadRepo: UserThreadRepo,
     nonUserThreadRepo: NonUserThreadRepo,
@@ -232,7 +234,8 @@ class MessagingCommanderImpl @Inject() (
               pageTitle = titleOpt,
               startedBy = from,
               participants = mtParticipants,
-              keepId = csKeep.id
+              keepId = csKeep.id,
+              numMessages = 0
             ))
             (thread, true)
           }
@@ -310,31 +313,35 @@ class MessagingCommanderImpl @Inject() (
     sendMessage(MessageSender.User(from), thread, messageText, source, urlOpt)
   }
 
-  private def sendMessage(from: MessageSender, thread: MessageThread, messageText: String, source: Option[MessageSource], urlOpt: Option[URI], nUriIdOpt: Option[Id[NormalizedURI]] = None, isNew: Option[Boolean] = None)(implicit context: HeimdalContext): (MessageThread, ElizaMessage) = {
+  private def sendMessage(from: MessageSender, initialThread: MessageThread, messageText: String, source: Option[MessageSource], urlOpt: Option[URI], nUriIdOpt: Option[Id[NormalizedURI]] = None, isNew: Option[Boolean] = None)(implicit context: HeimdalContext): (MessageThread, ElizaMessage) = {
     from match {
       case MessageSender.User(id) =>
-        if (!thread.containsUser(id)) throw NotAuthorizedException(s"User $id not authorized to send message on thread ${thread.id.get}")
+        if (!initialThread.containsUser(id)) throw NotAuthorizedException(s"User $id not authorized to send message on thread ${initialThread.id.get}")
       case MessageSender.NonUser(nup) =>
-        if (!thread.containsNonUser(nup)) throw NotAuthorizedException(s"Non-User $nup not authorized to send message on thread ${thread.id.get}")
+        if (!initialThread.containsNonUser(nup)) throw NotAuthorizedException(s"Non-User $nup not authorized to send message on thread ${initialThread.id.get}")
       case MessageSender.System =>
         throw NotAuthorizedException("Wrong code path for system Messages.")
     }
 
-    log.info(s"Sending message from $from to ${thread.participants}")
-    val message = db.readWrite { implicit session =>
-      messageRepo.save(ElizaMessage(
-        keepId = thread.keepId,
+    log.info(s"Sending message from $from to ${initialThread.participants}")
+    val (message, thread) = db.readWrite { implicit session =>
+      val msg = messageRepo.save(ElizaMessage(
+        keepId = initialThread.keepId,
         from = from,
         messageText = messageText,
         source = source,
-        sentOnUrl = urlOpt.flatMap(_.raw).orElse(Some(thread.url)),
-        sentOnUriId = Some(thread.uriId)
-      )) tap { msg => userThreadRepo.registerMessage(msg) }
+        sentOnUrl = urlOpt.flatMap(_.raw).orElse(Some(initialThread.url)),
+        sentOnUriId = Some(initialThread.uriId)
+      ))
+      val thread = threadRepo.save(initialThread.withNumMessages(initialThread.numMessages + 1))
+      userThreadRepo.registerMessage(msg)
+      (msg, thread)
     }
+
     SafeFuture {
       db.readOnlyMaster { implicit session => messageRepo.refreshCache(thread.keepId) }
       shoebox.registerMessageOnKeep(thread.keepId, ElizaMessage.toCrossServiceMessage(message))
-      from.asUser.foreach(user => shoebox.editRecipientsOnKeep(editorId = user, keepId = thread.keepId, diff = KeepRecipientsDiff.addUser(user), persistKeepEvent = false, source = KeepEventSourceKind.fromMessageSource(source)))
+      from.asUser.foreach(user => shoebox.editRecipientsOnKeep(editorId = user, keepId = thread.keepId, diff = KeepRecipientsDiff.addUser(user), persistKeepEvent = false, source = KeepEventSource.fromMessageSource(source)))
     }
 
     val participantSet = thread.participants.allUsers
@@ -376,7 +383,7 @@ class MessagingCommanderImpl @Inject() (
     // send message through websockets immediately
     thread.participants.allUsers.foreach { user =>
       notificationDeliveryCommander.notifyMessage(user, message.pubKeepId, messageWithBasicUser)
-      notificationDeliveryCommander.notifyEvent(user, message.pubKeepId, event)
+      notificationDeliveryCommander.sendKeepEvent(user, message.pubKeepId, event)
     }
     // Anyone who got this new notification might have a NewKeep notification that is going to be
     // passively replaced by this message thread. The client will then have no way of ever marking or
@@ -439,7 +446,7 @@ class MessagingCommanderImpl @Inject() (
         db.readWrite { implicit s => messageRepo.updateUriId(message, nUriId) }
       }
     }
-    messagingAnalytics.sentMessage(from, message, thread, isNew, context)
+    messagingAnalytics.sentMessage(message, thread, isNew, context)
 
     (thread, message)
   }
@@ -471,10 +478,10 @@ class MessagingCommanderImpl @Inject() (
     }
   }
 
-  def addParticipantsToThread(
-    adderUserId: Id[User], keepId: Id[Keep],
-    newUsers: Seq[Id[User]], emailContacts: Seq[BasicContact], orgIds: Seq[Id[Organization]], newLibs: Seq[Id[Library]],
-    source: Option[KeepEventSourceKind], updateShoebox: Boolean)(implicit context: HeimdalContext): Future[Boolean] = {
+  // todo(cam): make this `editParticipantsOnThread` with inactivation behavior
+  def addParticipantsToThread(adderUserId: Id[User], keepId: Id[Keep],
+    newUsers: Seq[Id[User]], emailContacts: Seq[BasicContact], orgIds: Seq[Id[Organization]],
+    source: Option[KeepEventSource], updateShoebox: Boolean)(implicit context: HeimdalContext): Future[Boolean] = {
     val newUserParticipantsFuture = Future.successful(newUsers)
     val newNonUserParticipantsFuture = constructNonUserRecipients(adderUserId, emailContacts)
 
@@ -503,41 +510,17 @@ class MessagingCommanderImpl @Inject() (
 
         val actuallyNewUsers = (newUserParticipants ++ newOrgParticipants).filterNot(oldThread.containsUser)
         val actuallyNewNonUsers = newNonUserParticipants.filterNot(oldThread.containsNonUser)
-        val actuallyNewLibraries = {
-          if (newLibs.isEmpty) Set.empty[Id[Library]]
-          else {
-            val existingLibs = messageRepo.getAllByKeep(keepId).foldLeft(Set.empty[Id[Library]]) {
-              case (allLibs, message) =>
-                message.auxData match {
-                  case Some(SystemMessageData.AddLibraries(_, libraries)) => allLibs ++ libraries
-                  case _ => allLibs
-                }
-            }
-            newLibs.filterNot(existingLibs.contains).toSet
-          }
-        }
-
-        if (actuallyNewLibraries.nonEmpty) {
-          messageRepo.save(ElizaMessage(
-            keepId = oldThread.keepId,
-            from = MessageSender.System,
-            messageText = "",
-            source = source.flatMap(KeepEventSourceKind.toMessageSource),
-            auxData = Some(AddLibraries(adderUserId, actuallyNewLibraries)),
-            sentOnUrl = None,
-            sentOnUriId = None
-          ))
-        }
 
         if (actuallyNewNonUsers.isEmpty && actuallyNewUsers.isEmpty) {
           None
         } else {
+          // this block might be unnecessary since ElizaDiscussionCommander.addParticipantsToThread is the only caller of this method and already does all this interning.
           val thread = threadRepo.save(oldThread.withParticipants(clock.now, actuallyNewUsers.toSet, actuallyNewNonUsers.toSet))
           val message = messageRepo.save(ElizaMessage(
             keepId = thread.keepId,
             from = MessageSender.System,
             messageText = "",
-            source = source.flatMap(KeepEventSourceKind.toMessageSource),
+            source = source.flatMap(KeepEventSource.toMessageSource),
             auxData = Some(AddParticipants(adderUserId, actuallyNewUsers, actuallyNewNonUsers)),
             sentOnUrl = None,
             sentOnUriId = None
@@ -557,13 +540,13 @@ class MessagingCommanderImpl @Inject() (
             ))
           }
 
-          Some((actuallyNewUsers, actuallyNewNonUsers, actuallyNewLibraries, message, thread))
+          Some((actuallyNewUsers, actuallyNewNonUsers, message, thread))
 
         }
       }
 
       resultInfoOpt.exists {
-        case (newUsers, newNonUsers, newLibraries, message, thread) =>
+        case (newUsers, newNonUsers, message, thread) =>
 
           SafeFuture {
             db.readOnlyMaster { implicit session =>
@@ -573,12 +556,12 @@ class MessagingCommanderImpl @Inject() (
 
           if (updateShoebox) {
             val newEmails = newNonUsers.flatMap(NonUserParticipant.toEmailAddress)
-            shoebox.editRecipientsOnKeep(adderUserId, keepId, KeepRecipientsDiff(DeltaSet.addOnly(newUsers.toSet), DeltaSet.addOnly(newLibraries), DeltaSet.addOnly(newEmails.toSet)), persistKeepEvent = true, source)
+            shoebox.editRecipientsOnKeep(adderUserId, keepId, KeepRecipientsDiff(DeltaSet.addOnly(newUsers.toSet), libraries = DeltaSet.empty, DeltaSet.addOnly(newEmails.toSet)), persistKeepEvent = true, source)
           }
 
           if (newUsers.nonEmpty || newNonUsers.nonEmpty) {
-            notificationDeliveryCommander.notifyAddParticipants(newUsers, newNonUsers, thread, message, adderUserId)
-            messagingAnalytics.addedParticipantsToConversation(adderUserId, newUsers, newNonUsers, thread, context)
+            notificationDeliveryCommander.notifyAddParticipants(adderUserId, newUsers, newNonUsers, thread, message, source)
+            messagingAnalytics.addedParticipantsToConversation(adderUserId, newUsers, newNonUsers, thread, source, context)
           }
 
           true

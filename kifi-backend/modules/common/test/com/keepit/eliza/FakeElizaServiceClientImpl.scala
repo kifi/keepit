@@ -2,22 +2,21 @@ package com.keepit.eliza
 
 import akka.actor.Scheduler
 import com.google.inject.util.Providers
+import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.{Id, SequenceNumber}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.service.ServiceType
-import com.keepit.common.util.DeltaSet
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.common.time._
-import com.keepit.discussion.{CrossServiceKeepActivity, MessageSource, CrossServiceMessage, Discussion, Message}
+import com.keepit.discussion.{ MessageSource, CrossServiceMessage, Discussion, Message}
 import com.keepit.eliza.model._
-import com.keepit.model.KeepEventData.ModifyRecipients
 import com.keepit.model._
 import com.keepit.notify.model.event.NotificationEvent
 import com.keepit.notify.model.{GroupingNotificationKind, Recipient}
 import com.keepit.search.index.message.ThreadContent
 import org.joda.time.DateTime
-import play.api.libs.json.{JsArray, JsObject}
+import play.api.libs.json.JsArray
 
 import scala.collection.mutable
 import scala.concurrent.{Future, Promise}
@@ -40,6 +39,8 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   def sendToUser(userId: Id[User], data: JsArray) = Future.successful((): Unit)
 
   def sendToAllUsers(data: JsArray): Unit = {}
+
+  def sendKeepEvent(userId: Id[User], keepId: PublicId[Keep], event: BasicKeepEvent): Future[Unit] = Future.successful(())
 
   def flush(userId: Id[User]): Future[Unit] = Future.successful((): Unit)
 
@@ -93,42 +94,8 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
     Future.successful(true)
   }
 
-  var idX = 0
-  var keepEvents = Map.empty[Id[Keep], Seq[CrossServiceMessage]].withDefaultValue(Seq.empty)
-  private def crossServiceMessageFromEvent(keepId: Id[Keep], event: KeepEventData, source: Option[KeepEventSourceKind]) = CrossServiceMessage(
-    Id[Message](idX),
-    isDeleted = false,
-    SequenceNumber[Message](idX),
-    keepId,
-    sentAt = currentDateTime,
-    sentBy = None,
-    text = "",
-    auxData = Some(event),
-    source = source.flatMap(KeepEventSourceKind.toMessageSource)
-  )
 
-  def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], newUsers: Set[Id[User]], newLibraries: Set[Id[Library]], source: Option[KeepEventSourceKind]): Future[Set[Id[User]]] = {
-    val event = ModifyRecipients(editor, KeepRecipientsDiff(users = DeltaSet.empty.addAll(newUsers), libraries = DeltaSet.empty.addAll(newLibraries), emails = DeltaSet.empty))
-    val msg = crossServiceMessageFromEvent(keepId, event, source)
-    keepEvents += (keepId -> (keepEvents(keepId) :+ msg))
-    Future.successful(Set.empty)
-  }
-  def getCrossServiceKeepActivity(keepIds: Set[Id[Keep]], eventsBefore: Option[DateTime], maxEventsPerKeep: Int): Future[Map[Id[Keep], CrossServiceKeepActivity]] = {
-    import com.keepit.common.util.Ord.dateTimeOrdering
-    val activityByKeepId = keepIds.map { keepId =>
-      keepId -> CrossServiceKeepActivity(numComments = 0, messages = keepEvents(keepId).filter(msg => eventsBefore.forall(_ < msg.sentAt)).take(maxEventsPerKeep))
-    }.toMap
-    Future.successful(activityByKeepId)
-  }
-  def saveKeepEvent(keepId: Id[Keep], userId: Id[User], event: KeepEventData.EditTitle, source: Option[KeepEventSourceKind]): Future[Unit] = {
-    keepEvents += (keepId -> (keepEvents(keepId) :+ crossServiceMessageFromEvent(keepId, event, source)))
-    Future.successful(())
-  }
-
-  def pageSystemMessages(fromId: Id[Message], pageSize: Int): Future[Seq[CrossServiceMessage]] = ???
-
-
-  def getDiscussionsForKeeps(keepIds: Set[Id[Keep]], maxMessagesShown: Int): Future[Map[Id[Keep], Discussion]] = Future.successful(Map.empty)
+  def getDiscussionsForKeeps(keepIds: Set[Id[Keep]], fromTime: Option[DateTime], maxMessagesShown: Int): Future[Map[Id[Keep], Discussion]] = Future.successful(Map.empty)
   def getEmailParticipantsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Map[EmailAddress, (Id[User], DateTime)]]] = Future.successful(Map.empty)
   def deleteMessage(msgId: Id[Message]): Future[Unit] = ???
   def deleteThreadsForKeeps(keepIds: Set[Id[Keep]]): Future[Unit] = Future.successful(Unit)
@@ -144,5 +111,8 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   def getMessagesChanged(seqNum: SequenceNumber[Message], fetchSize: Int): Future[Seq[CrossServiceMessage]] = Future.successful(Seq.empty)
   def convertNonUserThreadToUserThread(userId: Id[User], accessToken: String): Future[(Option[EmailAddress], Option[Id[User]])] = Future.successful((None, Some(Id[User](1)))) // should be different userId than arg
   def getInitialRecipientsByKeepId(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], KeepRecipients]] = ???
+  def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], diff: KeepRecipientsDiff, source: Option[KeepEventSource]): Future[Boolean] = Future.successful(true)
+  def syncAddParticipants(keepId: Id[Keep], event: KeepEventData.ModifyRecipients, source: Option[KeepEventSource]): Future[Unit] = ???
+  def pageSystemMessages(fromId: Id[Message], pageSize: Int): Future[Seq[CrossServiceMessage]] = ???
   def rpbTest(keepIds: Set[Id[Keep]], numPerKeep: Int): Future[Map[Id[Keep], Seq[Id[Message]]]] = ???
 }

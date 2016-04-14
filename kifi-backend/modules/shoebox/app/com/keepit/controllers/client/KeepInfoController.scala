@@ -1,6 +1,6 @@
 package com.keepit.controllers.client
 
-import com.google.inject.Inject
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders.KeepCommander
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.core.{ anyExtensionOps, tryExtensionOps }
@@ -9,17 +9,20 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.SlackLog
+import com.keepit.common.performance.Stopwatch
 import com.keepit.common.time._
 import com.keepit.common.util.{ TimedComputation, RightBias }
 import com.keepit.common.util.RightBias.FromOption
 import com.keepit.model._
 import com.keepit.shoebox.data.assemblers.{ KeepActivityAssembler, KeepInfoAssembler }
 import com.keepit.slack.{ InhouseSlackClient, InhouseSlackChannel }
+import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.DateTime
 import play.api.libs.json.Json
 
 import scala.concurrent.{ ExecutionContext, Future }
 
+@Singleton
 class KeepInfoController @Inject() (
   db: Database,
   val userActionsHelper: UserActionsHelper,
@@ -47,38 +50,31 @@ class KeepInfoController @Inject() (
     }
   }
 
-  def getKeepStream(fromPubIdOpt: Option[String]) = UserAction.async { implicit request =>
-    TimedComputation.async {
-      val goodResult = for {
-        fromIdOpt <- fromPubIdOpt.filter(_.nonEmpty).map { pubId =>
-          Keep.decodePublicIdStr(pubId).airbrakingOption.map(Option(_)).withLeft(KeepFail.INVALID_ID: KeepFail)
-        }.getOrElse(RightBias.right(None))
-      } yield {
-        val keepIds = TimedComputation.sync {
-          db.readOnlyMaster { implicit s =>
-            val ugh = fromIdOpt.map(kId => keepRepo.get(kId).externalId) // I'm really sad about this external id right now :(
-            keepRepo.getRecentKeepsByActivity(request.userId, limit = 10, beforeIdOpt = ugh, afterIdOpt = None, filterOpt = None).map(_._1.id.get)
-          }
-        } |> { tc =>
-          if (request.userId == ryan) ryanLog.info("Retrieving the keep ids took", tc.millis, tc.range.toString())
-          tc.value
-        }
-        TimedComputation.async(keepInfoAssembler.assembleKeepViews(request.userIdOpt, keepSet = keepIds.toSet)).map { tc =>
-          if (request.userId == ryan) ryanLog.info("Generating keep views took", tc.millis, tc.range.toString())
-          val viewMap = tc.value
-          Ok(Json.obj("keeps" -> keepIds.flatMap(kId => viewMap.get(kId).flatMap(_.getRight))))
-        }
+  def getKeepStream(fromPubIdOpt: Option[String], limit: Int) = UserAction.async { implicit request =>
+    val stopwatch = new Stopwatch(s"[KIC-STREAM-${RandomStringUtils.randomAlphanumeric(5)}]")
+    val goodResult = for {
+      _ <- RightBias.unit.filter(_ => limit < 100, KeepFail.LIMIT_TOO_LARGE: KeepFail)
+      fromIdOpt <- fromPubIdOpt.filter(_.nonEmpty).fold[RightBias[KeepFail, Option[Id[Keep]]]](RightBias.right(None)) { pubId =>
+        Keep.decodePublicIdStr(pubId).airbrakingOption.withLeft(KeepFail.INVALID_KEEP_ID: KeepFail).map(Some(_))
       }
-      goodResult.getOrElse { fail => Future.successful(fail.asErrorResponse) }
-    }.map { tc =>
-      if (request.userId == ryan) ryanLog.info("The whole request took", tc.millis, tc.range.toString())
-      tc.value
+    } yield {
+      stopwatch.logTimeWith("input_decoded")
+      val keepIds = db.readOnlyMaster { implicit s =>
+        val ugh = fromIdOpt.map(kId => keepRepo.get(kId).externalId) // I'm really sad about this external id right now :(
+        keepRepo.getRecentKeepsByActivity(request.userId, limit = limit, beforeIdOpt = ugh, afterIdOpt = None, filterOpt = None).map(_._1.id.get)
+      }
+      stopwatch.logTimeWith(s"query_complete_n_${keepIds.length}")
+      keepInfoAssembler.assembleKeepViews(request.userIdOpt, keepSet = keepIds.toSet).map { viewMap =>
+        stopwatch.logTimeWith("done")
+        Ok(Json.obj("keeps" -> keepIds.flatMap(kId => viewMap.get(kId).flatMap(_.getRight))))
+      }
     }
+    goodResult.getOrElse { fail => Future.successful(fail.asErrorResponse) }
   }
 
   def getActivityOnKeep(pubId: PublicId[Keep], limit: Int, fromTime: Option[DateTime]) = MaybeUserAction.async { implicit request =>
     val result = for {
-      keepId <- Keep.decodePublicId(pubId).map(Future.successful).getOrElse(Future.failed(KeepFail.INVALID_ID))
+      keepId <- Keep.decodePublicId(pubId).map(Future.successful).getOrElse(Future.failed(KeepFail.INVALID_KEEP_ID))
       activity <- keepActivityAssembler.getActivityForKeep(keepId, fromTime, limit)
     } yield {
       Ok(Json.toJson(activity))

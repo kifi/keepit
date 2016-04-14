@@ -61,7 +61,7 @@ class KeepToEmailRepoImpl @Inject() (
   def table(tag: Tag) = new KeepToEmailTable(tag)
   initTable()
 
-  private def activeRows = rows.filter(_.state === KeepToEmailStates.ACTIVE)
+  def activeRows = rows.filter(_.state === KeepToEmailStates.ACTIVE)
   def getByKeepIdAndEmailAddress(keepId: Id[Keep], emailAddress: EmailAddress, excludeStateOpt: Option[State[KeepToEmail]] = Some(KeepToEmailStates.INACTIVE))(implicit session: RSession): Option[KeepToEmail] = {
     val hash = EmailAddressHash.hashEmailAddress(emailAddress)
     rows.filter(r => r.keepId === keepId && r.emailAddressHash === hash && r.emailAddress === emailAddress && r.state =!= excludeStateOpt.orNull).firstOption

@@ -103,7 +103,7 @@ class KeepExportCommanderImpl @Inject() (
           slackLog.info(s"Exporting ${keepIds.size} org keeps from ${libIdsToExportFrom.size} libs for user $userId")
         }
     }
-    val keeps = keepRepo.getByIds(keepIds).values.toSeq
+    val keeps = keepRepo.getActiveByIds(keepIds).values.toSeq
     val tagsByKeepId = {
       val tags = tagCommander.getTagsForKeeps(keeps.flatMap(_.id))
       keeps.map { keep => keep.id.get -> tags(keep.id.get).map(_.tag) }.toMap

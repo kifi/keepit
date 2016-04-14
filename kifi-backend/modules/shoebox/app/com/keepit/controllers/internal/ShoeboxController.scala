@@ -447,7 +447,7 @@ class ShoeboxController @Inject() (
     implicit val payloadFormat = KeyFormat.key2Format[Id[User], Set[Id[Keep]]]("viewerId", "keepIds")
     val (viewerId, keepIds) = request.body.as[(Id[User], Set[Id[Keep]])]
 
-    val keepById = db.readOnlyMaster { implicit s => keepRepo.getByIds(keepIds) }
+    val keepById = db.readOnlyMaster { implicit s => keepRepo.getActiveByIds(keepIds) }
     val keepsSeq = keepIds.toList.flatMap(keepById.get)
     val keepInfosFut = keepDecorator.decorateKeepsIntoKeepInfos(
       Some(viewerId),
@@ -654,11 +654,11 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(csKeep))
   }
 
-  def editRecipientsOnKeep(editorId: Id[User], keepId: Id[Keep], persistKeepEvent: Boolean, source: Option[KeepEventSourceKind]) = Action(parse.tolerantJson) { request =>
+  def editRecipientsOnKeep(editorId: Id[User], keepId: Id[Keep], persistKeepEvent: Boolean, source: Option[KeepEventSource]) = Action(parse.tolerantJson) { request =>
     val diff = (request.body \ "diff").as[KeepRecipientsDiff](KeepRecipientsDiff.internalFormat)
     db.readWrite { implicit s =>
       keepMutator.unsafeModifyKeepRecipients(keepId, diff, Some(editorId))
-      if (persistKeepEvent) keepEventCommander.registerKeepEvent(keepId, KeepEventData.ModifyRecipients(editorId, diff), source, eventTime = None)
+      if (persistKeepEvent) keepEventCommander.persistKeepEvent(keepId, KeepEventData.ModifyRecipients(editorId, diff), source, eventTime = None)
     }
     NoContent
   }

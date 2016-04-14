@@ -8,7 +8,7 @@ import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.core._
 import com.keepit.common.db.Id.ord
 import com.keepit.common.db.slick.Database
-import com.keepit.common.db.{ Id, SequenceNumber }
+import com.keepit.common.db.{ ExternalId, Id, SequenceNumber }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.SlackLog
 import com.keepit.common.social.BasicUserRepo
@@ -43,6 +43,7 @@ object SlackPushingActor {
   val KEEP_TITLE_MAX_DISPLAY_LENGTH = 60
 
   val imageUrlRegex = """^https?://[^\s]*\.(png|jpg|jpeg|gif)""".r
+  val jenUserId = ExternalId[User]("ae139ae4-49ad-4026-b215-1ece236f1322")
 
   sealed abstract class PushItem(val time: DateTime)
   object PushItem {
@@ -273,7 +274,7 @@ class SlackPushingActor @Inject() (
             }
             ()
           }.recover {
-            case SlackErrorCode(EDIT_WINDOW_CLOSED) | SlackErrorCode(CANT_UPDATE_MESSAGE) | SlackErrorCode(CHANNEL_NOT_FOUND) =>
+            case SlackErrorCode(EDIT_WINDOW_CLOSED) | SlackErrorCode(CANT_UPDATE_MESSAGE) | SlackErrorCode(CHANNEL_NOT_FOUND) | SlackErrorCode(MESSAGE_NOT_FOUND) =>
               slackLog.warn(s"Failed to update keep ${k.id.get} because slack says it's uneditable, removing it from the cache")
               db.readWrite { implicit s => slackPushForKeepRepo.save(oldPush.uneditable) }
               ()
@@ -300,7 +301,7 @@ class SlackPushingActor @Inject() (
             }
             ()
           }.recover {
-            case SlackErrorCode(EDIT_WINDOW_CLOSED) | SlackErrorCode(CANT_UPDATE_MESSAGE) | SlackErrorCode(CHANNEL_NOT_FOUND) =>
+            case SlackErrorCode(EDIT_WINDOW_CLOSED) | SlackErrorCode(CANT_UPDATE_MESSAGE) | SlackErrorCode(CHANNEL_NOT_FOUND) | SlackErrorCode(MESSAGE_NOT_FOUND) =>
               slackLog.warn(s"Failed to update message ${msg.id} because slack says it's uneditable, removing it from the cache")
               db.readWrite { implicit s => slackPushForMessageRepo.save(oldPush.uneditable) }
               ()
@@ -321,29 +322,37 @@ class SlackPushingActor @Inject() (
     val changedKeepIds = changedKeeps.map(_.id.get).toSet
 
     val keepAndKtlByKeep = db.readOnlyMaster { implicit s =>
-      val keepById = keepRepo.getByIds(changedKeepIds)
+      val keepById = keepRepo.getActiveByIds(changedKeepIds)
       val ktlsByKeepId = ktlRepo.getAllByKeepIds(changedKeepIds).flatMapValues { ktls => ktls.find(_.libraryId == lts.libraryId) }
       changedKeepIds.flatAugmentWith(kId => for (k <- keepById.get(kId); ktl <- ktlsByKeepId.get(kId)) yield (k, ktl)).toMap
     }
 
     val keepsToPushFut = db.readOnlyReplicaAsync { implicit s =>
-      val attributionByKeepId = keepSourceAttributionRepo.getByKeepIds(changedKeepIds.toSet)
-      // TODO(ryan): temporarily making this more aggressive, something bad is happening in prod
-      def comesFromDestinationChannel(keep: Keep): Boolean = keep.source == KeepSource.slack
+      (keepSourceAttributionRepo.getByKeepIds(changedKeepIds.toSet), lts.lastProcessedKeep.map(ktlRepo.get))
+    }.map {
+      case (attributionByKeepId, lastPushedKtl) =>
+        def shouldKeepBePushed(keep: Keep, ktl: KeepToLibrary): Boolean = {
+          // TODO(ryan): temporarily making this more aggressive, something bad is happening in prod
+          keep.source != KeepSource.slack && ktl.addedAt.isAfter(lts.changedStatusAt)
+        }
 
-      val lastPushedKtl = lts.lastProcessedKeep.map(ktlRepo.get)
-      def hasAlreadyBeenPushed(ktl: KeepToLibrary) = lastPushedKtl.exists { last =>
-        ktl.addedAt.isBefore(last.addedAt) || (ktl.addedAt.isEqual(last.addedAt) && ktl.id.get.id <= last.id.get.id)
-      }
-      val (oldKeeps, newKeeps) = keepAndKtlByKeep.values.toSeq.partition { case (k, ktl) => hasAlreadyBeenPushed(ktl) }
-      (oldKeeps, newKeeps.filter { case (k, ktl) => !comesFromDestinationChannel(k) }, attributionByKeepId)
+        def hasAlreadyBeenPushed(ktl: KeepToLibrary) = lastPushedKtl.exists { last =>
+          ktl.addedAt.isBefore(last.addedAt) || (ktl.addedAt.isEqual(last.addedAt) && ktl.id.get.id <= last.id.get.id)
+        }
+        val (oldKeeps, newKeeps) = keepAndKtlByKeep.values.toSeq.partition { case (k, ktl) => hasAlreadyBeenPushed(ktl) }
+        (oldKeeps, newKeeps.filter { case (k, ktl) => shouldKeepBePushed(k, ktl) }, attributionByKeepId)
     }
     val msgsToPushFut = eliza.getChangedMessagesFromKeeps(changedKeepIds, lts.lastProcessedMsgSeq getOrElse SequenceNumber.ZERO).map { changedMsgs =>
       def hasAlreadyBeenPushed(msg: CrossServiceMessage) = lts.lastProcessedMsg.exists(msg.id.id <= _.id)
-      def wasSentAfterKeepWasAddedToLibrary(msg: CrossServiceMessage) = keepAndKtlByKeep.get(msg.keep).exists { case (k, ktl) => ktl.addedAt isBefore msg.sentAt }
+      def shouldMessageBePushed(msg: CrossServiceMessage) = keepAndKtlByKeep.get(msg.keep).exists {
+        case (k, ktl) =>
+          def messageWasSentAfterKeepWasAddedToThisLibrary = ktl.addedAt isBefore msg.sentAt
+          def keepWasAddedToThisLibraryAfterIntegrationWasActivated = ktl.addedAt isAfter lts.changedStatusAt
+          messageWasSentAfterKeepWasAddedToThisLibrary && keepWasAddedToThisLibraryAfterIntegrationWasActivated
+      }
       val msgsWithKeep = changedMsgs.flatAugmentWith(msg => keepAndKtlByKeep.get(msg.keep).map(_._1)).map(_.swap)
       msgsWithKeep
-        .filter { case (k, msg) => wasSentAfterKeepWasAddedToLibrary(msg) }
+        .filter { case (k, msg) => shouldMessageBePushed(msg) }
         .partition { case (k, msg) => hasAlreadyBeenPushed(msg) }
     }
 
@@ -393,19 +402,20 @@ class SlackPushingActor @Inject() (
     import DescriptionElements._
     val category = NotificationCategory.NonUser.NEW_KEEP
     val userStr = user.fold[String]("Someone")(_.firstName)
+    val userColor = user.map(u => if (u.externalId == jenUserId) LibraryColor.PURPLE else LibraryColor.byHash(Seq(keep.externalId.id, u.externalId.id)))
     val keepElement = DescriptionElements(
       s"_${keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH)}_",
       "  ",
-      "View Article" --> LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(items.slackChannelId, category, Some("viewArticle")))),
+      "View" --> LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(items.slackChannelId, category, Some("viewArticle")))),
       "|",
-      "Reply to Thread" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(items.slackChannelId, category, Some("reply"))))
+      "Reply" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(items.slackChannelId, category, Some("reply"))))
     )
 
     // TODO(cam): once you backfill, `attribution` should be non-optional so you can simplify this match
     (keep.note, attribution) match {
       case (Some(note), _) => SlackMessageRequest.fromKifi(
         text = DescriptionElements.formatForSlack(keepElement),
-        attachments = Seq(SlackAttachment.simple(DescriptionElements(s"*$userStr:*", Hashtags.format(note))).withColor(LibraryColor.BLUE.hex).withFullMarkdown)
+        attachments = Seq(SlackAttachment.simple(DescriptionElements(s"*$userStr:*", Hashtags.format(note))).withColorMaybe(userColor.map(_.hex)).withFullMarkdown)
       )
       case (None, None) => SlackMessageRequest.fromKifi(
         text = DescriptionElements.formatForSlack(DescriptionElements(s"*$userStr*", "sent", keepElement))
@@ -431,6 +441,7 @@ class SlackPushingActor @Inject() (
     import DescriptionElements._
 
     val userStr = user.fold[String]("Someone")(_.firstName)
+    val userColor = user.map(u => if (u.externalId == jenUserId) LibraryColor.PURPLE else LibraryColor.byHash(Seq(keep.externalId.id, u.externalId.id)))
 
     val category = NotificationCategory.NonUser.NEW_COMMENT
     def keepLink(subaction: String) = LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(items.slackChannelId, category, Some(subaction))))
@@ -440,9 +451,9 @@ class SlackPushingActor @Inject() (
       DescriptionElements(
         s"_${keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH)}_",
         "  ",
-        "View Article" --> keepLink("viewArticle"),
+        "View" --> keepLink("viewArticle"),
         "|",
-        "Reply to Thread" --> keepLink("reply")
+        "Reply" --> keepLink("reply")
       )
     }
 
@@ -455,7 +466,7 @@ class SlackPushingActor @Inject() (
           case Left(str) => DescriptionElements(str)
           case Right(Success((pointer, ref))) => pointer --> msgLink("lookHere")
           case Right(Failure(fail)) => "look here" --> msgLink("lookHere")
-        })).withFullMarkdown.withColor(LibraryColor.BLUE.hex) +: textAndLookHeres.collect {
+        })).withFullMarkdown.withColorMaybe(userColor.map(_.hex)) +: textAndLookHeres.collect {
           case Right(Success((pointer, ref))) =>
             imageUrlRegex.findFirstIn(ref) match {
               case Some(url) =>

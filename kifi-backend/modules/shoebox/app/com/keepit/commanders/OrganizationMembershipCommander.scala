@@ -52,6 +52,7 @@ trait OrganizationMembershipCommander {
 
   def unsafeAddMembership(request: OrganizationMembershipAddRequest, isAdmin: Boolean = false)(implicit session: RWSession): OrganizationMembershipAddResponse
   def unsafeRemoveMembership(request: OrganizationMembershipRemoveRequest, isAdmin: Boolean = false): OrganizationMembershipRemoveResponse
+  def unsafeModifyMembership(request: OrganizationMembershipModifyRequest, isAdmin: Boolean = false)(implicit session: RWSession): OrganizationMembershipModifyResponse
 }
 
 @Singleton
@@ -215,8 +216,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
       val inactiveMembershipOpt = orgMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId, excludeState = None)
       assert(inactiveMembershipOpt.forall(_.isInactive))
       val membership = OrganizationMembership(organizationId = request.orgId, userId = request.targetId, role = request.newRole)
-      val attribution = ActionAttribution(user = if (isAdmin) None else Some(request.requesterId), admin = if (isAdmin) Some(request.requesterId) else None)
-      planCommander.registerNewUser(request.orgId, request.targetId, request.newRole, attribution)
+      planCommander.registerNewUser(request.orgId, request.targetId, request.newRole, ActionAttribution(request.requesterId, isAdmin))
       orgMembershipRepo.save(membership.copy(id = inactiveMembershipOpt.map(_.id.get)))
     }
     creditRewardCommander.registerRewardTrigger(RewardTrigger.OrganizationMemberAdded(request.orgId, orgMembershipRepo.countByOrgId(request.orgId)))
@@ -238,23 +238,25 @@ class OrganizationMembershipCommanderImpl @Inject() (
   def modifyMembershipHelper(request: OrganizationMembershipModifyRequest)(implicit session: RWSession): Either[OrganizationFail, OrganizationMembershipModifyResponse] = {
     getValidationError(request) match {
       case Some(fail) => Left(fail)
-      case None =>
-        val membership = orgMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId).get
-        if (membership.role == request.newRole) Right(OrganizationMembershipModifyResponse(request, membership))
-        else {
-          val org = orgRepo.get(request.orgId)
-          val newMembership = orgMembershipRepo.save(membership.withRole(request.newRole))
-          planCommander.registerRoleChanged(org.id.get, request.targetId, from = membership.role, to = request.newRole, ActionAttribution(user = Some(request.requesterId), admin = None))
-          Right(OrganizationMembershipModifyResponse(request, newMembership))
-        }
+      case None => Right(unsafeModifyMembership(request))
+    }
+  }
+
+  def unsafeModifyMembership(request: OrganizationMembershipModifyRequest, isAdmin: Boolean = false)(implicit session: RWSession): OrganizationMembershipModifyResponse = {
+    val membership = orgMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId).get
+    if (membership.role == request.newRole) OrganizationMembershipModifyResponse(request, membership)
+    else {
+      val org = orgRepo.get(request.orgId)
+      val newMembership = orgMembershipRepo.save(membership.withRole(request.newRole))
+      planCommander.registerRoleChanged(org.id.get, request.targetId, from = membership.role, to = request.newRole, ActionAttribution(request.requesterId, isAdmin))
+      OrganizationMembershipModifyResponse(request, newMembership)
     }
   }
 
   def unsafeRemoveMembership(request: OrganizationMembershipRemoveRequest, isAdmin: Boolean = false): OrganizationMembershipRemoveResponse = {
     db.readWrite { implicit session =>
       val membership = orgMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId).get
-      val attribution = ActionAttribution(user = if (isAdmin) None else Some(request.requesterId), admin = if (isAdmin) Some(request.requesterId) else None)
-      planCommander.registerRemovedUser(request.orgId, request.targetId, membership.role, attribution)
+      planCommander.registerRemovedUser(request.orgId, request.targetId, membership.role, ActionAttribution(request.requesterId, isAdmin))
       orgMembershipRepo.deactivate(membership)
     }
     orgDomainOwnershipCommander.hideOrganizationForUser(request.targetId, request.orgId)

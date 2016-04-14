@@ -81,7 +81,7 @@ trait SlackInfoCommander {
 
   // For generating OrganizationInfo
   def getOrganizationSlackInfo(orgId: Id[Organization], viewerId: Id[User], max: Option[Int] = None)(implicit session: RSession): OrganizationSlackInfo
-  def getOrganizationSlackTeam(orgId: Id[Organization], viewerId: Id[User])(implicit session: RSession): Option[OrganizationSlackTeamInfo]
+  def getOrganizationSlackTeam(orgId: Id[Organization])(implicit session: RSession): Option[OrganizationSlackTeamInfo]
 
   // For generating UserProfileStats
   def getUserSlackInfo(userId: Id[User], viewerId: Option[Id[User]])(implicit session: RSession): UserSlackInfo
@@ -178,14 +178,14 @@ class SlackInfoCommanderImpl @Inject() (
     }.toMap
   }
 
-  def getOrganizationSlackTeam(orgId: Id[Organization], viewerId: Id[User])(implicit session: RSession): Option[OrganizationSlackTeamInfo] = {
+  def getOrganizationSlackTeam(orgId: Id[Organization])(implicit session: RSession): Option[OrganizationSlackTeamInfo] = {
     slackTeamRepo.getByOrganizationId(orgId).map(team => OrganizationSlackTeamInfo(team.slackTeamId, team.slackTeamName, team.publicChannelsLastSyncedAt))
   }
 
   @StatsdTiming("SlackInfoCommander.getOrganizationSlackInfo")
   def getOrganizationSlackInfo(orgId: Id[Organization], viewerId: Id[User], max: Option[Int])(implicit session: RSession): OrganizationSlackInfo = {
     val (libIds, basicLibsById, integrationInfosByLib, slackTeam) = {
-      val slackTeamOpt = getOrganizationSlackTeam(orgId, viewerId)
+      val slackTeamOpt = getOrganizationSlackTeam(orgId)
       val slackTeamIdOpt = slackTeamOpt.map(_.id)
       val (visibleLibraryIds, visibleSlackToLibs, visibleLibToSlacks) = {
         val allSlackToLibs = slackTeamIdOpt.map(channelToLibRepo.getBySlackTeam(_)) getOrElse Seq.empty

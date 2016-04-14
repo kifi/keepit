@@ -2,6 +2,7 @@ package com.keepit.commanders
 
 import com.google.inject.Injector
 import com.keepit.commanders.gen.KeepActivityGen
+import com.keepit.commanders.gen.KeepActivityGen.SerializationInfo
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.{ FakeAirbrakeNotifier, AirbrakeNotifier }
@@ -55,13 +56,13 @@ class KeepActivityGenTest extends Specification with ShoeboxTestInjector {
           Map(userIdsToAdd.take(2) -> true, libIdsToAdd.take(4) -> false, userIdsToAdd.takeRight(2) -> true, libIdsToAdd.takeRight(4) -> false).map {
             case (ids, true) => // users
               val adding = ids.map(id => Id[User](id.id))
-              keepEventCommander.registerKeepEvent(keep.id.get, KeepEventData.ModifyRecipients(user.id.get, KeepRecipientsDiff.addUsers(adding)), eventTime = Some(fakeClock.now()), source = None)
+              keepEventCommander.persistKeepEventAndUpdateEliza(keep.id.get, KeepEventData.ModifyRecipients(user.id.get, KeepRecipientsDiff.addUsers(adding)), eventTime = Some(fakeClock.now()), source = None)
               fakeClock += Hours.ONE
-              val entities = adding.map(id => fromBasicUser(basicUserById(id))).toSeq
+              val entities = adding.map(id => generateUserElement(basicUserById(id), fullName = false)).toSeq
               DescriptionElements.formatPlain(DescriptionElements(basicUser, "added", unwordsPretty(entities), "to this discussion"))
             case (ids, false) => // libraries
               val adding = ids.map(id => Id[Library](id.id))
-              keepEventCommander.registerKeepEvent(keep.id.get, KeepEventData.ModifyRecipients(user.id.get, KeepRecipientsDiff.addLibraries(adding)), eventTime = Some(fakeClock.now()), source = None)
+              keepEventCommander.persistKeepEventAndUpdateEliza(keep.id.get, KeepEventData.ModifyRecipients(user.id.get, KeepRecipientsDiff.addLibraries(adding)), eventTime = Some(fakeClock.now()), source = None)
               fakeClock += Hours.ONE
               val entities = adding.map(id => fromBasicLibrary(basicLibById(id))).toSeq
               DescriptionElements.formatPlain(DescriptionElements(basicUser, "added", unwordsPretty(entities), "to this discussion"))
@@ -70,10 +71,8 @@ class KeepActivityGenTest extends Specification with ShoeboxTestInjector {
 
         val events = db.readOnlyMaster { implicit s => inject[KeepEventRepo].pageForKeep(keep.id.get, fromTime = None, limit = 10) }
 
-        val activity = KeepActivityGen.generateKeepActivity(
-          keep, sourceAttrOpt = None, events = events, discussionOpt = None, ktls = Seq.empty, ktus,
-          basicUserById, basicLibById, orgByLibraryId = Map.empty,
-          maxEvents = 5)
+        implicit val info = SerializationInfo(basicUserById, basicLibById, orgByLibraryId = Map.empty)
+        val activity = KeepActivityGen.generateKeepActivity(keep, sourceAttrOpt = None, events = events, discussionOpt = None, ktls = Seq.empty, ktus, maxEvents = 5)
 
         activity.events.size === 5
         activity.events.map { event => DescriptionElements.formatPlain(event.header) } === (eventHeaders.reverse :+ "Benjamin Button kept this")

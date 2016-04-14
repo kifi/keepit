@@ -7,8 +7,9 @@ import com.keepit.heimdal._
 import com.keepit.realtime._
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
+import com.keepit.common.core.optionExtensionOps
 import com.keepit.common.akka.SafeFuture
-import com.keepit.model.{ Keep, Organization, NotificationCategory, User }
+import com.keepit.model.{ KeepEventSource, Keep, Organization, NotificationCategory, User }
 import com.keepit.common.db.{ ExternalId, Id }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -26,6 +27,7 @@ class MessagingAnalytics @Inject() (
     shoebox: ShoeboxServiceClient,
     threadRepo: MessageThreadRepo,
     db: Database,
+    clock: Clock,
     implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
 
   private val kifi = "kifi"
@@ -183,7 +185,7 @@ class MessagingAnalytics @Inject() (
     }
   }
 
-  def addedParticipantsToConversation(userId: Id[User], newUserParticipants: Seq[Id[User]], newNonUserParticipants: Seq[NonUserParticipant], thread: MessageThread, existingContext: HeimdalContext) = {
+  def addedParticipantsToConversation(userId: Id[User], newUserParticipants: Seq[Id[User]], newNonUserParticipants: Seq[NonUserParticipant], thread: MessageThread, source: Option[KeepEventSource], existingContext: HeimdalContext) = {
     val addedAt = currentDateTime
     SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
@@ -195,22 +197,22 @@ class MessagingAnalytics @Inject() (
       contextBuilder += ("newParticipantKinds", newUserParticipants.map(_ => "user") ++ newNonUserParticipants.map(_.kind.name))
       contextBuilder += ("participantsAdded", newNonUserParticipants.length)
       contextBuilder += ("uriId", thread.uriId.toString)
+      source.foreach { src => contextBuilder += ("source", src.value) }
       addParticipantsInfo(contextBuilder, thread.participants)
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.MESSAGED, addedAt))
     }
   }
 
-  def sentMessage(sender: MessageSender, message: ElizaMessage, thread: MessageThread, isActuallyNew: Option[Boolean], existingContext: HeimdalContext) = {
-    val sentAt = currentDateTime
+  def sentMessage(message: ElizaMessage, thread: MessageThread, isActuallyNew: Option[Boolean], existingContext: HeimdalContext) = {
+    val sentAt = message.createdAt
     SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
       contextBuilder.data ++= existingContext.data
-      isActuallyNew match {
-        case Some(isNew) => {
-          contextBuilder += ("action", "startedConversation")
-          contextBuilder += ("isNewConversation", isNew)
-        }
-        case None => contextBuilder += ("action", "replied")
+      if (message.from.asUser.safely.contains(thread.startedBy) && thread.numMessages <= 1) {
+        contextBuilder += ("action", "startedConversation")
+        contextBuilder += ("isNewConversation", isActuallyNew getOrElse false)
+      } else {
+        contextBuilder += ("action", "replied")
       }
 
       contextBuilder += ("threadId", thread.pubKeepId.id)
@@ -218,7 +220,7 @@ class MessagingAnalytics @Inject() (
       message.source.foreach { source => contextBuilder += ("source", source.value) }
       contextBuilder += ("uriId", thread.uriId.toString)
       addParticipantsInfo(contextBuilder, thread.participants)
-      sender match {
+      message.from match {
         case MessageSender.User(userId) =>
           val uriId = thread.uriId
           shoebox.getPersonalKeepRecipientsOnUris(userId, Set(uriId)).foreach { personalKeeps =>

@@ -281,6 +281,14 @@ k.compose = k.compose || (function() {
           editor.clear();
           editor.$el.focus();
         }
+      })
+      .catch(function () {
+        $form.on('animationend', function animationEnd() {
+          $form.off('animationend', animationEnd).removeClass('kifi-shake');
+        })
+        .addClass('kifi-shake');
+      })
+      .finally(function () {
         $submit.prop('href', 'javascript:');
         $form.data('submitted', false);
       });

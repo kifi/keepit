@@ -54,7 +54,7 @@ class ElizaDiscussionCommanderTest extends TestKitSupport with SpecificationLike
             MessageThreadFactory.thread().withKeep(keepNoMessages).saved
           }
 
-          val ans = Await.result(discussionCommander.getDiscussionsForKeeps(Set(keep, keepNoMessages, keepNoThread), maxMessagesShown = 5), Duration.Inf)
+          val ans = Await.result(discussionCommander.getDiscussionsForKeeps(Set(keep, keepNoMessages, keepNoThread), fromTime = None, maxMessagesShown = 5), Duration.Inf)
 
           ans(keep).numMessages === 10
           ans(keep).messages must haveLength(5)
@@ -75,7 +75,7 @@ class ElizaDiscussionCommanderTest extends TestKitSupport with SpecificationLike
             val sysMessage = MessageFactory.message().withThread(thread).from(MessageSender.System).saved
           }
 
-          val ans = Await.result(discussionCommander.getDiscussionsForKeeps(Set(keep), maxMessagesShown = 5), Duration.Inf)
+          val ans = Await.result(discussionCommander.getDiscussionsForKeeps(Set(keep), fromTime = None, maxMessagesShown = 5), Duration.Inf)
 
           ans(keep).numMessages === 1
           ans(keep).messages must haveLength(1)
@@ -110,7 +110,7 @@ class ElizaDiscussionCommanderTest extends TestKitSupport with SpecificationLike
             userThreadRepo.getByKeep(keep) must haveSize(2)
           }
 
-          val ans = Await.result(discussionCommander.getDiscussionsForKeeps(Set(keep), maxMessagesShown = 5), Duration.Inf).get(keep)
+          val ans = Await.result(discussionCommander.getDiscussionsForKeeps(Set(keep), fromTime = None, maxMessagesShown = 5), Duration.Inf).get(keep)
           inject[WatchableExecutionContext].drain()
           ans must beSome
           ans.get.numMessages === 2

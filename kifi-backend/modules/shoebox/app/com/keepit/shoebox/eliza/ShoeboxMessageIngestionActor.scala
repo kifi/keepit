@@ -57,7 +57,7 @@ class ShoeboxMessageIngestionActor @Inject() (
     messages.map(_.seq).maxOpt.foreach { maxSeq =>
       val messagesByKeep = messages.groupBy(_.keep)
       db.readWrite { implicit session =>
-        val keeps = keepRepo.getByIds(messagesByKeep.keySet).values
+        val keeps = keepRepo.getActiveByIds(messagesByKeep.keySet).values
         session.onTransactionSuccess {
           slackPusher.schedule(keeps.flatMap(_.recipients.libraries).toSet)
         }

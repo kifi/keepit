@@ -79,7 +79,7 @@ class SlackPersonalDigestNotificationGenerator @Inject() (
     val attributions = attributionRepo.getByKeepIds(keepsForThisMembership).collect {
       case (keepId, slack: SlackAttribution) => keepId -> slack
     }
-    val keepsById = keepRepo.getByIds(keepsForThisMembership)
+    val keepsById = keepRepo.getActiveByIds(keepsForThisMembership)
     val attributionsByChannel = attributions.groupBy(_._2.message.channel)
     val oldestIntegrationByChannel = channelToLibRepo.getBySlackTeam(membership.slackTeamId).groupBy(_.slackChannelId).mapValuesStrict { integrations =>
       integrations.map(_.createdAt).min

@@ -42,14 +42,14 @@ trait NotificationDeliveryCommander {
   // todo: For each method here, remove if no one's calling it externally, and set as private in the implementation
   def updateEmailParticipantThreads(thread: MessageThread, newMessage: ElizaMessage): Unit
   def notifyEmailParticipants(thread: MessageThread): Unit
-  def notifyAddParticipants(newParticipants: Seq[Id[User]], newNonUserParticipants: Seq[NonUserParticipant], thread: MessageThread, message: ElizaMessage, adderUserId: Id[User]): Unit
+  def notifyAddParticipants(adderUserId: Id[User], newParticipants: Seq[Id[User]], newNonUserParticipants: Seq[NonUserParticipant], thread: MessageThread, message: ElizaMessage, source: Option[KeepEventSource]): Unit
   def notifyMessage(userId: Id[User], keepId: PublicId[Keep], message: MessageWithBasicUser): Unit
-  def notifyEvent(userId: Id[User], keepId: PublicId[Keep], event: BasicKeepEvent): Unit
   def notifyRead(userId: Id[User], keepId: Id[Keep], messageId: Id[ElizaMessage], nUrl: String, creationDate: DateTime): Unit
   def notifyUnread(userId: Id[User], keepId: Id[Keep], messageId: Id[ElizaMessage], nUrl: String, creationDate: DateTime): Unit
   def notifyUnreadCount(userId: Id[User]): Unit
   def notifyRemoveThread(userId: Id[User], keepId: Id[Keep]): Unit
   def sendToUser(userId: Id[User], data: JsArray): Unit
+  def sendKeepEvent(userId: Id[User], keepId: PublicId[Keep], event: BasicKeepEvent): Unit
   def sendUserPushNotification(userId: Id[User], message: String, recipientUserId: ExternalId[User], username: Username, pictureUrl: String, pushNotificationExperiment: PushNotificationExperiment, category: UserPushNotificationCategory): Future[Int]
   def sendLibraryPushNotification(userId: Id[User], message: String, libraryId: Id[Library], libraryUrl: String, pushNotificationExperiment: PushNotificationExperiment, category: LibraryPushNotificationCategory, force: Boolean): Future[Int]
   def sendGeneralPushNotification(userId: Id[User], message: String, pushNotificationExperiment: PushNotificationExperiment, category: SimplePushNotificationCategory, force: Boolean): Future[Int]
@@ -121,7 +121,7 @@ class NotificationDeliveryCommanderImpl @Inject() (
     emailCommander.notifyEmailUsers(thread)
   }
 
-  def notifyAddParticipants(newParticipants: Seq[Id[User]], newNonUserParticipants: Seq[NonUserParticipant], thread: MessageThread, message: ElizaMessage, adderUserId: Id[User]): Unit = {
+  def notifyAddParticipants(adderUserId: Id[User], newParticipants: Seq[Id[User]], newNonUserParticipants: Seq[NonUserParticipant], thread: MessageThread, message: ElizaMessage, source: Option[KeepEventSource]): Unit = {
     new SafeFuture(shoebox.getBasicUsers(thread.participants.allUsers.toSeq) map { basicUsers =>
       val adderUserName = basicUsers.get(adderUserId).map { bu => bu.firstName + " " + bu.lastName }.get
       val theTitle: String = thread.pageTitle.getOrElse("New conversation")
@@ -162,9 +162,6 @@ class NotificationDeliveryCommanderImpl @Inject() (
   def notifyMessage(userId: Id[User], keepId: PublicId[Keep], message: MessageWithBasicUser): Unit =
     sendToUser(userId, Json.arr("message", keepId, message))
 
-  def notifyEvent(userId: Id[User], keepId: PublicId[Keep], event: BasicKeepEvent): Unit =
-    sendToUser(userId, Json.arr("event", keepId, event))
-
   def notifyRead(userId: Id[User], keepId: Id[Keep], messageId: Id[ElizaMessage], nUrl: String, creationDate: DateTime): Unit = {
     // TODO(ryan): stop manually forcing the date to go to millis, fix the Json formatter
     sendToUser(userId, Json.arr("message_read", nUrl, Keep.publicId(keepId), creationDate.getMillis, Message.publicId(ElizaMessage.toCommonId(messageId))))
@@ -196,6 +193,8 @@ class NotificationDeliveryCommanderImpl @Inject() (
 
   def sendToUser(userId: Id[User], data: JsArray): Unit =
     notificationRouter.sendToUser(userId, data)
+
+  def sendKeepEvent(userId: Id[User], keepId: PublicId[Keep], event: BasicKeepEvent): Unit = sendToUser(userId, Json.arr("event", keepId, event))
 
   def sendUserPushNotification(userId: Id[User], message: String, recipientUserId: ExternalId[User], username: Username, pictureUrl: String, pushNotificationExperiment: PushNotificationExperiment, category: UserPushNotificationCategory): Future[Int] = {
     val notification = UserPushNotification(message = Some(message), userExtId = recipientUserId, username = username, pictureUrl = pictureUrl, unvisitedCount = getTotalUnreadUnmutedCount(userId), category = category, experiment = pushNotificationExperiment)
