@@ -20,11 +20,13 @@ import scala.concurrent.ExecutionContext
 class OrganizationController @Inject() (
     orgCommander: OrganizationCommander,
     orgInfoCommander: OrganizationInfoCommander,
+    userProfileCommander: UserProfileCommander,
     orgMembershipCommander: OrganizationMembershipCommander,
     orgInviteCommander: OrganizationInviteCommander,
     userCommander: UserCommander,
     libraryInfoCommander: LibraryInfoCommander,
     libraryQueryCommander: LibraryQueryCommander,
+    userValueRepo: UserValueRepo,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     val userActionsHelper: UserActionsHelper,
     val db: Database,
@@ -109,12 +111,11 @@ class OrganizationController @Inject() (
     Ok(Json.obj("libraries" -> libCards))
   }
 
-  def getLHRLibrariesForOrg(pubId: PublicId[Organization], orderingOpt: Option[String], directionOpt: Option[String], offset: Int, limit: Int, windowSize: Option[Int]) = OrganizationUserAction(pubId, OrganizationPermission.VIEW_ORGANIZATION) { request =>
-    val arrangement = for {
-      ordering <- orderingOpt.flatMap(LibraryOrdering.fromStr)
-      direction <- directionOpt.flatMap(SortDirection.fromStr)
-    } yield Arrangement(ordering, direction)
-    val basicLibs = db.readOnlyMaster(implicit s => libraryQueryCommander.getLHRLibrariesForOrg(request.request.userId, request.orgId, arrangement, fromIdOpt = None, Offset(offset), Limit(limit), windowSize))
+  def getLHRLibrariesForOrg(pubId: PublicId[Organization], offset: Int, limit: Int, windowSize: Option[Int]) = OrganizationUserAction(pubId, OrganizationPermission.VIEW_ORGANIZATION) { request =>
+    val basicLibs = db.readOnlyMaster { implicit s =>
+      val sortingArrangement = userProfileCommander.getLHRSortingArrangement(request.request.userId)
+      libraryQueryCommander.getLHRLibrariesForOrg(request.request.userId, request.orgId, sortingArrangement, fromIdOpt = None, Offset(offset), Limit(limit), windowSize)
+    }
     Ok(Json.obj("libraries" -> basicLibs))
   }
 

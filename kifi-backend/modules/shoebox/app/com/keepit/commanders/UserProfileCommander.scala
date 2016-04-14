@@ -284,15 +284,19 @@ class UserProfileCommander @Inject() (
     UserValueSettings.readFromJsValue(settingsJs)
   }
 
+  def getLHRSortingArrangement(userId: Id[User])(implicit session: RSession): Arrangement = {
+    import LibraryQuery._
+    val userSettings = UserValueSettings.readFromJsValue(userValueRepo.getValue(userId, UserValues.userProfileSettings))
+    userSettings.leftHandRailSort match {
+      case LibraryOrdering.LAST_KEPT_INTO => Arrangement(LibraryOrdering.LAST_KEPT_INTO, SortDirection.DESCENDING)
+      case LibraryOrdering.ALPHABETICAL => Arrangement(LibraryOrdering.ALPHABETICAL, SortDirection.ASCENDING)
+      case _ => throw new Exception(s"unknown sorting value ${userSettings.leftHandRailSort}")
+    }
+  }
+
   def getLeftHandRailResponse(userId: Id[User], numLibs: Int, windowSize: Option[Int]): LeftHandRailResponse = {
     db.readOnlyMaster { implicit s =>
-      import LibraryQuery._
-      val userSettings = UserValueSettings.readFromJsValue(userValueRepo.getValue(userId, UserValues.userProfileSettings))
-      val sortingArrangement = userSettings.leftHandRailSort match {
-        case LibraryOrdering.LAST_KEPT_INTO => Arrangement(LibraryOrdering.LAST_KEPT_INTO, SortDirection.DESCENDING)
-        case LibraryOrdering.ALPHABETICAL => Arrangement(LibraryOrdering.ALPHABETICAL, SortDirection.ASCENDING)
-        case _ => throw new Exception(s"unknown sorting value ${userSettings.leftHandRailSort}")
-      }
+      val sortingArrangement = getLHRSortingArrangement(userId)
       val orgIds = orgMembershipRepo.getAllByUserId(userId).map(_.organizationId)
 
       val userLibs = libQueryCommander.getLHRLibrariesForUser(userId, sortingArrangement, fromIdOpt = None, offset = Offset(0), limit = Limit(numLibs), windowSize)
