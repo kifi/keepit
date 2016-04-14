@@ -350,35 +350,7 @@ k.panes.thread = k.panes.thread || function () {
     };
     var $rendered = $(k.render('html/keeper/message_keepscussion', formattedEvent, partials));
     $rendered.find('time').timeago();
-    insertEllipsisIfStampOverlaps($rendered);
     return $rendered;
-  }
-
-  // TODO(carlos) This function could potentially be slow.
-  // Consider cost vs. benefits
-  function insertEllipsisIfStampOverlaps($rendered) {
-    var alreadyHeld = !!$holder.find($rendered).length;
-    var $stamp = $rendered.find('.kifi-message-sent-header-stamp')[0];
-    var $stampSibling = $stamp && $stamp.previousElementSibling;
-    if ($stampSibling) {
-      if (!alreadyHeld) {
-        $rendered.appendTo($holder);
-      }
-
-      $stamp.classList.add('kifi-message-sent-header-stamp-dummy');
-      $stamp.style.display = 'inline-block';
-      var rects = $stampSibling.getClientRects();
-      var lastRect = rects[rects.length - 1];
-      if (lastRect.right > $stamp.getBoundingClientRect().left) {
-        $stamp.classList.add('kifi-message-sent-header-stamp-ellipsis');
-      }
-      $stamp.style.display = null;
-      $stamp.classList.remove('kifi-message-sent-header-stamp-dummy');
-
-      if (!alreadyHeld) {
-        $rendered.remove();
-      }
-    }
   }
 
   function formatActivityEvent(keep, e) {
