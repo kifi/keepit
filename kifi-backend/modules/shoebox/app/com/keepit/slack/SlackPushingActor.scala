@@ -412,7 +412,30 @@ class SlackPushingActor @Inject() (
     )
 
     // TODO(cam): once you backfill, `attribution` should be non-optional so you can simplify this match
-    (keep.note, attribution) match {
+    if (slackTeamId == KifiSlackApp.BrewstercorpTeamId || slackTeamId == KifiSlackApp.KifiSlackTeamId) {
+      (keep.note, attribution) match {
+        case (Some(note), _) => SlackMessageRequest.fromKifi(
+          text = DescriptionElements.formatForSlack(DescriptionElements(s"*$userStr:*", Hashtags.format(note))),
+          attachments = Seq(SlackAttachment.simple(keepElement))
+        )
+        case (None, None) => SlackMessageRequest.fromKifi(
+          text = DescriptionElements.formatForSlack(DescriptionElements(s"*$userStr*", "sent", keepElement))
+        )
+        case (None, Some(attr)) => attr match {
+          case ka: KifiAttribution => SlackMessageRequest.fromKifi(
+            text = DescriptionElements.formatForSlack(DescriptionElements(s"*${ka.keptBy.firstName}*", "sent", keepElement))
+          )
+          case TwitterAttribution(tweet) => SlackMessageRequest.fromKifi(
+            text = DescriptionElements.formatForSlack(DescriptionElements(s"*${tweet.user.name}:*", Hashtags.format(tweet.text))),
+            attachments = Seq(SlackAttachment.simple(keepElement))
+          )
+          case SlackAttribution(msg, team) => SlackMessageRequest.fromKifi(
+            text = DescriptionElements.formatForSlack(DescriptionElements(s"*${msg.username.value}:*", msg.text)),
+            attachments = Seq(SlackAttachment.simple(keepElement))
+          )
+        }
+      }
+    } else (keep.note, attribution) match {
       case (Some(note), _) => SlackMessageRequest.fromKifi(
         text = DescriptionElements.formatForSlack(keepElement),
         attachments = Seq(SlackAttachment.simple(DescriptionElements(s"*$userStr:*", Hashtags.format(note))).withColorMaybe(userColor.map(_.hex)).withFullMarkdown)
@@ -458,7 +481,29 @@ class SlackPushingActor @Inject() (
     }
 
     val textAndLookHeres = CrossServiceMessage.splitOutLookHeres(msg.text)
-    SlackMessageRequest.fromKifi(
+
+    if (slackTeamId == KifiSlackApp.BrewstercorpTeamId || slackTeamId == KifiSlackApp.KifiSlackTeamId) {
+      SlackMessageRequest.fromKifi(
+        text = if (msg.isDeleted) "[comment has been deleted]"
+        else DescriptionElements.formatForSlack(DescriptionElements(s"*$userStr:*", textAndLookHeres.map {
+          case Left(str) => DescriptionElements(str)
+          case Right(Success((pointer, ref))) => pointer --> msgLink("lookHere")
+          case Right(Failure(fail)) => "look here" --> msgLink("lookHere")
+        })),
+        attachments = textAndLookHeres.collect {
+          case Right(Success((pointer, ref))) =>
+            imageUrlRegex.findFirstIn(ref) match {
+              case Some(url) =>
+                SlackAttachment.simple(DescriptionElements(SlackEmoji.magnifyingGlass, pointer --> msgLink("lookHereImage"))).withImageUrl(url)
+              case None =>
+                SlackAttachment.simple(DescriptionElements(
+                  SlackEmoji.magnifyingGlass, pointer --> msgLink("lookHere"), ": ",
+                  DescriptionElements.unlines(ref.lines.toSeq.map(ln => DescriptionElements(s"_${ln}_")))
+                )).withFullMarkdown
+            }
+        } :+ SlackAttachment.simple(keepElement)
+      )
+    } else SlackMessageRequest.fromKifi(
       text = DescriptionElements.formatForSlack(keepElement),
       attachments =
         if (msg.isDeleted) Seq(SlackAttachment.simple("[comment has been deleted]"))
