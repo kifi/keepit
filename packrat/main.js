@@ -893,6 +893,18 @@ api.port.on({
       }, respond.bind(null, false));
     }
   },
+  save_keepscussion_title: function (data, respond, tab) {
+    var d = pageData[tab.nUri];
+    if (d) {
+      var keep = keepData[data.keepId];
+      setKeepTitle(data.keepId, data.newTitle, api.browser.name)
+      .then(function () {
+        keep.title = data.newTitle;
+        respond(true);
+      })
+      .catch(respond.bind(null, false));
+    }
+  },
   save_keep_image: function (data, respond, tab) {
     var d = pageData[tab.nUri];
     if (d) {
@@ -2922,6 +2934,12 @@ function getKeepAndActivity(keepId) {
       page: keepResponseData.page,
       activity: activityResponseData
     }
+  });
+}
+
+function setKeepTitle(keepId, newTitle, source) {
+  return new Promise(function (resolve, reject) {
+    ajax('POST', '/api/1/keeps/' + keepId + '/title', { newTitle: newTitle, source: source }, resolve, reject);
   });
 }
 
