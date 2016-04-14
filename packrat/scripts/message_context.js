@@ -3,6 +3,7 @@
 // @require scripts/html/keeper/message_context.js
 // @require scripts/lib/q.min.js
 // @require scripts/lib/jquery.js
+// @require scripts/progress.js
 // @require scripts/formatting.js
 // @require scripts/render.js
 
@@ -39,8 +40,6 @@ k.messageContext = k.messageContext || (function ($) {
      * @property {Object}
      */
     parent: null,
-
-    onDocClick: null,
 
     /**
      * Initializes a Message Participants.
@@ -221,82 +220,34 @@ k.messageContext = k.messageContext || (function ($) {
   };
 
   function saveKeepTitleIfChanged($view) {
-    var library = this.getKeep().recipients.libraries[0];
+    var keep = this.getKeep();
+    var keepId = keep.id;
 
-    if (!$view) return;  // already removed, no data
+    if (!$view) {
+      return;  // already removed, no data
+    }
+
+    var deferred = Q.defer();
     var input = $view.find('.kifi-message-context-controls-title')[0];
     var data = $view.data();
     var val = input.value.trim();
+
+    k.progress.emptyAndShow($view, deferred.promise);
+
     if (val && val !== data['title' in data.saving ? 'saving' : 'saved'].title) {
-      var deferred = Q.defer();
       data.saving.title = val;
-      api.port.emit('save_keep_title', {libraryId: library.id, title: val}, function (success) {
+      api.port.emit('save_keepscussion_title', {keepId: keepId, newTitle: val}, function (success) {
         if (data.saving.title === val) {
           delete data.saving.title;
         }
+
         if (success) {
-          data.saved.title = val;
+          keep.title = data.saved.title = val;
           deferred.resolve();
         } else {
           deferred.reject();
         }
       });
-      showSaveKeepProgress($view, deferred.promise);
     }
-  }
-
-  function showSaveKeepProgress($view, promise) {
-    var $pp = $view.find('.kifi-progress-parent').empty();
-    progress($pp, promise).fin(function () {
-      $pp.children().delay(300).fadeOut(300);
-    });
-  }
-
-  // Takes a promise for a task's outcome. Returns a promise that relays
-  // the outcome after visual indication of the outcome is complete.
-  function progress(parent, promise) {
-    var $el = $('<div class="kifi-progress"/>').appendTo(parent);
-    var frac = 0, ms = 10, deferred = Q.defer();
-
-    var timeout;
-    function update() {
-      var left = 0.9 - frac;
-      frac += 0.06 * left;
-      $el[0].style.width = Math.min(frac * 100, 100) + '%';
-      if (left > 0.0001) {
-        timeout = setTimeout(function () {
-          update();
-        }, ms);
-      }
-    }
-    timeout = setTimeout(function () {
-      update();
-    }, ms);
-
-    promise.done(function (val) {
-      log('[progress:done]');
-      clearTimeout(timeout);
-      timeout = null;
-      $el.on('transitionend', function (e) {
-        if (e.originalEvent.propertyName === 'clip') {
-          $el.off('transitionend');
-          deferred.resolve(val);
-        }
-      }).addClass('kifi-done');
-    }, function (reason) {
-      log('[progress:fail]');
-      clearTimeout(timeout);
-      timeout = null;
-      var finishFail = function () {
-        $el.remove();
-        deferred.reject(reason);
-      };
-      if ($el[0].offsetWidth) {
-        $el.one('transitionend', finishFail).addClass('kifi-fail');
-      } else {
-        finishFail();
-      }
-    });
-    return deferred.promise;
   }
 })(jQuery, this);

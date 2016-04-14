@@ -75,39 +75,3 @@
     opacity: 1;
   }
 }
-
-.kifi-progress-parent {
-  position: relative;
-}
-.kifi-progress {
-  position: absolute;
-  left: 0;
-  bottom: -1px;
-  height: 2px;
-  width: 0;
-  background: #7bacf1;
-  &.kifi-done {
-    width: 100% !important;
-    transition: width .16s ease-in-out;
-  }
-  &.kifi-fail {
-    background: #b00;
-    width: 0 !important;
-    transition: width .24s ease-in-out;
-  }
-  &::after {
-    content: '';
-    position: absolute;
-    bottom: 5px;
-    right: 4px;
-    width: 16px;
-    height: 12px;
-    @url: %(@kifi-symbol-check, #48b07a);
-    background: url(@url) right center/contain no-repeat !important;
-    clip: rect(0,0,12px,0);
-    transition: clip .16s .16s;
-  }
-  &.kifi-done::after {
-    clip: rect(0,16px,12px,0);
-  }
-}

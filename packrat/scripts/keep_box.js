@@ -18,6 +18,7 @@
 // @require scripts/listen.js
 // @require scripts/title_from_url.js
 // @require scripts/send_chooser.js
+// @require scripts/progress.js
 
 k.keepBox = k.keepBox || (function () {
   'use strict';
@@ -689,7 +690,7 @@ k.keepBox = k.keepBox || (function () {
         });
       } else {
         el.style.position = 'relative';
-        progress(el, tryKeepTo(library, guided)).done(function (keep) {
+        k.progress.show(el, tryKeepTo(library, guided)).done(function (keep) {
           showKeep(library, subsource, trigger, guided, true);
         });
       }
@@ -771,7 +772,7 @@ k.keepBox = k.keepBox || (function () {
     });
     $btn.fadeOut(160);
     var $kept = $btn.parent();
-    progress($kept, deferred.promise).done(function () {
+    k.progress.show($kept, deferred.promise).done(function () {
       var $fromHead = $kept.next().hasClass('kifi-keep-box-lib-head') ? $kept.prev('.kifi-keep-box-lib-head') : $();
       var $from = $('<div class="kifi-keep-box-lib-unkept-from"/>').insertAfter($kept);
       $kept.addClass('kifi-unkeeping');
@@ -1142,7 +1143,7 @@ k.keepBox = k.keepBox || (function () {
           deferred.reject();
         }
       });
-      showSaveKeepProgress($view, deferred.promise);
+      k.progress.emptyAndShow($view, deferred.promise);
     }
   }
 
@@ -1165,7 +1166,7 @@ k.keepBox = k.keepBox || (function () {
           deferred.reject();
         }
       });
-      showSaveKeepProgress($view, deferred.promise);
+      k.progress.emptyAndShow($view, deferred.promise);
     }
   }
 
@@ -1188,61 +1189,8 @@ k.keepBox = k.keepBox || (function () {
           deferred.reject();
         }
       });
-      showSaveKeepProgress($view, deferred.promise);
+      k.progress.emptyAndShow($view, deferred.promise);
     }
-  }
-
-  function showSaveKeepProgress($view, promise) {
-    var $pp = $view.find('.kifi-keep-box-progress-parent').empty();
-    progress($pp, promise).fin(function () {
-      $pp.children().delay(300).fadeOut(300);
-    });
-  }
-
-  // Takes a promise for a task's outcome. Returns a promise that relays
-  // the outcome after visual indication of the outcome is complete.
-  function progress(parent, promise) {
-    var $el = $('<div class="kifi-keep-box-progress"/>').appendTo(parent);
-    var frac = 0, ms = 10, deferred = Q.defer();
-
-    var timeout;
-    function update() {
-      var left = .9 - frac;
-      frac += .06 * left;
-      $el[0].style.width = Math.min(frac * 100, 100) + '%';
-      if (left > .0001) {
-        timeout = setTimeout(function () {
-          update();
-        }, ms);
-      }
-    }
-    timeout = setTimeout(function () {
-      update();
-    }, ms);
-
-    promise.done(function (val) {
-      log('[progress:done]');
-      clearTimeout(timeout), timeout = null;
-      $el.on('transitionend', function (e) {
-        if (e.originalEvent.propertyName === 'clip') {
-          $el.off('transitionend');
-          deferred.resolve(val);
-        }
-      }).addClass('kifi-done');
-    }, function (reason) {
-      log('[progress:fail]');
-      clearTimeout(timeout), timeout = null;
-      var finishFail = function () {
-        $el.remove();
-        deferred.reject(reason);
-      };
-      if ($el[0].offsetWidth) {
-        $el.one('transitionend', finishFail).addClass('kifi-fail');
-      } else {
-        finishFail();
-      }
-    });
-    return deferred.promise;
   }
 
   function createLibrary($view, $btn, trigger, guided) {
@@ -1283,7 +1231,7 @@ k.keepBox = k.keepBox || (function () {
           deferred.reject();
         }
       });
-      progress($vis, deferred.promise).done(function (library) {
+      k.progress.show($vis, deferred.promise).done(function (library) {
         showKeep(library, 'libraryNew', trigger, guided, true);
       }, function (reason) {
         $name.prop('disabled', false).focus().select();
