@@ -120,13 +120,14 @@ var formatMessage = (function () {
         processKifiSelMarkdownToLinksThen.bind(null,
           processUrlsThen.bind(null, // processBetween
             processEmailAddressesThen.bind(null,
-              processEmojiThen.bind(null, processHashtagsThen.bind(null, null)))),
-          processEmojiThen.bind(null, // processInside
-            processHashtagsThen.bind(null, null))));
+              processHashtagsThen.bind(null,
+                processEmojiThen.bind(null, identity)))),
+          processHashtagsThen.bind(null, // processInside
+            processEmojiThen.bind(null, identity))));
 
   var formatAsHtmlSnippet =
       processKifiSelMarkdownToTextThen.bind(null,
-        processEmojiThen.bind(null, null));
+        processEmojiThen.bind(null, identity));
 
   function renderAndFormatFull(text, render) {
     text = text || '';
@@ -234,7 +235,6 @@ var formatMessage = (function () {
   }
 
   function processEmojiThen(process, text) {
-    process = process || identity;
     return process(Mustache.escape(emoji.supported() ? emoji.decode(text) : text));
   }
 
@@ -243,15 +243,20 @@ var formatMessage = (function () {
   var escapedLeftBracketHashOrAtRe = /\[\\([#@])/g;
   var backslashUnescapeRe = /\\(.)/g;
   function processHashtagsThen(process, text) {
-    process = process || identity;
     var parts = text.replace(multipleBlankLinesRe, '\n\n').split(hashTagMarkdownRe);
+    var tag;
     for (var i = 1; i < parts.length; i += 2) {
-      parts[i] = '<span class="kifi-message-tag">#' + Mustache.escape(parts[i].replace(backslashUnescapeRe, '$1')) + '</span>';
+      tag = Mustache.escape(parts[i].replace(backslashUnescapeRe, '$1'));
+      parts[i] = '<a class="kifi-tag" href="' + getTagUrl(tag) + '"target="_blank">#' + tag + '</a>';
     }
     for (i = 0; i < parts.length; i += 2) {
-      parts[i] = Mustache.escape(parts[i].replace(escapedLeftBracketHashOrAtRe, '[$1'));
+      parts[i] = process(parts[i].replace(escapedLeftBracketHashOrAtRe, '[$1'));
     }
-    return process(parts.join(''));
+    return parts.join('');
+  }
+
+  function getTagUrl(tag) {
+    return 'https://www.kifi.com/find?q=tag:' + tag;
   }
 
   function identity(o) { return o; }
