@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfProfileLhrLibrarySorting', [
-  'profileService',
-  function (profileService) {
+  '$rootScope', 'profileService',
+  function ($rootScope, profileService) {
     return {
       restrict: 'A',
       scope: {},
