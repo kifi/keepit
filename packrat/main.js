@@ -130,8 +130,9 @@ PageData.prototype = {
         'discoverable': 'public'
       };
       var maxVisibilityIndex = -1;
-      keeps.forEach(function (item) {
-        maxVisibilityIndex = Math.max(maxVisibilityIndex, visibilityOptions.indexOf(item.visibility));
+      keeps.forEach(function (keep) {
+        var visibility = (keep.libraryId ? keep.visibility : null);
+        maxVisibilityIndex = Math.max(maxVisibilityIndex, visibilityOptions.indexOf(visibility));
       });
       return maxVisibilityIndex >= 0 ? visibilityMap[visibilityOptions[maxVisibilityIndex]] : 'other';
     }
