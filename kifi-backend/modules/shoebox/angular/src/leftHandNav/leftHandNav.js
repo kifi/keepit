@@ -351,7 +351,8 @@ angular.module('kifi')
           $rootScope.$on('orgMemberRemoved', reload),
           $rootScope.$on('orgProfileUpdated', reload),
           $rootScope.$on('orgAvatarUploaded', reload),
-          $rootScope.$on('orgOwnershipTransferred', reload)
+          $rootScope.$on('orgOwnershipTransferred', reload),
+          $rootScope.$on('profileSettingLhrLibrarySorting', reload)
         ].forEach(function (deregister) {
           scope.$on('$destroy', deregister);
         });

@@ -18,7 +18,7 @@ angular.module('kifi')
         };
 
         scope.saveSettings = function () {
-          profileService.setSettings(scope.userProfileSettings);
+          profileService.setSettings(scope.userProfileSettings).then(function (res) { $rootScope.$emit('profileSettingLhrLibrarySorting'); return res;});
         };
 
         profileService.getSettings().then(function (res) {
