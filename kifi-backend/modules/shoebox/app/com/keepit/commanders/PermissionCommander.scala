@@ -293,7 +293,7 @@ class PermissionCommanderImpl @Inject() (
           deprecatedPermissions || viewerIsDirectlyConnectedToKeep || viewerCanSeeKeepViaLibrary
         }
         val canEditKeep = {
-          userIdOpt.contains(k.userId) || keepLibraries.flatMap(libPermissions.getOrElse(_, Set.empty)).contains(LibraryPermission.EDIT_OTHER_KEEPS)
+          (userIdOpt containsTheSameValueAs k.userId) || keepLibraries.flatMap(libPermissions.getOrElse(_, Set.empty)).contains(LibraryPermission.EDIT_OTHER_KEEPS)
         }
         val canDeleteKeep = userIdOpt.containsTheSameValueAs(k.userId)
 
