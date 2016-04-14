@@ -37,6 +37,12 @@
 .kifi-message-sent-header-item a[href]:hover {
   text-decoration: underline!important;
 }
+.kifi-message-sent.kifi-message-sent.kifi-message-sent:last-of-type .kifi-message-sent-stamp {
+  display: block;
+}
+.kifi-messages-sent-inner:hover .kifi-message-sent:last-of-type .kifi-message-sent-stamp {
+  display: none;
+}
 .kifi-message-sent.kifi-message-sent.kifi-message-sent:hover .kifi-message-sent-stamp {
   display: block;
 }
