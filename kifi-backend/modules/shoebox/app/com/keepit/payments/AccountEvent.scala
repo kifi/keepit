@@ -14,6 +14,12 @@ import org.joda.time.DateTime
 import play.api.libs.json.{ JsNull, JsValue, Json }
 
 case class ActionAttribution(user: Option[Id[User]], admin: Option[Id[User]])
+object ActionAttribution {
+  def apply(requesterId: Id[User], isAdmin: Boolean): ActionAttribution = ActionAttribution(
+    user = if (isAdmin) None else Some(requesterId),
+    admin = if (isAdmin) Some(requesterId) else None
+  )
+}
 
 sealed abstract class AccountEventKind(val value: String)
 object AccountEventKind {

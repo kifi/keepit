@@ -254,27 +254,26 @@ class AdminOrganizationController @Inject() (
     val org = db.readOnlyReplica { implicit s => orgRepo.get(orgId) }
     val oldOwnerId = org.ownerId
     implicit val context = HeimdalContext.empty
-    orgCommander.transferOrganization(OrganizationTransferRequest(oldOwnerId, orgId, newOwnerId)) match {
-      case Left(fail) => fail.asErrorResponse
-      case Right(res) =>
-        //next two line are to check that the impossible does not happen
-        val updatedOrg = db.readOnlyMaster { implicit s => orgRepo.get(orgId) }
-        assume(updatedOrg.ownerId == newOwnerId)
-        /**
-         * When we're creating orgs via the admin tool, we're setting a fake owner id as the owner to preserve data integrity.
-         * Once we make a real user own the org there is no longer a need for that fake user and we're taking them out.
-         */
-        if (oldOwnerId == fakeOwnerId) {
-          orgMembershipCommander.unsafeRemoveMembership(OrganizationMembershipRemoveRequest(orgId, requesterId = request.adminUserId.get, targetId = oldOwnerId), isAdmin = true)
-        }
-        db.readWrite { implicit s =>
-          orgMembershipCandidateRepo.getByUserAndOrg(newOwnerId, orgId) match {
-            case Some(candidate) => orgMembershipCandidateRepo.save(candidate.copy(state = OrganizationMembershipCandidateStates.INACTIVE))
-            case None => //whatever
-          }
-        }
-        Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewBy(orgId))
+    val updatedOrg = db.readWrite { implicit s =>
+      orgCommander.unsafeTransferOrganization(OrganizationTransferRequest(requesterId = request.adminUserId.get, orgId, newOwnerId), isAdmin = true)
+      orgRepo.get(orgId)
     }
+    //next line checks that the impossible does not happen
+    assume(updatedOrg.ownerId == newOwnerId)
+    /**
+     * When we're creating orgs via the admin tool, we're setting a fake owner id as the owner to preserve data integrity.
+     * Once we make a real user own the org there is no longer a need for that fake user and we're taking them out.
+     */
+    if (oldOwnerId == fakeOwnerId) {
+      orgMembershipCommander.unsafeRemoveMembership(OrganizationMembershipRemoveRequest(orgId, requesterId = request.adminUserId.get, targetId = oldOwnerId), isAdmin = true)
+    }
+    db.readWrite { implicit s =>
+      orgMembershipCandidateRepo.getByUserAndOrg(newOwnerId, orgId) match {
+        case Some(candidate) => orgMembershipCandidateRepo.save(candidate.copy(state = OrganizationMembershipCandidateStates.INACTIVE))
+        case None => //whatever
+      }
+    }
+    Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewBy(orgId))
   }
 
   def addCandidate(orgId: Id[Organization]) = AdminUserPage { implicit request =>

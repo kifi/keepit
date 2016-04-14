@@ -27,6 +27,7 @@ trait OrganizationCommander {
   def createOrganization(request: OrganizationCreateRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationCreateResponse]
   def modifyOrganization(request: OrganizationModifyRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationModifyResponse]
   def transferOrganization(request: OrganizationTransferRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationTransferResponse]
+  def unsafeTransferOrganization(request: OrganizationTransferRequest, isAdmin: Boolean = false)(implicit session: RWSession, eventContext: HeimdalContext): OrganizationTransferResponse
   def setAccountFeatureSettings(req: OrganizationSettingsRequest): Either[OrganizationFail, OrganizationSettingsResponse]
   def unsafeSetAccountFeatureSettings(orgId: Id[Organization], settings: OrganizationSettings, requesterIdOpt: Option[Id[User]])(implicit session: RWSession): OrganizationSettingsResponse
   def deleteOrganization(request: OrganizationDeleteRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationDeleteResponse]
@@ -273,23 +274,26 @@ class OrganizationCommanderImpl @Inject() (
     db.readWrite { implicit session =>
       getValidationError(request) match {
         case Some(orgFail) => Left(orgFail)
-        case None =>
-          val org = orgRepo.get(request.orgId)
-          if (orgMembershipRepo.getByOrgIdAndUserId(org.id.get, request.newOwner).isDefined) {
-            orgMembershipCommander.modifyMembershipHelper(OrganizationMembershipModifyRequest(request.orgId, request.requesterId, request.newOwner, OrganizationRole.ADMIN))
-          } else {
-            orgMembershipCommander.addMembershipHelper(OrganizationMembershipAddRequest(request.orgId, request.requesterId, request.newOwner, OrganizationRole.ADMIN))
-          }
-          planManagementCommander.addUserAccountContactHelper(org.id.get, request.newOwner, ActionAttribution(user = Some(request.requesterId), admin = None))
-          val modifiedOrg = orgRepo.save(org.withOwner(request.newOwner))
-          libraryRepo.getBySpaceAndKind(LibrarySpace.fromOrganizationId(request.orgId), LibraryKind.SYSTEM_ORG_GENERAL).foreach { lib =>
-            libraryCommander.unsafeTransferLibrary(lib.id.get, request.newOwner)
-          }
-
-          organizationAnalytics.trackOrganizationEvent(modifiedOrg, userRepo.get(request.requesterId), request)
-          Right(OrganizationTransferResponse(request, modifiedOrg))
+        case None => Right(unsafeTransferOrganization(request))
       }
     }
+  }
+
+  def unsafeTransferOrganization(request: OrganizationTransferRequest, isAdmin: Boolean = false)(implicit session: RWSession, eventContext: HeimdalContext): OrganizationTransferResponse = {
+    val org = orgRepo.get(request.orgId)
+    if (orgMembershipRepo.getByOrgIdAndUserId(org.id.get, request.newOwner).isDefined) {
+      orgMembershipCommander.unsafeModifyMembership(OrganizationMembershipModifyRequest(request.orgId, request.requesterId, request.newOwner, OrganizationRole.ADMIN), isAdmin = isAdmin)
+    } else {
+      orgMembershipCommander.unsafeAddMembership(OrganizationMembershipAddRequest(request.orgId, request.requesterId, request.newOwner, OrganizationRole.ADMIN), isAdmin = isAdmin)
+    }
+    planManagementCommander.addUserAccountContactHelper(org.id.get, request.newOwner, ActionAttribution(request.requesterId, isAdmin))
+    val modifiedOrg = orgRepo.save(org.withOwner(request.newOwner))
+    libraryRepo.getBySpaceAndKind(LibrarySpace.fromOrganizationId(request.orgId), LibraryKind.SYSTEM_ORG_GENERAL).foreach { lib =>
+      libraryCommander.unsafeTransferLibrary(lib.id.get, request.newOwner)
+    }
+
+    organizationAnalytics.trackOrganizationEvent(modifiedOrg, userRepo.get(request.requesterId), request)
+    OrganizationTransferResponse(request, modifiedOrg)
   }
 
   // For use in the Admin Organization controller. Don't use it elsewhere.
