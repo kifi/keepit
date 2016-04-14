@@ -21,7 +21,7 @@ k.keepNote = k.keepNote || (function () {
   var hashTagPattern = '#[^#' + nonTagCharCodes + ']*[^_\\d#' + nonTagCharCodes + '][^#' + nonTagCharCodes + ']*';
   var hashTagFindRe = new RegExp('(?:^|[#' + nonTagCharCodes + '])(' + hashTagPattern + ')(?=[' + nonTagCharCodes + ']|$)');
   var hashTagMarkdownRe = /\[#((?:\\.|[^\]])*)\]/g;
-  var hashTagInHtmlRe = /<span(?: [\w-]+="[^"]*")*? class="[^"]*?kifi-keep-box-tag[^"]*"(?: [\w-]+="[^"]*")*>(.*?)<\/span>/gi;
+  var hashTagInHtmlRe = /<span(?: [\w-]+="[^"]*")*? class="[^"]*?kifi-tag[^"]*"(?: [\w-]+="[^"]*")*>(.*?)<\/span>/gi;
   var allLineBreakTagsRe = /<(?:div[^>]*>(?:<br[^>]*><\/div>)?|br[^>]*>|\/div><div[^>]*>)/gi;
   var allDivEndTagsRe = /<\/div>/gi;
   var multipleBlankLinesRe = /\n(?:\s*\n)+/g;
@@ -32,7 +32,7 @@ k.keepNote = k.keepNote || (function () {
   function noteTextToHtml(text) {
     var parts = text.replace(multipleBlankLinesRe, '\n\n').split(hashTagMarkdownRe);
     for (var i = 1; i < parts.length; i += 2) {
-      parts[i] = '<span class="kifi-keep-box-tag">#' + Mustache.escape(parts[i].replace(backslashUnescapeRe, '$1')) + '</span>';
+      parts[i] = '<span class="kifi-tag">#' + Mustache.escape(parts[i].replace(backslashUnescapeRe, '$1')) + '</span>';
     }
     for (i = 0; i < parts.length; i += 2) {
       parts[i] = Mustache.escape(parts[i].replace(escapedLeftBracketHashOrAtRe, '[$1'));
@@ -52,7 +52,7 @@ k.keepNote = k.keepNote || (function () {
   }
 
   function isHashTag(node) {
-    return node.nodeType === ELEM && node.classList.contains('kifi-keep-box-tag');
+    return node.nodeType === ELEM && node.classList.contains('kifi-tag');
   }
 
   function inHashTag(node) {
@@ -222,7 +222,7 @@ k.keepNote = k.keepNote || (function () {
   function createNewHashTag(textNode, text, idx, tag) {
     var parent = textNode.parentNode;
     var next = textNode.nextSibling;
-    var tagEl = $('<span class="kifi-keep-box-tag"/>')[0];
+    var tagEl = $('<span class="kifi-tag"/>')[0];
     if (idx) {
       textNode.data = text.substr(0, idx);
       tagEl.textContent = tag;
@@ -387,14 +387,14 @@ k.keepNote = k.keepNote || (function () {
       if (seq === data.seq) {
         if (results.length) {
           if (!data.$suggestions) {
-            data.$suggestions = $('<div class="kifi-keep-box-tag-suggestions"/>')
+            data.$suggestions = $('<div class="kifi-tag-suggestions"/>')
               .data({
                 position: {my: 'left bottom', at: 'left-7 top-2', of: node.parentNode, collision: 'fit none', within: data.$bounds},
                 tagTextNode: node
               })
-              .on('mouseover', '.kifi-keep-box-tag-suggestion', data, onMouseOverSuggestion)
-              .on('mousemove', '.kifi-keep-box-tag-suggestion', data, onMouseMoveSuggestion)
-              .on('mousedown', '.kifi-keep-box-tag-suggestion', data, onMouseDownSuggestion)
+              .on('mouseover', '.kifi-tag-suggestion', data, onMouseOverSuggestion)
+              .on('mousemove', '.kifi-tag-suggestion', data, onMouseMoveSuggestion)
+              .on('mousedown', '.kifi-tag-suggestion', data, onMouseDownSuggestion)
               .insertBefore(noteEl);
             selectionchange.start();
             $(document).on('selectionchange', data, onDocSelectionChange);
@@ -415,7 +415,7 @@ k.keepNote = k.keepNote || (function () {
   }
 
   function formatTagSuggestion(item) {
-    var html = ['<div class="kifi-keep-box-tag-suggestion">'];
+    var html = ['<div class="kifi-tag-suggestion">'];
     if (item.matches || item.freeTag) {
       pushWithBoldedMatches(html, item.tag, item.matches || [[0, item.tag.length]]);
     } else {

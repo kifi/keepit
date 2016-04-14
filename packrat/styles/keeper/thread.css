@@ -91,6 +91,12 @@
   display: inline-block;
   background-image: url(/images/twitter-blue.svg);
 }
+.kifi-message-sent .kifi-tag.kifi-tag.kifi-tag {
+  color: #6fa6ef;
+}
+.kifi-message-sent .kifi-tag.kifi-tag.kifi-tag:not(:hover) {
+  text-decoration: none!important;
+}
 a.kifi-message-pic-a,
 span.kifi-message-pic-email {
   float: left;
