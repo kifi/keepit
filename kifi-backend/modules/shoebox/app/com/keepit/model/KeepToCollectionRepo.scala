@@ -12,8 +12,6 @@ import scala.slick.jdbc.StaticQuery
 
 @ImplementedBy(classOf[KeepToCollectionRepoImpl])
 trait KeepToCollectionRepo extends Repo[KeepToCollection] {
-  def getCollectionsForKeep(bookmarkId: Id[Keep])(implicit session: RSession): Seq[Id[Collection]]
-  def getCollectionsForKeeps(keeps: Seq[Keep])(implicit session: RSession): Seq[Seq[Id[Collection]]]
   def getKeepsForTag(collectionId: Id[Collection],
     excludeState: Option[State[KeepToCollection]] = Some(KeepToCollectionStates.INACTIVE))(implicit seesion: RSession): Seq[Id[Keep]]
   def getByKeep(keepId: Id[Keep],

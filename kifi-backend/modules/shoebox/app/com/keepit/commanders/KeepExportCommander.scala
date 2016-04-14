@@ -30,6 +30,7 @@ class KeepExportCommanderImpl @Inject() (
   permissionCommander: PermissionCommander,
   libraryRepo: LibraryRepo,
   libraryMembershipRepo: LibraryMembershipRepo,
+  tagCommander: TagCommander,
   implicit val defaultContext: ExecutionContext,
   implicit val publicIdConfig: PublicIdConfiguration,
   implicit val inhouseSlackClient: InhouseSlackClient)
@@ -104,9 +105,8 @@ class KeepExportCommanderImpl @Inject() (
     }
     val keeps = keepRepo.getByIds(keepIds).values.toSeq
     val tagsByKeepId = {
-      val tagIds = ktcRepo.getCollectionsForKeeps(keeps)
-      val idToTag = collectionRepo.getByIds(tagIds.flatten.toSet).mapValues(_.name.tag)
-      (keeps zip tagIds).map { case (keep, keepTags) => keep.id.get -> keepTags.map(idToTag(_)) }.toMap
+      val tags = tagCommander.getTagsForKeeps(keeps.flatMap(_.id))
+      keeps.map { keep => keep.id.get -> tags(keep.id.get).map(_.tag) }.toMap
     }
 
     val libIdsByKeep = ktlRepo.getAllByKeepIds(keeps.map(_.id.get).toSet).mapValues(ktls => ktls.map(_.libraryId))

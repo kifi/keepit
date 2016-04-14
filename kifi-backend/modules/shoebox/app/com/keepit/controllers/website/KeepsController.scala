@@ -37,6 +37,7 @@ class KeepsController @Inject() (
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   airbrake: AirbrakeNotifier,
   keepToCollectionRepo: KeepToCollectionRepo,
+  bulkTagCommander: BulkTagCommander,
   implicit val publicIdConfig: PublicIdConfiguration)
     extends UserActions with ShoeboxServiceController {
 
@@ -160,27 +161,18 @@ class KeepsController @Inject() (
   def deleteCollectionByTag(tag: String) = UserAction { request =>
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     val removed = db.readWrite(attempts = 3) { implicit s =>
-      collectionRepo.getByUserAndName(request.userId, Hashtag(tag)).map { coll =>
-        val keepIds = keepToCollectionRepo.getKeepsForTag(coll.id.get).toSet
-        keepsCommander.removeTagFromKeeps(keepIds, coll.name)
-      }
+      bulkTagCommander.removeAllForUserTag(request.userId, Hashtag(tag))
     }
-    Ok(Json.obj("deleted" -> tag, "cnt" -> removed.getOrElse(0).toInt))
+    Ok(Json.obj("deleted" -> tag, "cnt" -> removed))
   }
 
   def renameCollectionByTag() = UserAction(parse.json) { request =>
     val oldTagName = (request.body \ "oldTagName").as[String].trim
     val newTagName = (request.body \ "newTagName").as[String].trim
-    db.readOnlyMaster { implicit s => collectionRepo.getByUserAndName(request.userId, Hashtag(oldTagName)) } map { coll =>
-      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-      val keepIds = db.readOnlyReplica { implicit session =>
-        keepToCollectionRepo.getKeepsForTag(coll.id.get).toSet
-      }
-      val cnt = keepsCommander.replaceTagOnKeeps(keepIds, coll.name, Hashtag(newTagName))
-      Ok(Json.obj("renamed" -> coll.name, "cnt" -> cnt))
-    } getOrElse {
-      NotFound(Json.obj("error" -> s"Collection not found for id $oldTagName"))
+    val cnt = db.readWrite { implicit session =>
+      bulkTagCommander.replaceAllForUserTag(request.userId, Hashtag(oldTagName), Hashtag(newTagName))
     }
+    Ok(Json.obj("renamed" -> oldTagName, "cnt" -> cnt))
   }
 
   def searchUserTags(query: String, limit: Option[Int] = None) = UserAction.async { request =>

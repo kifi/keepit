@@ -122,6 +122,7 @@ class AdminUserController @Inject() (
     typeAheadCommander: TypeaheadCommander,
     slackTeamMembershipRepo: SlackTeamMembershipRepo,
     slackTeamRepo: SlackTeamRepo,
+    tagCommander: TagCommander,
     airbrake: AirbrakeNotifier) extends AdminUserActions with PaginationActions {
 
   def merge = AdminUserPage { implicit request =>
@@ -178,38 +179,6 @@ class AdminUserController @Inject() (
       abookInfos <- abookInfoF
       contacts <- contactsF
     } yield Ok(html.admin.moreUserInfo(user, rawInfos.flatten, socialUserInfos, socialConnections, abookInfos, contacts))
-  }
-
-  def updateCollectionsForBookmark(id: Id[Keep]) = AdminUserPage { implicit request =>
-    request.request.body.asFormUrlEncoded.map { _.map(r => r._1 -> r._2.head) }.map { map =>
-      val collectionNames = map.getOrElse("collections", "").split(",").map(_.trim).filterNot(_.isEmpty).map(Hashtag.apply)
-      db.readWrite { implicit s =>
-        val bookmark = keepRepo.get(id)
-        bookmark.userId match {
-          case None => BadRequest(Json.obj("err" -> "keep has no user"))
-          case Some(userId) =>
-            val existing = keepToCollectionRepo.getByKeep(id, excludeState = None).map(k => k.collectionId -> k).toMap
-            val colls = collectionNames.map { name =>
-              val collection = collectionRepo.getByUserAndName(userId, name, excludeState = None) match {
-                case Some(coll) if coll.isActive => coll
-                case Some(coll) => collectionRepo.save(coll.copy(state = CollectionStates.ACTIVE))
-                case None => collectionRepo.save(Collection(userId = userId, name = name))
-              }
-              existing.get(collection.id.get) match {
-                case Some(ktc) if ktc.isActive => ktc
-                case Some(ktc) => keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.ACTIVE))
-                case None => keepToCollectionRepo.save(KeepToCollection(keepId = id, collectionId = collection.id.get))
-              }
-              collection
-            }
-            (existing -- colls.map(_.id.get)).values.foreach { ktc =>
-              keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
-            }
-
-            Ok(Json.obj("collections" -> colls.map(_.name)))
-        }
-      }
-    } getOrElse BadRequest
   }
 
   def userView(userId: Id[User], showPrivates: Boolean = false) = AdminUserPage.async { implicit request =>
@@ -316,7 +285,7 @@ class AdminUserController @Inject() (
         bookmarks.filter { case (b, u) => b.title.exists { t => t.toLowerCase().indexOf(query) >= 0 } }
       }) collect {
         case (mark, uri) =>
-          val colls = keepToCollectionRepo.getCollectionsForKeep(mark.id.get).map(collectionRepo.get).map(_.name)
+          val colls = tagCommander.getTagsForKeep(mark.id.get)
           (mark, uri, colls)
       }
     }

@@ -58,7 +58,7 @@ case class Keep(
 
   def withOwner(newOwner: Id[User]) = this.copy(userId = Some(newOwner))
   def withTitle(title: Option[String]) = copy(title = title.map(_.trimAndRemoveLineBreaks()).filter(title => title.nonEmpty && title != url))
-  def withNote(newNote: Option[String]) = this.copy(note = newNote)
+  def withNote(newNote: Option[String]) = this.copy(note = newNote.filter(_.nonEmpty))
 
   def withRecipients(newRecipients: KeepRecipients): Keep = this.copy(recipients = newRecipients)
   def withLibraries(libraries: Set[Id[Library]]): Keep = this.withRecipients(recipients.withLibraries(libraries))

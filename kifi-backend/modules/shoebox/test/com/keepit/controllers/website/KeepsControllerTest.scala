@@ -160,7 +160,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         db.readOnlyMaster { implicit s =>
           val keep = keepRepo.getOpt(keep1.externalId).get
           keep.note === Some("thwip!")
-          collectionRepo.getHashtagsByKeepId(keep.id.get) === Set.empty
+          tagCommander.getTagsForKeep(keep.id.get) === Seq()
         }
 
         // test removing a note
@@ -169,7 +169,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         db.readOnlyMaster { implicit s =>
           val keep = keepRepo.getOpt(keep1.externalId).get
           keep.note === None
-          collectionRepo.getHashtagsByKeepId(keep.id.get) === Set.empty
+          tagCommander.getTagsForKeep(keep.id.get) === Seq()
         }
 
         // test adding a note (with hashtags)
@@ -178,7 +178,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         db.readOnlyMaster { implicit s =>
           val keep = keepRepo.getOpt(keep1.externalId).get
           keep.note === Some("thwip! #spiders [#avengers] [#tonysucks] blah")
-          collectionRepo.getHashtagsByKeepId(keep.id.get).map(_.tag) === Set("tonysucks", "avengers")
+          tagCommander.getTagsForKeep(keep.id.get).map(_.tag).toSet === Set("tonysucks", "avengers")
         }
 
       }

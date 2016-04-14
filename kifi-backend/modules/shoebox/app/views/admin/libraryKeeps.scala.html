@@ -52,39 +52,4 @@
 			</table>
     }
 
-  <script type="text/javascript">
-    $(function() {
-      $('.table').on('click', 'div.collections', function () {
-        var $input = $('<input type="text">').addClass('collections').val($(this).text());
-        $(this).hide().parent().append($input);
-        $input.focus();
-      });
-      $('.table').on('keydown', 'input.collections', function (e) {
-        if (e.keyCode === 13) {
-          e.preventDefault();
-          $(this).blur();
-        }
-      });
-      $('.table').on('change', 'input.collections', function () {
-        var $div = $(this).parent().find('div.collections');
-        var $td = $div.closest("td");
-        var $sp = $("<img src='/assets/images/spinner.15.gif'>").appendTo($td);
-        var bookmarkId = $div.data("id");
-        $.post('@com.keepit.controllers.admin.routes.AdminUserController.updateCollectionsForBookmark(Id(-1))'
-            .replace('-1', bookmarkId), { collections: $(this).val() }).done(done).fail(fail);
-        function done(data) {
-          $div.text(data.collections.join(", ")).show();
-          $sp.after($("<i class=icon-ok-sign>").delay(1000).fadeOut()).remove();
-        }
-        function fail() {
-          $sp.after($("<i class=icon-exclamation-sign></i> Error. Reload?").delay(3000).fadeOut()).remove();
-        }
-        return false;
-      });
-      $('.table').on('blur', 'input.collections', function () {
-        $(this).parent().find('.collections').show();
-        $(this).remove();
-      });
-    });
-  </script>
 }

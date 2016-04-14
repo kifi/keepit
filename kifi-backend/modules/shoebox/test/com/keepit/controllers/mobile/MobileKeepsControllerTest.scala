@@ -189,7 +189,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
           val currentKeep = keepRepo.get(keep1.externalId)
           currentKeep.title === Some("a real keep")
           currentKeep.note === Some("a real [#note]")
-          collectionRepo.getHashtagsByKeepId(currentKeep.id.get).map(_.tag) === Set("note")
+          tagCommander.getTagsForKeep(currentKeep.id.get).map(_.tag) === Seq("note")
         }
 
         val testEditWithHashtags2 = editKeepInfoV2(user, keep1, Json.obj("note" -> "a real [#note]. #Finally! [#woo[hoo\\]]"))
@@ -198,7 +198,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
           val currentKeep = keepRepo.get(keep1.externalId)
           currentKeep.title === Some("a real keep")
           currentKeep.note === Some("a real [#note]. #Finally! [#woo[hoo\\]]")
-          collectionRepo.getHashtagsByKeepId(currentKeep.id.get).map(_.tag) === Set("note", "woo[hoo]")
+          tagCommander.getTagsForKeep(currentKeep.id.get).map(_.tag) === Seq("note", "woo[hoo]")
         }
       }
     }

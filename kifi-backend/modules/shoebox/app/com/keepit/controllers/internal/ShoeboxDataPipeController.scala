@@ -1,7 +1,7 @@
 package com.keepit.controllers.internal
 
 import com.keepit.classify.{ NormalizedHostname, DomainInfo, DomainRepo, Domain }
-import com.keepit.commanders.{ KeepCommander, Hashtags }
+import com.keepit.commanders.{ TagCommander, KeepCommander, Hashtags }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.service.RequestConsolidator
@@ -44,6 +44,7 @@ class ShoeboxDataPipeController @Inject() (
     userIpAddressRepo: UserIpAddressRepo,
     domainRepo: DomainRepo,
     orgDomainOwnershipRepo: OrganizationDomainOwnershipRepo,
+    tagCommander: TagCommander,
     keepCommander: KeepCommander, // just for autofixer, can be removed after notes are good
     executor: DataPipelineExecutor) extends ShoeboxServiceController with Logging {
 
@@ -218,6 +219,7 @@ class ShoeboxDataPipeController @Inject() (
         val ktlsByKeep = ktlRepo.getAllByKeepIds(keepIds)
         val ktusByKeep = ktuRepo.getAllByKeepIds(keepIds)
         val ktesByKeep = kteRepo.getAllByKeepIds(keepIds)
+        val tagsByKeep = tagCommander.getTagsForKeeps(keepIds)
         changedKeeps.map { keep =>
           val csKeep = CrossServiceKeep.fromKeepAndRecipients(
             keep = keep,
@@ -225,9 +227,10 @@ class ShoeboxDataPipeController @Inject() (
             emails = ktesByKeep.getOrElse(keep.id.get, Seq.empty).map(_.emailAddress).toSet,
             libraries = ktlsByKeep.getOrElse(keep.id.get, Seq.empty).map(CrossServiceKeep.LibraryInfo.fromKTL).toSet
           )
-          val tags = Hashtags.findAllHashtagNames(keep.note.getOrElse("")).map(Hashtag.apply).distinctBy(_.normalized)
+
+          val tagsFromNote = Hashtags.findAllHashtagNames(keep.note.getOrElse("")).map(Hashtag.apply).distinctBy(_.normalized)
           val source = attributionById.get(keep.id.get)
-          CrossServiceKeepAndTags(csKeep, source, tags)
+          CrossServiceKeepAndTags(csKeep, source, tagsByKeep(keep.id.get).toSet ++ tagsFromNote)
         }
       }
       Ok(Json.toJson(keepAndTagsChanged))

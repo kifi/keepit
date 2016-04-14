@@ -1,7 +1,7 @@
 package com.keepit.controllers.admin
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ LibraryInfoCommander, LibraryCommander, LibrarySuggestedSearchCommander }
+import com.keepit.commanders.{ TagCommander, LibraryInfoCommander, LibraryCommander, LibrarySuggestedSearchCommander }
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper }
 import com.keepit.common.crypto.PublicIdConfiguration
@@ -62,6 +62,7 @@ class AdminLibraryController @Inject() (
     searchClient: SearchServiceClient,
     suggestedSearchCommander: LibrarySuggestedSearchCommander,
     slackChannelToLibraryRepo: SlackChannelToLibraryRepo,
+    tagCommander: TagCommander,
     implicit val publicIdConfig: PublicIdConfiguration) extends AdminUserActions {
 
   def updateLibraryOwner(libraryId: Id[Library], fromUserId: Id[User], toUserId: Id[User]) = AdminUserPage { implicit request =>
@@ -87,16 +88,6 @@ class AdminLibraryController @Inject() (
       while (hasMore) {
         val from = page * pageSize
         val chunk: Seq[Keep] = keepRepo.pageByLibrary(libraryId, from, from + pageSize, Set.empty) map { keep =>
-          val tags = keepToCollectionRepo.getByKeep(keep.id.get)
-          tags foreach { keepToTag =>
-            val origTag = collectionRepo.get(keepToTag.collectionId)
-            val tag = collectionRepo.getByUserAndName(toUserId, origTag.name, excludeState = None) match {
-              case None => collectionRepo.save(Collection(userId = toUserId, name = origTag.name))
-              case Some(existing) if !existing.isActive => collectionRepo.save(existing.copy(state = CollectionStates.ACTIVE, name = origTag.name))
-              case Some(existing) => existing
-            }
-            keepToCollectionRepo.save(keepToTag.copy(collectionId = tag.id.get))
-          }
           keepRepo.save(keep.withOwner(toUserId))
         }
         hasMore = chunk.size >= pageSize
@@ -195,7 +186,7 @@ class AdminLibraryController @Inject() (
       val keeps = keepRepo.pageByLibrary(libraryId, page * pageSize, pageSize, excludeKeepStateSet).filter(b => showPrivates || !lib.isSecret)
 
       val keepInfos = for (keep <- keeps) yield {
-        val tagNames = keepToCollectionRepo.getCollectionsForKeep(keep.id.get).map(collectionRepo.get).map(_.name)
+        val tagNames = tagCommander.getTagsForKeep(keep.id.get)
         (keep, normalizedURIRepo.get(keep.uriId), keep.userId.map(userRepo.get), tagNames)
       }
       (lib, owner, keepCount, keepInfos)

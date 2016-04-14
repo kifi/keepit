@@ -1393,7 +1393,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         val site2 = "http://www.freedom.org/"
         val site3 = "http://www.mcdonalds.com/"
 
-        val (tag1, tag2, libUSA, k1, k2, k3) = db.readWrite { implicit s =>
+        val (libUSA, k2) = db.readWrite { implicit s =>
           val libUSA = libraryRepo.save(Library(name = "USA", slug = LibrarySlug("usa"), ownerId = userCaptain.id.get, visibility = LibraryVisibility.DISCOVERABLE, kind = LibraryKind.USER_CREATED, memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = libUSA.id.get, userId = userCaptain.id.get, access = LibraryAccess.OWNER))
 
@@ -1419,7 +1419,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           keepToCollectionRepo.count === 4
           keepToCollectionRepo.getByCollection(tag1.id.get).length === 1
           keepToCollectionRepo.getByCollection(tag2.id.get).length === 3
-          (tag1, tag2, libUSA, keep1, keep2, keep3)
+          (libUSA, keep2)
         }
 
         val libraryCommander = inject[LibraryCommander]

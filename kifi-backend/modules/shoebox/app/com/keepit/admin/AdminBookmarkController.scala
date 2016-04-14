@@ -56,6 +56,7 @@ class AdminBookmarksController @Inject() (
   userIdentityHelper: UserIdentityHelper,
   uriInterner: NormalizedURIInterner,
   eliza: ElizaServiceClient,
+  bulkTagCommander: BulkTagCommander,
   implicit val inhouseSlackClient: InhouseSlackClient,
   implicit val imageConfig: S3ImageConfig)
     extends AdminUserActions {
@@ -188,7 +189,7 @@ class AdminBookmarksController @Inject() (
 
     (embedlyKeysFut zip word2vecFut).map {
       case (embedlyKeys, word2vecKeys) =>
-        (embedlyKeys zip word2vecKeys).map {
+        (embedlyKeys zip word2vecKeys).foreach {
           case (emb, w2v) =>
             val s1 = emb.map { _.name }.toSet
             val s2 = w2v.map { _.cosine }.getOrElse(Seq()).toSet
@@ -202,49 +203,6 @@ class AdminBookmarksController @Inject() (
   def checkLibraryKeepVisibility(libId: Id[Library]) = AdminUserAction { request =>
     val numFix = libraryChecker.keepVisibilityCheck(libId)
     Ok(JsNumber(numFix))
-  }
-
-  def removeTagFromKeeps() = AdminUserAction(parse.json) { implicit request =>
-    val tagToRemove = (request.body \ "tagToRemove").as[String]
-
-    val keepIds = db.readWrite { implicit session =>
-      val keeps = {
-        val keepIds = (request.body \ "keeps").asOpt[Seq[Long]].getOrElse(Seq.empty).map(j => Id[Keep](j))
-        keepRepo.getByIds(keepIds.toSet).keySet
-      }
-      val userKeeps = (request.body \ "users").asOpt[Seq[Long]].getOrElse(Seq.empty).flatMap { u =>
-        keepRepo.getByUser(Id[User](u)).map(_.id.get).toSet
-      }
-      val libKeeps = (request.body \ "libs").asOpt[Seq[Long]].getOrElse(Seq.empty).flatMap { l =>
-        ktlRepo.pageByLibraryId(Id[Library](l), Offset(0), Limit(1000)).map(_.keepId).toSet
-      }
-      keeps ++ userKeeps ++ libKeeps
-    }
-    val updated = keepCommander.removeTagFromKeeps(keepIds, Hashtag(tagToRemove))
-
-    Ok(updated.toString)
-  }
-
-  def replaceTagOnKeeps() = AdminUserAction(parse.json) { implicit request =>
-    val newTag = (request.body \ "newTag").as[String]
-    val oldTag = (request.body \ "oldTag").as[String]
-
-    val keepIds = db.readWrite { implicit session =>
-      val keeps = {
-        val keepIds = (request.body \ "keeps").asOpt[Seq[Long]].getOrElse(Seq.empty).map(j => Id[Keep](j))
-        keepRepo.getByIds(keepIds.toSet).keySet
-      }
-      val userKeeps = (request.body \ "users").asOpt[Seq[Long]].getOrElse(Seq.empty).flatMap { u =>
-        keepRepo.getByUser(Id[User](u)).map(_.id.get).toSet
-      }
-      val libKeeps = (request.body \ "libs").asOpt[Seq[Long]].getOrElse(Seq.empty).flatMap { l =>
-        ktlRepo.getAllByLibraryId(Id[Library](l)).map(_.keepId).toSet
-      }
-      keeps ++ userKeeps ++ libKeeps
-    }
-    val updated = keepCommander.replaceTagOnKeeps(keepIds, Hashtag(oldTag), Hashtag(newTag))
-
-    Ok(updated.toString)
   }
 
   // Warning! This deletes all keeps in a library, even if they're somewhere else as well.

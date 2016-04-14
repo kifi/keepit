@@ -1,6 +1,7 @@
 package com.keepit.model
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.commanders.TagSorting
 import com.keepit.common.db.{ State, Id }
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick._
@@ -15,11 +16,12 @@ import scala.collection.{ Traversable, Iterable }
 @ImplementedBy(classOf[KeepTagRepoImpl])
 trait KeepTagRepo extends Repo[KeepTag] {
   def getByKeepIds(keepIds: Traversable[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Seq[KeepTag]]
-  def getTagsByUser(userId: Id[User])(implicit session: RSession): Seq[(Hashtag, Int)]
+  def getTagsByUser(userId: Id[User], offset: Int, pageSize: Int, sort: TagSorting)(implicit session: RSession): Seq[(Hashtag, Int)]
   def getByMessage(messageId: Id[Message])(implicit session: RSession): Seq[KeepTag]
   def getAllByTagAndUser(tag: Hashtag, userId: Id[User])(implicit session: RSession): Seq[KeepTag]
   def removeTagsFromKeep(keepIds: Traversable[Id[Keep]], tags: Traversable[Hashtag])(implicit session: RWSession): Int
   def deactivate(model: KeepTag)(implicit session: RWSession): Unit
+  def countForUser(userId: Id[User])(implicit session: RSession): Int
 }
 
 @Singleton
@@ -66,11 +68,21 @@ class KeepTagRepoImpl @Inject() (
   }
 
   // todo: Sorting, pagination
-  def getTagsByUser(userId: Id[User])(implicit session: RSession): Seq[(Hashtag, Int)] = {
-    activeRows.filter(row => row.userId === userId).groupBy(_.normalizedTag)
-      .map { case (normalizedTag, q) => (q.map(_.tagName).max, q.length) }
+  def getTagsByUser(userId: Id[User], offset: Int, pageSize: Int, sort: TagSorting)(implicit session: RSession): Seq[(Hashtag, Int)] = {
+    val pp = activeRows.filter(row => row.userId === userId).groupBy(_.normalizedTag)
+      .map { case (normalizedTag, q) => (q.map(_.tagName).max, q.map(_.createdAt).max, q.length) }
+      .sortBy { s: (Column[Option[Hashtag]], Column[Option[DateTime]], Column[Int]) =>
+        sort match {
+          case TagSorting.LastKept => s._2.desc
+          case TagSorting.Name => s._1.desc
+          case TagSorting.NumKeeps => s._3.desc
+        }
+      }
+
+    pp.drop(offset)
+      .take(pageSize)
       .list
-      .collect { case (Some(t), b) => (t, b) }
+      .collect { case (Some(t), Some(m), b) => (t, b) }
   }
 
   def getByMessage(messageId: Id[Message])(implicit session: RSession): Seq[KeepTag] = {
@@ -90,6 +102,12 @@ class KeepTagRepoImpl @Inject() (
 
   def deactivate(model: KeepTag)(implicit session: RWSession): Unit = {
     save(model.sanitizeForDelete)
+  }
+
+  def countForUser(userId: Id[User])(implicit session: RSession): Int = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    import scala.collection.JavaConversions._
+    sql"select count(*) from keep_tag where user_id = $userId".as[Int].first
   }
 
 }

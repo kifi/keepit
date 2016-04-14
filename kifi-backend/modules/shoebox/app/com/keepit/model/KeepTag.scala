@@ -20,7 +20,7 @@ case class KeepTag(
   def withUpdateTime(now: DateTime): KeepTag = this.copy(updatedAt = now)
   def withState(newState: State[KeepTag]): KeepTag = this.copy(state = newState)
   def withKeepId(newKeepId: Id[Keep]): KeepTag = this.copy(keepId = newKeepId)
-  def sanitizeForDelete: KeepTag = this.withState(KeepTagStates.INACTIVE)
+  def sanitizeForDelete: KeepTag = this.withState(KeepTagStates.INACTIVE).copy(userId = None, messageId = None)
 }
 
 object KeepTagStates extends States[KeepTag]
