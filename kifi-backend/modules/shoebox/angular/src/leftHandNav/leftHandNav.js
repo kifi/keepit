@@ -15,22 +15,6 @@ angular.module('kifi')
       link: function (scope) {
         scope.libraries = [];
         scope.orgs = [];
-        var sortOpts;
-        var isAlphabeticSorting = ((profileService.me.experiments || []).indexOf('rhr_alpha_sorting') !== -1);
-        if (isAlphabeticSorting) {
-          sortOpts = {
-            ordering: 'alphabetical',
-            direction: 'asc',
-            windowSize: 14
-          };
-        } else {
-          sortOpts = {
-            ordering: 'most_recent_keeps_by_user',
-            direction: 'desc',
-            windowSize: 14
-          };
-        }
-
         var mql = $window.matchMedia('(min-width: 480px)');
         $rootScope.leftHandNavIsOpen = mql.matches;
         var isMobile = !mql.matches;
@@ -84,7 +68,7 @@ angular.module('kifi')
             scope.me = me;
             var numSections = (me.orgs && me.orgs.length || 0) + 1;
             var INITIAL_PAGE_SIZE = 2 + Math.floor(20 / numSections);
-            return net.getInitialLeftHandRailInfo(INITIAL_PAGE_SIZE + 1, sortOpts).then(function(res) {
+            return net.getInitialLeftHandRailInfo(INITIAL_PAGE_SIZE + 1).then(function(res) {
               var lhr = res.data.lhr;
               scope.initialFetchFailed = false;
               scope.hasMoreUserLibaries = lhr.userWithLibs.libs.length === INITIAL_PAGE_SIZE + 1;
@@ -114,7 +98,7 @@ angular.module('kifi')
         scope.fetchLibraries = function (offset, limit) {
           scope.hasMoreUserLibaries = false;
           return userProfileActionService
-              .getBasicLibraries(scope.me.id, offset, limit + 1, sortOpts)
+              .getBasicLibraries(scope.me.id, offset, limit + 1)
               .then(function (data) {
                 scope.hasMoreUserLibaries = data.libs.length === limit + 1;
                 data.libs.splice(limit);
@@ -126,7 +110,7 @@ angular.module('kifi')
 
         scope.fetchOrgLibraries = function (org, offset, limit) {
           org.hasMoreLibraries = false;
-          return orgProfileService.getOrgBasicLibraries(org.id, offset, limit + 1, sortOpts)
+          return orgProfileService.getOrgBasicLibraries(org.id, offset, limit + 1)
             .then(function (data) {
               org.hasMoreLibraries = data.libraries.length === limit + 1;
               data.libraries.splice(limit);

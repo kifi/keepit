@@ -698,12 +698,13 @@ class LibraryController @Inject() (
   }
 
   def getLHRLibrariesForUser(userExtId: ExternalId[User], orderingOpt: Option[String], directionOpt: Option[String], offset: Int, limit: Int, windowSize: Option[Int]) = UserAction { request =>
-    val arrangement = for {
+    val arrangementOpt = for {
       ordering <- orderingOpt.flatMap(LibraryOrdering.fromStr)
       direction <- directionOpt.flatMap(SortDirection.fromStr)
     } yield LibraryQuery.Arrangement(ordering, direction)
 
     val basicLibs = db.readOnlyMaster { implicit s =>
+      val arrangement = arrangementOpt.getOrElse(Arrangement(LibraryOrdering.ALPHABETICAL, SortDirection.ASCENDING))
       libraryQueryCommander.getLHRLibrariesForUser(request.userId, arrangement, fromIdOpt = None, Offset(offset), Limit(limit), windowSize)
     }
     Ok(Json.obj("libs" -> basicLibs))

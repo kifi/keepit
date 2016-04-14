@@ -41,8 +41,8 @@ object LibraryQuery {
 trait LibraryQueryCommander {
   def setPreferredArrangement(userId: Id[User], arrangement: LibraryQuery.Arrangement): Unit
   def getLibraries(requester: Option[Id[User]], query: LibraryQuery)(implicit session: RSession): Seq[Id[Library]]
-  def getLHRLibrariesForUser(userId: Id[User], arrangement: Option[Arrangement] = None, fromIdOpt: Option[Id[Library]], offset: Offset, limit: Limit, windowSize: Option[Int])(implicit session: RSession): Seq[BasicLibrary]
-  def getLHRLibrariesForOrg(userId: Id[User], orgId: Id[Organization], arrangementOpt: Option[Arrangement], fromIdOpt: Option[Id[Library]], offset: Offset, limit: Limit, windowSize: Option[Int])(implicit session: RSession): Seq[BasicLibrary]
+  def getLHRLibrariesForUser(userId: Id[User], arrangement: Arrangement, fromIdOpt: Option[Id[Library]], offset: Offset, limit: Limit, windowSize: Option[Int])(implicit session: RSession): Seq[BasicLibrary]
+  def getLHRLibrariesForOrg(userId: Id[User], orgId: Id[Organization], arrangement: Arrangement, fromIdOpt: Option[Id[Library]], offset: Offset, limit: Limit, windowSize: Option[Int])(implicit session: RSession): Seq[BasicLibrary]
 }
 
 @Singleton
@@ -81,9 +81,8 @@ class LibraryQueryCommanderImpl @Inject() (
     libRepo.getLibraryIdsForQuery(customizedQuery, extraInfo)
   }
 
-  def getLHRLibrariesForUser(userId: Id[User], arrangementOpt: Option[Arrangement] = None, fromIdOpt: Option[Id[Library]], offset: Offset, limit: Limit, windowSize: Option[Int])(implicit session: RSession): Seq[BasicLibrary] = {
+  def getLHRLibrariesForUser(userId: Id[User], arrangement: Arrangement, fromIdOpt: Option[Id[Library]], offset: Offset, limit: Limit, windowSize: Option[Int])(implicit session: RSession): Seq[BasicLibrary] = {
     import LibraryQuery._
-    val arrangement = arrangementOpt.getOrElse(Arrangement(LibraryOrdering.ALPHABETICAL, SortDirection.ASCENDING))
     val sortedLibIds = arrangement.ordering match {
       case LibraryOrdering.MOST_RECENT_KEEPS_BY_USER => ktlRepo.getSortedByKeepCountSince(userId, orgIdOpt = None, currentDateTime.minusDays(windowSize.getOrElse(14)), offset, limit)
       case _ => getLibraries(Some(userId), LibraryQuery(ForUser(userId, roles = Set(LibraryAccess.OWNER)), Some(arrangement), fromIdOpt, offset, limit))
@@ -93,10 +92,8 @@ class LibraryQueryCommanderImpl @Inject() (
     sortedLibIds.flatMap(libsById.get).map(lib => BasicLibrary(lib, basicUser, None))
   }
 
-  def getLHRLibrariesForOrg(userId: Id[User], orgId: Id[Organization], arrangementOpt: Option[Arrangement], fromIdOpt: Option[Id[Library]], offset: Offset, limit: Limit, windowSize: Option[Int])(implicit session: RSession): Seq[BasicLibrary] = {
+  def getLHRLibrariesForOrg(userId: Id[User], orgId: Id[Organization], arrangement: Arrangement, fromIdOpt: Option[Id[Library]], offset: Offset, limit: Limit, windowSize: Option[Int])(implicit session: RSession): Seq[BasicLibrary] = {
     import LibraryQuery._
-
-    val arrangement = arrangementOpt.getOrElse(Arrangement(LibraryOrdering.ALPHABETICAL, SortDirection.ASCENDING))
     val sortedLibIds = arrangement.ordering match {
       case LibraryOrdering.MOST_RECENT_KEEPS_BY_USER => ktlRepo.getSortedByKeepCountSince(userId, Some(orgId), currentDateTime.minusDays(windowSize.getOrElse(14)), offset, limit)
       case _ => getLibraries(Some(userId), LibraryQuery(ForOrg(orgId), Some(arrangement), fromIdOpt, offset, limit))
