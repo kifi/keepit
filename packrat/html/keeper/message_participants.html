@@ -7,7 +7,7 @@
     <div class="kifi-message-participant-name">{{#keptInLibrary}}{{author.name}}{{/keptInLibrary}}{{^keptInLibrary}}{{participantName}}{{/keptInLibrary}}</div>
   </div>
   <div class="kifi-message-participants-n">
-    <div class="kifi-message-participants-title">A discussion with</div>
+    <div class="kifi-message-participants-title">{{^keptInLibrary}}A discussion with{{/keptInLibrary}}</div>
     <div class="kifi-message-participants-avatar-container">
       <ul class="kifi-message-participants-avatars">
         {{#avatars}}

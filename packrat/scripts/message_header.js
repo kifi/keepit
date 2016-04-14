@@ -1,5 +1,6 @@
 // @require scripts/lib/jquery.js
 // @require scripts/render.js
+// @require scripts/message_context.js
 // @require scripts/message_participants.js
 // @require scripts/message_muter.js
 
@@ -22,6 +23,7 @@ k.messageHeader = k.messageHeader || (function ($, win) {
   return {
     initialized: false,
     plugins: [
+      k.messageContext,
       k.messageParticipants,
       k.messageMuter
     ],
