@@ -109,7 +109,7 @@ class LibraryToSlackChannelRepoImpl @Inject() (
     slackChannelId: SlackChannelId,
     libraryId: Id[Library],
     status: SlackIntegrationStatus,
-    lastActivatedAt: Option[DateTime],
+    changedStatusAt: DateTime,
     lastProcessedAt: Option[DateTime],
     lastProcessedKeep: Option[Id[KeepToLibrary]],
     lastProcessedKeepSeq: Option[SequenceNumber[Keep]],
@@ -127,7 +127,7 @@ class LibraryToSlackChannelRepoImpl @Inject() (
       slackChannelId,
       libraryId,
       status,
-      changedStatusAt = lastActivatedAt getOrElse createdAt,
+      changedStatusAt = changedStatusAt,
       lastProcessedAt = lastProcessedAt,
       lastProcessedKeep = lastProcessedKeep,
       lastProcessedKeepSeq = lastProcessedKeepSeq,
@@ -148,7 +148,7 @@ class LibraryToSlackChannelRepoImpl @Inject() (
     lts.slackChannelId,
     lts.libraryId,
     lts.status,
-    Option(lts.changedStatusAt),
+    lts.changedStatusAt,
     lts.lastProcessedAt,
     lts.lastProcessedKeep,
     lts.lastProcessedKeepSeq,
@@ -166,7 +166,7 @@ class LibraryToSlackChannelRepoImpl @Inject() (
     def slackChannelId = column[SlackChannelId]("slack_channel_id", O.NotNull)
     def libraryId = column[Id[Library]]("library_id", O.NotNull)
     def status = column[SlackIntegrationStatus]("status", O.NotNull)
-    def changedStatusAt = column[Option[DateTime]]("changed_status_at", O.Nullable)
+    def changedStatusAt = column[DateTime]("changed_status_at", O.NotNull)
     def lastProcessedAt = column[Option[DateTime]]("last_processed_at", O.Nullable)
     def lastProcessedKeep = column[Option[Id[KeepToLibrary]]]("last_processed_ktl", O.Nullable)
     def lastProcessedKeepSeq = column[Option[SequenceNumber[Keep]]]("last_processed_keep_seq", O.Nullable)
