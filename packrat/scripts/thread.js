@@ -2,9 +2,7 @@
 // @require styles/keeper/compose.css
 // @require styles/keeper/participant_colors.css
 // @require scripts/html/keeper/messages.js
-// @require scripts/html/keeper/message_aux.js
-// @require scripts/html/keeper/message_discussion.js
-// @require scripts/html/keeper/message_tip.js
+// @require scripts/html/keeper/message_keepscussion.js
 // @require scripts/html/keeper/kifi_mustache_tags.js
 // @require scripts/html/keeper/message_email_tooltip.js
 // @require scripts/html/keeper/compose.js
@@ -23,28 +21,46 @@
 
 k.panes.thread = k.panes.thread || function () {
   'use strict';
+  var $who, $holder, browserName;
+
   var handlers = {
     thread_info: function (o) {
       if ($holder && $holder.data('threadId') === o.th.thread) {
         $holder.data('keep', o.keep);
-        var participants = o.th.participants || o.keep && o.keep.keptBy && [o.keep.keptBy] || [];
+        var participants;
+        if (o.keep) {
+          var recipients = o.keep.recipients;
+          participants = Object.keys(recipients).map(function (k) {
+            var p = recipients[k];
+            var kind = k === 'users' ? 'user' : k === 'emails' ? 'email' : k === 'libraries' ? 'library' : null;
+            p.forEach(function (d) {
+              d.kind = kind;
+            });
+            return p;
+          }).reduce(function (a, n) { return a.concat(n); });
+        } else {
+          participants = o.th.participants;
+        }
         k.messageHeader.init($who.find('.kifi-message-header'), o.th.thread, participants, o.keep);
       }
     },
     thread: function (o) {
       if ($holder && $holder.data('threadId') === o.id) {
         $holder.data('keep', o.keep);
-        updateAll(o.id, o.messages);
+        updateAllActivity(o.id, o.activity.events);
       }
     },
-    message: function (o) {
-      if ($holder && $holder.data('threadId') === o.threadId) {
-        update(o.threadId, o.message);
+    thread_error: function (o) {
+      $holder.trigger('kifi:error', o.error);
+      $holder.data('error', o.error);
+    },
+    activity: function (o) {
+      if ($holder && $holder.data('threadId') === o.keepId) {
+        updateActivity(o.keepId, o.activity.events[0]);
       }
     }
   };
 
-  var $who, $holder, browserName;
   return {
     render: function ($paneBox, locator) {
       var threadId = locator.split('/')[2];
@@ -66,13 +82,14 @@ k.panes.thread = k.panes.thread || function () {
         browserName = data.name;
       });
 
+      var $redirected = $paneBox.find('.kifi-thread-redirected').click(function () {
+        $redirected.fadeOut(800, $.fn.remove.bind($redirected));
+      });
+
       $paneBox.on('click', '.kifi-message-header-back', function () {
         k.pane.back($redirected.length ? null : '/messages');
       });
 
-      var $redirected = $paneBox.find('.kifi-thread-redirected').click(function () {
-        $redirected.fadeOut(800, $.fn.remove.bind($redirected));
-      });
       if ($redirected.length) {
         setTimeout(function () {
           $redirected.triggerHandler('click');
@@ -99,7 +116,7 @@ k.panes.thread = k.panes.thread || function () {
     var $holder = $tall.find('.kifi-scroll-inner')
       .preventAncestorScroll()
       .handleLookClicks('chat')
-      .on('click', '.kifi-message-pic-a,a.kifi-message-name', function () {
+      .on('click', '.kifi-message-pic-a,.kifi-message-sent-header-item[data-kind="user"] a,.kifi-message-sent-header-item[data-kind="author"] a', function () {
         var a = this, url = a.href;
         if (url.indexOf('?') < 0) {
           a.href = url + '?o=xmp';
@@ -118,10 +135,17 @@ k.panes.thread = k.panes.thread || function () {
         });
       })
       .data({threadId: threadId, compose: compose});
+
     var $scroll = $tall.find('.kifi-scroll-wrap');
     var heighter = maintainHeight($scroll[0], $holder[0], $tall[0], [$who[0], compose.form()]);
 
+    $holder.on('scroll', _.throttle(onScroll, 30));
+
     $paneBox
+    .on('kifi:error', function (err) {
+      $paneBox.find('.kifi-thread-error').addClass('kifi-showing');
+      $holder.addClass('kifi-hidden');
+    })
     .on('kifi:removing', onRemoving.bind(null, threadId, compose))
     .on('kifi:remove', onRemoved.bind(null, $who.find('.kifi-message-header'), compose, heighter));
 
@@ -142,6 +166,46 @@ k.panes.thread = k.panes.thread || function () {
     return $holder;
   }
 
+  function onScroll() {
+    if (!this.dataset.atEarliest && this.scrollTop < 5) {
+      getOlderActivity(function (atEarliest) {
+        if (atEarliest) {
+          this.dataset.atEarliest = true;
+        }
+      }.bind(this));
+    }
+  }
+
+  function getOlderActivity(cb, stayAtBottom, iteration) {
+    var keep = $holder.data('keep');
+    var $latestMessage = $holder.find('.kifi-message-sent').get(0);
+    var $time = $latestMessage.querySelector('time');
+    var isoDate = $time.getAttribute('datetime');
+    var timestamp = +new Date(isoDate);
+    var preTop = $holder.scrollTop();
+
+    var limit = 10;
+    api.port.emit('activity_from', { id: keep.id, limit: limit, fromTime: timestamp }, function (o) {
+      o.activity.forEach(updateActivity.bind(null, keep));
+      var atEarliest = (o.activity.length < limit);
+      var postTop = $latestMessage.offsetTop;
+
+      if (!stayAtBottom) {
+        $holder[0].scrollTop = (postTop + preTop);
+      } else {
+        $holder[0].scrollTop = $holder[0].clientHeight;
+      }
+
+      if (!atEarliest && $holder[0].scrollHeight <= $holder[0].clientHeight && iteration < 3) {
+        getOlderActivity(cb, stayAtBottom, (iteration || 1) + 1); // paranoia about infinite loops
+      }
+
+      if (cb) {
+        cb(atEarliest);
+      }
+    });
+  }
+
   function onRemoving(threadId, compose) {
     compose.save({threadId: threadId});
     api.port.off(handlers);
@@ -154,54 +218,62 @@ k.panes.thread = k.panes.thread || function () {
     heighter.destroy();
   }
 
-  function update(threadId, message) {
-    if (!$holder.find('.kifi-message-sent[data-id="' + message.id + '"]').length &&
-        !$holder.find('.kifi-message-sent[data-id=]').get().some(textMatches.bind(null, message.text))) {  // transmitReply updates these
+  function updateActivity(keepId, activityEvent) {
+    if (!$holder.find('.kifi-message-sent[data-id="' + (activityEvent.id || 'nullId') + '"]').length &&
+        !$holder.find('.kifi-message-sent[data-id=]').get().some(textMatches.bind(null, activityEvent.body.map(getText).join('')))) {  // transmitReply updates these
       var atBottom = scrolledToBottom($holder[0]);
-      var _renderMessage = renderMessage.bind(null, $holder.data('keep'));
-      insertChronologically(_renderMessage(message), message.createdAt);
+      insertChronologically(renderActivityEvent($holder.data('keep'), activityEvent), activityEvent.timestamp);
       if (atBottom) {
         scrollToBottomResiliently();
       }
-      emitRendered(threadId, message);
+      emitEventRendered(keepId, activityEvent);
     }
   }
 
-  function updateAll(threadId, messages) {
+  function updateAllActivity(keepId, activityEvents) {
+    activityEvents = activityEvents || [];
+    var keep = $holder.data('keep');
     var $msgs = $holder.find('.kifi-message-sent');
-    var _renderMessage = renderMessage.bind(null, $holder.data('keep'));
 
     if ($msgs.length) {
-      var newMessages = justNewMessages($msgs, messages);
-      if (newMessages.length) {
+      var newEvents = justNewActivity($msgs, activityEvents);
+      if (newEvents.length) {
         var atBottom = scrolledToBottom($holder[0]);
-        newMessages.forEach(function (m) {
-          insertChronologically(_renderMessage(m), m.createdAt);
+        newEvents.forEach(function (e) {
+          insertChronologically(renderActivityEvent(keep, e), e.timestamp);
         });
         if (atBottom) {
           scrollToBottomResiliently();
         }
       }
     } else {
-      $holder.append(messages.map(_renderMessage));
+      $holder.append(activityEvents.reverse().map(renderActivityEvent.bind(null, keep)));
       scrollToBottomResiliently(true);
     }
 
-    if (messages && messages.length) {
-      emitRendered(threadId, messages[messages.length - 1]);
+    if (activityEvents.length) {
+      if ($holder[0].scrollHeight <= $holder[0].clientHeight) {
+        getOlderActivity();
+      }
+      emitEventRendered(keepId, activityEvents[activityEvents.length - 1]);
     }
   }
 
-  function justNewMessages($msgs, messages) {
+  function justNewActivity($msgs, activityEvents) {
+    var nullId = 'nullId';
     var ids = $msgs.get().reduce(function (o, el) {
-      var id = el.dataset.id;
-      if (id) o[id] = true;
+      var id = el.dataset.id || nullId;
+      o[id] = true;
       return o;
     }, {});
     var msgsSending = $msgs.filter('[data-id=]').get();
-    return messages.filter(function (m) {
-      return !ids[m.id] && !msgsSending.some(textMatches.bind(null, m.text))
+    return activityEvents.filter(function (a) {
+      return !ids[a.id || nullId] && !msgsSending.some(textMatches.bind(null, a.body.map(getText).join(' ')));
     });
+  }
+
+  function getText(o) {
+    return o.text;
   }
 
   function textMatches(messageText, el) {
@@ -227,18 +299,30 @@ k.panes.thread = k.panes.thread || function () {
   }
 
   function sendReply(threadId, text) {
-    var _renderMessage = renderMessage.bind(null, $holder.data('keep'));
-    var $m = $(_renderMessage({
+    var error = $holder.data('error');
+    if (error) {
+      return Q.reject();
+    }
+    var keep = $holder.data('keep');
+
+    var meParticipant = meToParticipant(k.me);
+    var newEvent = {
       id: '',
-      createdAt: new Date().toISOString(),
-      text: text,
-      user: k.me,
+      timestamp: new Date().toISOString(),
+      header: [
+        { kind: 'kifi', text: meParticipant.name, url: 'https://www.kifi.com/' + meParticipant.username },
+      ],
+      body: [{ text: text }],
+      author: meToParticipant(k.me),
+      source: {
+        kind: browserName
+      },
       displayedSource: browserName
-    }))
-    .data('text', text);
+    };
+    var $m = renderActivityEvent(keep, newEvent).data('text', text);
+
     $holder.append($m);
     scrollToBottomResiliently();
-
     transmitReply($m, text, threadId);
 
     setTimeout(function () {
@@ -251,37 +335,74 @@ k.panes.thread = k.panes.thread || function () {
     return Q(true);  // reset form
   }
 
-  function renderMessage(keep, m) {
-    m.parts = formatMessage.full()(m.text);
-    if (m.auxData) {
-      m.auxDataTags = formatAuxData.call(m);
-    }
-    m.keep = keep;
-    if (m.auxData && m.auxData.length >= 3 &&
-      (m.auxData[0] === 'add_participants' || m.auxData[0] === 'start_with_emails')) {
-      m.hasEmail = m.auxData[2].some(function (o) {return o.kind === 'email'});
-    }
-    m.formatLocalDate = formatLocalDate;
-    if (m.user) {
-      m.sender = m.user;
-      formatParticipant(m.sender);
-    }
-    if (m.source && m.source !== "server") {
-      m.displayedSource = m.source;
-    }
+  function meToParticipant(me) {
+    me = JSON.parse(JSON.stringify(me));
+    me.name = me.firstName + ' ' + me.lastName;
+    me.picture = k.cdnBase + '/users/' + me.id + '/pics/200/' + me.pictureName;
+    me.url = 'https://www.kifi.com/' + k.me.username;
+    return me;
+  }
 
-    var templates = {
-      messageTip: 'message_tip',
-      'kifi_mustache_tags': 'kifi_mustache_tags'
+  function renderActivityEvent(keep, activityEvent) {
+    var formattedEvent = formatActivityEvent(keep, activityEvent);
+    var partials = {
+      'kifi_mustache_tags': 'kifi_mustache_tags',
     };
-    var $rendered;
-    if (m.auxData && m.auxData.length) {
-      $rendered = $(k.render('html/keeper/message_aux', m, templates));
-    } else {
-      $rendered = $(k.render('html/keeper/message_discussion', m, templates));
-    }
+    var $rendered = $(k.render('html/keeper/message_keepscussion', formattedEvent, partials));
+    $rendered.find('time').timeago();
+    insertEllipsisIfStampOverlaps($rendered);
+    return $rendered;
+  }
 
-    return $rendered.find('time').timeago().end()[0];
+  // TODO(carlos) This function could potentially be slow.
+  // Consider cost vs. benefits
+  function insertEllipsisIfStampOverlaps($rendered) {
+    var alreadyHeld = !!$holder.find($rendered).length;
+    var $stamp = $rendered.find('.kifi-message-sent-header-stamp')[0];
+    var $stampSibling = $stamp && $stamp.previousElementSibling;
+    if ($stampSibling) {
+      if (!alreadyHeld) {
+        $rendered.appendTo($holder);
+      }
+
+      $stamp.classList.add('kifi-message-sent-header-stamp-dummy');
+      $stamp.style.display = 'inline-block';
+      var rects = $stampSibling.getClientRects();
+      var lastRect = rects[rects.length - 1];
+      if (lastRect.right > $stamp.getBoundingClientRect().left) {
+        $stamp.classList.add('kifi-message-sent-header-stamp-ellipsis');
+      }
+      $stamp.style.display = null;
+      $stamp.classList.remove('kifi-message-sent-header-stamp-dummy');
+
+      if (!alreadyHeld) {
+        $rendered.remove();
+      }
+    }
+  }
+
+  function formatActivityEvent(keep, e) {
+    e.id = e.id || (e.kind === 'initial' && 'nullId' || null);
+    formatParticipant(e.author);
+    e.author.picture = (e.author.isEmail ? null : e.author.picture);
+    e.keep = keep;
+    if (e.source && e.source.kind === 'Slack') {
+      e.body.forEach(formatSlackItem);
+    }
+    e.header.forEach(formatActivityEventItem);
+    e.body.forEach(formatActivityEventItem);
+    e.timestamp = new Date(e.timestamp).toISOString();
+    e.formatLocalDate = formatLocalDate;
+    return e;
+  }
+
+  function formatActivityEventItem(item, preformatter) {
+    item.html = formatMessage.full()(item.text);
+    item.isText = (item.kind === 'text');
+  }
+
+  function formatSlackItem(item) {
+    item.text = slackFormat.plain(item.text, {emptyIfInsignificant: true, truncate: false});
   }
 
   function handleReplyError($reply, status, originalText, threadId) {
@@ -310,15 +431,16 @@ k.panes.thread = k.panes.thread || function () {
   }
 
   function transmitReply($m, originalText, threadId) {
-    api.port.emit('send_reply', {text: originalText, threadId: threadId}, function (o) {
+    api.port.emit('send_reply', {text: originalText, keepId: threadId}, function (o) {
       log('[transmitReply] resp:', o);
       if (o.id) { // success, got a response
+        var isoDate = new Date(o.sentAt).toISOString();
         $m.attr('data-id', o.id);
         $m.find('.kifi-message-body').css({opacity: ''});
         $m.find('time')  // TODO: patch timeago to update attrs too
-          .attr('datetime', o.createdAt)
-          .attr('title', formatLocalDate()(o.createdAt, function render(s) {return s}))
-          .timeago('update', o.createdAt)
+          .attr('datetime', isoDate)
+          .attr('title', formatLocalDate()(o.sentAt, function render(s) {return s;}))
+          .timeago('update', isoDate)
           .css({display:''});
       } else {
         handleReplyError($m, o.status, originalText, threadId);
@@ -326,8 +448,8 @@ k.panes.thread = k.panes.thread || function () {
     });
   }
 
-  function emitRendered(threadId, m) {
-    api.port.emit('message_rendered', {threadId: threadId, messageId: m.id, time: m.createdAt});
+  function emitEventRendered(keepId, activityEvent) {
+    api.port.emit('activity_event_rendered', {keepId: keepId, eventId: activityEvent.id, time: activityEvent.timestamp});
   }
 
   function scrollToBottomResiliently(instantly) {

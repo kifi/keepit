@@ -2,7 +2,6 @@
 // @require scripts/render.js
 // @require scripts/message_participants.js
 // @require scripts/message_muter.js
-// @require scripts/message_keepscussion_header.js
 
 /**
  * ---------------------
@@ -24,8 +23,7 @@ k.messageHeader = k.messageHeader || (function ($, win) {
     initialized: false,
     plugins: [
       k.messageParticipants,
-      k.messageMuter,
-      k.messageKeepscussionHeader
+      k.messageMuter
     ],
     status: null,
     threadId: null,

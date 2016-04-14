@@ -4,6 +4,7 @@ import com.google.inject.Inject
 import com.keepit.commanders.KeepQuery.ForUri
 import com.keepit.common.json
 import com.keepit.common.core.anyExtensionOps
+import com.keepit.common.json.SchemaReads
 import com.keepit.common.performance.Stopwatch
 import com.keepit.common.util.RightBias
 import com.keepit.common.util.RightBias._
@@ -72,18 +73,21 @@ class PageInfoController @Inject() (
   }
 
   private object GetKeepsByUriAndRecipients {
+    import json.SchemaReads._
     final case class GetKeepsByUriAndRecipients(
       url: String,
       users: Set[ExternalId[User]],
       libraries: Set[PublicId[Library]],
       emails: Set[EmailAddress])
-    implicit val inputReads: Reads[GetKeepsByUriAndRecipients] = (
-      (__ \ 'url).read[String] and
-      (__ \ 'users).readNullable[Set[ExternalId[User]]].map(_ getOrElse Set.empty) and
-      (__ \ 'libraries).readNullable[Set[PublicId[Library]]].map(_ getOrElse Set.empty) and
-      (__ \ 'emails).readNullable[Set[EmailAddress]].map(_ getOrElse Set.empty)
+    val schemaReads: SchemaReads[GetKeepsByUriAndRecipients] = (
+      (__ \ 'url).readWithSchema[String] and
+      (__ \ 'users).readNullableWithSchema[Set[ExternalId[User]]].map(_ getOrElse Set.empty) and
+      (__ \ 'libraries).readNullableWithSchema[Set[PublicId[Library]]].map(_ getOrElse Set.empty) and
+      (__ \ 'emails).readNullableWithSchema[Set[EmailAddress]].map(_ getOrElse Set.empty)
     )(GetKeepsByUriAndRecipients.apply _)
-    val schema = json.schemaHelper(inputReads)
+    implicit val reads = schemaReads.reads
+    val schema = schemaReads.schema
+    val schemaHelper = json.schemaHelper(reads)
     val outputWrites: Writes[NewKeepInfosForPage] = NewKeepInfosForPage.writes
   }
   def getKeepsByUriAndRecipients() = UserAction.async(parse.tolerantJson) { implicit request =>
@@ -100,7 +104,7 @@ class PageInfoController @Inject() (
     } yield getKeepInfosForPage(request.userId, input.url, KeepRecipients.EMPTY)
 
     resultIfEverythingChecksOut.fold(
-      fail => Future.successful(BadRequest(Json.obj("err" -> fail, "hint" -> schema.hint(request.body)))),
+      fail => Future.successful(schemaHelper.hintResponse(request.body, schema)),
       result => result.map(ans => Ok(outputWrites.writes(ans)))
     )
   }

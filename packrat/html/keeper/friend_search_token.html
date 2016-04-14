@@ -1,0 +1,12 @@
+<li
+  {{#libKind}}{{#color}}style="background-color:{{color}}"{{/color}}{{/libKind}}
+  class="{{#userKind}}kifi-ti-user-token{{/userKind}}"
+>
+  {{#email}}<span class="kifi-ti-email-token-icon"></span>{{email}}{{/email}}
+  {{^email}}
+    {{#libKind}}<span class="kifi-ti-lib-token-icon" data-visibility={{visibility}}></span>{{/libKind}}
+    {{#orgKind}}<span class="kifi-ti-org-token-icon" style="background-image:url({{cdnBase}}/{{avatarPath}})"></span>{{/orgKind}}
+    {{#userKind}}<span class="kifi-ti-user-token-icon" style="background-image:url({{cdnBase}}/users/{{id}}/pics/100/{{pictureName}})"></span>{{/userKind}}
+    {{name}}
+  {{/email}}
+</li>

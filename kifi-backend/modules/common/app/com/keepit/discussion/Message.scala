@@ -5,7 +5,7 @@ import javax.crypto.spec.IvParameterSpec
 
 import com.keepit.common.crypto.{ PublicIdGenerator, PublicId }
 import com.keepit.common.db.{ SequenceNumber, Id }
-import com.keepit.common.json.{ EnumFormat, EitherFormat }
+import com.keepit.common.json.{ SchemaReads, EnumFormat, EitherFormat }
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.store.ImagePath
 import com.keepit.model._
@@ -128,4 +128,5 @@ object MessageSource extends Enumerator[MessageSource] {
   def apply(str: String) = fromStr(str).get
 
   implicit val messageSourceFormat: Format[MessageSource] = EnumFormat.format(fromStr, _.value)
+  implicit val schemaReads: SchemaReads[MessageSource] = SchemaReads.trivial("message_source")
 }
