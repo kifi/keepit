@@ -67,9 +67,8 @@ class KeepTagRepoImpl @Inject() (
     activeRows.filter(row => row.keepId.inSet(keepIds)).list.groupBy(_.keepId).withDefaultValue(Seq.empty)
   }
 
-  // todo: Sorting, pagination
   def getTagsByUser(userId: Id[User], offset: Int, pageSize: Int, sort: TagSorting)(implicit session: RSession): Seq[(Hashtag, Int)] = {
-    val pp = activeRows.filter(row => row.userId === userId).groupBy(_.normalizedTag)
+    val q = activeRows.filter(row => row.userId === userId).groupBy(_.normalizedTag)
       .map { case (normalizedTag, q) => (q.map(_.tagName).max, q.map(_.createdAt).max, q.length) }
       .sortBy { s: (Column[Option[Hashtag]], Column[Option[DateTime]], Column[Int]) =>
         sort match {
@@ -77,11 +76,12 @@ class KeepTagRepoImpl @Inject() (
           case TagSorting.Name => s._1.desc
           case TagSorting.NumKeeps => s._3.desc
         }
-      }
-
-    pp.drop(offset)
+      }.drop(offset)
       .take(pageSize)
-      .list
+
+    println("xxxxxxxxxxxxxxxxxxxxxxxxx\n\n" + q.selectStatement)
+
+    q.list
       .collect { case (Some(t), Some(m), b) => (t, b) }
   }
 

@@ -113,7 +113,7 @@ class TagCommanderImpl @Inject() (
         combined += ((kId, combined(kId) ++ hts))
     }
 
-    val keepOwners = keepRepo.getByIds(keepIds.toSet).mapValues(_.userId).withDefaultValue(None)
+    val keepOwners = keepRepo.getActiveByIds(keepIds.toSet).mapValues(_.userId).withDefaultValue(None)
     keepIds.map { keepId =>
       keepId -> collectionRepo.getHashtagsByKeepId(keepId).toSeq
     }.toMap.foreach {
@@ -125,7 +125,10 @@ class TagCommanderImpl @Inject() (
   }
 
   def getKeepsByTagAndUser(tag: Hashtag, userId: Id[User])(implicit session: RSession): Seq[Id[Keep]] = {
-    keepTagRepo.getAllByTagAndUser(tag, userId).map(_.keepId)
+    val collKeepIds = collectionRepo.getByUserAndName(userId, tag).map { coll =>
+      keepToCollectionRepo.getKeepsForTag(coll.id.get)
+    }.getOrElse(Seq.empty)
+    keepTagRepo.getAllByTagAndUser(tag, userId).map(_.keepId) ++ collKeepIds
   }
 
   // Reminder: does not check permissions. Do that yourself before calling this!
@@ -188,7 +191,7 @@ class BulkTagCommander @Inject() (
     // Collection ⨯ ⨯ ⨯
 
     // Update notes when appropriate
-    val keeps = keepRepo.getByIds((keepsToChange ++ collectionKeepIds).toSet).values
+    val keeps = keepRepo.getActiveByIds((keepsToChange ++ collectionKeepIds).toSet).values
     keeps.foreach {
       case keep =>
         if (keep.isActive && keep.note.nonEmpty) {
@@ -218,7 +221,7 @@ class BulkTagCommander @Inject() (
     // Collection ⨯ ⨯ ⨯
 
     // Update notes when appropriate
-    val keeps = keepRepo.getByIds((keepsToChange ++ collectionKeepIds).toSet).values
+    val keeps = keepRepo.getActiveByIds((keepsToChange ++ collectionKeepIds).toSet).values
     keeps.foreach { keep =>
       if (keep.isActive && keep.note.nonEmpty) {
         val note = Hashtags.replaceTagNameFromString(keep.note.getOrElse(""), oldTag.tag, newTag.tag)

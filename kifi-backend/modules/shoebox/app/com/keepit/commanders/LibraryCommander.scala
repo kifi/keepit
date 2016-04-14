@@ -564,7 +564,7 @@ class LibraryCommanderImpl @Inject() (
   def copyKeepsFromCollectionToLibrary(userId: Id[User], libraryId: Id[Library], tagName: Hashtag)(implicit context: HeimdalContext): Either[LibraryFail, (Seq[Keep], Seq[(Keep, LibraryError)])] = {
     val keeps = db.readOnlyMaster { implicit s =>
       val keepIds = tagCommander.getKeepsByTagAndUser(tagName, userId)
-      keepRepo.getByIds(keepIds.toSet).values.toSeq
+      keepRepo.getActiveByIds(keepIds.toSet).values.toSeq
     }
     Right(copyKeeps(userId, libraryId, keeps.toSet, withSource = Some(KeepSource.tagImport)))
   }
@@ -572,7 +572,7 @@ class LibraryCommanderImpl @Inject() (
   def moveKeepsFromCollectionToLibrary(userId: Id[User], libraryId: Id[Library], tagName: Hashtag)(implicit context: HeimdalContext): Either[LibraryFail, (Seq[Keep], Seq[(Keep, LibraryError)])] = {
     val keeps = db.readOnlyMaster { implicit s =>
       val keepIds = tagCommander.getKeepsByTagAndUser(tagName, userId)
-      keepRepo.getByIds(keepIds.toSet).values.toSeq
+      keepRepo.getActiveByIds(keepIds.toSet).values.toSeq
     }
     Right(moveKeeps(userId, libraryId, keeps))
   }
