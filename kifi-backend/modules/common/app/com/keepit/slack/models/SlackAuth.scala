@@ -175,46 +175,19 @@ case class SlackTeamInfo(
   icon: Map[Int, String])
 
 object SlackTeamInfo {
-  private val slackIconReads = new Reads[Map[Int, String]] {
-    private val sizePattern = """^image_(\d+)$""".r
-    def reads(value: JsValue) = value.validate[JsObject].map { obj =>
-      val isDefaultImage = (obj \ "image_default").asOpt[Boolean].getOrElse(false)
-      if (isDefaultImage) Map.empty[Int, String] else obj.value.collect { case (sizePattern(ValidInt(size)), JsString(imageUrl)) => size -> imageUrl }.toMap
-    }
-  }
-
   implicit val slackReads: Reads[SlackTeamInfo] = (
     (__ \ 'id).read[SlackTeamId] and
     (__ \ 'name).read[SlackTeamName] and
     (__ \ 'domain).read[SlackTeamDomain] and
     (__ \ 'email_domain).read[String].map(domains => domains.split(',').toList.map(_.trim).collect { case domain if domain.nonEmpty => SlackTeamEmailDomain(domain) }) and
-    (__ \ 'icon).read(slackIconReads)
+    (__ \ 'icon).read(SlackTeamIconReads)
   )(SlackTeamInfo.apply _)
-}
-
-case class SlackUserProfile(
-  firstName: Option[String],
-  lastName: Option[String],
-  fullName: Option[String],
-  emailAddress: Option[EmailAddress],
-  avatarUrl: Option[String],
-  originalJson: JsValue)
-
-object SlackUserProfile {
-  implicit val reads: Reads[SlackUserProfile] = (
-    (__ \ 'first_name).readNullable[String].map(_.filter(_.nonEmpty)) and
-    (__ \ 'last_name).readNullable[String].map(_.filter(_.nonEmpty)) and
-    (__ \ 'real_name).readNullable[String].map(_.filter(_.nonEmpty)) and
-    (__ \ 'email).readNullable[EmailAddress] and
-    (__ \ "image_original").readNullable[String] and
-    Reads(JsSuccess(_))
-  )(SlackUserProfile.apply _)
 }
 
 case class SlackUserInfo(
   id: SlackUserId,
   name: SlackUsername,
-  profile: SlackUserProfile,
+  profile: SlackUserInfo.Profile,
   deleted: Boolean,
   admin: Boolean,
   owner: Boolean,
@@ -223,10 +196,27 @@ case class SlackUserInfo(
   originalJson: JsValue)
 
 object SlackUserInfo {
+  case class Profile(
+    firstName: Option[String],
+    lastName: Option[String],
+    fullName: Option[String],
+    emailAddress: Option[EmailAddress],
+    avatarUrl: Option[String],
+    originalJson: JsValue)
+
+  private val profileReads: Reads[Profile] = (
+    (__ \ 'first_name).readNullable[String].map(_.filter(_.nonEmpty)) and
+    (__ \ 'last_name).readNullable[String].map(_.filter(_.nonEmpty)) and
+    (__ \ 'real_name).readNullable[String].map(_.filter(_.nonEmpty)) and
+    (__ \ 'email).readNullable[EmailAddress] and
+    (__ \ "image_original").readNullable[String] and
+    Reads(JsSuccess(_))
+  )(Profile.apply _)
+
   private val reads: Reads[SlackUserInfo] = (
     (__ \ 'id).read[SlackUserId] and
     (__ \ 'name).read[SlackUsername] and
-    (__ \ 'profile).read[SlackUserProfile] and
+    (__ \ 'profile).read(profileReads) and
     (__ \ 'deleted).readNullable[Boolean].map(_.contains(true)) and
     (__ \ 'is_admin).readNullable[Boolean].map(_.contains(true)) and
     (__ \ 'is_owner).readNullable[Boolean].map(_.contains(true)) and

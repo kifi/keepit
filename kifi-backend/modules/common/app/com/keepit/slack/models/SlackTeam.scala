@@ -34,6 +34,15 @@ object SlackTeamId {
 @json case class SlackTeamEmailDomain(value: String)
 @json case class InternalSlackTeamInfo(orgId: Option[Id[Organization]], teamName: SlackTeamName) // augment as needed
 
+
+object SlackTeamIconReads extends Reads[Map[Int, String]] {
+  private val sizePattern = """^image_(\d+)$""".r
+  def reads(value: JsValue) = value.validate[JsObject].map { obj =>
+    val isDefaultImage = (obj \ "image_default").asOpt[Boolean].getOrElse(false)
+    if (isDefaultImage) Map.empty[Int, String] else obj.value.collect { case (sizePattern(ValidInt(size)), JsString(imageUrl)) => size -> imageUrl }.toMap
+  }
+}
+
 case class InternalSlackTeamInfoKey(id: SlackTeamId) extends Key[InternalSlackTeamInfo] {
   override val version = 1
   val namespace = "internal_slack_team_info_by_slack_team_id"
