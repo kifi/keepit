@@ -45,11 +45,11 @@ object SlackPushingActor {
   val imageUrlRegex = """^https?://[^\s]*\.(png|jpg|jpeg|gif)""".r
   val jenUserId = ExternalId[User]("ae139ae4-49ad-4026-b215-1ece236f1322")
 
-  sealed abstract class PushItem(val time: DateTime)
+  sealed abstract class PushItem(val time: DateTime, val userAttribution: Option[Id[User]])
   object PushItem {
-    case class Digest(since: DateTime) extends PushItem(since)
-    case class KeepToPush(k: Keep, ktl: KeepToLibrary) extends PushItem(ktl.addedAt)
-    case class MessageToPush(k: Keep, msg: CrossServiceMessage) extends PushItem(msg.sentAt)
+    case class Digest(since: DateTime) extends PushItem(since, None)
+    case class KeepToPush(k: Keep, ktl: KeepToLibrary) extends PushItem(ktl.addedAt, k.userId)
+    case class MessageToPush(k: Keep, msg: CrossServiceMessage) extends PushItem(msg.sentAt, msg.sentBy.flatMap(_.left.toOption))
   }
   case class PushItems(
       oldKeeps: Seq[KeepToPush],
@@ -216,8 +216,18 @@ class SlackPushingActor @Inject() (
   private def pushNewItems(integration: LibraryToSlackChannel, channel: SlackChannel, sortedItems: Seq[PushItem], settings: Option[OrganizationSettings])(implicit pushItems: PushItems): Future[Unit] = {
     FutureHelpers.sequentialExec(sortedItems) { item =>
       slackMessageForItem(item, settings).fold(Future.successful(())) { itemMsg =>
-        val push = slackClient.sendToSlackHoweverPossible(integration.slackTeamId, integration.slackChannelId, itemMsg.asBot).recoverWith {
-          case SlackFail.NoValidPushMethod => Future.failed(BrokenSlackIntegration(integration, None, Some(SlackFail.NoValidPushMethod)))
+        val push = {
+          val userPush = for {
+            user <- item.userAttribution
+            userMsg <- itemMsg.asUser
+          } yield slackClient.sendToSlackAsUser(user, integration.slackTeamId, integration.slackChannelId, userMsg).map(Option(_))
+
+          userPush.getOrElse(Future.failed(SlackFail.NoValidToken)).recoverWith {
+            case SlackFail.NoValidToken =>
+              slackClient.sendToSlackHoweverPossible(integration.slackTeamId, integration.slackChannelId, itemMsg.asBot).recoverWith {
+                case SlackFail.NoValidPushMethod => Future.failed(BrokenSlackIntegration(integration, None, Some(SlackFail.NoValidPushMethod)))
+              }
+          }
         }
         push.map { pushedMessageOpt =>
           db.readWrite { implicit s =>
