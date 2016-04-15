@@ -3,11 +3,9 @@ package com.keepit.slack.models
 import java.util.UUID
 import com.keepit.common.cache._
 import com.keepit.common.time._
-import com.keepit.common.db.Id
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.strings.ValidInt
-import com.keepit.model.User
 import com.keepit.slack.models.SlackUserPresenceState.{ Away, Active }
 import com.kifi.macros.json
 import org.joda.time.DateTime
@@ -18,6 +16,33 @@ import scala.concurrent.duration.Duration
 
 case class SlackAuthScope(value: String)
 object SlackAuthScope {
+  def containsIdentityScope(scopes: Set[SlackAuthScope]): Boolean = scopes.exists(Identity.all.contains)
+  def containsAppScope(scopes: Set[SlackAuthScope]): Boolean = scopes.exists(!Identity.all.contains(_))
+  def mixesScopes(scopes: Set[SlackAuthScope]): Boolean = containsIdentityScope(scopes) && containsAppScope(scopes)
+
+  object Identity {
+    // should not be mixed with other scopes
+    val Basic = SlackAuthScope("identity.basic")
+    val Email = SlackAuthScope("identity.email")
+    val Team = SlackAuthScope("identity.team")
+    val Avatar = SlackAuthScope("identity.avatar")
+
+    val all = Set(Basic, Email, Team, Avatar)
+
+    val signup: Set[SlackAuthScope] = Set(Basic, Email, Avatar, Team)
+    val login: Set[SlackAuthScope] = Set(Basic)
+
+    private val pilotTeams: Set[SlackTeamId] = Set(
+      "T02A81H50", // Kifi
+      "T0F5KKU3T", // Kinetic Inc.
+      "T0GKSNJKW", // Purple
+      "T0FUL04N4", // Brewstercorp
+      "T06NHNNJW" // JRuff
+    ).map(SlackTeamId(_))
+
+    def areAvailableForTeam(slackTeamId: SlackTeamId): Boolean = pilotTeams.contains(slackTeamId)
+  }
+
   val Identify = SlackAuthScope("identify")
   val Bot = SlackAuthScope("bot")
   val Commands = SlackAuthScope("commands")
