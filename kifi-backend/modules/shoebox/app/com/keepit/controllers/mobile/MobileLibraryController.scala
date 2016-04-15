@@ -38,7 +38,6 @@ class MobileLibraryController @Inject() (
   fortyTwoConfig: FortyTwoConfig,
   libraryRepo: LibraryRepo,
   keepRepo: KeepRepo,
-  collectionRepo: CollectionRepo,
   userRepo: UserRepo,
   basicUserRepo: BasicUserRepo,
   keepsCommander: KeepCommander,
@@ -52,6 +51,7 @@ class MobileLibraryController @Inject() (
   clock: Clock,
   airbrake: AirbrakeNotifier,
   libraryCardCommander: LibraryCardCommander,
+  tagCommander: TagCommander,
   val libraryInfoCommander: LibraryInfoCommander,
   val libraryAccessCommander: LibraryAccessCommander,
   val libraryCommander: LibraryCommander,
@@ -325,7 +325,8 @@ class MobileLibraryController @Inject() (
               case Some(keep) =>
                 val keepImageUrl = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(MobileLibraryController.defaultKeepImageSize)).flatten.map(keepImageCommander.getUrl)
                 if (v1) {
-                  val keepObj = Json.obj("id" -> keep.externalId, "title" -> keep.title, "note" -> Hashtags.formatMobileNote(keep.note, v1), "imageUrl" -> keepImageUrl, "hashtags" -> Json.toJson(collectionRepo.getHashtagsByKeepId(keep.id.get)))
+                  val tags = tagCommander.getTagsForKeep(keep.id.get)
+                  val keepObj = Json.obj("id" -> keep.externalId, "title" -> keep.title, "note" -> Hashtags.formatMobileNote(keep.note, v1), "imageUrl" -> keepImageUrl, "hashtags" -> tags)
                   Json.obj("keep" -> keepObj) ++ Json.toJson(keepData).as[JsObject] - ("id")
                 } else {
                   Json.obj("id" -> keep.externalId, "title" -> keep.title, "note" -> Hashtags.formatMobileNote(keep.note, v1), "imageUrl" -> keepImageUrl, "libraryId" -> keepData.libraryId)

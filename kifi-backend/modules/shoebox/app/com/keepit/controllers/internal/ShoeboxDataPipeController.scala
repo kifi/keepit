@@ -1,7 +1,7 @@
 package com.keepit.controllers.internal
 
 import com.keepit.classify.{ NormalizedHostname, DomainInfo, DomainRepo, Domain }
-import com.keepit.commanders.{ KeepCommander, Hashtags }
+import com.keepit.commanders.{ TagCommander, KeepCommander, Hashtags }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.service.RequestConsolidator
@@ -23,7 +23,6 @@ class ShoeboxDataPipeController @Inject() (
     db: Database,
     userRepo: UserRepo,
     normUriRepo: NormalizedURIRepo,
-    collectionRepo: CollectionRepo,
     keepRepo: KeepRepo,
     ktuRepo: KeepToUserRepo,
     ktlRepo: KeepToLibraryRepo,
@@ -44,6 +43,7 @@ class ShoeboxDataPipeController @Inject() (
     userIpAddressRepo: UserIpAddressRepo,
     domainRepo: DomainRepo,
     orgDomainOwnershipRepo: OrganizationDomainOwnershipRepo,
+    tagCommander: TagCommander,
     keepCommander: KeepCommander, // just for autofixer, can be removed after notes are good
     executor: DataPipelineExecutor) extends ShoeboxServiceController with Logging {
 
@@ -218,6 +218,7 @@ class ShoeboxDataPipeController @Inject() (
         val ktlsByKeep = ktlRepo.getAllByKeepIds(keepIds)
         val ktusByKeep = ktuRepo.getAllByKeepIds(keepIds)
         val ktesByKeep = kteRepo.getAllByKeepIds(keepIds)
+        val tagsByKeep = tagCommander.getTagsForKeeps(keepIds)
         changedKeeps.map { keep =>
           val csKeep = CrossServiceKeep.fromKeepAndRecipients(
             keep = keep,
@@ -225,9 +226,15 @@ class ShoeboxDataPipeController @Inject() (
             emails = ktesByKeep.getOrElse(keep.id.get, Seq.empty).map(_.emailAddress).toSet,
             libraries = ktlsByKeep.getOrElse(keep.id.get, Seq.empty).map(CrossServiceKeep.LibraryInfo.fromKTL).toSet
           )
-          val tags = Hashtags.findAllHashtagNames(keep.note.getOrElse("")).map(Hashtag.apply).distinctBy(_.normalized)
+
+          val tags = tagsByKeep.getOrElse(keep.id.get, Seq.empty).toSet
+          val tagsFromNote = Hashtags.findAllHashtagNames(keep.note.getOrElse("")).map(Hashtag.apply)
+          val allTags = (tags ++ tagsFromNote).distinctBy(_.normalized)
+
+          log.info(s"[getCrossServiceKeepsAndTagsChanged] ${keep.id.get}: $tags vs $tagsFromNote")
+
           val source = attributionById.get(keep.id.get)
-          CrossServiceKeepAndTags(csKeep, source, tags)
+          CrossServiceKeepAndTags(csKeep, source, allTags)
         }
       }
       Ok(Json.toJson(keepAndTagsChanged))
@@ -242,11 +249,15 @@ class ShoeboxDataPipeController @Inject() (
         val libByKeep = {
           ktlRepo.getAllByKeepIds(keepIds).flatMapValues(_.headOption.map(ktl => libraryRepo.get(ktl.libraryId)))
         }
+        val tagsByKeepId = tagCommander.getForKeeps(keepIds)
         changedKeeps.map { keep =>
-          val tags = Hashtags.findAllHashtagNames(keep.note.getOrElse("")).map(Hashtag.apply).distinctBy(_.normalized)
+          val tags = tagsByKeepId.getOrElse(keep.id.get, Seq.empty).map(_.tag).toSet
+          val noteTags = Hashtags.findAllHashtagNames(keep.note.getOrElse("")).map(Hashtag.apply)
+          val allTags = (tags ++ noteTags).distinctBy(_.normalized)
+          log.info(s"[getKeepsAndTagsChanged] ${keep.id.get}: ${tags} vs $noteTags")
           val source = attributionById.get(keep.id.get)
           val lib = libByKeep.get(keep.id.get)
-          KeepAndTags(keep, (lib.map(_.visibility).getOrElse(LibraryVisibility.SECRET), lib.flatMap(_.organizationId)), source, tags)
+          KeepAndTags(keep, (lib.map(_.visibility).getOrElse(LibraryVisibility.SECRET), lib.flatMap(_.organizationId)), source, allTags)
         }
       }
       Ok(Json.toJson(keepAndTagsChanged))

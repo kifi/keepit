@@ -52,7 +52,6 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
   )
 
   def externalIdForTitle(title: String)(implicit injector: Injector): String = forTitle(title).externalId.id
-  def externalIdForCollection(userId: Id[User], name: String)(implicit injector: Injector): String = forCollection(userId, name).externalId.id
 
   def sourceForTitle(title: String)(implicit injector: Injector): KeepSource = forTitle(title).source
 
@@ -64,14 +63,6 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
       val keeps = inject[KeepRepo].all().filter(_.title == title)
       keeps.size === 1
       keeps.head
-    }
-  }
-
-  def forCollection(userId: Id[User], name: String)(implicit injector: Injector): Collection = {
-    inject[Database].readWrite { implicit session =>
-      val collections = inject[CollectionRepo].getByUserAndName(userId, Hashtag(name))
-      collections.size === 1
-      collections.head
     }
   }
 
@@ -160,7 +151,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         db.readOnlyMaster { implicit s =>
           val keep = keepRepo.getOpt(keep1.externalId).get
           keep.note === Some("thwip!")
-          collectionRepo.getHashtagsByKeepId(keep.id.get) === Set.empty
+          tagCommander.getTagsForKeep(keep.id.get) === Seq()
         }
 
         // test removing a note
@@ -169,7 +160,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         db.readOnlyMaster { implicit s =>
           val keep = keepRepo.getOpt(keep1.externalId).get
           keep.note === None
-          collectionRepo.getHashtagsByKeepId(keep.id.get) === Set.empty
+          tagCommander.getTagsForKeep(keep.id.get) === Seq()
         }
 
         // test adding a note (with hashtags)
@@ -178,7 +169,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         db.readOnlyMaster { implicit s =>
           val keep = keepRepo.getOpt(keep1.externalId).get
           keep.note === Some("thwip! #spiders [#avengers] [#tonysucks] blah")
-          collectionRepo.getHashtagsByKeepId(keep.id.get).map(_.tag) === Set("tonysucks", "avengers")
+          tagCommander.getTagsForKeep(keep.id.get).map(_.tag).toSet === Set("tonysucks", "avengers")
         }
 
       }

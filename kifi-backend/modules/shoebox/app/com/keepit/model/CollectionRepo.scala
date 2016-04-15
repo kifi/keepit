@@ -20,7 +20,6 @@ import com.keepit.typeahead.{ UserHashtagTypeaheadUserIdKey, UserHashtagTypeahea
 
 @ImplementedBy(classOf[CollectionRepoImpl])
 trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Collection] with SeqNumberFunction[Collection] {
-  def getByIds(ids: Set[Id[Collection]])(implicit session: RSession): Map[Id[Collection], Collection]
   def getUnfortunatelyIncompleteTagsByUser(userId: Id[User])(implicit session: RSession): Seq[Collection]
   def getByUserAndExternalId(userId: Id[User], externalId: ExternalId[Collection],
     excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))(implicit session: RSession): Option[Collection]
@@ -28,7 +27,6 @@ trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Coll
     excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))(implicit session: RSession): Option[Collection]
   def getBookmarkCount(collId: Id[Collection])(implicit session: RSession): Int
   def count(userId: Id[User])(implicit session: RSession): Int
-  def getBookmarkCounts(collIds: Set[Id[Collection]])(implicit session: RSession): Map[Id[Collection], Int]
   def collectionChanged(collectionId: Id[Collection], isNewKeep: Boolean = false, inactivateIfEmpty: Boolean)(implicit session: RWSession): Collection
   def getHashtagsByKeepId(keepId: Id[Keep])(implicit session: RSession): Set[Hashtag]
   def getByUserSortedByLastKept(userId: Id[User], page: Int, size: Int)(implicit session: RSession): Seq[(CollectionSummary, Int)]
@@ -78,13 +76,9 @@ class CollectionRepoImpl @Inject() (
     }
   }
 
-  def getByIds(ids: Set[Id[Collection]])(implicit session: RSession): Map[Id[Collection], Collection] = {
-    rows.filter(row => row.id.inSet(ids)).list.map { c => c.id.get -> c }.toMap
-  }
-
   def getUnfortunatelyIncompleteTagsByUser(userId: Id[User])(implicit session: RSession): Seq[Collection] =
     userCollectionsCache.getOrElse(UserCollectionsKey(userId)) {
-      (for (c <- rows if c.userId === userId && c.state === CollectionStates.ACTIVE) yield c).sortBy(r => (r.lastKeptTo.desc, r.id)).take(500).list
+      (for (c <- rows if c.userId === userId && c.state === CollectionStates.ACTIVE) yield c).sortBy(r => (r.lastKeptTo.desc, r.id)).take(2000).list
     }
 
   def getByUserAndExternalId(userId: Id[User], externalId: ExternalId[Collection],
@@ -108,13 +102,6 @@ class CollectionRepoImpl @Inject() (
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     import scala.collection.JavaConversions._
     sql"select count(*) from collection where user_id = $userId".as[Int].first
-  }
-
-  def getBookmarkCounts(collIds: Set[Id[Collection]])(implicit session: RSession): Map[Id[Collection], Int] = {
-    val keys = collIds.map(KeepCountForCollectionKey)
-    bookmarkCountForCollectionCache.bulkGetOrElse(keys) { missing =>
-      missing.map { key => key -> keepToCollectionRepo.count(key.collectionId) }.toMap
-    }.map { case (key, count) => key.collectionId -> count }
   }
 
   override def save(model: Collection)(implicit session: RWSession): Collection = {

@@ -53,8 +53,6 @@ private[integration] class AutogenReaper @Inject() (
     emailAddressRepo: UserEmailAddressRepo,
     keepRepo: KeepRepo,
     keepMutator: KeepMutator,
-    collectionRepo: CollectionRepo,
-    k2cRepo: KeepToCollectionRepo,
     airbrake: AirbrakeNotifier,
     autogenReaperConf: AutogenReaperConf) extends FortyTwoActor(airbrake) with Logging {
 

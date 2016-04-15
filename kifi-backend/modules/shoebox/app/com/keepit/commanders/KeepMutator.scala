@@ -31,8 +31,8 @@ import scala.util.Try
 trait KeepMutator {
   def persistKeep(k: Keep)(implicit session: RWSession): Keep
   def unsafeModifyKeepRecipients(keepId: Id[Keep], diff: KeepRecipientsDiff, userAttribution: Option[Id[User]])(implicit session: RWSession): Keep
+  def updateKeepNote(userId: Id[User], oldKeep: Keep, newNote: String)(implicit session: RWSession): Keep
   def updateKeepTitle(oldKeep: Keep, newTitle: String)(implicit session: RWSession): Keep
-  def updateKeepNote(userId: Id[User], oldKeep: Keep, newNote: String, freshTag: Boolean = true)(implicit session: RWSession): Keep
   def setKeepOwner(keep: Keep, newOwner: Id[User])(implicit session: RWSession): Keep
   def updateLastActivityAtIfLater(keepId: Id[Keep], lastActivityAt: DateTime)(implicit session: RWSession): Keep
   def moveKeep(k: Keep, toLibrary: Library, userId: Id[User])(implicit session: RWSession): Either[LibraryError, Keep]
@@ -46,7 +46,6 @@ trait KeepMutator {
 @Singleton
 class KeepMutatorImpl @Inject() (
   searchClient: SearchServiceClient,
-  keepToCollectionRepo: KeepToCollectionRepo,
   keepRepo: KeepRepo,
   ktlRepo: KeepToLibraryRepo,
   ktlCommander: KeepToLibraryCommander,
@@ -54,7 +53,6 @@ class KeepMutatorImpl @Inject() (
   ktuCommander: KeepToUserCommander,
   kteCommander: KeepToEmailCommander,
   keepSourceRepo: KeepSourceAttributionRepo,
-  collectionRepo: CollectionRepo,
   clock: Clock,
   libraryRepo: LibraryRepo,
   userRepo: UserRepo,
@@ -66,6 +64,7 @@ class KeepMutatorImpl @Inject() (
   twitterPublishingCommander: TwitterPublishingCommander,
   uriHelpers: UriIntegrityHelpers,
   slackPusher: LibraryToSlackChannelPusher,
+  tagCommander: TagCommander,
   implicit val airbrake: AirbrakeNotifier,
   implicit val imageConfig: S3ImageConfig,
   implicit val defaultContext: ExecutionContext,
@@ -74,20 +73,19 @@ class KeepMutatorImpl @Inject() (
 
   // Updates note on keep, making sure tags are in sync.
   // i.e., the note is the source of truth, and tags are added/removed appropriately
-  def updateKeepNote(userId: Id[User], oldKeep: Keep, newNote: String, freshTag: Boolean)(implicit session: RWSession): Keep = {
+  def updateKeepNote(userId: Id[User], oldKeep: Keep, newNote: String)(implicit session: RWSession): Keep = {
     // todo IMPORTANT: check permissions here, this lets anyone edit anyone's keep.
     val noteToPersist = Some(newNote.trim).filter(_.nonEmpty)
     val updatedKeep = oldKeep.withOwner(userId).withNote(noteToPersist)
-    val hashtagNamesToPersist = Hashtags.findAllHashtagNames(noteToPersist.getOrElse(""))
-    val (keep, colls) = syncTagsToNoteAndSaveKeep(userId, updatedKeep, hashtagNamesToPersist.toSeq, freshTag = freshTag)
+
+    log.info(s"[updateKeepNote] ${oldKeep.id.get}: Note changing from ${oldKeep.note} to $noteToPersist")
+
     session.onTransactionSuccess {
       searchClient.updateKeepIndex()
       slackPusher.schedule(oldKeep.recipients.libraries)
     }
-    colls.foreach { c =>
-      Try(collectionRepo.collectionChanged(c.id, c.isNewKeep, c.inactivateIfEmpty)) // deadlock prone
-    }
-    keep
+
+    syncTagsFromNote(updatedKeep, userId)
   }
 
   def updateKeepTitle(oldKeep: Keep, newTitle: String)(implicit session: RWSession): Keep = {
@@ -100,61 +98,25 @@ class KeepMutatorImpl @Inject() (
     }
   }
 
-  private def getOrCreateTag(userId: Id[User], name: String)(implicit session: RWSession): Collection = {
-    val normalizedName = Hashtag(name.trim.replaceAll("""\s+""", " ").take(Collection.MaxNameLength))
-    val collection = collectionRepo.getByUserAndName(userId, normalizedName, excludeState = None)
-    collection match {
-      case Some(t) if t.isActive => t
-      case Some(t) => collectionRepo.save(t.copy(state = CollectionStates.ACTIVE, name = normalizedName, createdAt = clock.now()))
-      case None => collectionRepo.save(Collection(userId = userId, name = normalizedName))
-    }
-  }
+  // Assumes keep.note is set to be the updated value
+  private def syncTagsFromNote(keep: Keep, userId: Id[User])(implicit session: RWSession): Keep = {
+    val noteTags = Hashtags.findAllHashtagNames(keep.note.getOrElse("")).map(Hashtag(_))
+    val existingTags = tagCommander.getForKeeps(Seq(keep.id.get))(session)(keep.id.get)
+    val newTags = noteTags.filter(nt => !existingTags.exists(_.tag.normalized == nt.normalized))
+    val tagsToRemove = existingTags
+      .filter(et => et.userId.exists(_ == userId) && et.messageId.isEmpty && !noteTags.exists(_.normalized == et.tag.normalized))
+      .map(_.tag)
 
-  // Given set of tags and keep, update keep note to reflect tag seq (create tags, remove tags, insert into note, remove from note)
-  // i.e., source of tag truth is the tag seq, note will be brought in sync
-  // Important: Caller's responsibility to call collectionRepo.collectionChanged from the return value for collections that changed
-  case class ChangedCollection(id: Id[Collection], isNewKeep: Boolean, inactivateIfEmpty: Boolean)
-  private def syncTagsToNoteAndSaveKeep(userId: Id[User], keep: Keep, allTagsKeepShouldHave: Seq[String], freshTag: Boolean = false)(implicit session: RWSession) = {
-    // get all tags from hashtag names list
-    val selectedTags = allTagsKeepShouldHave.flatMap { t => Try(getOrCreateTag(userId, t)).toOption }
-    val selectedTagIds = selectedTags.map(_.id.get).toSet
-    // get all active tags for keep to figure out which tags to add & which tags to remove
-    val activeTagIds = keepToCollectionRepo.getCollectionsForKeep(keep.id.get).toSet
-    val tagIdsToAdd = selectedTagIds -- activeTagIds
-    val tagIdsToRemove = activeTagIds -- selectedTagIds
-    var changedCollections = scala.collection.mutable.Set.empty[ChangedCollection]
+    tagCommander.addTagsToKeep(keep.id.get, newTags, Some(userId), None)
+    tagCommander.removeTagsFromKeeps(Seq(keep.id.get), tagsToRemove)
 
-    // fix k2c for tagsToAdd & tagsToRemove
-    tagIdsToAdd.map { tagId =>
-      keepToCollectionRepo.getOpt(keep.id.get, tagId) match {
-        case None => keepToCollectionRepo.save(KeepToCollection(keepId = keep.id.get, collectionId = tagId))
-        case Some(k2c) => keepToCollectionRepo.save(k2c.copy(state = KeepToCollectionStates.ACTIVE))
-      }
-      changedCollections += ChangedCollection(tagId, isNewKeep = freshTag, inactivateIfEmpty = false)
-    }
-    tagIdsToRemove.map { tagId =>
-      keepToCollectionRepo.remove(keep.id.get, tagId)
-      changedCollections += ChangedCollection(tagId, isNewKeep = false, inactivateIfEmpty = true)
+    if (newTags.nonEmpty || tagsToRemove.nonEmpty) {
+      log.info(s"[updateKeepNote] ${keep.id.get}: Added tags [$newTags]. Removed tags: [$tagsToRemove]")
+    } else {
+      log.info(s"[updateKeepNote] ${keep.id.get}: No tag changes")
     }
 
-    // go through note field and find all hashtags
-    val keepNote = keep.note.getOrElse("")
-    val hashtagsInNote = Hashtags.findAllHashtagNames(keepNote)
-    val hashtagsToPersistSet = allTagsKeepShouldHave.toSet
-
-    // find hashtags to remove & to append
-    val hashtagsToRemove = hashtagsInNote -- hashtagsToPersistSet
-    val hashtagsToAppend = allTagsKeepShouldHave.filterNot(hashtagsInNote.contains)
-    val noteWithHashtagsRemoved = Hashtags.removeTagNamesFromString(keepNote, hashtagsToRemove.toSet)
-    val noteWithHashtagsAppended = Hashtags.addTagsToString(noteWithHashtagsRemoved, hashtagsToAppend)
-    val finalNote = Some(noteWithHashtagsAppended.trim).filterNot(_.isEmpty)
-
-    (keepRepo.save(keep.withNote(finalNote)), changedCollections)
-  }
-
-  def searchTags(userId: Id[User], query: String, limit: Option[Int]): Future[Seq[HashtagHit]] = {
-    implicit val hitOrdering = TypeaheadHit.defaultOrdering[(Hashtag, Int)]
-    hashtagTypeahead.topN(userId, query, limit).map(_.map(_.info)).map(HashtagHit.highlight(query, _))
+    keepRepo.save(keep)
   }
 
   def persistKeep(k: Keep)(implicit session: RWSession): Keep = {
@@ -251,7 +213,7 @@ class KeepMutatorImpl @Inject() (
     ktuCommander.removeKeepFromAllUsers(keep)
     kteCommander.removeKeepFromAllEmails(keep)
     keepSourceRepo.deactivateByKeepId(keep.id.get)
-    keepToCollectionRepo.getByKeep(keep.id.get).foreach(keepToCollectionRepo.deactivate)
+    tagCommander.removeAllTagsFromKeeps(Seq(keep.id.get))
     keepRepo.deactivate(keep)
   }
 

@@ -46,10 +46,10 @@ class ExtLibraryController @Inject() (
   val userActionsHelper: UserActionsHelper,
   userRepo: UserRepo,
   keepRepo: KeepRepo,
-  collectionRepo: CollectionRepo,
   airbrake: AirbrakeNotifier,
   rawKeepInterner: RawKeepInterner,
   rawKeepFactory: RawKeepFactory,
+  tagCommander: TagCommander,
   rover: RoverServiceClient,
   implicit val imageConfig: S3ImageConfig,
   implicit val publicIdConfig: PublicIdConfiguration)
@@ -235,7 +235,7 @@ class ExtLibraryController @Inject() (
             }
           } else {
             val tags = db.readOnlyReplica { implicit s =>
-              collectionRepo.getHashtagsByKeepId(keep.id.get)
+              tagCommander.getTagsForKeep(keep.id.get)
             }
             val image = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(ExtLibraryController.defaultImageSize)).flatten.map(keepImageCommander.getUrl)
             Future.successful((tags, image))
@@ -273,7 +273,7 @@ class ExtLibraryController @Inject() (
           val idealSize = imgSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(ExtLibraryController.defaultImageSize)
           val keepImageUrl = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(idealSize)).flatten.map(keepImageCommander.getUrl)
           val tags = db.readOnlyReplica { implicit s =>
-            collectionRepo.getHashtagsByKeepId(keep.id.get)
+            tagCommander.getTagsForKeep(keep.id.get)
           }
           Ok(Json.toJson(MoarKeepData(keep.title, keepImageUrl, keep.note, tags.map(_.tag).toSeq)))
       }
