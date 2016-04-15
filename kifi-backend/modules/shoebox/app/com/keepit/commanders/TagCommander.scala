@@ -77,8 +77,8 @@ class TagCommanderImpl @Inject() (
       val keepTags = keepTagRepo.getTagsByUser(userId, offset, pageSize, sort)
 
       (sort match {
-        case TagSorting.NumKeeps => (keepTags ++ collectionResults).sortBy(_._2)
-        case TagSorting.Name => keepTags ++ collectionResults.sortBy(_._1.tag)
+        case TagSorting.NumKeeps => (keepTags ++ collectionResults).sortBy(_._2)(Ordering[Int].reverse)
+        case TagSorting.Name => (keepTags ++ collectionResults).sortBy(_._1.tag.toLowerCase)
         case TagSorting.LastKept => keepTags ++ collectionResults
       }).collect {
         case r if r._2 > 0 =>
