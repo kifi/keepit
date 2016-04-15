@@ -76,10 +76,23 @@ class TagCommanderImpl @Inject() (
 
       val keepTags = keepTagRepo.getTagsByUser(userId, offset, pageSize, sort)
 
+      val allTags = {
+        val all = (keepTags ++ collectionResults).zipWithIndex
+        val combined = mutable.Map.empty[Hashtag, (Int, Option[Int])].withDefaultValue((0, None))
+        all.foreach {
+          case ((tag, count), idx) =>
+            val (cnt, prevIdx) = combined(tag)
+            combined += ((tag, (cnt + count, Some(prevIdx.getOrElse(idx)))))
+        }
+        combined.toSeq.sortBy(_._2._2).collect {
+          case e if e._2._2.nonEmpty =>
+            (e._1, e._2._1)
+        }
+      }
       (sort match {
-        case TagSorting.NumKeeps => (keepTags ++ collectionResults).sortBy(_._2)(Ordering[Int].reverse)
-        case TagSorting.Name => (keepTags ++ collectionResults).sortBy(_._1.tag.toLowerCase)
-        case TagSorting.LastKept => keepTags ++ collectionResults
+        case TagSorting.NumKeeps => allTags.sortBy(_._2)(Ordering[Int].reverse)
+        case TagSorting.Name => allTags.sortBy(_._1.tag.toLowerCase)
+        case TagSorting.LastKept => allTags
       }).collect {
         case r if r._2 > 0 =>
           FakedBasicCollection.fromTag(r._1, Some(r._2))
