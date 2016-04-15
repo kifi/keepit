@@ -20,11 +20,10 @@ POST    /api/1/keeps/:id/messages/:msgId/edit     @com.keepit.controllers.client
 
 # Info
 GET    /api/1/keeps/stream           @com.keepit.controllers.client.KeepInfoController.getKeepStream(fromId: Option[String] ?= None, limit: Int ?= 10)
+GET    /api/1/keeps/suggestRecipients @com.keepit.controllers.client.KeepInfoController.suggestRecipient(query: Option[String], limit: Option[Int], offset: Option[Int], requested: Option[String])
 
 GET    /api/1/keeps/:id              @com.keepit.controllers.client.KeepInfoController.getKeepView(id: PublicId[Keep])
 GET    /api/1/keeps/:id/activity     @com.keepit.controllers.client.KeepInfoController.getActivityOnKeep(id: PublicId[Keep], limit: Int ?= 10, fromTime: Option[DateTime] ?= None)
-GET    /api/1/keeps/suggestRecipients @com.keepit.controllers.client.KeepInfoController.suggestRecipient(query: Option[String], limit: Option[Int], offset: Option[Int], requested: Option[String])
-
 
 # Exports
 GET    /api/1/keeps/export/personal  @com.keepit.controllers.client.KeepExportController.exportPersonalKeeps()
