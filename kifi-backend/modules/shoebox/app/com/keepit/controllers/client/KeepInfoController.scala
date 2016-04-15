@@ -1,7 +1,7 @@
 package com.keepit.controllers.client
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.commanders.KeepCommander
+import com.keepit.commanders._
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.core.{ anyExtensionOps, tryExtensionOps }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
@@ -16,9 +16,10 @@ import com.keepit.common.util.RightBias.FromOption
 import com.keepit.model._
 import com.keepit.shoebox.data.assemblers.{ KeepActivityAssembler, KeepInfoAssembler }
 import com.keepit.slack.{ InhouseSlackClient, InhouseSlackChannel }
+import com.kifi.macros.json
 import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.DateTime
-import play.api.libs.json.Json
+import play.api.libs.json.{ JsObject, Json }
 
 import scala.concurrent.{ ExecutionContext, Future }
 
@@ -31,6 +32,7 @@ class KeepInfoController @Inject() (
   keepInfoAssembler: KeepInfoAssembler,
   keepActivityAssembler: KeepActivityAssembler,
   clock: Clock,
+  typeaheadCommander: TypeaheadCommander,
   implicit val airbrake: AirbrakeNotifier,
   private implicit val defaultContext: ExecutionContext,
   private implicit val publicIdConfig: PublicIdConfiguration,
@@ -84,4 +86,18 @@ class KeepInfoController @Inject() (
       case fail: KeepFail => fail.asErrorResponse
     }
   }
+
+  @json case class RecipientSuggestion(query: Option[String], results: Seq[JsObject /* TypeaheadResult */ ], mayHaveMore: Boolean, limit: Option[Int], offset: Option[Int])
+  def suggestRecipient(query: Option[String], limit: Option[Int], offset: Option[Int], requested: Option[String]) = UserAction.async { request =>
+    val requestedSet = requested.map(_.split(",").map(_.trim).flatMap(TypeaheadRequest.applyOpt).toSet).filter(_.nonEmpty).getOrElse(TypeaheadRequest.all)
+    typeaheadCommander.searchForKeepRecipients(request.userId, query.getOrElse(""), limit, offset, requestedSet).map { suggestions =>
+      val body = suggestions.take(limit.getOrElse(20)).collect {
+        case u: UserContactResult => Json.toJson(u).as[JsObject] ++ Json.obj("kind" -> "user")
+        case e: EmailContactResult => Json.toJson(e).as[JsObject] ++ Json.obj("kind" -> "email")
+        case l: LibraryResult => Json.toJson(l).as[JsObject] ++ Json.obj("kind" -> "library")
+      }
+      Ok(Json.toJson(RecipientSuggestion(query.map(_.trim).filter(_.nonEmpty), body, suggestions.nonEmpty, limit, offset)))
+    }
+  }
+
 }
