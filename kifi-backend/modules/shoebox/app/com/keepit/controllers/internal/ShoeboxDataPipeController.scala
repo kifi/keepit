@@ -249,7 +249,7 @@ class ShoeboxDataPipeController @Inject() (
         val libByKeep = {
           ktlRepo.getAllByKeepIds(keepIds).flatMapValues(_.headOption.map(ktl => libraryRepo.get(ktl.libraryId)))
         }
-        val tagsByKeepId = tagCommander.getForKeeps(keepIds)
+        val tagsByKeepId = tagCommander.getTagInfoForKeeps(keepIds)
         changedKeeps.map { keep =>
           val tags = tagsByKeepId.getOrElse(keep.id.get, Seq.empty).map(_.tag).toSet
           val noteTags = Hashtags.findAllHashtagNames(keep.note.getOrElse("")).map(Hashtag.apply)
