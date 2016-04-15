@@ -89,7 +89,7 @@ class KeepDecoratorImpl @Inject() (
       val emailParticipantsByKeepFuture = eliza.getEmailParticipantsForKeeps(keepIds)
 
       val (ktusByKeep, ktlsByKeep, eventsByKeep) = db.readOnlyMaster { implicit s =>
-        (ktuRepo.getAllByKeepIds(keeps.map(_.id.get).toSet), ktlRepo.getAllByKeepIds(keepIds), eventRepo.getForKeeps(keepIds, limit = Some(maxMessagesShown)))
+        (ktuRepo.getAllByKeepIds(keeps.map(_.id.get).toSet), ktlRepo.getAllByKeepIds(keepIds), eventRepo.getForKeeps(keepIds, limit = Some(maxMessagesShown), excludeKinds = KeepEventKind.hideForNow))
       }
 
       val entitiesFutures = for {
