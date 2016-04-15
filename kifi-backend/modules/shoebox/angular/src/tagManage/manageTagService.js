@@ -7,7 +7,7 @@ angular.module('kifi')
   function ($http, $q, $state, $analytics, routeService, undoService, Clutch) {
 
     var pageClutch = new Clutch(function (sort, offset) {
-      return $http.get(routeService.pageTags(sort, offset, 100)).then(function (res) {
+      return $http.get(routeService.pageTags(sort, offset, 300)).then(function (res) {
         return res.data.tags;
       });
     });
@@ -16,7 +16,7 @@ angular.module('kifi')
       if (!query || !query.trim()) {
         return $q.when([]);
       }
-      return $http.get(routeService.searchTags(query, 30)).then(function (res) {
+      return $http.get(routeService.searchTags(query, 100)).then(function (res) {
         return _.map(res.data.results, function (r) {
           return {name: r.tag, keeps: r.keepCount};
         });
