@@ -69,6 +69,12 @@ object SlackPushingActor {
       else items.sortBy(_.time)
     }
   }
+
+  final case class ContextSensitiveSlackPush(asUser: Option[SlackMessageRequest], asBot: SlackMessageRequest)
+  object ContextSensitiveSlackPush {
+    def insensitive(smr: SlackMessageRequest) = ContextSensitiveSlackPush(asUser = Some(smr), asBot = smr)
+    def generate(fn: Boolean => SlackMessageRequest) = ContextSensitiveSlackPush(asUser = Some(fn(true)), asBot = fn(false))
+  }
 }
 
 class SlackPushingActor @Inject() (
@@ -210,9 +216,10 @@ class SlackPushingActor @Inject() (
   private def pushNewItems(integration: LibraryToSlackChannel, channel: SlackChannel, sortedItems: Seq[PushItem], settings: Option[OrganizationSettings])(implicit pushItems: PushItems): Future[Unit] = {
     FutureHelpers.sequentialExec(sortedItems) { item =>
       slackMessageForItem(item, settings).fold(Future.successful(())) { itemMsg =>
-        slackClient.sendToSlackHoweverPossible(integration.slackTeamId, integration.slackChannelId, itemMsg).recoverWith {
+        val push = slackClient.sendToSlackHoweverPossible(integration.slackTeamId, integration.slackChannelId, itemMsg.asBot).recoverWith {
           case SlackFail.NoValidPushMethod => Future.failed(BrokenSlackIntegration(integration, None, Some(SlackFail.NoValidPushMethod)))
-        }.map { pushedMessageOpt =>
+        }
+        push.map { pushedMessageOpt =>
           db.readWrite { implicit s =>
             item match {
               case PushItem.Digest(_) =>
@@ -221,12 +228,12 @@ class SlackPushingActor @Inject() (
               case PushItem.KeepToPush(k, ktl) =>
                 log.info(s"[SLACK-PUSH-ACTOR] for integration ${integration.id.get}, keep ${k.id.get} had message ${pushedMessageOpt.map(_.timestamp)}")
                 pushedMessageOpt.foreach { response =>
-                  slackPushForKeepRepo.intern(SlackPushForKeep.fromMessage(integration, k.id.get, itemMsg, response))
+                  slackPushForKeepRepo.intern(SlackPushForKeep.fromMessage(integration, k.id.get, itemMsg.asBot, response))
                 }
                 integrationRepo.updateLastProcessedKeep(integration.id.get, ktl.id.get)
               case PushItem.MessageToPush(k, kifiMsg) =>
                 pushedMessageOpt.foreach { response =>
-                  slackPushForMessageRepo.intern(SlackPushForMessage.fromMessage(integration, kifiMsg.id, itemMsg, response))
+                  slackPushForMessageRepo.intern(SlackPushForMessage.fromMessage(integration, kifiMsg.id, itemMsg.asBot, response))
                 }
                 integrationRepo.updateLastProcessedMsg(integration.id.get, kifiMsg.id)
             }
@@ -265,7 +272,7 @@ class SlackPushingActor @Inject() (
     }
     FutureHelpers.sequentialExec(oldKeeps.flatAugmentWith { case KeepToPush(k, _) => slackPushesByKeep.get(k.id.get) }) {
       case (KeepToPush(k, ktl), oldPush) =>
-        val updatedMessage = keepAsSlackMessage(k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get))
+        val updatedMessage = keepAsSlackMessage(k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get)).asBot
         if (oldPush.messageRequest.safely.contains(updatedMessage)) Future.successful(())
         else {
           slackClient.updateMessage(botToken, integration.slackChannelId, oldPush.timestamp, SlackMessageUpdateRequest.fromMessageRequest(updatedMessage)).map { response =>
@@ -292,7 +299,7 @@ class SlackPushingActor @Inject() (
     }
     FutureHelpers.sequentialExec(oldMsgs.flatAugmentWith { case MessageToPush(_, msg) => slackPushesByMsg.get(msg.id) }) {
       case (MessageToPush(k, msg), oldPush) =>
-        val updatedMessage = messageAsSlackMessage(msg, k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get))
+        val updatedMessage = messageAsSlackMessage(msg, k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get)).asBot
         if (oldPush.messageRequest.safely.contains(updatedMessage)) Future.successful(())
         else {
           slackClient.updateMessage(botToken, integration.slackChannelId, oldPush.timestamp, SlackMessageUpdateRequest.fromMessageRequest(updatedMessage)).map { response =>
@@ -378,18 +385,18 @@ class SlackPushingActor @Inject() (
     }
   }
 
-  private def slackMessageForItem(item: PushItem, orgSettings: Option[OrganizationSettings])(implicit items: PushItems): Option[SlackMessageRequest] = {
+  private def slackMessageForItem(item: PushItem, orgSettings: Option[OrganizationSettings])(implicit items: PushItems): Option[ContextSensitiveSlackPush] = {
     import DescriptionElements._
     val libraryLink = LinkElement(pathCommander.libraryPageViaSlack(items.lib, items.slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(items.slackChannelId, NotificationCategory.NonUser.LIBRARY_DIGEST)))
     item match {
-      case PushItem.Digest(since) => Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements(
+      case PushItem.Digest(since) => Some(ContextSensitiveSlackPush(asUser = None, asBot = SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements(
         items.lib.name, "has", (items.newKeeps.length, items.newMsgs.length) match {
           case (numKeeps, numMsgs) if numMsgs < 2 => DescriptionElements(numKeeps, "new keeps since", since, ".")
           case (numKeeps, numMsgs) if numKeeps < 2 => DescriptionElements(numMsgs, "new comments since", since, ".")
           case (numKeeps, numMsgs) => DescriptionElements(numKeeps, "new keeps and", numMsgs, "new comments since", since, ".")
         },
         "It's a bit too much to post here, but you can check it all out", "here" --> libraryLink
-      ))))
+      )))))
       case PushItem.KeepToPush(k, ktl) =>
         Some(keepAsSlackMessage(k, items.lib, items.slackTeamId, items.attribution.get(k.id.get), ktl.addedBy.flatMap(items.users.get)))
       case PushItem.MessageToPush(k, msg) if msg.text.nonEmpty && orgSettings.exists(_.settingFor(StaticFeature.SlackCommentMirroring).safely.contains(StaticFeatureSetting.ENABLED)) =>
@@ -398,7 +405,7 @@ class SlackPushingActor @Inject() (
         None
     }
   }
-  private def keepAsSlackMessage(keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], user: Option[BasicUser])(implicit items: PushItems): SlackMessageRequest = {
+  private def keepAsSlackMessage(keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], user: Option[BasicUser])(implicit items: PushItems): ContextSensitiveSlackPush = {
     import DescriptionElements._
     val category = NotificationCategory.NonUser.NEW_KEEP
     val userStr = user.fold[String]("Someone")(_.firstName)
@@ -414,28 +421,28 @@ class SlackPushingActor @Inject() (
     // TODO(cam): once you backfill, `attribution` should be non-optional so you can simplify this match
     if (slackTeamId == KifiSlackApp.BrewstercorpTeamId || slackTeamId == KifiSlackApp.KifiSlackTeamId) {
       (keep.note, attribution) match {
-        case (Some(note), _) => SlackMessageRequest.fromKifi(
-          text = DescriptionElements.formatForSlack(DescriptionElements(s"*$userStr:*", Hashtags.format(note))),
+        case (Some(note), _) => ContextSensitiveSlackPush.generate(asUser => SlackMessageRequest.fromKifi(
+          text = DescriptionElements.formatForSlack(DescriptionElements(Some(s"*$userStr:*").filterNot(_ => asUser), Hashtags.format(note))),
           attachments = Seq(SlackAttachment.simple(DescriptionElements(SlackEmoji.newspaper, keepElement)))
-        )
-        case (None, None) => SlackMessageRequest.fromKifi(
-          text = DescriptionElements.formatForSlack(DescriptionElements(s"*$userStr*", "sent", keepElement))
-        )
+        ))
+        case (None, None) => ContextSensitiveSlackPush.generate(asUser => SlackMessageRequest.fromKifi(
+          text = DescriptionElements.formatForSlack(DescriptionElements(Some(DescriptionElements(s"*$userStr*", "sent")).filterNot(_ => asUser), keepElement))
+        ))
         case (None, Some(attr)) => attr match {
-          case ka: KifiAttribution => SlackMessageRequest.fromKifi(
-            text = DescriptionElements.formatForSlack(DescriptionElements(s"*${ka.keptBy.firstName}*", "sent", keepElement))
-          )
-          case TwitterAttribution(tweet) => SlackMessageRequest.fromKifi(
+          case ka: KifiAttribution => ContextSensitiveSlackPush.generate(asUser => SlackMessageRequest.fromKifi(
+            text = DescriptionElements.formatForSlack(DescriptionElements(Some(DescriptionElements(s"*${ka.keptBy.firstName}*", "sent")).filterNot(_ => asUser), keepElement))
+          ))
+          case TwitterAttribution(tweet) => ContextSensitiveSlackPush.insensitive(SlackMessageRequest.fromKifi(
             text = DescriptionElements.formatForSlack(DescriptionElements(s"*${tweet.user.name}:*", Hashtags.format(tweet.text))),
             attachments = Seq(SlackAttachment.simple(DescriptionElements(SlackEmoji.newspaper, keepElement)))
-          )
-          case SlackAttribution(msg, team) => SlackMessageRequest.fromKifi(
+          ))
+          case SlackAttribution(msg, team) => ContextSensitiveSlackPush.insensitive(SlackMessageRequest.fromKifi(
             text = DescriptionElements.formatForSlack(DescriptionElements(s"*${msg.username.value}:*", msg.text)),
             attachments = Seq(SlackAttachment.simple(DescriptionElements(SlackEmoji.newspaper, keepElement)))
-          )
+          ))
         }
       }
-    } else (keep.note, attribution) match {
+    } else ContextSensitiveSlackPush(asUser = None, asBot = (keep.note, attribution) match {
       case (Some(note), _) => SlackMessageRequest.fromKifi(
         text = DescriptionElements.formatForSlack(keepElement),
         attachments = Seq(SlackAttachment.simple(DescriptionElements(s"*$userStr:*", Hashtags.format(note))).withColorMaybe(userColor.map(_.hex)).withFullMarkdown)
@@ -456,9 +463,9 @@ class SlackPushingActor @Inject() (
           attachments = Seq(SlackAttachment.simple(DescriptionElements(s"*${msg.username.value}:*", msg.text)))
         )
       }
-    }
+    })
   }
-  private def messageAsSlackMessage(msg: CrossServiceMessage, keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], user: Option[BasicUser])(implicit items: PushItems): SlackMessageRequest = {
+  private def messageAsSlackMessage(msg: CrossServiceMessage, keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], user: Option[BasicUser])(implicit items: PushItems): ContextSensitiveSlackPush = {
     airbrake.verify(msg.keep == keep.id.get, s"Message $msg does not belong to keep $keep")
     airbrake.verify(keep.recipients.libraries.contains(lib.id.get), s"Keep $keep is not in library $lib")
     import DescriptionElements._
@@ -483,9 +490,9 @@ class SlackPushingActor @Inject() (
     val textAndLookHeres = CrossServiceMessage.splitOutLookHeres(msg.text)
 
     if (slackTeamId == KifiSlackApp.BrewstercorpTeamId || slackTeamId == KifiSlackApp.KifiSlackTeamId) {
-      SlackMessageRequest.fromKifi(
+      ContextSensitiveSlackPush.generate(asUser => SlackMessageRequest.fromKifi(
         text = if (msg.isDeleted) "[comment has been deleted]"
-        else DescriptionElements.formatForSlack(DescriptionElements(s"*$userStr:*", textAndLookHeres.map {
+        else DescriptionElements.formatForSlack(DescriptionElements(Some(s"*$userStr:*").filterNot(_ => asUser), textAndLookHeres.map {
           case Left(str) => DescriptionElements(str)
           case Right(Success((pointer, ref))) => pointer --> msgLink("lookHere")
           case Right(Failure(fail)) => "look here" --> msgLink("lookHere")
@@ -502,8 +509,8 @@ class SlackPushingActor @Inject() (
                 )).withFullMarkdown
             }
         } :+ SlackAttachment.simple(DescriptionElements(SlackEmoji.newspaper, keepElement))
-      )
-    } else SlackMessageRequest.fromKifi(
+      ))
+    } else ContextSensitiveSlackPush(asUser = None, asBot = SlackMessageRequest.fromKifi(
       text = DescriptionElements.formatForSlack(keepElement),
       attachments =
         if (msg.isDeleted) Seq(SlackAttachment.simple("[comment has been deleted]"))
@@ -523,7 +530,7 @@ class SlackPushingActor @Inject() (
                 )).withFullMarkdown
             }
         }
-    )
+    ))
   }
 }
 
