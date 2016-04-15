@@ -80,8 +80,9 @@ class TagCommanderImpl @Inject() (
         case TagSorting.NumKeeps => (keepTags ++ collectionResults).sortBy(_._2)
         case TagSorting.Name => keepTags ++ collectionResults.sortBy(_._1.tag)
         case TagSorting.LastKept => keepTags ++ collectionResults
-      }).collect { case r if r._2 > 0 =>
-        FakedBasicCollection.fromTag(r._1, Some(r._2))
+      }).collect {
+        case r if r._2 > 0 =>
+          FakedBasicCollection.fromTag(r._1, Some(r._2))
       }
     }
   }
