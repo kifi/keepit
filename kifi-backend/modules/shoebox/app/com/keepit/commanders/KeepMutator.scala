@@ -78,6 +78,8 @@ class KeepMutatorImpl @Inject() (
     val noteToPersist = Some(newNote.trim).filter(_.nonEmpty)
     val updatedKeep = oldKeep.withOwner(userId).withNote(noteToPersist)
 
+    log.info(s"[updateKeepNote] ${oldKeep.id.get}: Note changing from ${oldKeep.note} to $noteToPersist")
+
     session.onTransactionSuccess {
       searchClient.updateKeepIndex()
       slackPusher.schedule(oldKeep.recipients.libraries)
@@ -107,6 +109,12 @@ class KeepMutatorImpl @Inject() (
 
     tagCommander.addTagsToKeep(keep.id.get, newTags, Some(userId), None)
     tagCommander.removeTagsFromKeeps(Seq(keep.id.get), tagsToRemove)
+
+    if (newTags.nonEmpty || tagsToRemove.nonEmpty) {
+      log.info(s"[updateKeepNote] ${keep.id.get}: Added tags [$newTags]. Removed tags: [$tagsToRemove]")
+    } else {
+      log.info(s"[updateKeepNote] ${keep.id.get}: No tag changes")
+    }
 
     keepRepo.save(keep)
   }
