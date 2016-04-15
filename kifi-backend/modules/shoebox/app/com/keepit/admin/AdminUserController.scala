@@ -97,6 +97,7 @@ class AdminUserController @Inject() (
     userValueRepo: UserValueRepo,
     collectionRepo: CollectionRepo,
     keepToCollectionRepo: KeepToCollectionRepo,
+    keepTagRepo: KeepTagRepo,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     libraryRepo: LibraryRepo,
     libraryCommander: LibraryCommander,
@@ -713,7 +714,7 @@ class AdminUserController @Inject() (
         properties += ("keeps", keeps)
         properties += ("publicKeeps", keepVisibilityCount.published + keepVisibilityCount.discoverable + keepVisibilityCount.organization)
         properties += ("privateKeeps", keepVisibilityCount.secret)
-        properties += ("tags", collectionRepo.count(userId))
+        properties += ("tags", tagCommander.getCountForUser(userId))
         properties += ("kifiConnections", userConnectionRepo.getConnectionCount(userId))
         properties += ("socialConnections", socialConnectionRepo.getUserConnectionCount(userId))
         properties += ("experiments", userExperimentRepo.getUserExperiments(userId).map(_.value).toSeq)
@@ -803,7 +804,7 @@ class AdminUserController @Inject() (
         val emails = emailRepo.getAllByUser(userId)
         val credentials = userCredRepo.findByUserIdOpt(userId)
         val installations = kifiInstallationRepo.all(userId)
-        val tags = collectionRepo.getUnfortunatelyIncompleteTagsByUser(userId)
+        val tags = tagCommander.tagsForUser(userId, 0, 200, TagSorting.NumKeeps).map(_.name)
         val keeps = keepRepo.getByUser(userId)
         val slackMemberships = slackTeamMembershipRepo.getByUserId(userId).map(m => s"${m.slackTeamId.value}|${m.slackUserId.value}")
         val socialUsers = socialUserInfoRepo.getByUser(userId)
@@ -851,6 +852,7 @@ class AdminUserController @Inject() (
     keepRepo.getByUser(userId).foreach(keepMutator.deactivateKeep)
     ktuRepo.getAllByUserId(userId).foreach(ktuRepo.deactivate)
     collectionRepo.getUnfortunatelyIncompleteTagsByUser(userId).foreach { collection => collectionRepo.save(collection.copy(state = CollectionStates.INACTIVE)) }
+    keepTagRepo.getAllByUser(userId).foreach { kt => keepTagRepo.deactivate(kt) }
 
     // Libraries Data
     libraryInviteRepo.getByUser(userId, Set(LibraryInviteStates.INACTIVE)).foreach { case (invite, _) => libraryInviteRepo.save(invite.withState(LibraryInviteStates.INACTIVE)) } // Library Invites

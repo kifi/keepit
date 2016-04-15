@@ -216,13 +216,13 @@ class KeepCommanderImpl @Inject() (
 
     def getKeepsFromCollection(userId: Id[User], collectionId: String, beforeOpt: Option[ExternalId[Keep]], afterOpt: Option[ExternalId[Keep]], count: Int): Seq[Keep] = {
       db.readOnlyReplica { implicit session =>
-        val collectionOpt = collectionRepo.getByUserAndName(userId, Hashtag(collectionId))
-          .orElse(ExternalId.asOpt[Collection](collectionId).flatMap(cid => collectionRepo.getByUserAndExternalId(userId, cid)))
-        val keeps = collectionOpt.map { collection =>
-          keepRepo.getByUserAndCollection(userId, collection.id.get, beforeOpt, afterOpt, count)
-        } getOrElse Seq.empty
+        // todo: This screws up pagination. Crap.
+        val tagKeeps = {
+          val ids = tagCommander.getKeepsByTagAndUser(Hashtag(collectionId), userId)
+          keepRepo.getActiveByIds(ids.toSet).values.toSeq.sortBy(_.lastActivityAt)
+        }
 
-        keeps
+        tagKeeps
       }
     }
 
@@ -368,16 +368,6 @@ class KeepCommanderImpl @Inject() (
         }
     }
     result.map(_._2)
-  }
-
-  private def getOrCreateTag(userId: Id[User], name: String)(implicit session: RWSession): Collection = {
-    val normalizedName = Hashtag(name.trim.replaceAll("""\s+""", " ").take(Collection.MaxNameLength))
-    val collection = collectionRepo.getByUserAndName(userId, normalizedName, excludeState = None)
-    collection match {
-      case Some(t) if t.isActive => t
-      case Some(t) => collectionRepo.save(t.copy(state = CollectionStates.ACTIVE, name = normalizedName, createdAt = clock.now()))
-      case None => collectionRepo.save(Collection(userId = userId, name = normalizedName))
-    }
   }
 
   private def postSingleKeepReporting(keep: Keep, isNewKeep: Boolean, library: Library, socialShare: SocialShare): Unit = SafeFuture {

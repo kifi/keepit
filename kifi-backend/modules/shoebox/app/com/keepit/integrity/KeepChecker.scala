@@ -151,7 +151,7 @@ class KeepChecker @Inject() (
     val keep = keepRepo.getNoCache(keepId)
 
     val tagsFromHashtags = Hashtags.findAllHashtagNames(keep.note.getOrElse("")).map(Hashtag.apply)
-    val tagsFromCollections = collectionRepo.getHashtagsByKeepId(keep.id.get)
+    val tagsFromCollections = tagCommander.getTagsForKeep(keep.id.get).toSet
     if (tagsFromHashtags.map(_.normalized) != tagsFromCollections.map(_.normalized) && keep.isActive) {
       log.info(s"[NOTE-TAGS-MATCH] Keep $keepId's note does not match tags. $tagsFromHashtags vs $tagsFromCollections")
       autoFixKeepNoteAndTags(keep.id.get) // Async, max 1 thread system wide. i.e., this does not fix it immediately

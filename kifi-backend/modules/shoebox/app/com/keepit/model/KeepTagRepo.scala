@@ -8,6 +8,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
 import com.keepit.discussion.Message
+import com.keepit.typeahead.{ UserHashtagTypeaheadCache, UserHashtagTypeaheadUserIdKey }
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax.unlift
 
@@ -19,6 +20,7 @@ trait KeepTagRepo extends Repo[KeepTag] {
   def getTagsByUser(userId: Id[User], offset: Int, pageSize: Int, sort: TagSorting)(implicit session: RSession): Seq[(Hashtag, Int)]
   def getByMessage(messageId: Id[Message])(implicit session: RSession): Seq[KeepTag]
   def getAllByTagAndUser(tag: Hashtag, userId: Id[User])(implicit session: RSession): Seq[KeepTag]
+  def getAllByUser(userId: Id[User])(implicit session: RSession): Seq[KeepTag]
   def removeTagsFromKeep(keepIds: Traversable[Id[Keep]], tags: Traversable[Hashtag])(implicit session: RWSession): Int
   def deactivate(model: KeepTag)(implicit session: RWSession): Unit
   def countForUser(userId: Id[User])(implicit session: RSession): Int
@@ -27,15 +29,18 @@ trait KeepTagRepo extends Repo[KeepTag] {
 @Singleton
 class KeepTagRepoImpl @Inject() (
   airbrake: AirbrakeNotifier,
+  userHashtagTypeaheadCache: UserHashtagTypeaheadCache,
   val db: DataBaseComponent,
   val clock: Clock)
     extends DbRepo[KeepTag] with KeepTagRepo {
 
   import db.Driver.simple._
 
-  override def invalidateCache(ktc: KeepTag)(implicit session: RSession): Unit = deleteCache(ktc)
+  override def invalidateCache(kt: KeepTag)(implicit session: RSession): Unit = deleteCache(kt)
 
-  override def deleteCache(ktc: KeepTag)(implicit session: RSession): Unit = {}
+  override def deleteCache(kt: KeepTag)(implicit session: RSession): Unit = {
+    kt.userId.foreach(u => userHashtagTypeaheadCache.remove(UserHashtagTypeaheadUserIdKey(u)))
+  }
 
   type RepoImpl = KeepTagTable
   class KeepTagTable(tag: Tag) extends RepoTable[KeepTag](db, tag, "keep_tag") {
@@ -68,7 +73,7 @@ class KeepTagRepoImpl @Inject() (
   }
 
   def getTagsByUser(userId: Id[User], offset: Int, pageSize: Int, sort: TagSorting)(implicit session: RSession): Seq[(Hashtag, Int)] = {
-    val q = activeRows.filter(row => row.userId === userId).groupBy(_.normalizedTag)
+    activeRows.filter(row => row.userId === userId).groupBy(_.normalizedTag)
       .map { case (normalizedTag, q) => (q.map(_.tagName).max, q.map(_.createdAt).max, q.length) }
       .sortBy { s: (Column[Option[Hashtag]], Column[Option[DateTime]], Column[Int]) =>
         sort match {
@@ -78,10 +83,7 @@ class KeepTagRepoImpl @Inject() (
         }
       }.drop(offset)
       .take(pageSize)
-
-    println("xxxxxxxxxxxxxxxxxxxxxxxxx\n\n" + q.selectStatement)
-
-    q.list
+      .list
       .collect { case (Some(t), Some(m), b) => (t, b) }
   }
 
@@ -91,6 +93,11 @@ class KeepTagRepoImpl @Inject() (
 
   def getAllByTagAndUser(tag: Hashtag, userId: Id[User])(implicit session: RSession): Seq[KeepTag] = {
     activeRows.filter(row => row.normalizedTag === tag.normalized && row.userId === userId).list
+  }
+
+  // Can be very expensive!
+  def getAllByUser(userId: Id[User])(implicit session: RSession): Seq[KeepTag] = {
+    activeRows.filter(row => row.userId === userId).list
   }
 
   def removeTagsFromKeep(keepIds: Traversable[Id[Keep]], tags: Traversable[Hashtag])(implicit session: RWSession): Int = {

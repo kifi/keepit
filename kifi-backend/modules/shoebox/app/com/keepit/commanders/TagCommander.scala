@@ -1,7 +1,7 @@
 package com.keepit.commanders
 
 import com.google.inject.{ ImplementedBy, Inject, Provider }
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
@@ -9,6 +9,7 @@ import com.keepit.common.time._
 import com.keepit.discussion.Message
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
+import com.keepit.typeahead.{ UserHashtagTypeaheadUserIdKey, UserHashtagTypeaheadCache }
 import com.kifi.macros.json
 import com.keepit.common.core._
 
@@ -54,7 +55,7 @@ class TagCommanderImpl @Inject() (
   }
 
   def addTagsToKeep(keepId: Id[Keep], tags: Traversable[Hashtag], userIdOpt: Option[Id[User]], messageIdOpt: Option[Id[Message]])(implicit session: RWSession): Unit = {
-    val existingTags = keepTagRepo.getByKeepIds(Seq(keepId))(session)(keepId).map(t => t.tag.normalized -> t).toMap
+    val existingTags = getTagsForKeep(keepId).map(t => t.normalized -> t).toMap
 
     tags.foreach { tag =>
       existingTags.get(tag.normalized) match {
@@ -66,17 +67,16 @@ class TagCommanderImpl @Inject() (
 
   def tagsForUser(userId: Id[User], offset: Int, pageSize: Int, sort: TagSorting): Seq[FakedBasicCollection] = {
 
-    // todo: Plug in KeepTag.
     db.readOnlyMaster { implicit s =>
-      val collectionResults = sort match {
+      val collectionResults = (sort match {
         case TagSorting.NumKeeps => collectionRepo.getByUserSortedByNumKeeps(userId, offset, pageSize)
         case TagSorting.Name => collectionRepo.getByUserSortedByName(userId, offset, pageSize)
         case TagSorting.LastKept => collectionRepo.getByUserSortedByLastKept(userId, offset, pageSize)
-      }
+      }).map { case (collectionSummary, keepCount) => FakedBasicCollection.fromTag(collectionSummary.name, Some(keepCount)) }
 
       val keepTags = keepTagRepo.getTagsByUser(userId, offset, pageSize, sort).map(r => FakedBasicCollection.fromTag(r._1, Some(r._2)))
 
-      keepTags ++ collectionResults.map { case (collectionSummary, keepCount) => FakedBasicCollection.fromTag(collectionSummary.name, Some(keepCount)) }
+      keepTags ++ collectionResults
     }
   }
 
@@ -128,7 +128,11 @@ class TagCommanderImpl @Inject() (
     val collKeepIds = collectionRepo.getByUserAndName(userId, tag).map { coll =>
       keepToCollectionRepo.getKeepsForTag(coll.id.get)
     }.getOrElse(Seq.empty)
-    keepTagRepo.getAllByTagAndUser(tag, userId).map(_.keepId) ++ collKeepIds
+    val colIdKeepIds = ExternalId.asOpt[Collection](tag.tag).flatMap(cid => collectionRepo.getByUserAndExternalId(userId, cid)).map { c =>
+      keepRepo.getByUserAndCollection(userId, c.id.get, None, None, 1000).map(_.id.get)
+    }.getOrElse(Seq.empty)
+
+    keepTagRepo.getAllByTagAndUser(tag, userId).map(_.keepId) ++ collKeepIds ++ colIdKeepIds
   }
 
   // Reminder: does not check permissions. Do that yourself before calling this!

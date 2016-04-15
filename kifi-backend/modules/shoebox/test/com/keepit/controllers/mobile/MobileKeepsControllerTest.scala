@@ -134,8 +134,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
           val keep2 = KeepFactory.keep().withUser(user).withLibrary(lib).withTitle("default1").saved
           val keepInactive = KeepFactory.keep().withUser(user).withLibrary(lib).withState(KeepStates.INACTIVE).saved
 
-          collectionRepo.count(user.id.get) === 0
-          keepToCollectionRepo.count === 0
+          tagCommander.getCountForUser(user.id.get) === 0
 
           (user, keep1, keep2, keepInactive)
         }

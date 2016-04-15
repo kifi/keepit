@@ -52,7 +52,6 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
   )
 
   def externalIdForTitle(title: String)(implicit injector: Injector): String = forTitle(title).externalId.id
-  def externalIdForCollection(userId: Id[User], name: String)(implicit injector: Injector): String = forCollection(userId, name).externalId.id
 
   def sourceForTitle(title: String)(implicit injector: Injector): KeepSource = forTitle(title).source
 
@@ -64,14 +63,6 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
       val keeps = inject[KeepRepo].all().filter(_.title == title)
       keeps.size === 1
       keeps.head
-    }
-  }
-
-  def forCollection(userId: Id[User], name: String)(implicit injector: Injector): Collection = {
-    inject[Database].readWrite { implicit session =>
-      val collections = inject[CollectionRepo].getByUserAndName(userId, Hashtag(name))
-      collections.size === 1
-      collections.head
     }
   }
 
