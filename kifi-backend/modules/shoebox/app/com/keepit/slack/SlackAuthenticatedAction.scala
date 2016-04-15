@@ -19,13 +19,13 @@ sealed trait SlackAuthenticatedAction { self =>
 }
 
 object Signup extends SlackAuthenticatedActionHelper[Signup]("signup")
-case class Signup() extends SlackAuthenticatedAction {
+case class Signup(useIdentityScopes: Boolean) extends SlackAuthenticatedAction {
   type A = Signup
   def helper = Signup
 }
 
 object Login extends SlackAuthenticatedActionHelper[Login]("login")
-case class Login() extends SlackAuthenticatedAction {
+case class Login(useIdentityScopes: Boolean) extends SlackAuthenticatedAction {
   type A = Login
   def helper = Login
 }
@@ -121,8 +121,8 @@ object SlackAuthenticatedActionHelper {
 
   private def formatPure[A <: SlackAuthenticatedAction](a: A) = Format(Reads.pure(a), Writes[A](_ => Json.obj()))
   def getInstanceFormat[A <: SlackAuthenticatedAction](actionHelper: SlackAuthenticatedActionHelper[A]): Format[A] = actionHelper match {
-    case Signup => formatPure(Signup())
-    case Login => formatPure(Login())
+    case Signup => implicitly[Format[Signup]]
+    case Login => implicitly[Format[Login]]
     case SetupLibraryIntegrations => implicitly[Format[SetupLibraryIntegrations]]
     case TurnLibraryPush => implicitly[Format[TurnLibraryPush]]
     case TurnChannelIngestion => implicitly[Format[TurnChannelIngestion]]
@@ -136,8 +136,8 @@ object SlackAuthenticatedActionHelper {
   }
 
   def getRequiredScopes(action: SlackAuthenticatedAction): Set[SlackAuthScope] = action match {
-    case Signup() => SlackAuthScope.userSignup
-    case Login() => SlackAuthScope.userLogin
+    case Signup(useIdentityScopes) => if (useIdentityScopes) SlackAuthScope.Identity.signup else SlackAuthScope.userSignup
+    case Login(useIdentityScopes) => if (useIdentityScopes) SlackAuthScope.Identity.login else SlackAuthScope.userLogin
     case SetupLibraryIntegrations(_, incomingWebhookId) => if (incomingWebhookId.isDefined) Set.empty else SlackAuthScope.integrationSetup
     case TurnLibraryPush(_, isBroken: Boolean, turnOn: Boolean) => if (turnOn && isBroken) SlackAuthScope.brokenPush else Set.empty
     case TurnChannelIngestion(_, turnOn) => if (turnOn) SlackAuthScope.ingest else Set.empty
