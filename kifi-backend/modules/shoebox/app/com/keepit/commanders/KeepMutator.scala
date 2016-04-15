@@ -103,7 +103,7 @@ class KeepMutatorImpl @Inject() (
   // Assumes keep.note is set to be the updated value
   private def syncTagsFromNote(keep: Keep, userId: Id[User])(implicit session: RWSession): Keep = {
     val noteTags = Hashtags.findAllHashtagNames(keep.note.getOrElse("")).map(Hashtag(_))
-    val existingTags = tagCommander.getForKeeps(Seq(keep.id.get))(session)(keep.id.get)
+    val existingTags = tagCommander.getTagInfoForKeeps(Seq(keep.id.get))(session)(keep.id.get)
     val newTags = noteTags.filter(nt => !existingTags.exists(_.tag.normalized == nt.normalized))
     val tagsToRemove = existingTags
       .filter(et => et.userId.exists(_ == userId) && et.messageId.isEmpty && !noteTags.exists(_.normalized == et.tag.normalized))

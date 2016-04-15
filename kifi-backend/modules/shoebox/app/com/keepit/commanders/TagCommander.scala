@@ -24,11 +24,12 @@ trait TagCommander {
   def addTagsToKeep(keepId: Id[Keep], tags: Traversable[Hashtag], userIdOpt: Option[Id[User]], messageIdOpt: Option[Id[Message]])(implicit session: RWSession): Unit
   def getTagsForKeep(keepId: Id[Keep])(implicit session: RSession): Seq[Hashtag]
   def getTagsForKeeps(keepIds: Traversable[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Seq[Hashtag]]
-  def getForKeeps(keepIds: Traversable[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Seq[TagInfo]]
+  def getTagInfoForKeeps(keepIds: Traversable[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Seq[TagInfo]]
   def tagsForUser(userId: Id[User], offset: Int, pageSize: Int, sort: TagSorting): Seq[FakedBasicCollection]
   def getKeepsByTagAndUser(tag: Hashtag, userId: Id[User])(implicit session: RSession): Seq[Id[Keep]]
   def removeTagsFromKeeps(keepIds: Traversable[Id[Keep]], tags: Traversable[Hashtag])(implicit session: RWSession): Int
   def removeAllTagsFromKeeps(keepIds: Traversable[Id[Keep]])(implicit session: RWSession): Int
+  def getTagsForMessage(messageId: Id[Message])(implicit session: RSession): Seq[Hashtag]
 }
 
 class TagCommanderImpl @Inject() (
@@ -123,7 +124,7 @@ class TagCommanderImpl @Inject() (
   }
 
   // Less efficient than getTagsForKeeps
-  def getForKeeps(keepIds: Traversable[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Seq[TagInfo]] = {
+  def getTagInfoForKeeps(keepIds: Traversable[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Seq[TagInfo]] = {
     val combined = mutable.HashMap[Id[Keep], Seq[TagInfo]]().withDefaultValue(Seq.empty)
 
     keepTagRepo.getByKeepIds(keepIds).map { kt =>
@@ -178,6 +179,10 @@ class TagCommanderImpl @Inject() (
   // Primarily useful when unkeeping. Does not update keep notes. Responsibility of caller.
   def removeAllTagsFromKeeps(keepIds: Traversable[Id[Keep]])(implicit session: RWSession): Int = {
     removeTagsFromKeeps(keepIds, getTagsForKeeps(keepIds).values.flatten)
+  }
+
+  def getTagsForMessage(messageId: Id[Message])(implicit session: RSession): Seq[Hashtag] = {
+    keepTagRepo.getByMessage(messageId).map(_.tag)
   }
 
 }
