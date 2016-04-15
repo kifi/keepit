@@ -76,7 +76,7 @@ class TagCommanderImpl @Inject() (
 
       val keepTags = keepTagRepo.getTagsByUser(userId, page * pageSize, pageSize, sort)
 
-      val allTags = {
+      val allTags = { // This just combines the two results, trying to keep the original order
         val all = (keepTags ++ collectionResults).zipWithIndex
         val combined = mutable.Map.empty[Hashtag, (Int, Option[Int])].withDefaultValue((0, None))
         all.foreach {

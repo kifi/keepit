@@ -254,7 +254,9 @@ class ShoeboxDataPipeController @Inject() (
           val tags = tagsByKeepId.getOrElse(keep.id.get, Seq.empty).map(_.tag).toSet
           val noteTags = Hashtags.findAllHashtagNames(keep.note.getOrElse("")).map(Hashtag.apply)
           val allTags = (tags ++ noteTags).distinctBy(_.normalized)
-          log.info(s"[getKeepsAndTagsChanged] ${keep.id.get}: ${tags} vs $noteTags")
+          if (tags.map(_.normalized).toSet != noteTags.map(_.normalized)) {
+            log.info(s"[getKeepsAndTagsChanged] ${keep.id.get}: ${tags} vs $noteTags")
+          }
           val source = attributionById.get(keep.id.get)
           val lib = libByKeep.get(keep.id.get)
           KeepAndTags(keep, (lib.map(_.visibility).getOrElse(LibraryVisibility.SECRET), lib.flatMap(_.organizationId)), source, allTags)
