@@ -416,7 +416,7 @@ class SlackPushingActor @Inject() (
       (keep.note, attribution) match {
         case (Some(note), _) => SlackMessageRequest.fromKifi(
           text = DescriptionElements.formatForSlack(DescriptionElements(s"*$userStr:*", Hashtags.format(note))),
-          attachments = Seq(SlackAttachment.simple(keepElement))
+          attachments = Seq(SlackAttachment.simple(DescriptionElements(SlackEmoji.newspaper, keepElement)))
         )
         case (None, None) => SlackMessageRequest.fromKifi(
           text = DescriptionElements.formatForSlack(DescriptionElements(s"*$userStr*", "sent", keepElement))
@@ -427,11 +427,11 @@ class SlackPushingActor @Inject() (
           )
           case TwitterAttribution(tweet) => SlackMessageRequest.fromKifi(
             text = DescriptionElements.formatForSlack(DescriptionElements(s"*${tweet.user.name}:*", Hashtags.format(tweet.text))),
-            attachments = Seq(SlackAttachment.simple(keepElement))
+            attachments = Seq(SlackAttachment.simple(DescriptionElements(SlackEmoji.newspaper, keepElement)))
           )
           case SlackAttribution(msg, team) => SlackMessageRequest.fromKifi(
             text = DescriptionElements.formatForSlack(DescriptionElements(s"*${msg.username.value}:*", msg.text)),
-            attachments = Seq(SlackAttachment.simple(keepElement))
+            attachments = Seq(SlackAttachment.simple(DescriptionElements(SlackEmoji.newspaper, keepElement)))
           )
         }
       }
@@ -501,7 +501,7 @@ class SlackPushingActor @Inject() (
                   DescriptionElements.unlines(ref.lines.toSeq.map(ln => DescriptionElements(s"_${ln}_")))
                 )).withFullMarkdown
             }
-        } :+ SlackAttachment.simple(keepElement)
+        } :+ SlackAttachment.simple(DescriptionElements(SlackEmoji.newspaper, keepElement))
       )
     } else SlackMessageRequest.fromKifi(
       text = DescriptionElements.formatForSlack(keepElement),
