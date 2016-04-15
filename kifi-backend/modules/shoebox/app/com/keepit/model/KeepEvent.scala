@@ -30,6 +30,8 @@ case class KeepEvent(
     messageId: Option[Id[Message]] = None) extends ModelWithState[KeepEvent] {
   def withId(id: Id[KeepEvent]): KeepEvent = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): KeepEvent = this.copy(updatedAt = updatedAt)
+  def withEventData(newData: KeepEventData): KeepEvent = this.copy(eventData = newData)
+  def withEventTime(newTime: DateTime): KeepEvent = this.copy(eventTime = newTime)
 }
 object KeepEventStates extends States[KeepEvent]
 object KeepEvent extends CommonClassLinker[KeepEvent, CommonKeepEvent] {
@@ -82,6 +84,7 @@ object KeepEvent extends CommonClassLinker[KeepEvent, CommonKeepEvent] {
 trait KeepEventRepo extends Repo[KeepEvent] {
   def pageForKeep(keepId: Id[Keep], fromTime: Option[DateTime], limit: Int)(implicit session: RSession): Seq[KeepEvent]
   def getForKeeps(keepIds: Set[Id[Keep]], limit: Option[Int])(implicit s: RSession): Map[Id[Keep], Seq[KeepEvent]]
+  def getMostRecentForKeep(keepId: Id[Keep])(implicit s: RSession): Option[KeepEvent]
 }
 
 @Singleton
@@ -126,5 +129,9 @@ class KeepEventRepoImpl @Inject() (
     import com.keepit.common.core._
     // todo(cam): be more efficient here by perhaps using Ryan's fancy query for MessageRepo.getRecentByKeeps (i.e. don't paginate in-memory)
     activeRows.filter(r => r.keepId.inSet(keepIds)).list.groupBy(_.keepId).mapValuesStrict(_.sortBy(_.eventTime.getMillis * -1).take(limit.getOrElse(Int.MaxValue)))
+  }
+
+  def getMostRecentForKeep(keepId: Id[Keep])(implicit s: RSession): Option[KeepEvent] = {
+    activeRows.filter(_.keepId === keepId).sortBy(_.eventTime desc).firstOption
   }
 }
