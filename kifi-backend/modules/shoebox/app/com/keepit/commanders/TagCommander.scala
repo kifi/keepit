@@ -72,11 +72,17 @@ class TagCommanderImpl @Inject() (
         case TagSorting.NumKeeps => collectionRepo.getByUserSortedByNumKeeps(userId, offset, pageSize)
         case TagSorting.Name => collectionRepo.getByUserSortedByName(userId, offset, pageSize)
         case TagSorting.LastKept => collectionRepo.getByUserSortedByLastKept(userId, offset, pageSize)
-      }).map { case (collectionSummary, keepCount) => FakedBasicCollection.fromTag(collectionSummary.name, Some(keepCount)) }
+      }).map { case (collectionSummary, keepCount) => (collectionSummary.name, keepCount) }
 
-      val keepTags = keepTagRepo.getTagsByUser(userId, offset, pageSize, sort).map(r => FakedBasicCollection.fromTag(r._1, Some(r._2)))
+      val keepTags = keepTagRepo.getTagsByUser(userId, offset, pageSize, sort)
 
-      keepTags ++ collectionResults
+      (sort match {
+        case TagSorting.NumKeeps => (keepTags ++ collectionResults).sortBy(_._2)
+        case TagSorting.Name => keepTags ++ collectionResults.sortBy(_._1.tag)
+        case TagSorting.LastKept => keepTags ++ collectionResults
+      }).collect { case r if r._2 > 0 =>
+        FakedBasicCollection.fromTag(r._1, Some(r._2))
+      }
     }
   }
 
