@@ -120,14 +120,15 @@ var formatMessage = (function () {
         processKifiSelMarkdownToLinksThen.bind(null,
           processUrlsThen.bind(null, // processBetween
             processEmailAddressesThen.bind(null,
-              processHashtagsThen.bind(null,
+              processHashtagsThen.bind(null, true, // yes, make tags into links
                 processEmojiThen.bind(null, identity)))),
           processHashtagsThen.bind(null, // processInside
             processEmojiThen.bind(null, identity))));
 
   var formatAsHtmlSnippet =
       processKifiSelMarkdownToTextThen.bind(null,
-        processEmojiThen.bind(null, identity));
+        processHashtagsThen.bind(null, false, // no, do not make tags into links
+          processEmojiThen.bind(null, identity)));
 
   function renderAndFormatFull(text, render) {
     text = text || '';
@@ -242,12 +243,16 @@ var formatMessage = (function () {
   var multipleBlankLinesRe = /\n(?:\s*\n)+/g;
   var escapedLeftBracketHashOrAtRe = /\[\\([#@])/g;
   var backslashUnescapeRe = /\\(.)/g;
-  function processHashtagsThen(process, text) {
+  function processHashtagsThen(doLink, process, text) {
     var parts = text.replace(multipleBlankLinesRe, '\n\n').split(hashTagMarkdownRe);
     var tag;
     for (var i = 1; i < parts.length; i += 2) {
       tag = Mustache.escape(parts[i].replace(backslashUnescapeRe, '$1'));
-      parts[i] = '<a class="kifi-tag" href="' + getTagUrl(tag) + '"target="_blank">#' + tag + '</a>';
+      if (doLink) {
+        parts[i] = '<a class="kifi-tag" href="' + getTagUrl(tag) + '"target="_blank">#' + tag + '</a>';
+      } else {
+        parts[i] = '<span class="kifi-tag">#' + tag + '</span>';
+      }
     }
     for (i = 0; i < parts.length; i += 2) {
       parts[i] = process(parts[i].replace(escapedLeftBracketHashOrAtRe, '[$1'));
