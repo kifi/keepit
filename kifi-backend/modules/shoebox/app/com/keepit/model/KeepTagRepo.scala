@@ -22,6 +22,9 @@ trait KeepTagRepo extends Repo[KeepTag] {
   def getAllByTagAndUser(tag: Hashtag, userId: Id[User])(implicit session: RSession): Seq[KeepTag]
   def getAllByUser(userId: Id[User])(implicit session: RSession): Seq[KeepTag]
   def removeTagsFromKeep(keepIds: Traversable[Id[Keep]], tags: Traversable[Hashtag])(implicit session: RWSession): Int
+  def removeTagsFromKeepByUser(userId: Id[User], keepIds: Traversable[Id[Keep]], tags: Traversable[Hashtag])(implicit session: RWSession): Int
+  def removeTagsFromKeepByMessage(messageId: Id[Message], keepIds: Traversable[Id[Keep]], tags: Traversable[Hashtag])(implicit session: RWSession): Int
+  def removeTagsFromKeepNotes(keepIds: Traversable[Id[Keep]], tags: Traversable[Hashtag])(implicit session: RWSession): Int
   def deactivate(model: KeepTag)(implicit session: RWSession): Unit
   def countForUser(userId: Id[User])(implicit session: RSession): Int
 }
@@ -100,9 +103,32 @@ class KeepTagRepoImpl @Inject() (
     activeRows.filter(row => row.userId === userId).list
   }
 
+  // Removes no matter where the tag came from
   def removeTagsFromKeep(keepIds: Traversable[Id[Keep]], tags: Traversable[Hashtag])(implicit session: RWSession): Int = {
     val normalized = tags.map(_.normalized)
     val toKill = activeRows.filter(row => row.keepId.inSet(keepIds) && row.normalizedTag.inSet(normalized)).list
+    toKill.foreach(deactivate)
+    toKill.length
+  }
+
+  def removeTagsFromKeepByUser(userId: Id[User], keepIds: Traversable[Id[Keep]], tags: Traversable[Hashtag])(implicit session: RWSession): Int = {
+    val normalized = tags.map(_.normalized)
+    val toKill = activeRows.filter(row => row.userId === userId && row.keepId.inSet(keepIds) && row.normalizedTag.inSet(normalized)).list
+    toKill.foreach(deactivate)
+    toKill.length
+  }
+
+  def removeTagsFromKeepByMessage(messageId: Id[Message], keepIds: Traversable[Id[Keep]], tags: Traversable[Hashtag])(implicit session: RWSession): Int = {
+    val normalized = tags.map(_.normalized)
+    val toKill = activeRows.filter(row => row.messageId === messageId && row.keepId.inSet(keepIds) && row.normalizedTag.inSet(normalized)).list
+    toKill.foreach(deactivate)
+    toKill.length
+  }
+
+  // Removes only tags that were not in messages (ie, came from notes)
+  def removeTagsFromKeepNotes(keepIds: Traversable[Id[Keep]], tags: Traversable[Hashtag])(implicit session: RWSession): Int = {
+    val normalized = tags.map(_.normalized)
+    val toKill = activeRows.filter(row => row.messageId.isEmpty && row.keepId.inSet(keepIds) && row.normalizedTag.inSet(normalized)).list
     toKill.foreach(deactivate)
     toKill.length
   }
