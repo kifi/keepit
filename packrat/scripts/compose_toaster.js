@@ -8,6 +8,7 @@
 // @require scripts/render.js
 // @require scripts/compose.js
 // @require scripts/listen.js
+// @require scripts/progress.js
 
 k.toaster = k.toaster || (function () {
   'use strict';
@@ -161,7 +162,7 @@ k.toaster = k.toaster || (function () {
       });
 
     var progressDeferred = Q.defer();
-    progress($t.find('.kifi-compose-bar'), progressDeferred.promise)
+    k.progress.show($t.find('.kifi-progress-parent'), progressDeferred.promise)
     .done(function (threadId) {
       if ($toast === $t) {
         var $parent = $t.parent();
@@ -276,52 +277,6 @@ k.toaster = k.toaster || (function () {
     $sent.on('transitionend', $.fn.remove.bind($sent, undefined))
       .addClass('kifi-hidden' + (quickly ? '' : ' kifi-slowly'));
     $sent = null;
-  }
-
-  // Takes a promise for a task's outcome. Returns a promise that relays
-  // the outcome after visual indication of the outcome is complete.
-  function progress(parent, promise) {
-    var $el = $('<div class="kifi-toast-progress"/>').appendTo(parent);
-    var frac = 0, ms = 10, deferred = Q.defer();
-
-    var timeout;
-    function update() {
-      var left = .9 - frac;
-      frac += .06 * left;
-      $el[0].style.width = Math.min(frac * 100, 100) + '%';
-      if (left > .0001) {
-        timeout = setTimeout(function () {
-          update();
-        }, ms);
-      }
-    }
-    timeout = setTimeout(function () {
-      update();
-    }, ms);
-
-    promise.done(function (val) {
-      log('[progress:done]');
-      clearTimeout(timeout), timeout = null;
-      $el.on('transitionend', function (e) {
-        if (e.originalEvent.propertyName === 'clip') {
-          $el.off('transitionend');
-          deferred.resolve(val);
-        }
-      }).addClass('kifi-done');
-    }, function (reason) {
-      log('[progress:fail]');
-      clearTimeout(timeout), timeout = null;
-      var finishFail = function () {
-        $el.remove();
-        deferred.reject(reason);
-      };
-      if ($el[0].offsetWidth) {
-        $el.one('transitionend', finishFail).addClass('kifi-fail');
-      } else {
-        finishFail();
-      }
-    });
-    return deferred.promise;
   }
 
   function getId(o) {

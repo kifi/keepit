@@ -47,22 +47,6 @@ angular.module('kifi')
             }
           },
           {
-            name: 'follow_libs',
-            title: 'Follow 5 libraries',
-            subtitle: 'Browse libraries from your connections',
-            action: function () {
-              modalService.open({
-                template: 'home/userChecklistFollowModal.tpl.html',
-                scope: scope
-              });
-              $analytics.eventTrack('user_clicked_page', {
-                'type': 'yourKeeps',
-                'action': 'clickedFollow5Checklist',
-                'subaction': completeOrIncomplete(this.complete)
-              });
-            }
-          },
-          {
             name: 'install_ext',
             title: 'Get the Kifi browser add-on',
             subtitle: 'The most loved features are in the add-on',

@@ -266,7 +266,6 @@ class SlackTeamDigestNotificationActor @Inject() (
         val msgOpt = db.readOnlyMaster { implicit s => createMessage(team)(s, generalChannel) }
         msgOpt.map { msg =>
           slackClient.sendToSlackHoweverPossible(team.slackTeamId, generalChannel, msg).map { sent =>
-            slackLog.info("Team digest to", team.slackTeamName.value, "(", team.slackTeamId.value, ")")
             val contextBuilder = heimdalContextBuilder()
             contextBuilder += ("slackTeamName", team.slackTeamName.value)
             slackAnalytics.trackNotificationSent(team.slackTeamId, generalChannel, SlackChannelName("general"), NotificationCategory.NonUser.TEAM_DIGEST)
@@ -275,7 +274,7 @@ class SlackTeamDigestNotificationActor @Inject() (
         }.getOrElse(Future.failed(new Exception))
       }.recover {
         case SlackFail.NoValidPushMethod =>
-          slackLog.info("Could not find a way to push a digest to", team.slackTeamName.value, "(", team.slackTeamId.value, "), but marking it anwaysy")
+          slackLog.info("Could not find a way to push a digest to", team.slackTeamName.value, "(", team.slackTeamId.value, "), but marking it as sent anyways")
           ()
       }.andThen {
         case Success(_) =>
