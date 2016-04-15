@@ -143,9 +143,11 @@ k.messageContext = k.messageContext || (function ($) {
      */
     getView: function () {
       var keep = this.getKeep();
+      var favicon = document.querySelector('[rel~="icon"],[type="image/x-icon"]');
+      var alternateImage = favicon && favicon.getAttribute('href');
 
       return {
-        image: keep.image && keep.image.url,
+        image: (keep.image && keep.image.url) || alternateImage,
         title: keep.title,
         location: this.getUrlParts(keep.url).hostname
       };

@@ -6,13 +6,15 @@
   padding: 5px 8px;
   border-bottom: 1px solid #ccc;
 }
-
 .kifi-message-context-image {
   width: 54px;
   height: 54px;
   background-size: cover;
 }
-
+.kifi-message-context-image-empty {
+  border: 1px dashed #aaa;
+  border-radius: 5px;
+}
 .kifi-message-context-controls {
   display: flex;
   flex-flow: column nowrap;
@@ -21,7 +23,6 @@
   margin-left: 5px;
   overflow: hidden;
 }
-
 .kifi-message-context-controls-title {
   display: block;
   width: 100%;
@@ -43,19 +44,16 @@
     background: rgba(255, 255, 255, .9)!important;
   }
 }
-
 .kifi-message-context-controls-location {
   font-size: 14px;
   padding: 0 2px;
   color: #ababab;
 }
-
 .kifi-message-context-elide {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
-
 .kifi-message-context-edit {
   @url: %(@kifi-symbol-pencil, #ababab, #ababab, #ababab);
   width: 22px;

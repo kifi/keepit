@@ -1,7 +1,7 @@
 <div class="kifi-message-context">
   <div class="kifi-message-context-main">
     <div class="kifi-message-context-image-container">
-      <div class="kifi-message-context-image" style="background-image:url({{image}})"></div>
+      <div class="kifi-message-context-image{{^image}} kifi-message-context-image-empty{{/image}}"{{#image}} style="background-image:url({{image}})"{{/image}}></div>
     </div>
     <div class="kifi-message-context-controls">
       <input class="kifi-message-context-controls-title" type="text" name="keep_title" value="{{title}}"/>
