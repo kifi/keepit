@@ -60,7 +60,7 @@ class KeepTagRepoImpl @Inject() (
   }
 
   def unapplyToDbRow(kt: KeepTag): Option[(Option[Id[KeepTag]], State[KeepTag], DateTime, DateTime, Hashtag, String, Id[Keep], Option[Id[Message]], Option[Id[User]])] = {
-    Some((kt.id, kt.state, kt.createdAt, kt.updatedAt, kt.tag, kt.tag.normalized, kt.keepId, kt.messageId, kt.userId))
+    Some((kt.id, kt.state, kt.createdAt, kt.updatedAt, Hashtag(kt.tag.tag.take(64)), kt.tag.normalized.take(64), kt.keepId, kt.messageId, kt.userId))
   }
 
   def table(tag: Tag) = new KeepTagTable(tag)
