@@ -65,16 +65,16 @@ class TagCommanderImpl @Inject() (
     }
   }
 
-  def tagsForUser(userId: Id[User], offset: Int, pageSize: Int, sort: TagSorting): Seq[FakedBasicCollection] = {
+  def tagsForUser(userId: Id[User], page: Int, pageSize: Int, sort: TagSorting): Seq[FakedBasicCollection] = {
 
     db.readOnlyMaster { implicit s =>
       val collectionResults = (sort match {
-        case TagSorting.NumKeeps => collectionRepo.getByUserSortedByNumKeeps(userId, offset, pageSize)
-        case TagSorting.Name => collectionRepo.getByUserSortedByName(userId, offset, pageSize)
-        case TagSorting.LastKept => collectionRepo.getByUserSortedByLastKept(userId, offset, pageSize)
+        case TagSorting.NumKeeps => collectionRepo.getByUserSortedByNumKeeps(userId, page, pageSize)
+        case TagSorting.Name => collectionRepo.getByUserSortedByName(userId, page, pageSize)
+        case TagSorting.LastKept => collectionRepo.getByUserSortedByLastKept(userId, page, pageSize)
       }).map { case (collectionSummary, keepCount) => (collectionSummary.name, keepCount) }
 
-      val keepTags = keepTagRepo.getTagsByUser(userId, offset, pageSize, sort)
+      val keepTags = keepTagRepo.getTagsByUser(userId, page * pageSize, pageSize, sort)
 
       val allTags = {
         val all = (keepTags ++ collectionResults).zipWithIndex
