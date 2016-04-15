@@ -82,8 +82,8 @@ object KeepEvent extends CommonClassLinker[KeepEvent, CommonKeepEvent] {
 
 @ImplementedBy(classOf[KeepEventRepoImpl])
 trait KeepEventRepo extends Repo[KeepEvent] {
-  def pageForKeep(keepId: Id[Keep], fromTime: Option[DateTime], limit: Int)(implicit session: RSession): Seq[KeepEvent]
-  def getForKeeps(keepIds: Set[Id[Keep]], limit: Option[Int])(implicit s: RSession): Map[Id[Keep], Seq[KeepEvent]]
+  def pageForKeep(keepId: Id[Keep], fromTime: Option[DateTime], limit: Int, excludeKinds: Set[KeepEventKind] = Set.empty)(implicit session: RSession): Seq[KeepEvent]
+  def getForKeeps(keepIds: Set[Id[Keep]], limit: Option[Int], excludeKinds: Set[KeepEventKind] = Set.empty)(implicit s: RSession): Map[Id[Keep], Seq[KeepEvent]]
   def getMostRecentForKeep(keepId: Id[Keep])(implicit s: RSession): Option[KeepEvent]
 }
 
@@ -115,20 +115,26 @@ class KeepEventRepoImpl @Inject() (
 
   private val activeRows = rows.filter(_.state === KeepEventStates.ACTIVE)
 
-  def pageForKeep(keepId: Id[Keep], fromTime: Option[DateTime], limit: Int)(implicit session: RSession): Seq[KeepEvent] = {
+  def pageForKeep(keepId: Id[Keep], fromTime: Option[DateTime], limit: Int, excludeKinds: Set[KeepEventKind] = Set.empty)(implicit session: RSession): Seq[KeepEvent] = {
     import com.keepit.common.util.Ord.dateTimeOrdering
     val keepRows = activeRows.filter(r => r.keepId === keepId)
     val rowsBefore = fromTime match {
       case None => keepRows
-      case Some(time) => keepRows.filter(_.eventTime < fromTime)
+      case Some(time) => keepRows.filter(r => r.eventTime < fromTime)
     }
-    rowsBefore.sortBy(_.eventTime desc).take(limit).list
+    rowsBefore.sortBy(_.eventTime desc).list.filterNot(r => excludeKinds.contains(r.eventData.kind)).take(limit)
   }
 
-  def getForKeeps(keepIds: Set[Id[Keep]], limit: Option[Int])(implicit s: RSession): Map[Id[Keep], Seq[KeepEvent]] = {
+  def getForKeeps(keepIds: Set[Id[Keep]], limit: Option[Int], excludeKinds: Set[KeepEventKind] = Set.empty)(implicit s: RSession): Map[Id[Keep], Seq[KeepEvent]] = {
     import com.keepit.common.core._
     // todo(cam): be more efficient here by perhaps using Ryan's fancy query for MessageRepo.getRecentByKeeps (i.e. don't paginate in-memory)
-    activeRows.filter(r => r.keepId.inSet(keepIds)).list.groupBy(_.keepId).mapValuesStrict(_.sortBy(_.eventTime.getMillis * -1).take(limit.getOrElse(Int.MaxValue)))
+    val allEvents = activeRows.filter(r => r.keepId.inSet(keepIds)).list
+    allEvents.groupBy(_.keepId).mapValuesStrict { events =>
+      events
+        .filterNot(r => excludeKinds.contains(r.eventData.kind))
+        .sortBy(_.eventTime.getMillis * -1)
+        .take(limit.getOrElse(Int.MaxValue))
+    }
   }
 
   def getMostRecentForKeep(keepId: Id[Keep])(implicit s: RSession): Option[KeepEvent] = {

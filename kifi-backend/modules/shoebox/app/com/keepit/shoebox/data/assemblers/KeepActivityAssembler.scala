@@ -54,7 +54,7 @@ class KeepActivityAssemblerImpl @Inject() (
     val shoeboxFut = db.readOnlyMasterAsync { implicit s =>
       val keepsById = keepRepo.getActiveByIds(keepIds)
       val sourceAttrsByKeep = keepSourceCommander.getSourceAttributionForKeeps(keepIds)
-      val eventsByKeep = keepIds.augmentWith(keepId => eventRepo.pageForKeep(keepId, fromTime, limit = numEventsPerKeep)).toMap
+      val eventsByKeep = keepIds.augmentWith(keepId => eventRepo.pageForKeep(keepId, fromTime, limit = numEventsPerKeep, excludeKinds = KeepEventKind.hideForNow)).toMap
       val ktusByKeep = ktuRepo.getAllByKeepIds(keepIds)
       val ktlsByKeep = ktlRepo.getAllByKeepIds(keepIds)
       (keepsById, sourceAttrsByKeep, eventsByKeep, ktusByKeep, ktlsByKeep)
