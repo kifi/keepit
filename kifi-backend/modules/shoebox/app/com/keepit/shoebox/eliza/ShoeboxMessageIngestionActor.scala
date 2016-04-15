@@ -1,7 +1,7 @@
 package com.keepit.shoebox.eliza
 
 import com.google.inject.Inject
-import com.keepit.commanders.{TagCommander, Hashtags, KeepMutator, KeepCommander}
+import com.keepit.commanders.{ TagCommander, Hashtags, KeepMutator, KeepCommander }
 import com.keepit.common.akka.{ FortyTwoActor, SafeFuture }
 import com.keepit.common.core._
 import com.keepit.common.db.SequenceNumber
@@ -85,12 +85,16 @@ class ShoeboxMessageIngestionActor @Inject() (
               case KeepEventData.EditTitle(_, _, _) =>
             }
             def syncTagsFromMessages() = msgs.foreach { msg =>
-              val tags = Hashtags.findAllHashtagNames(msg.text).filter(_.nonEmpty).map(Hashtag(_))
               val existing = tagCommander.getTagsForMessage(msg.id).toSet
-              val tagsToAdd = tags.diff(existing)
-              val tagsToRemove = existing.diff(tags)
-              tagCommander.addTagsToKeep(keepId, tagsToAdd, msg.sentBy.flatMap(_.left.toOption), Some(msg.id))
-              tagCommander.removeTagsFromKeeps(Set(keepId), tagsToRemove)
+              if (msg.isDeleted) {
+                tagCommander.removeTagsFromKeepsByMessage(msg.id, Set(keepId), existing)
+              } else {
+                val tags = Hashtags.findAllHashtagNames(msg.text).filter(_.nonEmpty).map(Hashtag(_))
+                val tagsToAdd = tags.diff(existing)
+                val tagsToRemove = existing.diff(tags)
+                tagCommander.addTagsToKeep(keepId, tagsToAdd, msg.sentBy.flatMap(_.left.toOption), Some(msg.id))
+                tagCommander.removeTagsFromKeepsByMessage(msg.id, Set(keepId), tagsToRemove)
+              }
             }
 
             // Apply all of the functions in sequence

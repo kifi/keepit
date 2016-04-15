@@ -110,7 +110,7 @@ class KeepMutatorImpl @Inject() (
       .map(_.tag)
 
     tagCommander.addTagsToKeep(keep.id.get, newTags, Some(userId), None)
-    tagCommander.removeTagsFromKeeps(Seq(keep.id.get), tagsToRemove)
+    tagCommander.removeTagsFromKeepsNote(Seq(keep.id.get), tagsToRemove)
 
     if (newTags.nonEmpty || tagsToRemove.nonEmpty) {
       log.info(s"[updateKeepNote] ${keep.id.get}: Added tags [${newTags.mkString(",")}]. Removed tags: [${tagsToRemove.mkString(",")}]")

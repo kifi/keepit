@@ -27,7 +27,9 @@ trait TagCommander {
   def getTagInfoForKeeps(keepIds: Traversable[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Seq[TagInfo]]
   def tagsForUser(userId: Id[User], offset: Int, pageSize: Int, sort: TagSorting): Seq[FakedBasicCollection]
   def getKeepsByTagAndUser(tag: Hashtag, userId: Id[User])(implicit session: RSession): Seq[Id[Keep]]
-  def removeTagsFromKeeps(keepIds: Traversable[Id[Keep]], tags: Traversable[Hashtag])(implicit session: RWSession): Int
+  def removeTagsFromKeepsNote(keepIds: Traversable[Id[Keep]], tags: Traversable[Hashtag])(implicit session: RWSession): Int
+  def removeTagsFromKeepsByUser(userId: Id[User], keepIds: Traversable[Id[Keep]], tags: Traversable[Hashtag])(implicit session: RWSession): Int
+  def removeTagsFromKeepsByMessage(messageId: Id[Message], keepIds: Traversable[Id[Keep]], tags: Traversable[Hashtag])(implicit session: RWSession): Int
   def removeAllTagsFromKeeps(keepIds: Traversable[Id[Keep]])(implicit session: RWSession): Int
   def getTagsForMessage(messageId: Id[Message])(implicit session: RSession): Seq[Hashtag]
 }
@@ -156,29 +158,87 @@ class TagCommanderImpl @Inject() (
     keepTagRepo.getAllByTagAndUser(tag, userId).map(_.keepId) ++ collKeepIds ++ colIdKeepIds
   }
 
-  // Reminder: does not check permissions. Do that yourself before calling this!
-  // Does not update keep notes. Responsibility of caller.
-  def removeTagsFromKeeps(keepIds: Traversable[Id[Keep]], tags: Traversable[Hashtag])(implicit session: RWSession): Int = {
+  // Does not update note field, only tags that came from notes! Use KeepMutator.updateKeepNote for note updating needs.
+  def removeTagsFromKeepsNote(keepIds: Traversable[Id[Keep]], tags: Traversable[Hashtag])(implicit session: RWSession): Int = {
 
-    val ktRemovals = keepTagRepo.removeTagsFromKeep(keepIds, tags)
+    val ktRemovals = keepTagRepo.removeTagsFromKeepNotes(keepIds, tags)
 
     var colRemovals = 0
+    val normalizedTags = tags.map(_.normalized).toSet
+    val collections = mutable.Map.empty[Id[Collection], Collection]
     keepIds.flatMap { keepId =>
       keepToCollectionRepo.getByKeep(keepId).map { ktc =>
-        keepToCollectionRepo.deactivate(ktc)
-        colRemovals += 1
-        ktc.collectionId
+        val coll = collections.getOrElseUpdate(ktc.collectionId, collectionRepo.get(ktc.collectionId))
+        if (normalizedTags.contains(coll.name.normalized)) {
+          keepToCollectionRepo.deactivate(ktc)
+          colRemovals += 1
+          Some(ktc.collectionId)
+        } else None
       }
-    }.toSet.foreach { cid: Id[Collection] =>
+    }.toSet.flatten.foreach { cid: Id[Collection] =>
       collectionRepo.collectionChanged(cid, isNewKeep = false, inactivateIfEmpty = true)
     }
 
     ktRemovals + colRemovals
   }
 
+  def removeTagsFromKeepsByUser(userId: Id[User], keepIds: Traversable[Id[Keep]], tags: Traversable[Hashtag])(implicit session: RWSession): Int = {
+
+    val ktRemovals = keepTagRepo.removeTagsFromKeepByUser(userId, keepIds, tags)
+
+    var colRemovals = 0
+    val normalizedTags = tags.map(_.normalized).toSet
+    val collections = mutable.Map.empty[Id[Collection], Collection]
+    keepIds.flatMap { keepId =>
+      keepToCollectionRepo.getByKeep(keepId).map { ktc =>
+        val coll = collections.getOrElseUpdate(ktc.collectionId, collectionRepo.get(ktc.collectionId))
+        if (coll.userId == userId && normalizedTags.contains(coll.name.normalized)) {
+          keepToCollectionRepo.deactivate(ktc)
+          colRemovals += 1
+          Some(ktc.collectionId)
+        } else None
+      }
+    }.toSet.flatten.foreach { cid: Id[Collection] =>
+      collectionRepo.collectionChanged(cid, isNewKeep = false, inactivateIfEmpty = true)
+    }
+    ktRemovals + colRemovals
+  }
+
+  def removeTagsFromKeepsByMessage(messageId: Id[Message], keepIds: Traversable[Id[Keep]], tags: Traversable[Hashtag])(implicit session: RWSession): Int = {
+    // No message tags in the old Collection table!
+    keepTagRepo.removeTagsFromKeepByMessage(messageId, keepIds, tags)
+  }
+
   // Primarily useful when unkeeping. Does not update keep notes. Responsibility of caller.
   def removeAllTagsFromKeeps(keepIds: Traversable[Id[Keep]])(implicit session: RWSession): Int = {
     removeTagsFromKeeps(keepIds, getTagsForKeeps(keepIds).values.flatten)
+  }
+
+  // Reminder: does not check permissions. Do that yourself before calling this!
+  // Removes all occurrences of each tag, even if they're there multiple times.
+  // Does not update keep notes. Responsibility of caller.
+  // Private because no one currently needs this externally.
+  private def removeTagsFromKeeps(keepIds: Traversable[Id[Keep]], tags: Traversable[Hashtag])(implicit session: RWSession): Int = {
+
+    val ktRemovals = keepTagRepo.removeTagsFromKeep(keepIds, tags)
+
+    var colRemovals = 0
+    val normalizedTags = tags.map(_.normalized).toSet
+    val collections = mutable.Map.empty[Id[Collection], Collection]
+    keepIds.flatMap { keepId =>
+      keepToCollectionRepo.getByKeep(keepId).map { ktc =>
+        val coll = collections.getOrElseUpdate(ktc.collectionId, collectionRepo.get(ktc.collectionId))
+        if (normalizedTags.contains(coll.name.normalized)) {
+          keepToCollectionRepo.deactivate(ktc)
+          colRemovals += 1
+          Some(ktc.collectionId)
+        } else None
+      }
+    }.toSet.flatten.foreach { cid: Id[Collection] =>
+      collectionRepo.collectionChanged(cid, isNewKeep = false, inactivateIfEmpty = true)
+    }
+
+    ktRemovals + colRemovals
   }
 
   def getTagsForMessage(messageId: Id[Message])(implicit session: RSession): Seq[Hashtag] = {
@@ -214,7 +274,7 @@ class BulkTagCommander @Inject() (
     // Collection ⨯ ⨯ ⨯
     val collectionKeepIds = collectionRepo.getByUserAndName(userId, tag).map { coll =>
       val keepIds = keepToCollectionRepo.getKeepsForTag(coll.id.get)
-      tagCommander.removeTagsFromKeeps(keepIds, Seq(tag))
+      tagCommander.removeTagsFromKeepsByUser(userId, keepIds, Seq(tag))
       keepIds
     }.getOrElse(Seq.empty)
     // Collection ⨯ ⨯ ⨯
