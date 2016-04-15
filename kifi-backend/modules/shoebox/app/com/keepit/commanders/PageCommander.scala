@@ -37,8 +37,6 @@ class PageCommander @Inject() (
     userToDomainRepo: UserToDomainRepo,
     keepRepo: KeepRepo,
     ktlRepo: KeepToLibraryRepo,
-    keepToCollectionRepo: KeepToCollectionRepo,
-    collectionRepo: CollectionRepo,
     keepSourceCommander: KeepSourceCommander,
     keepDecorator: KeepDecorator,
     libraryRepo: LibraryRepo,

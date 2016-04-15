@@ -25,7 +25,6 @@ class KeepsController @Inject() (
   db: Database,
   keepRepo: KeepRepo,
   keepDecorator: KeepDecorator,
-  collectionRepo: CollectionRepo,
   tagCommander: TagCommander,
   keepsCommander: KeepCommander,
   keepMutator: KeepMutator,
@@ -36,7 +35,6 @@ class KeepsController @Inject() (
   clock: Clock,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   airbrake: AirbrakeNotifier,
-  keepToCollectionRepo: KeepToCollectionRepo,
   bulkTagCommander: BulkTagCommander,
   implicit val publicIdConfig: PublicIdConfiguration)
     extends UserActions with ShoeboxServiceController {

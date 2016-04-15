@@ -92,8 +92,6 @@ class KeepInternerImpl @Inject() (
   ktlRepo: KeepToLibraryRepo,
   libraryRepo: LibraryRepo,
   keepMutator: KeepMutator,
-  keepToCollectionRepo: KeepToCollectionRepo,
-  collectionRepo: CollectionRepo,
   airbrake: AirbrakeNotifier,
   libraryAnalytics: LibraryAnalytics,
   userValueRepo: UserValueRepo,

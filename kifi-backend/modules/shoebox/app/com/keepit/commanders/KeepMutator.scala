@@ -46,7 +46,6 @@ trait KeepMutator {
 @Singleton
 class KeepMutatorImpl @Inject() (
   searchClient: SearchServiceClient,
-  keepToCollectionRepo: KeepToCollectionRepo,
   keepRepo: KeepRepo,
   ktlRepo: KeepToLibraryRepo,
   ktlCommander: KeepToLibraryCommander,
@@ -54,7 +53,6 @@ class KeepMutatorImpl @Inject() (
   ktuCommander: KeepToUserCommander,
   kteCommander: KeepToEmailCommander,
   keepSourceRepo: KeepSourceAttributionRepo,
-  collectionRepo: CollectionRepo,
   clock: Clock,
   libraryRepo: LibraryRepo,
   userRepo: UserRepo,

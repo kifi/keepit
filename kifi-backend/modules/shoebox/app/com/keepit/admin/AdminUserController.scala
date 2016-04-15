@@ -851,7 +851,12 @@ class AdminUserController @Inject() (
     // URI Graph
     keepRepo.getByUser(userId).foreach(keepMutator.deactivateKeep)
     ktuRepo.getAllByUserId(userId).foreach(ktuRepo.deactivate)
-    collectionRepo.getUnfortunatelyIncompleteTagsByUser(userId).foreach { collection => collectionRepo.save(collection.copy(state = CollectionStates.INACTIVE)) }
+    collectionRepo.getUnfortunatelyIncompleteTagsByUser(userId).foreach { collection =>
+      keepToCollectionRepo.getByCollection(collection.id.get).foreach { ktc =>
+        keepToCollectionRepo.save(ktc.sanitizeForDelete)
+      }
+      collectionRepo.save(collection.copy(state = CollectionStates.INACTIVE))
+    }
     keepTagRepo.getAllByUser(userId).foreach { kt => keepTagRepo.deactivate(kt) }
 
     // Libraries Data

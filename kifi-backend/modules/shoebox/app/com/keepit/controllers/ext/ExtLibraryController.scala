@@ -46,7 +46,6 @@ class ExtLibraryController @Inject() (
   val userActionsHelper: UserActionsHelper,
   userRepo: UserRepo,
   keepRepo: KeepRepo,
-  collectionRepo: CollectionRepo,
   airbrake: AirbrakeNotifier,
   rawKeepInterner: RawKeepInterner,
   rawKeepFactory: RawKeepFactory,

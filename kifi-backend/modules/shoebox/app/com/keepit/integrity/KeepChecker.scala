@@ -35,7 +35,6 @@ class KeepChecker @Inject() (
     kteCommander: KeepToEmailCommander,
     libraryRepo: LibraryRepo,
     systemValueRepo: SystemValueRepo,
-    collectionRepo: CollectionRepo,
     tagCommander: TagCommander,
     implicit val executionContext: ExecutionContext) extends Logging {
 

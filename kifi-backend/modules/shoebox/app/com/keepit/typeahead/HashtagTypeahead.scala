@@ -1,6 +1,7 @@
 package com.keepit.typeahead
 
-import com.keepit.model.{ User, CollectionRepo, Hashtag }
+import com.keepit.commanders.{ TagSorting, TagCommander }
+import com.keepit.model.{ User, Hashtag }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.Id
 import scala.concurrent.{ ExecutionContext, Future }
@@ -29,7 +30,7 @@ class HashtagTypeahead @Inject() (
     val airbrake: AirbrakeNotifier,
     cache: UserHashtagTypeaheadCache,
     clock: Clock,
-    collectionRepo: CollectionRepo,
+    tagCommander: TagCommander,
     db: Database,
     implicit val executionContext: ExecutionContext) extends Typeahead[User, Hashtag, (Hashtag, Int), UserHashtagTypeahead] {
 
@@ -63,7 +64,7 @@ class HashtagTypeahead @Inject() (
 
   protected def create(userId: Id[User]): Future[UserHashtagTypeahead] = Future.successful {
     val allTagsWithKeepCount = db.readOnlyMaster { implicit session =>
-      collectionRepo.getAllTagsByUserSortedByNumKeeps(userId)
+      tagCommander.tagsForUser(userId, 0, 2000, TagSorting.NumKeeps).flatMap(c => c.keeps.map(kc => (Hashtag(c.name), kc)))
     }
     val canonicalTagsWithKeepCount = makeCanonicalTagsAndCounts(allTagsWithKeepCount).values
     val (sortedTags, filter) = sortTagsAndBuildFilter(userId, canonicalTagsWithKeepCount)

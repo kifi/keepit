@@ -23,7 +23,6 @@ class ShoeboxDataPipeController @Inject() (
     db: Database,
     userRepo: UserRepo,
     normUriRepo: NormalizedURIRepo,
-    collectionRepo: CollectionRepo,
     keepRepo: KeepRepo,
     ktuRepo: KeepToUserRepo,
     ktlRepo: KeepToLibraryRepo,

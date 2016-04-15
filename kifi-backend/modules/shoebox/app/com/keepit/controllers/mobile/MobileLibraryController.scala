@@ -38,7 +38,6 @@ class MobileLibraryController @Inject() (
   fortyTwoConfig: FortyTwoConfig,
   libraryRepo: LibraryRepo,
   keepRepo: KeepRepo,
-  collectionRepo: CollectionRepo,
   userRepo: UserRepo,
   basicUserRepo: BasicUserRepo,
   keepsCommander: KeepCommander,

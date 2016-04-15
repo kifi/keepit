@@ -81,7 +81,6 @@ class LibraryCommanderImpl @Inject() (
   ktlRepo: KeepToLibraryRepo,
   ktlCommander: KeepToLibraryCommander,
   countByLibraryCache: CountByLibraryCache,
-  collectionRepo: CollectionRepo,
   airbrake: AirbrakeNotifier,
   searchClient: SearchServiceClient,
   libraryAnalytics: LibraryAnalytics,

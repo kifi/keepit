@@ -46,8 +46,6 @@ class AdminLibraryController @Inject() (
     val userActionsHelper: UserActionsHelper,
     keepRepo: KeepRepo,
     normalizedURIRepo: NormalizedURIRepo,
-    keepToCollectionRepo: KeepToCollectionRepo,
-    collectionRepo: CollectionRepo,
     libraryRepo: LibraryRepo,
     ktlRepo: KeepToLibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,

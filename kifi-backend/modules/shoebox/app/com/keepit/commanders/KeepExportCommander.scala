@@ -25,8 +25,6 @@ class KeepExportCommanderImpl @Inject() (
   db: Database,
   keepRepo: KeepRepo,
   ktlRepo: KeepToLibraryRepo,
-  ktcRepo: KeepToCollectionRepo,
-  collectionRepo: CollectionRepo,
   permissionCommander: PermissionCommander,
   libraryRepo: LibraryRepo,
   libraryMembershipRepo: LibraryMembershipRepo,
