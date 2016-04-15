@@ -12,7 +12,7 @@ import com.keepit.common.store.ImagePath
 import com.keepit.common.strings._
 import com.keepit.common.time._
 import com.keepit.model.OrganizationPermission._
-import com.keepit.slack.models.SlackTeamId
+import com.keepit.slack.models.{SlackTeamName, SlackTeamId}
 import com.kifi.macros.json
 import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.DateTime
@@ -181,6 +181,8 @@ case class OrgTrackingValues(
   inviteCount: Int,
   collabLibCount: Int)
 
+@json case class InternalSlackTeamInfo(orgId: Option[Id[Organization]], teamName: SlackTeamName) // augment as needed
+
 case class OrganizationKey(id: Id[Organization]) extends Key[Organization] {
   override val version = 8
   val namespace = "organization_by_id"
@@ -224,3 +226,11 @@ case class SlackTeamIdOrgIdKey(organizationId: Id[Organization]) extends Key[Sla
 }
 class SlackTeamIdOrgIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[SlackTeamIdOrgIdKey, SlackTeamId](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
+case class InternalSlackTeamInfoKey(id: SlackTeamId) extends Key[InternalSlackTeamInfo] {
+  override val version = 1
+  val namespace = "internal_slack_team_info_by_slack_team_id"
+  def toKey(): String = id.value
+}
+class InternalSlackTeamInfoCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[InternalSlackTeamInfoKey, InternalSlackTeamInfo](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)(Json.format[InternalSlackTeamInfo])
