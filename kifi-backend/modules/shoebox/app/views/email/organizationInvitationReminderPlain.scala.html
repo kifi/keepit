@@ -1,13 +1,38 @@
-@(inviteeId: Option[Id[User]], inviterId: Id[User])
+@(
+    inviteeId: Option[Id[User]],
+    inviterId: Id[User],
+    inviteMsg: Option[String],
+    orgId: Id[Organization],
+    authToken: String
+)
+
 @import com.keepit.common.mail.template.helpers._
+@orgLink = @{organizationLink(orgId, Some(authToken), "clickedOrgURL")}
+
+@* setting up message components that depend on conditionals *@
+@salutation = {
+@if(inviteeId.isEmpty) {
+<p>Hello,</p>
+} else {
+<p>Hi @firstName(inviteeId.get),</p>
+}
+}
 
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 </head>
-<body>
-@* TODO(josh) *@
-Hi, this is a friendly reminder to join my team.
+<p>
+@salutation
+<p>
+    @fullName(inviterId) is waiting your response to join the
+    <a href="@orgLink"><b>@organizationName(orgId)</b></a> team on Kifi,
+    so you can access and build our team's knowledge.
+</p>
+@if(inviteMsg.isDefined) {
+<br/>
+<p>"@inviteMsg.get" - @firstName(inviterId)</p>
+}
 </body>
 </html>

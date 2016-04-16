@@ -17,6 +17,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail._
 import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.mail.template.TemplateOptions._
+import com.keepit.common.mail.template.helpers.{ fullName, organizationName }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time._
 import com.keepit.common.util.{ LinkElement, DescriptionElements }
@@ -516,22 +517,24 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
       organizationInviteRepo.save(invite.copy(remindersSent = invite.remindersSent + 1, lastReminderSentAt = Some(clock.now())))
 
       getInviteRecipient(invite).map { toRecipient =>
+        val htmlTemplate = views.html.email.organizationInvitationReminderPlain(
+          toRecipient.left.toOption, fromUserId, invite.message, invite.organizationId, invite.authToken)
         val auxiliaryData = new HeimdalContext(Map[String, ContextData](("reminder", ContextBoolean(true))))
         val emailToSend = EmailToSend(
           fromName = Some(Right("Kifi")),
           from = SystemEmailAddress.NOTIFICATIONS,
-          subject = s"Reminder", // TODO(josh)
+          subject = s"${fullName(fromUserId)}'s invitation to join ${organizationName(invite.organizationId)} on Kifi is waiting your response",
           to = toRecipient,
           category = toRecipient.fold(
             _ => NotificationCategory.User.ORGANIZATION_INVITATION_REMINDER,
             _ => NotificationCategory.NonUser.ORGANIZATION_INVITATION_REMINDER),
-          htmlTemplate = views.html.email.organizationInvitationReminderPlain(toRecipient.left.toOption, fromUserId),
+          htmlTemplate = htmlTemplate,
           textTemplate = Some(views.html.email.organizationInvitationReminderText(toRecipient.left.toOption, fromUserId)),
           templateOptions = Seq(CustomLayout).toMap,
           auxiliaryData = Some(auxiliaryData),
           campaign = Some("na"),
           channel = Some("vf_email"),
-          source = Some("organization_invite_reminder") // TODO(josh)
+          source = Some("organization_invite_reminder")
         )
         emailTemplateSender.send(emailToSend).map(Some(_))
       } getOrElse {

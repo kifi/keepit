@@ -1,7 +1,7 @@
 package com.keepit.controllers.internal
 
 import com.google.inject.Inject
-import com.keepit.commanders.OrganizationDomainOwnershipCommander
+import com.keepit.commanders.{ OrganizationInviteCommander, OrganizationDomainOwnershipCommander }
 import com.keepit.commanders.emails._
 import com.keepit.common.controller.ShoeboxServiceController
 import com.keepit.common.crypto.PublicIdConfiguration
@@ -24,6 +24,8 @@ class EmailTestController @Inject() (
     emailRepo: ElectronicMailRepo,
     emailSenderProvider: EmailSenderProvider,
     emailTemplateSender: EmailTemplateSender,
+    organizationInviteCommander: OrganizationInviteCommander,
+    organizationInviteRepo: OrganizationInviteRepo,
     orgDomainCommander: OrganizationDomainOwnershipCommander) extends ShoeboxServiceController {
 
   def sendableAction(name: String)(body: => Html) = Action { request =>
@@ -51,6 +53,7 @@ class EmailTestController @Inject() (
     def sendTo = EmailAddress(request.getQueryString("sendTo").get)
     def libraryId = Id[Library](request.getQueryString("libraryId").get.toLong)
     def orgId = Id[Organization](request.getQueryString("organizationId").get.toLong)
+    def orgInviteId = Id[OrganizationInvite](request.getQueryString("orgInviteId").get.toLong)
     def msg = request.getQueryString("msg")
     def tip = request.getQueryString("tip")
     def installs = request.getQueryString("installs").map(_.split(",").toSeq).getOrElse(Seq.empty).map(k => KifiInstallationPlatform(k))
@@ -93,6 +96,10 @@ class EmailTestController @Inject() (
         emailSenderProvider.twitterWaitlist.sendToUser(sendTo, userId)
       case "joinByVerifying" =>
         Future.successful(orgDomainCommander.sendMembershipConfirmationEmail(OrganizationDomainSendMemberConfirmationRequest(userId, orgId, sendTo)).right.get)
+      case "orgInviteReminder" =>
+        val orgInvite = db.readOnlyReplica { implicit s => organizationInviteRepo.get(orgInviteId) }
+        val inviteF = organizationInviteCommander.sendInviteReminder(orgInvite)
+        inviteF.map(_.get)
     }
 
     emailOptF.map(_.map(email => Ok(email.htmlBody.value))).

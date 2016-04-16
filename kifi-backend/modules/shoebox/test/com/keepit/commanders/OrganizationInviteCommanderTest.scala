@@ -190,10 +190,13 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
 
     "send invite reminder emails" in {
       "sends the email on command" in withDb(modules: _*) { implicit injector =>
-        val orgInvite = db.readWrite { implicit session =>
+        val (inviter, org, orgInvite) = db.readWrite { implicit session =>
           val (org, owner, user) = setup
-          organizationInvite().withOrganization(org).withEmailAddress(EmailAddress("cam@panthers.com")).withInviter(owner).saved
+          val orgInvite = organizationInvite().withOrganization(org).withEmailAddress(EmailAddress("cam@panthers.com")).withInviter(owner).saved
+          (owner, org, orgInvite)
         }
+
+        val inviterName = s"${inviter.firstName} ${inviter.lastName}"
 
         orgInvite.remindersSent === 0
         val emailOpt = Await.result(orgInviteCommander.sendInviteReminder(orgInvite), 5 seconds)
@@ -206,7 +209,9 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
           val Seq(email) = electronicMailRepo.all()
           email === emailOpt.get
           email.to === Seq(orgInvite.emailAddress.get)
-          email.htmlBody.value must contain("reminder to join my team")
+          email.subject === s"$inviterName's invitation to join ${org.name} on Kifi is waiting your response"
+          email.htmlBody.value must contain(s"$inviterName is waiting your response to join the")
+          email.htmlBody.value must contain(s"${org.name}</b></a> team on Kifi")
           fromElectronicMailCategory(email.category) === NotificationCategory.NonUser.ORGANIZATION_INVITATION_REMINDER
         }
       }
