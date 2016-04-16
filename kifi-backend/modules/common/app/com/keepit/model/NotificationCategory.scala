@@ -46,6 +46,7 @@ object NotificationCategory {
     val MANY_NEW_KEEPS = NotificationCategory("many_new_keeps")
 
     val ORGANIZATION_INVITATION = NotificationCategory("organization_invitation")
+    val ORGANIZATION_INVITATION_REMINDER = NotificationCategory("organization_invitation_reminder")
     val ORGANIZATION_JOINED = NotificationCategory("organization_joined")
     val REWARD_CREDIT_APPLIED = NotificationCategory("reward_credit_applied")
     val CREATE_TEAM = NotificationCategory("create_team")
@@ -57,7 +58,8 @@ object NotificationCategory {
 
     val reportToAnalytics = Set(ANNOUNCEMENT, MESSAGE, EMAIL_KEEP, EMAIL_CONFIRMATION, RESET_PASSWORD, FRIEND_REQUEST,
       FRIEND_ACCEPTED, WELCOME, APPROVED, WAITLIST, WHO_KEPT_MY_KEEP, CONTACT_JOINED, CONNECTION_MADE,
-      SOCIAL_FRIEND_JOINED, LIBRARY_FOLLOWING, LIBRARY_INVITATION, ORGANIZATION_INVITATION, DIGEST, ACTIVITY, CREATE_TEAM, JOIN_BY_VERIFYING)
+      SOCIAL_FRIEND_JOINED, LIBRARY_FOLLOWING, LIBRARY_INVITATION, ORGANIZATION_INVITATION, ORGANIZATION_INVITATION_REMINDER,
+      DIGEST, ACTIVITY, CREATE_TEAM, JOIN_BY_VERIFYING)
 
     // Parent Categories used in analytics
     val fromKifi = Set(ANNOUNCEMENT, WAITLIST, APPROVED, WELCOME, EMAIL_CONFIRMATION, RESET_PASSWORD, EMAIL_KEEP,
@@ -67,7 +69,7 @@ object NotificationCategory {
 
     // Formatting Categories used in the extension
     val triggered = Set(FRIEND_ACCEPTED, FRIEND_REQUEST, WHO_KEPT_MY_KEEP, CONTACT_JOINED, CONNECTION_MADE, SOCIAL_FRIEND_JOINED, LIBRARY_INVITATION, LIBRARY_FOLLOWED, NEW_KEEP, MANY_NEW_KEEPS,
-      ORGANIZATION_INVITATION, ORGANIZATION_JOINED)
+      ORGANIZATION_INVITATION, ORGANIZATION_INVITATION_REMINDER, ORGANIZATION_JOINED)
     val global = Set(ANNOUNCEMENT)
     val kifiMessageFormattingCategory = Map.empty ++ triggered.map(_ -> "triggered") ++ global.map(_ -> "global")
   }
@@ -89,6 +91,7 @@ object NotificationCategory {
     val DISCUSSION_UPDATES = NotificationCategory("discussion_updates")
     val LIBRARY_INVITATION = NotificationCategory("visitor_library_invitation")
     val ORGANIZATION_INVITATION = NotificationCategory("visitor_organization_invitation")
+    val ORGANIZATION_INVITATION_REMINDER = NotificationCategory("visitor_organization_invitation_reminder")
     val BILLING = NotificationCategory("billing")
 
     val INTEGRATION_WELCOME = NotificationCategory("integration_welcome")
@@ -102,7 +105,8 @@ object NotificationCategory {
     val SETTINGS_TOGGLE = NotificationCategory("settings_toggle")
     val BOT_SETTINGS_UPGRADE = NotificationCategory("bot_settings_upgrade_dm")
 
-    val reportToAnalytics = Set(INVITATION, DISCUSSION_STARTED, DISCUSSION_UPDATES, ADDED_TO_DISCUSSION, LIBRARY_INVITATION, ORGANIZATION_INVITATION, BILLING)
+    val reportToAnalytics = Set(INVITATION, DISCUSSION_STARTED, DISCUSSION_UPDATES, ADDED_TO_DISCUSSION, LIBRARY_INVITATION,
+      ORGANIZATION_INVITATION, ORGANIZATION_INVITATION_REMINDER, BILLING)
 
     // Formatting Categories used in the extension
     val fromFriends = Set(INVITATION, DISCUSSION_STARTED, ADDED_TO_DISCUSSION, DISCUSSION_UPDATES, LIBRARY_INVITATION)

@@ -6,7 +6,6 @@ import com.keepit.common.crypto.{ ModelWithPublicId, PublicIdGenerator }
 import com.keepit.common.db.{ Id, ModelWithState, State, States }
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
-import com.keepit.model.InvitationDecision.ACCEPTED
 import com.kifi.macros.json
 import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.DateTime
@@ -25,7 +24,9 @@ case class OrganizationInvite(
     emailAddress: Option[EmailAddress] = None,
     role: OrganizationRole = OrganizationRole.MEMBER,
     message: Option[String] = None,
-    authToken: String = RandomStringUtils.randomAlphanumeric(16)) extends ModelWithPublicId[OrganizationInvite] with ModelWithState[OrganizationInvite] {
+    authToken: String = RandomStringUtils.randomAlphanumeric(16),
+    remindersSent: Int = 0,
+    lastReminderSentAt: Option[DateTime] = None) extends ModelWithPublicId[OrganizationInvite] with ModelWithState[OrganizationInvite] {
 
   def withId(id: Id[OrganizationInvite]): OrganizationInvite = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): OrganizationInvite = this.copy(updatedAt = now)
@@ -72,7 +73,9 @@ object OrganizationInvite extends PublicIdGenerator[OrganizationInvite] {
     (__ \ 'emailAddress).format[Option[EmailAddress]] and
     (__ \ 'role).format[OrganizationRole] and
     (__ \ 'message).format[Option[String]] and
-    (__ \ 'authToken).format[String]
+    (__ \ 'authToken).format[String] and
+    (__ \ 'remindersSent).format[Int] and
+    (__ \ 'lastReminderSentAt).formatNullable(DateTimeJsonFormat)
   )(OrganizationInvite.apply, unlift(OrganizationInvite.unapply))
 
   implicit def ord: Ordering[OrganizationInvite] = new Ordering[OrganizationInvite] {

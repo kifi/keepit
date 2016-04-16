@@ -2,22 +2,26 @@ package com.keepit.commanders
 
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.abook.model.RichContact
 import com.keepit.common.actor.TestKitSupport
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.db.Id
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.social.FakeSocialGraphModule
+import com.keepit.common.time._
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
+import com.keepit.model.NotificationCategory.fromElectronicMailCategory
 import com.keepit.model.OrganizationFactoryHelper._
+import com.keepit.model.OrganizationInviteFactory.organizationInvite
+import com.keepit.model.OrganizationInviteFactoryHelper._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.{ OrganizationFactory, _ }
 import com.keepit.social.BasicUser
 import com.keepit.test.ShoeboxTestInjector
+import org.joda.time.Duration.standardDays
 import org.specs2.mutable.SpecificationLike
 
 import scala.concurrent.Await
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration._
 
 class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
   implicit val context = HeimdalContext.empty
@@ -180,6 +184,84 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
             orgInviteRepo.getByOrgAndUserId(org.id.get, invitee.id.get) must beEmpty
             permissionCommander.getOrganizationPermissions(org.id.get, Some(invitee.id.get)) must not contain (OrganizationPermission.VIEW_ORGANIZATION)
           }
+        }
+      }
+    }
+
+    "send invite reminder emails" in {
+      "sends the email on command" in withDb(modules: _*) { implicit injector =>
+        val (inviter, org, orgInvite) = db.readWrite { implicit session =>
+          val (org, owner, user) = setup
+          val orgInvite = organizationInvite().withOrganization(org).withEmailAddress(EmailAddress("cam@panthers.com")).withInviter(owner).saved
+          (owner, org, orgInvite)
+        }
+
+        val inviterName = s"${inviter.firstName} ${inviter.lastName}"
+
+        orgInvite.remindersSent === 0
+        val emailOpt = Await.result(orgInviteCommander.sendInviteReminder(orgInvite), 5 seconds)
+        emailOpt must beSome
+
+        db.readOnlyMaster { implicit session =>
+          val updatedOrgInvite = orgInviteRepo.get(orgInvite.id.get)
+          updatedOrgInvite.remindersSent === 1
+          updatedOrgInvite.lastReminderSentAt must beSome
+          val Seq(email) = electronicMailRepo.all()
+          email === emailOpt.get
+          email.to === Seq(orgInvite.emailAddress.get)
+          email.subject === s"$inviterName's invitation to join ${org.name} on Kifi is waiting your response"
+          email.htmlBody.value must contain(s"$inviterName is waiting your response to join the")
+          email.htmlBody.value must contain(s"${org.name}</b></a> team on Kifi")
+          fromElectronicMailCategory(email.category) === NotificationCategory.NonUser.ORGANIZATION_INVITATION_REMINDER
+        }
+      }
+
+      "sends reminder emails to those who have an old pending invite" in withDb(modules: _*) { implicit injector =>
+        val now = inject[Clock].now()
+        def daysAgo(n: Int) = now.minusDays(n)
+
+        val (org1, org2, invites) = db.readWrite { implicit session =>
+          val owner = UserFactory.user().withName("Roger", "Goodell").saved
+          val org1 = OrganizationFactory.organization().withName("Carolina Panthers").withOwner(owner).withHandle(OrganizationHandle("keeppounding")).withWeakMembers().saved
+          val org2 = OrganizationFactory.organization().withName("Denver Broncos").withOwner(owner).withHandle(OrganizationHandle("broncos")).withWeakMembers().saved
+
+          inject[OrganizationExperimentRepo].save(OrganizationExperiment(orgId = org1.id.get, experimentType = OrganizationExperimentType.ORG_INVITE_REMINDERS))
+
+          def invite = organizationInvite().withOrganization(org1).withInviter(owner)
+          val invites = Seq(
+            // 2 of these guys should get a reminder email, 2 should not b/c they were invited < 3 days ago
+            invite.withEmailAddress(EmailAddress("mtolbert@panthers.com")).withCreatedAt(daysAgo(2)).saved,
+            invite.withEmailAddress(EmailAddress("golsen@panthers.com")).withCreatedAt(daysAgo(3).plusMinutes(1)).saved,
+            invite.withEmailAddress(EmailAddress("jstewart@panthers.com")).withCreatedAt(daysAgo(4)).saved,
+            invite.withEmailAddress(EmailAddress("cnewton@panthers.com")).withCreatedAt(daysAgo(5)).saved,
+
+            // this org isn't in the ORG_INVITE_REMINDERS experiment, this shouldn't send a reminder
+            organizationInvite().withOrganization(org2).withCreatedAt(daysAgo(6)).saved
+          )
+
+          (org1, org2, invites)
+        }
+
+        val remindersSentByOrg = Await.result(orgInviteCommander.sendInviteReminders(standardDays(3), Int.MaxValue), 5 seconds)
+        remindersSentByOrg.size === 2
+        remindersSentByOrg.head === (org1.id.get, 2)
+        remindersSentByOrg(1) === (org2.id.get, 0)
+
+        def assertNotSentTo(inv: OrganizationInvite) = { inv.lastReminderSentAt must beNone; inv.remindersSent === 0 }
+        def assertSentTo(inv: OrganizationInvite) = { inv.lastReminderSentAt must beSome; inv.remindersSent === 1 }
+
+        db.readOnlyMaster { implicit session =>
+          val Seq(otherguy, newton, stewart, olsen, tolbert) = orgInviteRepo.all().sortBy(_.createdAt)
+          tolbert === invites.head
+          olsen === invites(1)
+
+          assertNotSentTo(tolbert)
+          assertNotSentTo(olsen)
+          assertNotSentTo(otherguy)
+          assertSentTo(stewart)
+          assertSentTo(newton)
+
+          electronicMailRepo.count === 2
         }
       }
     }

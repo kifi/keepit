@@ -1,12 +1,12 @@
 package com.keepit.commanders
 
-import com.google.inject.{ Provider, ImplementedBy, Inject, Singleton }
+import com.google.inject.{ ImplementedBy, Inject, Provider, Singleton }
 import com.keepit.abook.ABookServiceClient
 import com.keepit.abook.model.RichContact
 import com.keepit.commanders.emails.EmailTemplateSender
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.controller.UserRequest
-import com.keepit.common.time._
 import com.keepit.common.core._
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
@@ -17,10 +17,12 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail._
 import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.mail.template.TemplateOptions._
+import com.keepit.common.mail.template.helpers.{ fullName, organizationName }
 import com.keepit.common.social.BasicUserRepo
+import com.keepit.common.time._
 import com.keepit.common.util.{ LinkElement, DescriptionElements }
 import com.keepit.eliza.{ OrgPushNotificationRequest, OrgPushNotificationCategory, ElizaServiceClient, PushNotificationExperiment, UserPushNotificationCategory }
-import com.keepit.heimdal.HeimdalContext
+import com.keepit.heimdal.{ ContextBoolean, ContextData, HeimdalContext }
 import com.keepit.model._
 import com.keepit.notify.model.Recipient
 import com.keepit.notify.model.event.{ OrgInviteAccepted, OrgNewInvite }
@@ -28,6 +30,7 @@ import com.keepit.search.SearchServiceClient
 import com.keepit.slack.{ SlackClientWrapper, SlackActionFail }
 import com.keepit.slack.models._
 import com.keepit.social.BasicUser
+import org.joda.time.ReadableDuration
 
 import scala.concurrent.{ ExecutionContext, Future }
 
@@ -46,6 +49,8 @@ trait OrganizationInviteCommander {
   def getViewerInviteInfo(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): Option[OrganizationInviteInfo]
   def getInvitesByInviteeAndDecision(userId: Id[User], decision: InvitationDecision): Set[OrganizationInvite]
   def sendOrganizationInviteViaSlack(username: SlackUsername, orgId: Id[Organization], userIdOpt: Option[Id[User]]): Future[Unit]
+  def sendInviteReminders(durationOfNoResponse: ReadableDuration, maxRemindersSent: Int): Future[Seq[(Id[Organization], Int)]]
+  def sendInviteReminder(orgInvite: OrganizationInvite): Future[Option[ElectronicMail]]
 }
 
 @Singleton
@@ -73,6 +78,8 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     slackChannelRepo: SlackChannelRepo,
     slackClient: SlackClientWrapper,
     pathCommander: PathCommander,
+    orgExperimentRepo: OrganizationExperimentRepo,
+    clock: Clock,
     implicit val publicIdConfig: PublicIdConfiguration) extends OrganizationInviteCommander with Logging {
 
   private def getValidationError(request: OrganizationInviteRequest)(implicit session: RSession): Option[OrganizationFail] = {
@@ -163,7 +170,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
 
   // return whether the invitation was persisted or not.
   private def persistInvitation(invite: OrganizationInvite, force: Boolean = false): Option[OrganizationInvite] = {
-    val OrganizationInvite(_, _, _, _, _, orgId, inviterId, recipientId, recipientEmail, _, _, _) = invite
+    val OrganizationInvite(_, _, _, _, _, orgId, inviterId, recipientId, recipientEmail, _, _, _, _, _) = invite
     val shouldInsert = force || db.readOnlyMaster { implicit s =>
       (recipientId, recipientEmail) match {
         case (Some(userId), _) =>
@@ -198,12 +205,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
   }
 
   def sendInvite(invite: OrganizationInvite, org: Organization): Future[Option[ElectronicMail]] = {
-    val toRecipientOpt: Option[Either[Id[User], EmailAddress]] =
-      if (invite.userId.isDefined) Some(Left(invite.userId.get))
-      else if (invite.emailAddress.isDefined) Some(Right(invite.emailAddress.get))
-      else None
-
-    toRecipientOpt map { toRecipient =>
+    getInviteRecipient(invite) map { toRecipient =>
       val trimmedInviteMsg = invite.message map (_.trim) filter (_.nonEmpty)
       val fromUserId = invite.inviterId
       val authToken = invite.authToken
@@ -225,6 +227,12 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
       airbrake.notify(s"OrganizationInvite does not have a recipient: $invite")
       Future.successful(None)
     }
+  }
+
+  def getInviteRecipient(invite: OrganizationInvite): Option[Either[Id[User], EmailAddress]] = {
+    if (invite.userId.isDefined) Some(Left(invite.userId.get))
+    else if (invite.emailAddress.isDefined) Some(Right(invite.emailAddress.get))
+    else None
   }
 
   def notifyInviteeAboutInvitationToJoinOrganization(org: Organization, orgOwner: BasicUser, inviter: User, invitees: Set[Id[User]]) {
@@ -478,6 +486,60 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
             log.info(s"[OrgDMInvite] sending to slack team ${slackTeamId.value}, user ${slackUserId.value}")
             slackClient.sendToSlackHoweverPossible(slackTeamId, slackUserId.asChannel, message).map(_ => ())
         }
+    }
+  }
+
+  def sendInviteReminders(durationOfNoResponse: ReadableDuration, maxRemindersSent: Int): Future[Seq[(Id[Organization], Int)]] = {
+    // do not send more than 1 email in parallel
+    val lock: ReactiveLock = new ReactiveLock
+    val maxLastReminderSentAt = clock.now().minus(durationOfNoResponse)
+
+    db.readOnlyReplica { implicit session =>
+      val orgsWithPendingInvites = organizationInviteRepo.getDecisionCountsGroupedByOrganization(Set(InvitationDecision.PENDING), OrganizationInviteStates.ACTIVE)
+
+      Future.sequence(orgsWithPendingInvites.map {
+        case (orgId, _) =>
+          if (orgExperimentRepo.hasExperiment(orgId, OrganizationExperimentType.ORG_INVITE_REMINDERS)) {
+            organizationInviteRepo.getAllByLastReminderSentAt(orgId, maxLastReminderSentAt, maxRemindersSent).foldLeft(Future.successful(0)) {
+              case (emailsSentF, invite) =>
+                emailsSentF.flatMap { emailsSent =>
+                  lock.withLockFuture { sendInviteReminder(invite).map(emailOpt => if (emailOpt.isDefined) emailsSent + 1 else emailsSent) }
+                }
+            }.map(emailsSent => orgId -> emailsSent)
+          } else Future.successful(orgId -> 0)
+      })
+    }
+  }
+
+  def sendInviteReminder(invite: OrganizationInvite): Future[Option[ElectronicMail]] = {
+    val fromUserId = invite.inviterId
+    db.readWrite { implicit session =>
+      organizationInviteRepo.save(invite.copy(remindersSent = invite.remindersSent + 1, lastReminderSentAt = Some(clock.now())))
+
+      getInviteRecipient(invite).map { toRecipient =>
+        val htmlTemplate = views.html.email.organizationInvitationReminderPlain(
+          toRecipient.left.toOption, fromUserId, invite.message, invite.organizationId, invite.authToken)
+        val auxiliaryData = new HeimdalContext(Map[String, ContextData](("reminder", ContextBoolean(true))))
+        val emailToSend = EmailToSend(
+          fromName = Some(Right("Kifi")),
+          from = SystemEmailAddress.NOTIFICATIONS,
+          subject = s"${fullName(fromUserId)}'s invitation to join ${organizationName(invite.organizationId)} on Kifi is waiting your response",
+          to = toRecipient,
+          category = toRecipient.fold(
+            _ => NotificationCategory.User.ORGANIZATION_INVITATION_REMINDER,
+            _ => NotificationCategory.NonUser.ORGANIZATION_INVITATION_REMINDER),
+          htmlTemplate = htmlTemplate,
+          textTemplate = Some(views.html.email.organizationInvitationReminderText(toRecipient.left.toOption, fromUserId)),
+          templateOptions = Seq(CustomLayout).toMap,
+          auxiliaryData = Some(auxiliaryData),
+          campaign = Some("na"),
+          channel = Some("vf_email"),
+          source = Some("organization_invite_reminder")
+        )
+        emailTemplateSender.send(emailToSend).map(Some(_))
+      } getOrElse {
+        Future.successful(None)
+      }
     }
   }
 }

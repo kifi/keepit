@@ -28,6 +28,8 @@ trait OrganizationInviteRepo extends Repo[OrganizationInvite] {
   def getLastSentByOrgIdAndInviterIdAndEmailAddress(organizationId: Id[Organization], inviterId: Id[User], emailAddress: EmailAddress, includeStates: Set[State[OrganizationInvite]])(implicit s: RSession): Option[OrganizationInvite]
   def deactivate(model: OrganizationInvite)(implicit session: RWSession): Unit
   def getCountByOrganization(organizationId: Id[Organization], decisions: Set[InvitationDecision], excludeState: Option[State[OrganizationInvite]] = Some(OrganizationInviteStates.INACTIVE))(implicit s: RSession): Int
+  def getAllByLastReminderSentAt(organizationId: Id[Organization], maxLastInviteSentAt: DateTime, maxRemindersSent: Int, decisions: Set[InvitationDecision] = Set(InvitationDecision.PENDING), excludeState: Option[State[OrganizationInvite]] = Some(OrganizationInviteStates.INACTIVE))(implicit session: RSession): Seq[OrganizationInvite]
+  def getDecisionCountsGroupedByOrganization(decisions: Set[InvitationDecision], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[(Id[Organization], Int)]
 }
 
 @Singleton
@@ -64,6 +66,8 @@ class OrganizationInviteRepoImpl @Inject() (
     def role = column[OrganizationRole]("role", O.NotNull)
     def message = column[Option[String]]("message", O.Nullable)
     def authToken = column[String]("auth_token", O.NotNull)
+    def remindersSent = column[Int]("reminders_sent", O.NotNull)
+    def lastReminderSentAt = column[Option[DateTime]]("last_reminder_sent_at", O.Nullable)
 
     def applyFromDbRow(
       id: Option[Id[OrganizationInvite]],
@@ -77,8 +81,11 @@ class OrganizationInviteRepoImpl @Inject() (
       emailAddress: Option[EmailAddress],
       role: OrganizationRole,
       message: Option[String],
-      authToken: String) = {
-      OrganizationInvite(id, createdAt, updatedAt, state, decision, organizationId, inviterId, userId, emailAddress, role, message, authToken)
+      authToken: String,
+      remindersSent: Int,
+      lastReminderSentAt: Option[DateTime]) = {
+      OrganizationInvite(id, createdAt, updatedAt, state, decision, organizationId, inviterId, userId, emailAddress, role,
+        message, authToken, remindersSent, lastReminderSentAt)
     }
 
     def unapplyToDbRow(invite: OrganizationInvite) = {
@@ -93,10 +100,13 @@ class OrganizationInviteRepoImpl @Inject() (
         invite.emailAddress,
         invite.role,
         invite.message,
-        invite.authToken))
+        invite.authToken,
+        invite.remindersSent,
+        invite.lastReminderSentAt))
     }
 
-    def * = (id.?, createdAt, updatedAt, state, decision, organizationId, inviterId, userId, emailAddress, role, message, authToken) <> ((applyFromDbRow _).tupled, unapplyToDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, decision, organizationId, inviterId, userId, emailAddress, role, message,
+      authToken, remindersSent, lastReminderSentAt) <> ((applyFromDbRow _).tupled, unapplyToDbRow _)
   }
 
   def table(tag: Tag) = new OrganizationInviteTable(tag)
@@ -234,5 +244,23 @@ class OrganizationInviteRepoImpl @Inject() (
 
   def getCountByOrganization(organizationId: Id[Organization], decisions: Set[InvitationDecision], excludeState: Option[State[OrganizationInvite]])(implicit s: RSession): Int = {
     rows.filter(row => row.organizationId === organizationId && row.decision.inSet(decisions) && row.state =!= excludeState.orNull).length.run
+  }
+
+  def getAllByLastReminderSentAt(organizationId: Id[Organization], maxLastInviteSentAt: DateTime, maxRemindersSent: Int, decisions: Set[InvitationDecision], excludeState: Option[State[OrganizationInvite]])(implicit session: RSession): Seq[OrganizationInvite] = {
+    rows.filter { row =>
+      row.organizationId === organizationId &&
+        (row.lastReminderSentAt.isEmpty && row.createdAt <= maxLastInviteSentAt) ||
+        (row.lastReminderSentAt.isDefined && row.lastReminderSentAt <= maxLastInviteSentAt) &&
+        row.state =!= excludeState.orNull &&
+        row.decision.inSet(decisions) &&
+        row.remindersSent <= maxRemindersSent
+    }.list
+  }
+
+  def getDecisionCountsGroupedByOrganization(decisions: Set[InvitationDecision], state: State[OrganizationInvite])(implicit s: RSession): Seq[(Id[Organization], Int)] = {
+    rows.
+      filter(row => row.decision.inSet(decisions) && row.state === state).groupBy(_.organizationId).
+      map { case (orgId, results) => orgId -> results.length }.
+      sortBy(_._1).list // ORDER BY orgid
   }
 }
