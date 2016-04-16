@@ -786,9 +786,18 @@ api.port.on({
   keeps_and_libraries_and_organizations_and_me_and_experiments: function (_, respond, tab) {
     var d = pageData[tab.nUri];
 
-    searchRecipients('', 20, 0, {library: true})
-    .then(function (responseData) {
-      var libraries = responseData.results;
+    Promise.all([
+      getKeepsByPage(tab.nUri),
+      getDefaultLibraries()
+    ])
+    .then(function (promiseResults) {
+      var keepsResponseData = promiseResults[0]; // To get the libraries of keeps on this page.
+      var searchResponseData = promiseResults[1]; // The initial set of libraries in the keeper
+      var libraries = keepsResponseData.keeps.reduce(function (acc, keep) {
+        return acc.concat(keep.recipients.libraries);
+      }, searchResponseData.results);
+      libraries = unique(libraries, getId);
+
       var recentLibIds = loadRecentLibs();
       if (guideData && guideData.library && recentLibIds.indexOf(guideData.library.id) < 0) {
         var i = libraries.findIndex(idIs(guideData.library.id));
@@ -2732,6 +2741,12 @@ function appendUserResult(contacts, n, user) {
   contacts.splice(i, 0, clone(user));
 }
 
+function unique(arr, by) {
+  var o = arr.reduce(function (o, d) {
+    return o[by(d)] = d, o;
+  }, {});
+  return Object.keys(o).map(function (k) { return o[k]; });
+}
 function reTest(s) {
   return function (re) {return re.test(s)};
 }
@@ -2862,6 +2877,22 @@ function searchRecipients(query, limit, offset, searchFor) {
 
   return new Promise(function (resolve, reject) {
     ajax('GET', '/api/1/keeps/suggestRecipients', {query: query, limit: limit, offset, requested: requested}, resolve, reject);
+  });
+}
+
+var defaultLibraries;
+var defaultLibrariesTime;
+function getDefaultLibraries() {
+  if (!defaultLibraries || +new Date() - defaultLibrariesTime > 60000 ) {
+    defaultLibraries = searchRecipients('', 20, null, {library: true});
+    defaultLibrariesTime = +new Date();
+  }
+  return defaultLibraries;
+}
+
+function getKeepsByPage(pageUri) {
+  return new Promise(function (resolve, reject) {
+    ajax('POST', '/api/1/pages/query', {url: pageUri}, resolve, reject);
   });
 }
 
