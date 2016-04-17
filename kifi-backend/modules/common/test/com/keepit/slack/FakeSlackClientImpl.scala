@@ -26,7 +26,7 @@ class FakeSlackClientImpl extends SlackClient {
   val pushedMessagesByWebhook: mutable.Map[String, List[SlackMessageRequest]] = mutable.Map.empty.withDefaultValue(List.empty)
   val channelLog: mutable.Map[(SlackTeamId, SlackChannelName), List[SlackMessage]] = mutable.Map.empty.withDefaultValue(List.empty)
   val membershipToken: mutable.Map[SlackAccessToken, (SlackTeamId, SlackUserId)] = mutable.Map.empty
-  val teamByToken: mutable.Map[SlackAccessToken, SlackTeamInfo] = mutable.Map.empty
+  val teamByToken: mutable.Map[SlackAccessToken, FullSlackTeamInfo] = mutable.Map.empty
   var isSlackDown = false
   var isSlackThrowingAFit = false
   private val inc = new AtomicLong(1442527939)
@@ -86,7 +86,7 @@ class FakeSlackClientImpl extends SlackClient {
   }
 
   def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackTimestamp): Future[Unit] = Future.successful(())
-  def getTeamInfo(token: SlackAccessToken): Future[SlackTeamInfo] = ???
+  def getTeamInfo(token: SlackAccessToken): Future[FullSlackTeamInfo] = ???
   def getPublicChannels(token: SlackAccessToken, excludeArchived: Boolean): Future[Seq[SlackPublicChannelInfo]] = Future.successful(Seq.range(1, 10).map { x =>
     SlackPublicChannelInfo(
       SlackChannelId.Public("C" + RandomStringUtils.randomAlphanumeric(8)),
@@ -103,8 +103,8 @@ class FakeSlackClientImpl extends SlackClient {
   def getPublicChannelInfo(token: SlackAccessToken, channelId: SlackChannelId): Future[SlackPublicChannelInfo] = ???
   def getPrivateChannels(token: SlackAccessToken, excludeArchived: Boolean): Future[Seq[SlackPrivateChannelInfo]] = ???
   def getPrivateChannelInfo(token: SlackAccessToken, channelId: SlackChannelId): Future[SlackPrivateChannelInfo] = ???
-  def getUserInfo(token: SlackAccessToken, userId: SlackUserId): Future[SlackUserInfo] = ???
-  def getUsers(token: SlackAccessToken): Future[Seq[SlackUserInfo]] = ???
+  def getUserInfo(token: SlackAccessToken, userId: SlackUserId): Future[FullSlackUserInfo] = ???
+  def getUsers(token: SlackAccessToken): Future[Seq[FullSlackUserInfo]] = ???
   def getIMChannels(token: SlackAccessToken): Future[Seq[SlackIMChannelInfo]] = ???
   def getIMHistory(token: SlackAccessToken, channelId: SlackChannelId, fromTimestamp: Option[SlackTimestamp], limit: Int, inclusive: Boolean = false): Future[Seq[SlackHistoryMessage]] = ???
   def inviteToChannel(token: SlackAccessToken, invitee: SlackUserId, channelId: SlackChannelId): Future[Unit] = ???

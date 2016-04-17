@@ -298,7 +298,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
           kind = if (request.slackUser.exists(_.bot)) SlackAccountKind.Bot else membership.kind,
           userId = request.userId orElse membership.userId,
           tokenWithScopes = request.tokenWithScopes orElse membership.tokenWithScopes,
-          slackUser = request.slackUser orElse membership.slackUser
+          slackUser = request.slackUser.filter(_.isFull) orElse membership.slackUser.filter(_.isFull) orElse request.slackUser orElse membership.slackUser
         )
         if (updated == membership) (membership, false) else (save(updated), (updated.userId != membership.userId))
       case inactiveMembershipOpt =>

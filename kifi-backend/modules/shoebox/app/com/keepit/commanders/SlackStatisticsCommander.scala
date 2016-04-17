@@ -13,10 +13,10 @@ case class SlackStatistics(
   closedSlackLibs: Int,
   brokenSlackLibs: Int,
   teamSize: Int,
-  bots: Set[String])
+  bots: Set[SlackUsername])
 
 object SlackStatistics {
-  def apply(teamSize: Int, bots: Set[String], slacking: Iterable[SlackChannelToLibrary]): SlackStatistics = {
+  def apply(teamSize: Int, bots: Set[SlackUsername], slacking: Iterable[SlackChannelToLibrary]): SlackStatistics = {
     SlackStatistics(
       slacking.count { s => s.state == SlackChannelToLibraryStates.ACTIVE && s.status == SlackIntegrationStatus.On },
       slacking.count { s => s.state == SlackChannelToLibraryStates.INACTIVE },
@@ -45,23 +45,23 @@ class SlackStatisticsCommander @Inject() (
     }
   }
 
-  def getSlackBots(slackTeamId: SlackTeamId): Future[Set[String]] = {
+  def getSlackBots(slackTeamId: SlackTeamId): Future[Set[SlackUsername]] = {
     slackTeamBotsCache.direct.getOrElseFuture(SlackTeamBotsKey(slackTeamId)) {
-      val bots = getTeamMembers(slackTeamId).map(_.filter(_.bot).map(_.name.value).toSet)
+      val bots = getTeamMembers(slackTeamId).map(_.filter(_.bot).map(_.username).toSet)
       bots.recover {
         case error =>
           log.error("error fetching members", error)
-          Set("ERROR")
+          Set(SlackUsername("ERROR"))
       }
     }
   }
 
-  def getTeamMembers(slackTeamId: SlackTeamId): Future[Seq[SlackUserInfo]] = {
+  def getTeamMembers(slackTeamId: SlackTeamId): Future[Seq[FullSlackUserInfo]] = {
     slackTeamMembersCache.direct.getOrElseFuture(SlackTeamMembersKey(slackTeamId)) {
       slackClient.getUsers(slackTeamId).map { allMembers =>
         val deleted = allMembers.filter(_.deleted)
         val bots = allMembers.filterNot(_.deleted).filter(_.bot)
-        log.info(s"fetched members from slack team $slackTeamId: out of ${allMembers.size}, ${deleted.size} deleted, ${bots.size} where bots: ${bots.map(_.name)}")
+        log.info(s"fetched members from slack team $slackTeamId: out of ${allMembers.size}, ${deleted.size} deleted, ${bots.size} where bots: ${bots.map(_.username)}")
         allMembers.filterNot(_.deleted)
       }
     }

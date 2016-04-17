@@ -27,7 +27,7 @@ orgStats: OrganizationStatistics
     <tr><td>Slack Integrations</td>
         <td>@orgStats.slackStats.activeSlackLibs happy, @orgStats.slackStats.inactiveSlackLibs inactive libs, @orgStats.slackStats.closedSlackLibs user closed on kifi side, @orgStats.slackStats.brokenSlackLibs user broke on slack side</td></tr>
     <tr><td>Slack bots</td>
-        <td>@orgStats.slackStats.bots.mkString(", ")</td></tr>
+        <td>@orgStats.slackStats.bots.map(_.value).mkString(", ")</td></tr>
     <tr><td>Libs prv/org/pub</td>
         <td>@orgStats.libStats.privateLibCount / @orgStats.libStats.protectedLibCount / @orgStats.libStats.publicLibCount</td></tr>
     <tr><td>Num Keeps ever/last week</td>

@@ -167,69 +167,6 @@ object SlackIdentifyResponse {
   )(SlackIdentifyResponse.apply _)
 }
 
-case class SlackTeamInfo(
-  id: SlackTeamId,
-  name: SlackTeamName,
-  domain: SlackTeamDomain,
-  emailDomains: Seq[SlackTeamEmailDomain],
-  icon: Map[Int, String])
-
-object SlackTeamInfo {
-  implicit val slackReads: Reads[SlackTeamInfo] = (
-    (__ \ 'id).read[SlackTeamId] and
-    (__ \ 'name).read[SlackTeamName] and
-    (__ \ 'domain).read[SlackTeamDomain] and
-    (__ \ 'email_domain).read[String].map(domains => domains.split(',').toList.map(_.trim).collect { case domain if domain.nonEmpty => SlackTeamEmailDomain(domain) }) and
-    (__ \ 'icon).read(SlackTeamIconReads)
-  )(SlackTeamInfo.apply _)
-}
-
-case class SlackUserInfo(
-  id: SlackUserId,
-  name: SlackUsername,
-  profile: SlackUserInfo.Profile,
-  deleted: Boolean,
-  admin: Boolean,
-  owner: Boolean,
-  bot: Boolean,
-  restricted: Boolean,
-  originalJson: JsValue)
-
-object SlackUserInfo {
-  case class Profile(
-    firstName: Option[String],
-    lastName: Option[String],
-    fullName: Option[String],
-    emailAddress: Option[EmailAddress],
-    avatarUrl: Option[String],
-    originalJson: JsValue)
-
-  private val profileReads: Reads[Profile] = (
-    (__ \ 'first_name).readNullable[String].map(_.filter(_.nonEmpty)) and
-    (__ \ 'last_name).readNullable[String].map(_.filter(_.nonEmpty)) and
-    (__ \ 'real_name).readNullable[String].map(_.filter(_.nonEmpty)) and
-    (__ \ 'email).readNullable[EmailAddress] and
-    (__ \ "image_original").readNullable[String] and
-    Reads(JsSuccess(_))
-  )(Profile.apply _)
-
-  private val reads: Reads[SlackUserInfo] = (
-    (__ \ 'id).read[SlackUserId] and
-    (__ \ 'name).read[SlackUsername] and
-    (__ \ 'profile).read(profileReads) and
-    (__ \ 'deleted).readNullable[Boolean].map(_.contains(true)) and
-    (__ \ 'is_admin).readNullable[Boolean].map(_.contains(true)) and
-    (__ \ 'is_owner).readNullable[Boolean].map(_.contains(true)) and
-    (__ \ 'is_bot).readNullable[Boolean].map(_.contains(true)) and
-    (__ \ 'is_restricted).readNullable[Boolean].map(_.contains(true)) and
-    Reads(JsSuccess(_))
-  )(SlackUserInfo.apply _)
-
-  private val writes: Writes[SlackUserInfo] = Writes(_.originalJson)
-
-  implicit val format: Format[SlackUserInfo] = Format(reads, writes)
-}
-
 sealed abstract class SlackUserPresenceState(val name: String)
 
 object SlackUserPresenceState {
@@ -266,23 +203,23 @@ object SlackUserPresence {
   implicit val format: Format[SlackUserPresence] = Format(reads, writes)
 }
 
-case class SlackTeamMembersKey(slackTeamId: SlackTeamId) extends Key[Seq[SlackUserInfo]] {
+case class SlackTeamMembersKey(slackTeamId: SlackTeamId) extends Key[Seq[FullSlackUserInfo]] {
   override val version = 3
   val namespace = "slack_team_members"
   def toKey(): String = slackTeamId.value
 }
 
 class SlackTeamMembersCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[SlackTeamMembersKey, Seq[SlackUserInfo]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+  extends JsonCacheImpl[SlackTeamMembersKey, Seq[FullSlackUserInfo]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
-case class SlackTeamBotsKey(slackTeamId: SlackTeamId) extends Key[Set[String]] {
-  override val version = 1
+case class SlackTeamBotsKey(slackTeamId: SlackTeamId) extends Key[Set[SlackUsername]] {
+  override val version = 2
   val namespace = "slack_team_bots"
   def toKey(): String = slackTeamId.value
 }
 
 class SlackTeamBotsCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[SlackTeamBotsKey, Set[String]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+  extends JsonCacheImpl[SlackTeamBotsKey, Set[SlackUsername]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class SlackTeamMembersCountKey(slackTeamId: SlackTeamId) extends Key[Int] {
   override val version = 3

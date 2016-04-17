@@ -70,7 +70,7 @@
       <tr><th>Slack teams size</th>
         <td>@fullUserStatistics.slacks.teamSize</td>
       <tr><th>Slack bots</th>
-        <td>@fullUserStatistics.slacks.bots.mkString(", ")</td>
+        <td>@fullUserStatistics.slacks.bots.map(_.value).mkString(", ")</td>
       <tr><th>Slack Integrations</th>
         <td>@fullUserStatistics.slacks.activeSlackLibs happy, @fullUserStatistics.slacks.inactiveSlackLibs inactive libs, @fullUserStatistics.slacks.closedSlackLibs user closed on kifi side, @fullUserStatistics.slacks.brokenSlackLibs user broke on slack side</td>
       </tr>

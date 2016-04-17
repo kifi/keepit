@@ -42,9 +42,9 @@ trait SlackClientWrapper {
   def getGeneralChannelId(slackTeamId: SlackTeamId, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[Option[SlackChannelId]]
   def getPublicChannelInfo(slackTeamId: SlackTeamId, channelId: SlackChannelId.Public, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[SlackPublicChannelInfo]
   def getPrivateChannelInfo(slackTeamId: SlackTeamId, channelId: SlackChannelId.Private, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[SlackPrivateChannelInfo]
-  def getTeamInfo(slackTeamId: SlackTeamId, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[SlackTeamInfo]
-  def getUserInfo(slackTeamId: SlackTeamId, userId: SlackUserId, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[SlackUserInfo]
-  def getUsers(slackTeamId: SlackTeamId, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[Seq[SlackUserInfo]]
+  def getTeamInfo(slackTeamId: SlackTeamId, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[FullSlackTeamInfo]
+  def getUserInfo(slackTeamId: SlackTeamId, userId: SlackUserId, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[FullSlackUserInfo]
+  def getUsers(slackTeamId: SlackTeamId, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[Seq[FullSlackUserInfo]]
   def checkUserPresence(slackTeamId: SlackTeamId, user: SlackUserId, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[SlackUserPresence]
 
   def getIMChannels(token: SlackAccessToken): Future[Seq[SlackIMChannelInfo]]
@@ -308,7 +308,7 @@ class SlackClientWrapperImpl @Inject() (
     }
   }
 
-  def getTeamInfo(slackTeamId: SlackTeamId, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[SlackTeamInfo] = {
+  def getTeamInfo(slackTeamId: SlackTeamId, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[FullSlackTeamInfo] = {
     withFirstValidToken(slackTeamId, preferredTokens, Set(SlackAuthScope.TeamRead)) { token =>
       slackClient.getTeamInfo(token) andThen {
         case Success(team) => db.readWrite { implicit s =>
@@ -318,7 +318,7 @@ class SlackClientWrapperImpl @Inject() (
     }
   }
 
-  def getUserInfo(slackTeamId: SlackTeamId, userId: SlackUserId, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[SlackUserInfo] = {
+  def getUserInfo(slackTeamId: SlackTeamId, userId: SlackUserId, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[FullSlackUserInfo] = {
     withFirstValidToken(slackTeamId, preferredTokens, Set(SlackAuthScope.UsersRead)) { token =>
       slackClient.getUserInfo(token, userId) andThen {
         case Success(user) => db.readWrite { implicit s =>
@@ -330,7 +330,7 @@ class SlackClientWrapperImpl @Inject() (
     }
   }
 
-  def getUsers(slackTeamId: SlackTeamId, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[Seq[SlackUserInfo]] = {
+  def getUsers(slackTeamId: SlackTeamId, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[Seq[FullSlackUserInfo]] = {
     withFirstValidToken(slackTeamId, preferredTokens, Set(SlackAuthScope.UsersRead)) { token =>
       slackClient.getUsers(token) andThen {
         case Success(users) => db.readWrite { implicit s =>
@@ -351,11 +351,11 @@ class SlackClientWrapperImpl @Inject() (
     slackClient.getIMHistory(token, channelId, fromTimestamp, limit, inclusive = false)
   }
 
-  private def saveUserInfo(slackTeam: SlackTeam, user: SlackUserInfo)(implicit session: RWSession): SlackTeamMembership = {
+  private def saveUserInfo(slackTeam: SlackTeam, user: FullSlackUserInfo)(implicit session: RWSession): SlackTeamMembership = {
     slackTeamMembershipRepo.internMembership(SlackTeamMembershipInternRequest(
       userId = None,
       slackUserId = user.id,
-      slackUsername = user.name,
+      slackUsername = user.username,
       slackTeamId = slackTeam.slackTeamId,
       tokenWithScopes = None,
       slackUser = Some(user)

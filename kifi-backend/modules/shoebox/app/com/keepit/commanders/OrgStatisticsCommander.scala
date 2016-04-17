@@ -154,7 +154,7 @@ class OrgStatisticsCommander @Inject() (
       val count = slackStatisticsCommander.getTeamMembersCount(team.slackTeamId)
       val bots = slackStatisticsCommander.getSlackBots(team.slackTeamId)
       (count, bots)
-    } getOrElse (Future.successful(0), Future.successful(Set.empty[String]))
+    } getOrElse (Future.successful(0), Future.successful(Set.empty[SlackUsername]))
 
     val fMemberRecoInfos = fMemberRecommendations.map(_.filter { reco =>
       reco.identifier.isLeft &&
@@ -256,7 +256,7 @@ class OrgStatisticsCommander @Inject() (
       val count = slackStatisticsCommander.getTeamMembersCount(team.slackTeamId)
       val bots = slackStatisticsCommander.getSlackBots(team.slackTeamId)
       (count, bots)
-    } getOrElse (Future.successful(0), Future.successful(Set.empty[String]))
+    } getOrElse (Future.successful(0), Future.successful(Set.empty[SlackUsername]))
 
     for {
       slackTeamMembersCount <- countF

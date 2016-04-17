@@ -463,7 +463,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
       case None => Future.failed(SlackActionFail.OrgNotConnected(orgId))
       case Some(slackTeamId) =>
         val futureSlackUserIdOpt = slackUserIdOpt.map(id => Future.successful(Some(id))) getOrElse slackClient.getUsers(slackTeamId).imap { users =>
-          users.collectFirst { case user if user.name equalsIgnoreCase username => user.id }
+          users.collectFirst { case user if user.username equalsIgnoreCase username => user.id }
         }
         futureSlackUserIdOpt.flatMap {
           case None => Future.failed(SlackFail.SlackUserNotFound(username, slackTeamId))
