@@ -2,6 +2,7 @@ package com.keepit.shoebox.data.assemblers
 
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.commanders._
+import com.keepit.common.core.iterableExtensionOps
 import com.keepit.commanders.gen.KeepActivityGen.SerializationInfo
 import com.keepit.commanders.gen.{ BasicLibraryGen, BasicOrganizationGen, KeepActivityGen }
 import com.keepit.common.concurrent.FutureHelpers
@@ -14,9 +15,11 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.performance.StatsdTimingAsync
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageConfig
+import com.keepit.discussion.Discussion
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model.KeepEventData.{ EditTitle, ModifyRecipients }
 import com.keepit.model._
+import com.keepit.social.BasicUser
 import org.joda.time.DateTime
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -48,53 +51,64 @@ class KeepActivityAssemblerImpl @Inject() (
 
   @StatsdTimingAsync("KeepActivityAssembler.getActivityForKeeps")
   def getActivityForKeeps(keepIds: Set[Id[Keep]], fromTime: Option[DateTime], numEventsPerKeep: Int): Future[Map[Id[Keep], KeepActivity]] = {
-    // TODO(cam): implement batched activity-log retrieval
-    FutureHelpers.accumulateOneAtATime(keepIds) { keepId =>
-      getActivityForKeep(keepId, fromTime, limit = numEventsPerKeep)
-    }
-  }
-  def getActivityForKeep(keepId: Id[Keep], fromTime: Option[DateTime], limit: Int): Future[KeepActivity] = {
     val shoeboxFut = db.readOnlyMasterAsync { implicit s =>
-      val keep = keepRepo.get(keepId)
-      val sourceAttr = keepSourceCommander.getSourceAttributionForKeep(keepId)
-      val ktus = ktuRepo.getAllByKeepId(keepId)
-      val ktls = ktlRepo.getAllByKeepId(keepId)
-      val events = eventRepo.pageForKeep(keepId, fromTime, limit)
-      (keep, sourceAttr, events, ktus, ktls)
+      val keepsById = keepRepo.getActiveByIds(keepIds)
+      val sourceAttrsByKeep = keepSourceCommander.getSourceAttributionForKeeps(keepIds)
+      val eventsByKeep = keepIds.augmentWith(keepId => eventRepo.pageForKeep(keepId, fromTime, limit = numEventsPerKeep, excludeKinds = KeepEventKind.hideForNow)).toMap
+      val ktusByKeep = ktuRepo.getAllByKeepIds(keepIds)
+      val ktlsByKeep = ktlRepo.getAllByKeepIds(keepIds)
+      (keepsById, sourceAttrsByKeep, eventsByKeep, ktusByKeep, ktlsByKeep)
     }
-    val elizaFut = eliza.getDiscussionsForKeeps(Set(keepId), fromTime, limit).map(_.get(keepId))
-
-    val basicModelFut = shoeboxFut.map {
-      case (keep, sourceAttr, events, ktus, ktls) =>
-        db.readOnlyMaster { implicit s =>
-          val (usersFromEvents, libsFromEvents) = KeepEvent.idsInvolved(events)
-
-          val libsNeeded: Seq[Id[Library]] = ktls.map(_.libraryId) ++ libsFromEvents
-          val libById = libRepo.getActiveByIds(libsNeeded.toSet)
-
-          val basicOrgById = basicOrgGen.getBasicOrganizations(libById.values.flatMap(_.organizationId).toSet)
-          val basicOrgByLibId = libById.flatMapValues { library =>
-            library.organizationId.flatMap(basicOrgById.get)
-          }
-
-          val basicUserById = {
-            val ktuUsers = ktus.map(_.userId)
-            val libOwners = libById.map { case (libId, library) => library.ownerId }
-            basicUserRepo.loadAllActive((ktuUsers ++ libOwners ++ usersFromEvents).toSet)
-          }
-          val basicLibById = basicLibGen.getBasicLibraries(libById.keySet)
-          (basicUserById, basicLibById, basicOrgByLibId)
-        }
-    }
+    val elizaFut = eliza.getDiscussionsForKeeps(keepIds, fromTime, numEventsPerKeep)
 
     for {
-      (keep, sourceAttrOpt, events, ktus, ktls) <- shoeboxFut
-      (elizaActivityOpt) <- elizaFut
-      (userById, libById, orgByLibId) <- basicModelFut
-    } yield {
-      implicit val info = SerializationInfo(userById, libById, orgByLibId)
-      KeepActivityGen.generateKeepActivity(keep, sourceAttrOpt, events, elizaActivityOpt, ktls, ktus, limit)
+      (keepsById, sourceAttrsByKeep, eventsByKeep, ktusByKeep, ktlsByKeep) <- shoeboxFut
+      discussionsByKeep <- elizaFut
+    } yield keepsById.map {
+      case (kId, keep) => kId -> keepActivityAssemblyHelper(
+        keep = keep,
+        sourceAttrOpt = sourceAttrsByKeep.get(kId),
+        events = eventsByKeep.getOrElse(kId, throw new Exception()),
+        ktus = ktusByKeep.getOrElse(kId, Seq.empty),
+        ktls = ktlsByKeep.getOrElse(kId, Seq.empty),
+        discussion = discussionsByKeep.get(kId),
+        limit = numEventsPerKeep
+      )
     }
+  }
+
+  def getActivityForKeep(keepId: Id[Keep], fromTime: Option[DateTime], limit: Int): Future[KeepActivity] = {
+    getActivityForKeeps(Set(keepId), fromTime, limit).map(_.getOrElse(keepId, throw new Exception()))
+  }
+
+  private def keepActivityAssemblyHelper(
+    keep: Keep,
+    sourceAttrOpt: Option[(SourceAttribution, Option[BasicUser])],
+    events: Seq[KeepEvent],
+    ktus: Seq[KeepToUser],
+    ktls: Seq[KeepToLibrary],
+    discussion: Option[Discussion],
+    limit: Int): KeepActivity = {
+    val (userById, libById, orgByLibId) = db.readOnlyMaster { implicit s =>
+      val (usersFromEvents, libsFromEvents) = KeepEvent.idsInvolved(events)
+      val libById = {
+        val libsNeeded = ktls.map(_.libraryId).toSet ++ libsFromEvents
+        libRepo.getActiveByIds(libsNeeded)
+      }
+      val basicOrgByLibId = {
+        val basicOrgById = basicOrgGen.getBasicOrganizations(libById.values.flatMap(_.organizationId).toSet)
+        libById.flatMapValues(_.organizationId.flatMap(basicOrgById.get))
+      }
+      val basicUserById = {
+        val ktuUsers = ktus.map(_.userId).toSet
+        val libOwners = libById.values.map(_.ownerId).toSet
+        basicUserRepo.loadAllActive(ktuUsers ++ libOwners ++ usersFromEvents)
+      }
+      val basicLibById = basicLibGen.getBasicLibraries(libById.keySet)
+      (basicUserById, basicLibById, basicOrgByLibId)
+    }
+    implicit val info = SerializationInfo(userById, libById, orgByLibId)
+    KeepActivityGen.generateKeepActivity(keep, sourceAttrOpt, events, discussion, ktls, ktus, limit)
   }
 
   def assembleBasicKeepEvent(keepId: Id[Keep], event: KeepEvent)(implicit session: RSession): BasicKeepEvent = {

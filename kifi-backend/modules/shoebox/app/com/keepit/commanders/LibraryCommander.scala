@@ -78,14 +78,13 @@ class LibraryCommanderImpl @Inject() (
   keepRepo: KeepRepo,
   keepCommander: KeepCommander,
   keepMutator: KeepMutator,
-  keepToCollectionRepo: KeepToCollectionRepo,
   ktlRepo: KeepToLibraryRepo,
   ktlCommander: KeepToLibraryCommander,
   countByLibraryCache: CountByLibraryCache,
-  collectionRepo: CollectionRepo,
   airbrake: AirbrakeNotifier,
   searchClient: SearchServiceClient,
   libraryAnalytics: LibraryAnalytics,
+  tagCommander: TagCommander,
   implicit val defaultContext: ExecutionContext,
   implicit val publicIdConfig: PublicIdConfiguration,
   implicit val inhouseSlackClient: InhouseSlackClient,
@@ -562,31 +561,19 @@ class LibraryCommanderImpl @Inject() (
     }
   }
   def copyKeepsFromCollectionToLibrary(userId: Id[User], libraryId: Id[Library], tagName: Hashtag)(implicit context: HeimdalContext): Either[LibraryFail, (Seq[Keep], Seq[(Keep, LibraryError)])] = {
-    db.readOnlyMaster { implicit s =>
-      collectionRepo.getByUserAndName(userId, tagName)
-    } match {
-      case None =>
-        Left(LibraryFail(NOT_FOUND, "tag_not_found"))
-      case Some(tag) =>
-        val keeps = db.readOnlyMaster { implicit s =>
-          keepToCollectionRepo.getKeepsForTag(tag.id.get).map { kId => keepRepo.get(kId) }
-        }
-        Right(copyKeeps(userId, libraryId, keeps.toSet, withSource = Some(KeepSource.tagImport)))
+    val keeps = db.readOnlyMaster { implicit s =>
+      val keepIds = tagCommander.getKeepsByTagAndUser(tagName, userId)
+      keepRepo.getActiveByIds(keepIds.toSet).values.toSeq
     }
+    Right(copyKeeps(userId, libraryId, keeps.toSet, withSource = Some(KeepSource.tagImport)))
   }
 
   def moveKeepsFromCollectionToLibrary(userId: Id[User], libraryId: Id[Library], tagName: Hashtag)(implicit context: HeimdalContext): Either[LibraryFail, (Seq[Keep], Seq[(Keep, LibraryError)])] = {
-    db.readOnlyMaster { implicit s =>
-      collectionRepo.getByUserAndName(userId, tagName)
-    } match {
-      case None =>
-        Left(LibraryFail(NOT_FOUND, "tag_not_found"))
-      case Some(tag) =>
-        val keeps = db.readOnlyMaster { implicit s =>
-          keepToCollectionRepo.getKeepsForTag(tag.id.get).map { kId => keepRepo.get(kId) }
-        }
-        Right(moveKeeps(userId, libraryId, keeps))
+    val keeps = db.readOnlyMaster { implicit s =>
+      val keepIds = tagCommander.getKeepsByTagAndUser(tagName, userId)
+      keepRepo.getActiveByIds(keepIds.toSet).values.toSeq
     }
+    Right(moveKeeps(userId, libraryId, keeps))
   }
 
   def moveAllKeepsFromLibrary(userId: Id[User], fromLibraryId: Id[Library], toLibraryId: Id[Library])(implicit context: HeimdalContext): (Seq[Keep], Seq[(Keep, LibraryError)]) = {

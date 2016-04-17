@@ -91,6 +91,7 @@ trait ShoeboxInjectionHelpers { self: TestInjectorProvider =>
   def activityLogCommander(implicit injector: Injector) = inject[ActivityLogCommander]
   def sourceAttributionRepo(implicit injector: Injector) = inject[KeepSourceAttributionRepo]
   def sourceAttributionCommander(implicit injector: Injector) = inject[KeepSourceCommander]
+  def tagCommander(implicit injector: Injector) = inject[TagCommander]
 
   def slackTeamRepo(implicit injector: Injector) = inject[SlackTeamRepo]
   def slackCommander(implicit injector: Injector) = inject[SlackIdentityCommander].asInstanceOf[SlackIdentityCommanderImpl]

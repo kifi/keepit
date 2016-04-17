@@ -30,7 +30,6 @@ class MobileKeepsController @Inject() (
   keepsCommander: KeepCommander,
   keepMutator: KeepMutator,
   tagCommander: TagCommander,
-  collectionRepo: CollectionRepo,
   normalizedURIInterner: NormalizedURIInterner,
   libraryInfoCommander: LibraryInfoCommander,
   rawBookmarkFactory: RawBookmarkFactory,

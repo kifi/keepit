@@ -202,6 +202,7 @@ object SlackEmoji {
   val hourglass = SlackEmoji(":hourglass:")
   val magnifyingGlass = SlackEmoji(":mag_right:")
   val mailboxWithMail = SlackEmoji(":mailbox_with_mail:")
+  val newspaper = SlackEmoji(":newspaper:")
   val pencil = SlackEmoji(":pencil:")
   val robotFace = SlackEmoji(":robot_face:")
   val rocket = SlackEmoji(":rocket:")

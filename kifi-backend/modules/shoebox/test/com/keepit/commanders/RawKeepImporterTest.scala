@@ -100,14 +100,13 @@ class RawKeepImporterTest extends TestKitSupport with SpecificationLike with Sho
           val bookmarks = keepRepo.all
           bookmarks.count(k => k.recipients.libraries.contains(lib.id.get)) === 5
           val oneUrl = bookmarks.find(_.url == "http://www.findsounds.com/types.html")
-          // println(bookmarks) // can be removed?
           oneUrl.size === 1
           val bm = oneUrl.head
           bm.userId.get === user.id.get
           bookmarks.size === 5
 
-          collectionRepo.getAllTagsByUserSortedByNumKeeps(user.id.get).map(_._1.tag) === Seq("college", "hack", "stuff")
-          keepToCollectionRepo.getCollectionsForKeep(bookmarks.filter(b => b.title.get.contains("Infographic")).head.id.get).length === 3
+          tagCommander.tagsForUser(user.id.get, 0, 20, TagSorting.NumKeeps).map(_.name).toSet === Set("college", "hack", "stuff")
+          tagCommander.getTagsForKeep(bookmarks.filter(b => b.title.get.contains("Infographic")).head.id.get).length === 3
         }
       }
     }

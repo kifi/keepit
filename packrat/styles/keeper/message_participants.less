@@ -28,22 +28,10 @@
   }
 }
 
-.kifi-message-participants-2 {
-  text-align: center;
-  margin-bottom: 6px;
-  padding: 3px 0;
-
-  :not([data-kifi-participants="2"])>& {
-    display: none;
-  }
-}
-
 .kifi-message-participants-n {
   position: relative;
-  text-align: center;
 
-  [data-kifi-participants="1"]>&,
-  [data-kifi-participants="2"]>& {
+  [data-kifi-participants="1"]>& {
     display: none;
   }
 }
@@ -52,30 +40,25 @@
   font-size: 13px;
   margin-bottom: 6px;
 
-  .kifi-message-participants-2 & {
-    font-weight: 200;
-    margin-bottom: 2px;
-    color: @buttonBgColor;
-  }
-
   .kifi-message-participants-n & {
     color: @fgColor;
     padding: 0 @itemPaddingX;
   }
 }
-
-.kifi-message-participant-1-or-2-add {
+.kifi-message-participants-title:empty + .kifi-message-participants-avatar-container {
+    margin-top: -5px;
+}
+.kifi-message-participant-1-add {
   display: none;
   border-top: 1px solid @borderColor;
   text-align: center;
 
-  [data-kifi-participants="1"]>&,
-  [data-kifi-participants="2"]>& {
+  [data-kifi-participants="1"]>& {
     display: block;
   }
 }
 
-.kifi-message-participant-1-or-2-add-link {
+.kifi-message-participant-1-add-link {
   display: inline-block;
   width: 100%;
   height: auto;

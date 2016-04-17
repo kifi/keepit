@@ -6,7 +6,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.heimdal.{ ContextData, HeimdalContextBuilder, HeimdalServiceClient }
-import com.keepit.model.{ CollectionRepo, KeepToLibraryRepo, User, UserConnectionRepo }
+import com.keepit.model.{ KeepToLibraryRepo, User, UserConnectionRepo }
 
 abstract sealed class UserPropertyUpdateInstruction(val v: Int) {
   def has(other: UserPropertyUpdateInstruction): Boolean = (this.v & other.v) == other.v
@@ -25,7 +25,7 @@ class UserPropertyUpdateActor @Inject() (
     heimdalServiceClient: HeimdalServiceClient,
     keepToLibraryRepo: KeepToLibraryRepo,
     userConnectionRepo: UserConnectionRepo,
-    collectionRepo: CollectionRepo,
+    tagCommander: TagCommander,
     db: Database) extends FortyTwoActor(airbrake) {
   import UserPropertyUpdateInstruction._
 
@@ -54,7 +54,7 @@ class UserPropertyUpdateActor @Inject() (
       }
 
       if (instruction.has(TagCount)) {
-        val tagsCount = collectionRepo.count(userId)
+        val tagsCount = tagCommander.getCountForUser(userId)
         builder += ("tags", tagsCount)
       }
 

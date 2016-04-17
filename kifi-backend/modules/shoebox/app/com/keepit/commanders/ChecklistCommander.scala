@@ -31,7 +31,6 @@ class ChecklistCommander @Inject() (
 
           val hasExt = sources.contains(KeepSource.keeper) || installations.exists(_.platform == KifiInstallationPlatform.Extension)
           val hasMobile = sources.contains(KeepSource.mobile) || installations.exists(p => mobilePlatforms.contains(p.platform))
-          val followsSeveralLibs = libraryRepo.getFollowingLibrariesForSelf(userId, Paginator(0, 5), None).length >= 5
           val keptSeveralPages = sources.size > 2 || keepRepo.getCountByUser(userId) >= 5
           val importedBrowserBookmarks = sources.contains(KeepSource.bookmarkImport) || sources.contains(KeepSource.bookmarkFileImport)
           val importedThirdParty = KeepSource.imports.exists(sources.contains)
@@ -42,7 +41,6 @@ class ChecklistCommander @Inject() (
             "install_ext" -> hasExt,
             "install_mobile" -> hasMobile,
             //"invite_friends" -> hasInvitedFriends,
-            "follow_libs" -> followsSeveralLibs,
             "keep_pages" -> keptSeveralPages,
             "import_bookmarks" -> importedBrowserBookmarks,
             "import_third_party" -> importedThirdParty,

@@ -2,6 +2,7 @@ package com.keepit.integrity
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders._
+import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ Id, SequenceNumber }
@@ -34,7 +35,7 @@ class KeepChecker @Inject() (
     kteCommander: KeepToEmailCommander,
     libraryRepo: LibraryRepo,
     systemValueRepo: SystemValueRepo,
-    collectionRepo: CollectionRepo,
+    tagCommander: TagCommander,
     implicit val executionContext: ExecutionContext) extends Logging {
 
   private val debouncer = new Debouncing.Dropper[Unit]
@@ -149,10 +150,32 @@ class KeepChecker @Inject() (
     val keep = keepRepo.getNoCache(keepId)
 
     val tagsFromHashtags = Hashtags.findAllHashtagNames(keep.note.getOrElse("")).map(Hashtag.apply)
-    val tagsFromCollections = collectionRepo.getHashtagsByKeepId(keep.id.get)
+    val tagsFromCollections = tagCommander.getTagsForKeep(keep.id.get).toSet
     if (tagsFromHashtags.map(_.normalized) != tagsFromCollections.map(_.normalized) && keep.isActive) {
       log.info(s"[NOTE-TAGS-MATCH] Keep $keepId's note does not match tags. $tagsFromHashtags vs $tagsFromCollections")
-      keepCommander.autoFixKeepNoteAndTags(keep.id.get) // Async, max 1 thread system wide. i.e., this does not fix it immediately
+      autoFixKeepNoteAndTags(keep.id.get) // Async, max 1 thread system wide. i.e., this does not fix it immediately
+    }
+  }
+
+  private val autoFixNoteLimiter = new ReactiveLock()
+  def autoFixKeepNoteAndTags(keepId: Id[Keep]): Future[Unit] = {
+    autoFixNoteLimiter.withLock {
+      db.readWrite(attempts = 3) { implicit session =>
+        val keep = keepRepo.getNoCache(keepId)
+        val tagsFromNote = Hashtags.findAllHashtagNames(keep.note.getOrElse("")).map(Hashtag.apply)
+        val allTagsOnKeep = tagCommander.getTagsForKeep(keep.id.get).toSet
+        val diff = tagsFromNote.filter(nt => !allTagsOnKeep.exists(_.normalized == nt.normalized))
+        if (keep.isActive && diff.nonEmpty) {
+          val newNote = Hashtags.addHashtagsToString(keep.note.getOrElse(""), diff.toSeq)
+          if (keep.note.getOrElse("").toLowerCase != newNote.toLowerCase) {
+            log.info(s"[autoFixKeepNoteAndTags] (${keep.id.get}) Previous note: '${keep.note.getOrElse("")}', new: '$newNote'")
+            Try(keepMutator.updateKeepNote(keep.userId.get, keep, newNote)).recover {
+              case ex: Throwable =>
+                log.warn(s"[autoFixKeepNoteAndTags] (${keep.id.get}) Couldn't update note", ex)
+            }
+          }
+        }
+      }
     }
   }
 }

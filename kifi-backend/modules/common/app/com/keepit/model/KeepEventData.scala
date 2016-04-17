@@ -32,6 +32,7 @@ object KeepEventKind extends Enumerator[KeepEventKind] {
   def apply(str: String) = fromStr(str).get
 
   implicit val format: Format[KeepEventKind] = EnumFormat.format(fromStr, _.value)
+  val hideForNow: Set[KeepEventKind] = Set(EditTitle)
 }
 
 @json case class BasicKeepEventSource(kind: KeepEventSource, url: Option[String])

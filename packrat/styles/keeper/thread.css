@@ -17,10 +17,6 @@
 .kifi-message-sent:first-child {
   margin-top: 4px;
 }
-.kifi-message-sent:last-child {
-  padding-bottom: 0;
-  margin-bottom: 10px;
-}
 .kifi-message-status {
   position: absolute;
   right: 10px;
@@ -41,38 +37,23 @@
 .kifi-message-sent-header-item a[href]:hover {
   text-decoration: underline!important;
 }
-.kifi-message-sent:only-of-type:hover .kifi-message-sent-header-stamp, /* hide stamp on hover when it's the only one */
-.kifi-messages-sent:hover .kifi-message-sent:last-of-type .kifi-message-sent-header-stamp { /* hide the shown-by-default last timestamp if hovering over another */
+.kifi-message-sent:last-of-type .kifi-message-sent-stamp {
+  display: block;
+}
+.kifi-message-sent:hover ~ .kifi-message-sent:last-of-type .kifi-message-sent-stamp {
   display: none;
 }
-.kifi-message-sent:last-of-type .kifi-message-sent-header-stamp { /* show last timestamp when not hovering */
-  display: inline-block;
+.kifi-message-sent.kifi-message-sent.kifi-message-sent:hover .kifi-message-sent-stamp {
+  display: block;
 }
-.kifi-message-sent.kifi-message-sent.kifi-message-sent:hover .kifi-message-sent-header-stamp { /* show the timestamp when hovering over its message */
-  display: inline-block;
-}
-.kifi-message-sent-header-stamp {
+.kifi-message-sent-stamp {
   position: absolute;
   right: 0;
+  bottom: 0;
   display: none;
-  background: linear-gradient(to right, rgba(250,250,250,0) 0, rgba(250,250,250,1) 10px);
   font-size: 10px;
   text-align: right;
   color: #a9a9a9;
-}
-.kifi-message-sent-header-stamp-ellipsis {
-  padding-left: 13px;
-}
-.kifi-message-sent:not(:only-of-type) .kifi-message-sent-header-stamp-ellipsis::before { /* add the ellipsis to messages unless there is only one */
-  content: '…';
-}
-.kifi-message-sent:only-of-type .kifi-message-sent-header-stamp { /* if there is only one message, display its stamp on its own line. */
-  position: static;
-  display: block!important;
-}
-.kifi-message-sent:only-of-type .kifi-message-sent-header-stamp.kifi-message-sent-header-stamp-dummy { /* matched when measuring if an ellipsis is needed */
-  position: absolute;
-  display: inline-block!important;
 }
 .kifi-message-source-icon {
   display: none;
@@ -90,6 +71,12 @@
 .kifi-message-source-icon-Twitter {
   display: inline-block;
   background-image: url(/images/twitter-blue.svg);
+}
+.kifi-message-sent .kifi-tag.kifi-tag.kifi-tag {
+  color: #6fa6ef;
+}
+.kifi-message-sent .kifi-tag.kifi-tag.kifi-tag:not(:hover) {
+  text-decoration: none!important;
 }
 a.kifi-message-pic-a,
 span.kifi-message-pic-email {

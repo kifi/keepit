@@ -64,8 +64,6 @@ trait KeepCommander {
   // Tagging
   def searchTags(userId: Id[User], query: String, limit: Option[Int]): Future[Seq[HashtagHit]]
   def suggestTags(userId: Id[User], keepIdOpt: Option[ExternalId[Keep]], query: Option[String], limit: Int): Future[Seq[(Hashtag, Seq[(Int, Int)])]]
-  def removeTagFromKeeps(keeps: Set[Id[Keep]], tag: Hashtag): Int
-  def replaceTagOnKeeps(keeps: Set[Id[Keep]], oldTag: Hashtag, newTag: Hashtag): Int
 
   // Destroying
   def unkeepOneFromLibrary(keepId: ExternalId[Keep], libId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[String, PartialKeepInfo]
@@ -73,7 +71,6 @@ trait KeepCommander {
 
   // On the way out, hopefully.
   def allKeeps(before: Option[ExternalId[Keep]], after: Option[ExternalId[Keep]], collectionId: Option[String], helprankOpt: Option[String], count: Int, userId: Id[User]): Future[Seq[KeepInfo]]
-  def autoFixKeepNoteAndTags(keepId: Id[Keep]): Future[Unit]
 }
 
 @Singleton
@@ -82,7 +79,6 @@ class KeepCommanderImpl @Inject() (
     keepInterner: KeepInterner,
     searchClient: SearchServiceClient,
     globalKeepCountCache: GlobalKeepCountCache,
-    keepToCollectionRepo: KeepToCollectionRepo,
     keepRepo: KeepRepo,
     ktlRepo: KeepToLibraryRepo,
     ktlCommander: KeepToLibraryCommander,
@@ -93,7 +89,6 @@ class KeepCommanderImpl @Inject() (
     keepSourceCommander: KeepSourceCommander,
     eventCommander: KeepEventCommander,
     keepSourceRepo: KeepSourceAttributionRepo,
-    collectionRepo: CollectionRepo,
     tagCommander: TagCommander,
     libraryAnalytics: LibraryAnalytics,
     heimdalClient: HeimdalServiceClient,
@@ -219,13 +214,13 @@ class KeepCommanderImpl @Inject() (
 
     def getKeepsFromCollection(userId: Id[User], collectionId: String, beforeOpt: Option[ExternalId[Keep]], afterOpt: Option[ExternalId[Keep]], count: Int): Seq[Keep] = {
       db.readOnlyReplica { implicit session =>
-        val collectionOpt = collectionRepo.getByUserAndName(userId, Hashtag(collectionId))
-          .orElse(ExternalId.asOpt[Collection](collectionId).flatMap(cid => collectionRepo.getByUserAndExternalId(userId, cid)))
-        val keeps = collectionOpt.map { collection =>
-          keepRepo.getByUserAndCollection(userId, collection.id.get, beforeOpt, afterOpt, count)
-        } getOrElse Seq.empty
+        // todo: This screws up pagination. Crap.
+        val tagKeeps = {
+          val ids = tagCommander.getKeepsByTagAndUser(Hashtag(collectionId), userId)
+          keepRepo.getActiveByIds(ids.toSet).values.toSeq.sortBy(_.lastActivityAt)
+        }
 
-        keeps
+        tagKeeps
       }
     }
 
@@ -319,12 +314,11 @@ class KeepCommanderImpl @Inject() (
           val keeps = keepsE.map(_.left.get)
           val invalidKeepIds = invalidKeepIdsE.map(_.right.get)
 
-          val inactivatedKeeps = keeps.map { k =>
+          keeps.foreach { k =>
             // TODO(ryan): stop deactivating keeps and instead just detach them from libraries
             // just uncomment the line below this and rework some of this
             // ktlCommander.removeKeepFromLibrary(k.id.get, libId)
             keepMutator.deactivateKeep(k)
-            k
           }
           finalizeUnkeeping(keeps, userId)
 
@@ -332,7 +326,7 @@ class KeepCommanderImpl @Inject() (
           val phantomActiveKeeps = keeps.map(_.copy(state = KeepStates.ACTIVE))
           tagCommander.removeAllTagsFromKeeps(phantomActiveKeeps.flatMap(_.id))
 
-          (inactivatedKeeps, invalidKeepIds)
+          (keeps, invalidKeepIds)
         }
 
         Right((keeps map PartialKeepInfo.fromKeep, invalidKeepIds))
@@ -372,130 +366,6 @@ class KeepCommanderImpl @Inject() (
         }
     }
     result.map(_._2)
-  }
-
-  private def getOrCreateTag(userId: Id[User], name: String)(implicit session: RWSession): Collection = {
-    val normalizedName = Hashtag(name.trim.replaceAll("""\s+""", " ").take(Collection.MaxNameLength))
-    val collection = collectionRepo.getByUserAndName(userId, normalizedName, excludeState = None)
-    collection match {
-      case Some(t) if t.isActive => t
-      case Some(t) => collectionRepo.save(t.copy(state = CollectionStates.ACTIVE, name = normalizedName, createdAt = clock.now()))
-      case None => collectionRepo.save(Collection(userId = userId, name = normalizedName))
-    }
-  }
-
-  // You have keeps, and want tags removed from it.
-  def removeTagFromKeeps(keeps: Set[Id[Keep]], tag: Hashtag): Int = {
-    db.readWrite { implicit session =>
-      var errors = mutable.Set.empty[Id[Keep]]
-      val updated = keepRepo.getActiveByIds(keeps).flatMap {
-        case ((_, k)) =>
-          val existingTags = Hashtags.findAllHashtagNames(k.note.getOrElse("")).map(Hashtag(_)).toSeq
-          val existingNormalized = existingTags.map(_.normalized)
-
-          if (k.isActive && existingNormalized.contains(tag.normalized)) {
-            val newTags = existingTags.filterNot(_.normalized == tag.normalized).map(_.tag)
-            Try(syncTagsToNoteAndSaveKeep(k.userId.get, k, newTags)) match { // Note will be updated here
-              case Success(r) => Some(r)
-              case Failure(ex) =>
-                errors += k.id.get
-                log.warn(s"[removeTagFromKeeps] Failure removing tag for keep ${k.id.get} removing ${tag.tag}. Existing tags: ${k.note}, new tags: $newTags")
-                None
-            }
-          } else None
-      }
-      updated.values.flatten.distinctBy(_.id).map { c =>
-        collectionRepo.collectionChanged(c.id, c.isNewKeep, c.inactivateIfEmpty)
-      }
-      if (errors.nonEmpty) {
-        airbrake.notify(s"[removeTagFromKeeps] Failure removing tag ${tag.tag} from ${errors.size} keeps. See logs for details.")
-      }
-      updated.size
-    }
-  }
-
-  // Assumption that all keeps are owned by the same user
-  def replaceTagOnKeeps(keeps: Set[Id[Keep]], oldTag: Hashtag, newTag: Hashtag): Int = {
-    if (keeps.nonEmpty && oldTag.normalized == newTag.normalized) { // Changing capitalization, etc
-      db.readWrite { implicit session =>
-        for {
-          firstKeepId <- keeps.headOption
-          keep = keepRepo.get(firstKeepId)
-          user <- keep.userId
-          existing <- collectionRepo.getByUserAndName(user, oldTag)
-        } yield {
-          collectionRepo.save(existing.copy(name = newTag))
-        }
-      }
-    }
-    db.readWrite(attempts = 3) { implicit session =>
-      var errors = mutable.Set.empty[Id[Keep]]
-      val updated = keepRepo.getActiveByIds(keeps).flatMap {
-        case ((_, k)) =>
-          val existingTags = Hashtags.findAllHashtagNames(k.note.getOrElse("")).map(Hashtag(_)).toSeq
-          val existingNormalized = existingTags.map(_.normalized)
-          if (k.isActive && existingNormalized.contains(oldTag.normalized)) {
-            val newTags = newTag.tag +: existingTags.filterNot(_.normalized == oldTag.normalized).map(_.tag)
-            val newNote = k.note.map(Hashtags.replaceTagNameFromString(_, oldTag.tag, newTag.tag))
-            Try(syncTagsToNoteAndSaveKeep(k.userId.get, k.withNote(newNote), newTags)) match {
-              case Success(r) => Some(r)
-              case Failure(ex) =>
-                errors += k.id.get
-                log.warn(s"[replaceTagOnKeeps] Failure updating note for keep ${k.id.get} replacing ${oldTag.tag} with ${newTag.tag}. Existing note: ${k.note}, new note: $newNote")
-                None
-            }
-          } else None
-      }
-      updated.values.flatten.distinctBy(_.id).map { c =>
-        collectionRepo.collectionChanged(c.id, c.isNewKeep, c.inactivateIfEmpty)
-      }
-      if (errors.nonEmpty) {
-        airbrake.notify(s"[replaceTagOnKeeps] Failure replacing ${oldTag.tag} with ${newTag.tag} from ${errors.size} keeps. See logs for details.")
-      }
-      updated.size
-    }
-  }
-
-  // Given set of tags and keep, update keep note to reflect tag seq (create tags, remove tags, insert into note, remove from note)
-  // i.e., source of tag truth is the tag seq, note will be brought in sync
-  // Important: Caller's responsibility to call collectionRepo.collectionChanged from the return value for collections that changed
-  case class ChangedCollection(id: Id[Collection], isNewKeep: Boolean, inactivateIfEmpty: Boolean)
-  private def syncTagsToNoteAndSaveKeep(userId: Id[User], keep: Keep, allTagsKeepShouldHave: Seq[String], freshTag: Boolean = false)(implicit session: RWSession) = {
-    // get all tags from hashtag names list
-    val selectedTags = allTagsKeepShouldHave.flatMap { t => Try(getOrCreateTag(userId, t)).toOption }
-    val selectedTagIds = selectedTags.map(_.id.get).toSet
-    // get all active tags for keep to figure out which tags to add & which tags to remove
-    val activeTagIds = keepToCollectionRepo.getCollectionsForKeep(keep.id.get).toSet
-    val tagIdsToAdd = selectedTagIds.filterNot(activeTagIds.contains)
-    val tagIdsToRemove = activeTagIds.filterNot(selectedTagIds.contains)
-    var changedCollections = scala.collection.mutable.Set.empty[ChangedCollection]
-
-    // fix k2c for tagsToAdd & tagsToRemove
-    tagIdsToAdd.map { tagId =>
-      keepToCollectionRepo.getOpt(keep.id.get, tagId) match {
-        case None => keepToCollectionRepo.save(KeepToCollection(keepId = keep.id.get, collectionId = tagId))
-        case Some(k2c) => keepToCollectionRepo.save(k2c.copy(state = KeepToCollectionStates.ACTIVE))
-      }
-      changedCollections += ChangedCollection(tagId, isNewKeep = freshTag, inactivateIfEmpty = false)
-    }
-    tagIdsToRemove.map { tagId =>
-      keepToCollectionRepo.remove(keep.id.get, tagId)
-      changedCollections += ChangedCollection(tagId, isNewKeep = false, inactivateIfEmpty = true)
-    }
-
-    // go through note field and find all hashtags
-    val keepNote = keep.note.getOrElse("")
-    val hashtagsInNote = Hashtags.findAllHashtagNames(keepNote)
-    val hashtagsToPersistSet = allTagsKeepShouldHave.toSet
-
-    // find hashtags to remove & to append
-    val hashtagsToRemove = hashtagsInNote.filterNot(hashtagsToPersistSet.contains(_))
-    val hashtagsToAppend = allTagsKeepShouldHave.filterNot(hashtagsInNote.contains(_))
-    val noteWithHashtagsRemoved = Hashtags.removeTagNamesFromString(keepNote, hashtagsToRemove.toSet)
-    val noteWithHashtagsAppended = Hashtags.addTagsToString(noteWithHashtagsRemoved, hashtagsToAppend)
-    val finalNote = Some(noteWithHashtagsAppended.trim).filterNot(_.isEmpty)
-
-    (keepRepo.save(keep.withNote(finalNote)), changedCollections)
   }
 
   private def postSingleKeepReporting(keep: Keep, isNewKeep: Boolean, library: Library, socialShare: SocialShare): Unit = SafeFuture {
@@ -587,27 +457,6 @@ class KeepCommanderImpl @Inject() (
         maxMessagesShown = maxMessagesShown,
         getTimestamp = getKeepTimestamp
       )
-    }
-  }
-
-  private val autoFixNoteLimiter = new ReactiveLock()
-  def autoFixKeepNoteAndTags(keepId: Id[Keep]): Future[Unit] = {
-    autoFixNoteLimiter.withLock {
-      db.readWrite(attempts = 3) { implicit session =>
-        val keep = keepRepo.getNoCache(keepId)
-        val tagsFromHashtags = Hashtags.findAllHashtagNames(keep.note.getOrElse("")).map(Hashtag.apply)
-        val tagsFromCollections = tagCommander.getTagsForKeep(keep.id.get).toSet
-        if (tagsFromHashtags.map(_.normalized) != tagsFromCollections.map(_.normalized) && keep.isActive) {
-          val newNote = Hashtags.addHashtagsToString(keep.note.getOrElse(""), tagsFromCollections.toSeq)
-          if (keep.note.getOrElse("").toLowerCase != newNote.toLowerCase) {
-            log.info(s"[autoFixKeepNoteAndTags] (${keep.id.get}) Previous note: '${keep.note.getOrElse("")}', new: '$newNote'")
-            Try(keepMutator.updateKeepNote(keep.userId.get, keep, newNote, freshTag = false)).recover {
-              case ex: Throwable =>
-                log.warn(s"[autoFixKeepNoteAndTags] (${keep.id.get}) Couldn't update note", ex)
-            }
-          }
-        }
-      }
     }
   }
 }

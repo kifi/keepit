@@ -161,7 +161,6 @@
 }
 
 @svgFindDataUrl: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 13.6 13.6"><ellipse fill="none" stroke="%D" cx="5.5" cy="5.5" rx="5" ry="5"/><line fill="none" stroke="%D" stroke-width="1.2" stroke-linecap="round" x1="13" y1="13" x2="9.6" y2="9.6"/></svg>';
-@svgCheckDataUrl: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 11 8"><path fill="%D" d="M10.8,0.8l-0.7-0.7C9.9,0,9.6,0,9.4,0.1L4,5.4L1.6,3.1C1.4,2.9,1,2.9,0.9,3.1L0.1,3.7C0,3.9,0,4.2,0.1,4.4l3.5,3.4C3.8,8,4.1,8,4.3,7.8l6.5-6.3C11,1.3,11,1,10.8,0.8z"/></svg>';
 @import (reference) 'lib_icons.less';
 
 @lib-border-color: #e7e7e7;
@@ -261,7 +260,7 @@
     right: 0;
     height: @lib-height + 1px; // bottom border
     z-index: 1;
-    &>.kifi-keep-box-progress {
+    &>.kifi-progress {
       transition: opacity @unkeep-duration;
       opacity: 0;
     }
@@ -845,11 +844,11 @@
     color: #a9a9a9;
   }
 }
-.kifi-keep-box-tag {
+.kifi-keep-box .kifi-tag {
   color: #6fa6ef;
   text-decoration: underline;
 }
-.kifi-keep-box-tag-suggestions {
+.kifi-tag-suggestions {
   position: absolute;
   margin: 0 !important;
   border: 1px solid #d2d2d2;
@@ -858,7 +857,7 @@
   overflow: hidden;
   cursor: default;
 }
-.kifi-keep-box-tag-suggestion {
+.kifi-tag-suggestion {
   position: relative;
   margin: 0 !important;
   padding: 3px 6px !important;
@@ -945,43 +944,6 @@
 .kifi-keep-box-done {
   padding: 0 30px;
 }
-
-.kifi-keep-box-progress-parent {
-  position: relative;
-}
-.kifi-keep-box-progress {
-  position: absolute;
-  left: 0;
-  bottom: -1px;
-  height: 2px;
-  width: 0;
-  background: #7bacf1;
-  &.kifi-done {
-    width: 100% !important;
-    transition: width .16s ease-in-out;
-  }
-  &.kifi-fail {
-    background: #b00;
-    width: 0 !important;
-    transition: width .24s ease-in-out;
-  }
-  &::after {
-    content: '';
-    position: absolute;
-    bottom: 5px;
-    right: 4px;
-    width: 16px;
-    height: 12px;
-    @url: %(@svgCheckDataUrl, #48b07a);
-    background: url(@url) right center/contain no-repeat !important;
-    clip: rect(0,0,12px,0);
-    transition: clip .16s .16s;
-  }
-  &.kifi-done::after {
-    clip: rect(0,16px,12px,0);
-  }
-}
-
 .kifi-keep-box-collab-icon {
   width: 15px;
   height: 10px;

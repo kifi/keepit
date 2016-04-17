@@ -49,7 +49,6 @@ class LibraryController @Inject() (
   keepsCommander: KeepCommander,
   keepDecorator: KeepDecorator,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
-  collectionRepo: CollectionRepo,
   clock: Clock,
   relatedLibraryCommander: RelatedLibraryCommander,
   suggestedSearchCommander: LibrarySuggestedSearchCommander,

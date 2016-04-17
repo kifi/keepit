@@ -91,7 +91,7 @@ class SlackChannelToLibraryRepoImpl @Inject() (
     slackChannelId: SlackChannelId,
     libraryId: Id[Library],
     status: SlackIntegrationStatus,
-    changedStatusAt: Option[DateTime],
+    changedStatusAt: DateTime,
     nextIngestionAt: Option[DateTime],
     lastIngestingAt: Option[DateTime],
     lastIngestedAt: Option[DateTime],
@@ -106,7 +106,7 @@ class SlackChannelToLibraryRepoImpl @Inject() (
       slackChannelId,
       libraryId,
       status,
-      changedStatusAt = changedStatusAt getOrElse createdAt,
+      changedStatusAt = changedStatusAt,
       nextIngestionAt = nextIngestionAt,
       lastIngestingAt = lastIngestingAt,
       lastIngestedAt = lastIngestedAt,
@@ -124,7 +124,7 @@ class SlackChannelToLibraryRepoImpl @Inject() (
     stl.slackChannelId,
     stl.libraryId,
     stl.status,
-    Option(stl.changedStatusAt),
+    stl.changedStatusAt,
     stl.nextIngestionAt,
     stl.lastIngestingAt,
     stl.lastIngestedAt,
@@ -139,7 +139,7 @@ class SlackChannelToLibraryRepoImpl @Inject() (
     def slackChannelId = column[SlackChannelId]("slack_channel_id", O.NotNull)
     def libraryId = column[Id[Library]]("library_id", O.NotNull)
     def status = column[SlackIntegrationStatus]("status", O.NotNull)
-    def changedStatusAt = column[Option[DateTime]]("changed_status_at", O.Nullable)
+    def changedStatusAt = column[DateTime]("changed_status_at", O.NotNull)
     def nextIngestionAt = column[Option[DateTime]]("next_ingestion_at", O.Nullable)
     def lastIngestingAt = column[Option[DateTime]]("last_ingesting_at", O.Nullable)
     def lastIngestedAt = column[Option[DateTime]]("last_ingested_at", O.Nullable)

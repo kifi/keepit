@@ -1,7 +1,7 @@
 package com.keepit.shoebox.eliza
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ KeepMutator, KeepCommander }
+import com.keepit.commanders.{ TagCommander, Hashtags, KeepMutator, KeepCommander }
 import com.keepit.common.akka.{ FortyTwoActor, SafeFuture }
 import com.keepit.common.core._
 import com.keepit.common.db.SequenceNumber
@@ -31,6 +31,7 @@ class ShoeboxMessageIngestionActor @Inject() (
   eliza: ElizaServiceClient,
   airbrake: AirbrakeNotifier,
   slackPusher: LibraryToSlackChannelPusher,
+  tagCommander: TagCommander,
   implicit val executionContext: ExecutionContext,
   implicit val inhouseSlackClient: InhouseSlackClient)
     extends FortyTwoActor(airbrake) with BatchProcessingActor[CrossServiceMessage] {
@@ -83,11 +84,24 @@ class ShoeboxMessageIngestionActor @Inject() (
                 keepMutator.unsafeModifyKeepRecipients(keepId, diff, userAttribution = Some(editor))
               case KeepEventData.EditTitle(_, _, _) =>
             }
+            def syncTagsFromMessages() = msgs.foreach { msg =>
+              val existing = tagCommander.getTagsForMessage(msg.id).toSet
+              if (msg.isDeleted) {
+                tagCommander.removeTagsFromKeepsByMessage(msg.id, Set(keepId), existing)
+              } else {
+                val tags = Hashtags.findAllHashtagNames(msg.text).filter(_.nonEmpty).map(Hashtag(_))
+                val tagsToAdd = tags.diff(existing)
+                val tagsToRemove = existing.diff(tags)
+                tagCommander.addTagsToKeep(keepId, tagsToAdd, msg.sentBy.flatMap(_.left.toOption), Some(msg.id))
+                tagCommander.removeTagsFromKeepsByMessage(msg.id, Set(keepId), tagsToRemove)
+              }
+            }
 
             // Apply all of the functions in sequence
             updateMessageSeq()
             updateLastActivity()
             handleKeepEvents()
+            syncTagsFromMessages()
         }
         systemValueRepo.setSequenceNumber(shoeboxMessageSeq, maxSeq)
       }

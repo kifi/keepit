@@ -570,7 +570,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
         db.readOnlyMaster { implicit s =>
           val keep = keepRepo.getOpt(keep1.externalId).get
           keep.note === Some("thwip!")
-          collectionRepo.getHashtagsByKeepId(keep.id.get) === Set.empty
+          tagCommander.getTagsForKeep(keep.id.get) === Seq.empty
         }
 
         // nonempty note -> nonempty note (with hashtags)
@@ -578,7 +578,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
         db.readOnlyMaster { implicit s =>
           val keep = keepRepo.getOpt(keep1.externalId).get
           keep.note === Some("thwip! #lol [#tony[sucks\\]] [#avengers] blah")
-          collectionRepo.getHashtagsByKeepId(keep.id.get).map(_.tag) === Set("tony[sucks]", "avengers")
+          tagCommander.getTagsForKeep(keep.id.get).map(_.tag).toSet === Set("tony[sucks]", "avengers")
         }
 
         // nonempty note (with hashtags) -> empty note
@@ -586,7 +586,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
         db.readOnlyMaster { implicit s =>
           val keep = keepRepo.getOpt(keep1.externalId).get
           keep.note === None
-          collectionRepo.getHashtagsByKeepId(keep.id.get) === Set.empty
+          tagCommander.getTagsForKeep(keep.id.get) === Seq.empty
         }
 
         // empty note -> non-empty note (with "fake" hashtag)
@@ -594,7 +594,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
         db.readOnlyMaster { implicit s =>
           val keep = keepRepo.getOpt(keep1.externalId).get
           keep.note === Some("[\\#trololol]")
-          collectionRepo.getHashtagsByKeepId(keep.id.get) === Set.empty
+          tagCommander.getTagsForKeep(keep.id.get) === Seq.empty
         }
       }
     }
