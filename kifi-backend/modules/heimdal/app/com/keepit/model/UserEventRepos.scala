@@ -1,18 +1,10 @@
 package com.keepit.model
 
-import com.keepit.commander.HelpRankCommander
-import com.keepit.common.akka.SafeFuture
-import com.keepit.common.cache.{ CacheStatistics, FortyTwoCachePlugin, JsonCacheImpl, Key }
 import com.keepit.common.crypto.PublicId
-import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
-import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.cache.{ Key, JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics }
-import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.common.logging.AccessLog
-import com.keepit.common.core._
-import com.keepit.eliza.ElizaServiceClient
-import com.keepit.slack.models.{ InternalSlackTeamInfoCache, InternalSlackTeamInfoKey, InternalSlackTeamInfo, SlackTeamInfo, SlackTeamId }
+import com.keepit.slack.models.SlackTeamId
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.usersegment.UserSegment
 import com.keepit.heimdal.{ HeimdalContext, UserEvent }
@@ -22,7 +14,6 @@ import com.keepit.common.crypto.PublicIdConfiguration
 
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
-import scala.util.Success
 
 class ExtensionVersionAugmentor(shoeboxClient: ShoeboxServiceClient) extends EventAugmentor[UserEvent] {
   def isDefinedAt(userEvent: UserEvent) = userEvent.context.get[String]("extensionVersion").filter(_.nonEmpty).isEmpty
@@ -135,6 +126,7 @@ class SlackInfoAugmentor(eventContextHelper: EventContextHelper, shoebox: Shoebo
     val emptyResponse = Future.successful(Seq.empty[(String, ContextData)])
 
     event.context.get[String]("slackTeamId").map { id =>
+      import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
       internalSlackTeamInfoCache.getOrElseFutureOpt(InternalSlackTeamInfoKey(SlackTeamId(id))) {
         shoebox.getSlackTeamInfo(SlackTeamId(id))
       }.flatMap { teamInfoOpt =>

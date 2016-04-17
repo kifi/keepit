@@ -12,7 +12,7 @@ import com.keepit.common.store.ImagePath
 import com.keepit.common.strings._
 import com.keepit.common.time._
 import com.keepit.model.OrganizationPermission._
-import com.keepit.slack.models.{SlackTeamName, SlackTeamId}
+import com.keepit.slack.models.{ SlackTeamName, SlackTeamId }
 import com.kifi.macros.json
 import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.DateTime
