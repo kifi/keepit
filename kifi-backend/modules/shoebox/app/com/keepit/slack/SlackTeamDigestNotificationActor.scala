@@ -269,7 +269,7 @@ class SlackTeamDigestNotificationActor @Inject() (
             slackLog.info("Team digest to", team.slackTeamName.value, "(", team.slackTeamId.value, ")")
             val contextBuilder = heimdalContextBuilder()
             contextBuilder += ("slackTeamName", team.slackTeamName.value)
-            slackAnalytics.trackNotificationSent(team.slackTeamId, generalChannel, SlackChannelName("general"), NotificationCategory.NonUser.TEAM_DIGEST)
+            slackAnalytics.trackNotificationSent(team.slackTeamId, generalChannel, Some(SlackChannelName("general")), NotificationCategory.NonUser.TEAM_DIGEST)
             ()
           }
         }.getOrElse(Future.failed(new Exception))

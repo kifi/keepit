@@ -27,7 +27,7 @@ object SlackTeamMembershipFactory {
     PartialSlackTeamMembership(SlackTeamMembership(
       userId = Some(owner),
       slackUserId = SlackUserId(ran(10)),
-      slackUsername = SlackUsername(ran(10)),
+      slackUsername = Some(SlackUsername(ran(10))),
       slackTeamId = SlackTeamId(ran(10)),
       kind = SlackAccountKind.User,
       tokenWithScopes = None,
@@ -39,7 +39,7 @@ object SlackTeamMembershipFactory {
   case class PartialSlackTeamMembership(stm: SlackTeamMembership) {
     def withUser(user: User) = this.copy(stm = stm.copy(userId = Some(user.id.get)))
     def withTeam(team: SlackTeam) = this.copy(stm = stm.copy(slackTeamId = team.slackTeamId))
-    def withUsername(str: String) = this.copy(stm = stm.copy(slackUsername = SlackUsername(str)))
+    def withUsername(str: String) = this.copy(stm = stm.copy(slackUsername = Some(SlackUsername(str))))
     def withScopes(scopes: Set[SlackAuthScope]) = this.copy(stm = stm.copy(tokenWithScopes = Some(SlackTokenWithScopes(SlackUserAccessToken(ran(30)), scopes))))
 
     def withNextPersonalDigestAt(time: DateTime) = this.copy(stm = stm.withNextPersonalDigestAt(time))

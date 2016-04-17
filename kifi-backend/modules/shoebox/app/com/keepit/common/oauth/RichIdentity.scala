@@ -13,17 +13,15 @@ case class LinkedInIdentity(socialUser: SocialUser) extends RichIdentity
 case class TwitterIdentity(socialUser: SocialUser, pictureUrl: Option[String], profileUrl: Option[String]) extends RichIdentity
 case class EmailPasswordIdentity(firstName: String, lastName: String, email: EmailAddress, password: Option[PasswordInfo]) extends RichIdentity
 
-case class SlackIdentity(teamId: SlackTeamId, teamName: SlackTeamName, tokenWithScopes: Option[SlackTokenWithScopes], userId: SlackUserId, username: SlackUsername, user: Option[SlackUserInfo]) extends RichIdentity
+case class SlackIdentity(teamId: SlackTeamId, userId: SlackUserId, user: Option[SlackUserInfo], tokenWithScopes: Option[SlackTokenWithScopes]) extends RichIdentity
 object SlackIdentity {
   def apply(auth: SlackAuthorizationResponse, identity: SlackIdentifyResponse, fullUser: Option[FullSlackUserInfo]): SlackIdentity = {
-    require(auth.teamId == identity.teamId && auth.teamName == identity.teamName && !fullUser.exists(_.id != identity.userId))
+    require(auth.teamId == identity.teamId && !fullUser.exists(_.id != identity.userId))
     SlackIdentity(
-      auth.teamId,
-      auth.teamName,
-      Some(SlackTokenWithScopes(auth.accessToken, auth.scopes)),
+      identity.teamId,
       identity.userId,
-      identity.userName,
-      fullUser
+      fullUser,
+      Some(SlackTokenWithScopes(auth.accessToken, auth.scopes))
     )
   }
 }

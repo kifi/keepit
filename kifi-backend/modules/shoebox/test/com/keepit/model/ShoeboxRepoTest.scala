@@ -109,7 +109,6 @@ class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
         val slackAccount = SlackTeamMembershipInternRequest(
           Some(user.id.get),
           SlackUserId("UFAKE"),
-          SlackUsername("@fake"),
           slackTeam.slackTeamId,
           Some(SlackTokenWithScopes(SlackUserAccessToken("fake_token"), Set(SlackAuthScope.SearchRead))),
           slackUser = None

@@ -10,7 +10,7 @@ CREATE TABLE slack_team_membership (
   seq bigint(20) NOT NULL,
   user_id BIGINT(20) DEFAULT NULL,
   slack_user_id VARCHAR(32) NOT NULL,
-  slack_username VARCHAR(32) NOT NULL,
+  slack_username VARCHAR(32) DEFAULT NULL,
   slack_team_id VARCHAR(32) NOT NULL,
   kind VARCHAR(32) NOT NULL,
   token VARCHAR(512) NOT NULL,

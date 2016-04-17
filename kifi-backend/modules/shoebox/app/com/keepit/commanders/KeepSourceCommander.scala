@@ -117,9 +117,8 @@ class KeepSourceAugmentor @Inject() (
         val whole = identifier.group(0)
         val id = whole.substring(2, whole.length - 1)
         SlackChannelId.parse[SlackChannelId](id).toOption.collect {
-          // stripPrefix is because we're storing some with prefixes, some without. Once that's not true, this isn't needed.
-          case SlackChannelId.User(username) =>
-            slackTeamMembershipRepo.getBySlackTeamAndUser(teamId, SlackUserId(username)).map(s => "<@" + s.slackUsername.value.stripPrefix("@") + ">")
+          case SlackChannelId.User(slackUserId) =>
+            slackTeamMembershipRepo.getBySlackTeamAndUser(teamId, SlackUserId(slackUserId)).flatMap(_.slackUsername.map(username => "<@" + username.value + ">"))
           case channel: SlackChannelId =>
             slackChannelRepo.getByChannelId(teamId, channel).map(s => "<" + s.prettyName.getOrElse(s.slackChannelName).value + ">")
         }.flatten.getOrElse {

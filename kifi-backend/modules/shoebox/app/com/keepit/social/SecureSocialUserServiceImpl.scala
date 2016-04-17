@@ -76,16 +76,13 @@ class UserIdentityHelper @Inject() (
         Try(parseSlackId(identityId)).toOption.flatMap {
           case (slackTeamId, slackUserId) =>
             for {
-              team <- slackTeamRepo.getBySlackTeamId(slackTeamId)
               membership <- slackMembershipRepo.getBySlackTeamAndUser(slackTeamId, slackUserId)
             } yield UserIdentity(
               SlackIdentity(
                 membership.slackTeamId,
-                team.slackTeamName,
-                membership.tokenWithScopes,
                 membership.slackUserId,
-                membership.slackUsername,
-                membership.slackUser
+                membership.slackUser,
+                membership.tokenWithScopes
               ),
               membership.userId
             )

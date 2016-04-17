@@ -497,7 +497,7 @@ class AdminOrganizationController @Inject() (
         val msg = SlackMessageRequest.fromKifi(text)
         slackClient.sendToSlackHoweverPossible(mem.slackTeamId, mem.slackUserId.asChannel, msg)
           .map { _ =>
-            slackAnalytics.trackNotificationSent(mem.slackTeamId, mem.slackUserId.asChannel, mem.slackUsername.asChannelName, category)
+            slackAnalytics.trackNotificationSent(mem.slackTeamId, mem.slackUserId.asChannel, mem.slackUsername.map(_.asChannelName), category)
             acc + (mem.id.get -> true)
           }
           .recover { case _ => acc + (mem.id.get -> false) }

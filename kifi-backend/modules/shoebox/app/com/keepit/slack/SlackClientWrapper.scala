@@ -360,7 +360,6 @@ class SlackClientWrapperImpl @Inject() (
     slackTeamMembershipRepo.internMembership(SlackTeamMembershipInternRequest(
       userId = None,
       slackUserId = user.id,
-      slackUsername = user.username,
       slackTeamId = slackTeam.slackTeamId,
       tokenWithScopes = None,
       slackUser = Some(user)

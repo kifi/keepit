@@ -102,9 +102,9 @@ class SlackPersonalDigestNotificationActor @Inject() (
             teamOpt.foreach { team =>
               contextBuilder += ("slackTeamName", team.slackTeamName.value)
             }
-            slackAnalytics.trackNotificationSent(membership.slackTeamId, membership.slackUserId.asChannel, membership.slackUsername.asChannelName, NotificationCategory.NonUser.PERSONAL_DIGEST, contextBuilder.build)
+            slackAnalytics.trackNotificationSent(membership.slackTeamId, membership.slackUserId.asChannel, membership.slackUsername.map(_.asChannelName), NotificationCategory.NonUser.PERSONAL_DIGEST, contextBuilder.build)
             slackLog.info(
-              "Personal digest to", membership.slackUsername.value, "in team", membership.slackTeamId.value,
+              "Personal digest to", membership.slackUserId.value, "in team", membership.slackTeamId.value,
               membership.lastPersonalDigestAt.fold[DescriptionElements]("ever")(DescriptionElements("since", _))
             )
           case Failure(SlackFail.NoValidPushMethod) =>
