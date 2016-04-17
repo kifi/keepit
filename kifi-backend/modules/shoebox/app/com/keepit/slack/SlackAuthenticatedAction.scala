@@ -19,13 +19,13 @@ sealed trait SlackAuthenticatedAction { self =>
 }
 
 object Signup extends SlackAuthenticatedActionHelper[Signup]("signup")
-case class Signup(useIdentityScopes: Boolean) extends SlackAuthenticatedAction {
+@json case class Signup(useIdentityScopes: Boolean) extends SlackAuthenticatedAction {
   type A = Signup
   def helper = Signup
 }
 
 object Login extends SlackAuthenticatedActionHelper[Login]("login")
-case class Login(useIdentityScopes: Boolean) extends SlackAuthenticatedAction {
+@json case class Login(useIdentityScopes: Boolean) extends SlackAuthenticatedAction {
   type A = Login
   def helper = Login
 }
