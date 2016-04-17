@@ -51,8 +51,6 @@ object SlackTeamIconReads extends Reads[Map[Int, String]] {
 sealed trait SlackTeamInfo {
   def id: SlackTeamId
   def name: SlackTeamName
-  def domain: SlackTeamDomain
-  def icon: Map[Int, String]
 }
 
 object SlackTeamInfo {
@@ -88,3 +86,5 @@ object PartialSlackTeamInfo {
     SlackTeamIconReads
   )(PartialSlackTeamInfo.apply _)
 }
+
+case class BasicSlackTeamInfo(id: SlackTeamId, name: SlackTeamName) extends SlackTeamInfo

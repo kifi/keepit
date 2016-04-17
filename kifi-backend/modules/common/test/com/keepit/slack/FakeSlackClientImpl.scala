@@ -36,7 +36,7 @@ class FakeSlackClientImpl extends SlackClient {
 
   def testToken(token: SlackAccessToken): Future[Unit] = Future.successful(())
   def identifyUser(token: SlackAccessToken): Future[SlackIdentifyResponse] = ???
-  def getUserIdentity(token: SlackAccessToken): Future[SlackUserIdentityInfo] = ???
+  def getUserIdentity(token: SlackAccessToken): Future[SlackUserIdentityResponse] = ???
   def processAuthorizationResponse(code: SlackAuthorizationCode, redirectUri: String): Future[SlackAuthorizationResponse] = ???
   def pushToWebhook(url: String, msg: SlackMessageRequest): Future[Unit] = () match {
     case _ if isSlackDown => Future.failed(new Exception("slack_is_down"))

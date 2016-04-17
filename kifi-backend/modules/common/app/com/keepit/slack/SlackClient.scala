@@ -72,7 +72,7 @@ trait SlackClient {
   def deleteMessage(token: SlackAccessToken, channelId: SlackChannelId, timestamp: SlackTimestamp): Future[Unit]
   def testToken(token: SlackAccessToken): Future[Unit]
   def identifyUser(token: SlackAccessToken): Future[SlackIdentifyResponse]
-  def getUserIdentity(token: SlackAccessToken): Future[SlackUserIdentityInfo]
+  def getUserIdentity(token: SlackAccessToken): Future[SlackUserIdentityResponse]
   def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse]
   def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackTimestamp): Future[Unit]
   def getTeamInfo(token: SlackAccessToken): Future[FullSlackTeamInfo]
@@ -158,8 +158,8 @@ class SlackClientImpl(
     slackCall[SlackIdentifyResponse](SlackAPI.Identify(token))
   }
 
-  def getUserIdentity(token: SlackAccessToken): Future[SlackUserIdentityInfo] = {
-    slackCall[SlackUserIdentityInfo](SlackAPI.Identify(token))
+  def getUserIdentity(token: SlackAccessToken): Future[SlackUserIdentityResponse] = {
+    slackCall[SlackUserIdentityResponse](SlackAPI.Identify(token))
   }
 
   def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackTimestamp): Future[Unit] = {

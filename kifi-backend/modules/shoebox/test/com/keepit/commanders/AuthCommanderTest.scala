@@ -1,5 +1,6 @@
 package com.keepit.commanders
 
+import com.keepit.common.oauth.SlackIdentity
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.UserFactory._
 import com.keepit.abook.FakeABookServiceClientModule
@@ -102,25 +103,19 @@ class AuthCommanderTest extends Specification with ShoeboxApplicationInjector {
       res.header.status === NOT_FOUND
       res.session.getUserId.isDefined === false
 
-      // Register Slack authorization
-      slackCommander.registerAuthorization(
-        Some(user.id.get),
-        SlackAuthorizationResponse(
-          accessToken = SlackUserAccessToken("fake"),
-          scopes = Set(),
-          teamName = SlackTeamName("fake"),
-          teamId = slackTeamId,
-          incomingWebhook = None,
-          botAuth = None
-        ),
-        SlackIdentifyResponse(
-          url = "fake.slack.com",
-          teamName = SlackTeamName("fake"),
-          userName = SlackUsername("fake"),
-          teamId = slackTeamId,
-          userId = slackUserId
+      // Register Slack Identity
+      db.readWrite { implicit session =>
+        slackCommander.internSlackIdentity(
+          Some(user.id.get),
+          SlackIdentity(
+            slackTeamId,
+            slackUserId,
+            Some(BasicSlackTeamInfo(slackTeamId, SlackTeamName("fake"))),
+            None,
+            Some(SlackTokenWithScopes(SlackUserAccessToken("fake"), Set.empty))
+          )
         )
-      )
+      }
 
       val res1 = authCommander.loginWithTrustedSocialIdentity(identityId)
       res1.header.status === OK

@@ -4,8 +4,6 @@ import java.util.UUID
 import com.keepit.common.cache._
 import com.keepit.common.time._
 import com.keepit.common.logging.AccessLog
-import com.keepit.common.mail.EmailAddress
-import com.keepit.common.strings.ValidInt
 import com.keepit.slack.models.SlackUserPresenceState.{ Away, Active }
 import com.kifi.macros.json
 import org.joda.time.DateTime
@@ -133,22 +131,52 @@ object SlackBotUserAuthorization {
   )(SlackBotUserAuthorization.apply _)
 }
 
-case class SlackAuthorizationResponse(
+sealed trait SlackAuthorizationResponse {
+  def accessToken: SlackUserAccessToken
+  def scopes: Set[SlackAuthScope]
+  def teamId: SlackTeamId
+}
+
+object SlackAuthorizationResponse {
+  implicit val reads: Reads[SlackAuthorizationResponse] = {
+    SlackAppAuthorizationResponse.reads.map[SlackAuthorizationResponse](identity) orElse
+      SlackIdentityAuthorizationResponse.reads.map[SlackAuthorizationResponse](identity)
+  }
+}
+
+case class SlackIdentityAuthorizationResponse(
   accessToken: SlackUserAccessToken,
   scopes: Set[SlackAuthScope],
-  teamName: SlackTeamName,
   teamId: SlackTeamId,
-  incomingWebhook: Option[SlackIncomingWebhook],
-  botAuth: Option[SlackBotUserAuthorization])
-object SlackAuthorizationResponse {
-  implicit val reads: Reads[SlackAuthorizationResponse] = (
+  userId: SlackUserId,
+  userFullName: String) extends SlackAuthorizationResponse
+
+object SlackIdentityAuthorizationResponse {
+  val reads: Reads[SlackIdentityAuthorizationResponse] = (
     (__ \ 'access_token).read[SlackUserAccessToken] and
     (__ \ 'scope).read[Set[SlackAuthScope]](SlackAuthScope.slackFormat) and
-    (__ \ 'team_name).read[SlackTeamName] and
+    (__ \ 'team \ 'id).read[SlackTeamId] and
+    (__ \ 'user \ 'id).read[SlackUserId] and
+    (__ \ 'user \ 'name).read[String]
+  )(SlackIdentityAuthorizationResponse.apply _)
+}
+
+case class SlackAppAuthorizationResponse(
+  accessToken: SlackUserAccessToken,
+  scopes: Set[SlackAuthScope],
+  teamId: SlackTeamId,
+  teamName: SlackTeamName,
+  incomingWebhook: Option[SlackIncomingWebhook],
+  botAuth: Option[SlackBotUserAuthorization]) extends SlackAuthorizationResponse
+object SlackAppAuthorizationResponse {
+  val reads: Reads[SlackAppAuthorizationResponse] = (
+    (__ \ 'access_token).read[SlackUserAccessToken] and
+    (__ \ 'scope).read[Set[SlackAuthScope]](SlackAuthScope.slackFormat) and
     (__ \ 'team_id).read[SlackTeamId] and
+    (__ \ 'team_name).read[SlackTeamName] and
     (__ \ 'incoming_webhook).readNullable[SlackIncomingWebhook] and
     (__ \ 'bot).readNullable[SlackBotUserAuthorization]
-  )(SlackAuthorizationResponse.apply _)
+  )(SlackAppAuthorizationResponse.apply _)
 }
 
 case class SlackIdentifyResponse(
@@ -167,13 +195,15 @@ object SlackIdentifyResponse {
   )(SlackIdentifyResponse.apply _)
 }
 
-case class SlackUserIdentityInfo(user: PartialSlackUserInfo, teamId: SlackTeamId, team: Option[PartialSlackTeamInfo])
-object SlackUserIdentityInfo {
+case class SlackUserIdentityResponse(user: PartialSlackUserInfo, teamId: SlackTeamId, team: Option[PartialSlackTeamInfo]) {
+  def userId = user.id
+}
+object SlackUserIdentityResponse {
   implicit val reads = (
     (__ \ 'user).read[PartialSlackUserInfo] and
     (__ \ 'team \ 'id).read[SlackTeamId] and
     (__ \ 'team).readNullable[PartialSlackTeamInfo]
-  )(SlackUserIdentityInfo.apply _)
+  )(SlackUserIdentityResponse.apply _)
 }
 
 sealed abstract class SlackUserPresenceState(val name: String)

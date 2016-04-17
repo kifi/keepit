@@ -27,17 +27,23 @@ class SlackOAuthProviderImpl @Inject() (
     implicit val executionContext: ExecutionContext) extends SlackOAuthProvider with Logging {
 
   def getIdentityId(auth: SlackAuthorizationResponse): Future[IdentityId] = {
-    slackClient.identifyUser(auth.accessToken).imap(response => IdentityHelpers.toIdentityId(response.teamId, response.userId))
-  }
+    auth match {
+      case appAuth: SlackAppAuthorizationResponse => slackClient.identifyUser(auth.accessToken).imap(identity => (identity.teamId, identity.userId))
+      case identityAuth: SlackIdentityAuthorizationResponse => Future.successful((identityAuth.teamId, identityAuth.userId))
+    }
+  }.imap { case (teamId, userId) => IdentityHelpers.toIdentityId(teamId, userId) }
 
   def getRichIdentity(auth: SlackAuthorizationResponse): Future[SlackIdentity] = {
     for {
-      userIdentity <- slackClient.identifyUser(auth.accessToken)
-      userInfoOpt <- {
-        val preferredTokens = if (auth.scopes.contains(SlackAuthScope.UsersRead)) Seq(auth.accessToken) else Seq.empty
-        slackClient.getUserInfo(userIdentity.teamId, userIdentity.userId, preferredTokens).imap(Some(_)).recover { case SlackFail.NoValidToken => None }
+      (teamId, userId, toSlackIdentity) <- auth match {
+        case appAuth: SlackAppAuthorizationResponse => slackClient.identifyUser(auth.accessToken).imap(identity => (identity.teamId, identity.userId, SlackIdentity(appAuth, identity, _: Option[FullSlackUserInfo])))
+        case identityAuth: SlackIdentityAuthorizationResponse => slackClient.getUserIdentity(auth.accessToken).imap(identity => (identity.teamId, identity.userId, SlackIdentity(identityAuth, identity, _: Option[FullSlackUserInfo])))
       }
-    } yield SlackIdentity(auth, userIdentity, userInfoOpt)
+      fullUser <- {
+        val preferredTokens = if (auth.scopes.contains(SlackAuthScope.UsersRead)) Seq(auth.accessToken) else Seq.empty
+        slackClient.getUserInfo(teamId, userId, preferredTokens).imap(Some(_)).recover { case SlackFail.NoValidToken => None }
+      }
+    } yield toSlackIdentity(fullUser)
   }
 
   def doOAuth[A]()(implicit request: Request[A]): Future[Either[Result, SlackAuthorizationResponse]] = {

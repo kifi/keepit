@@ -26,7 +26,7 @@ object SlackIdentityCommander {
 
 @ImplementedBy(classOf[SlackIdentityCommanderImpl])
 trait SlackIdentityCommander {
-  def registerAuthorization(userId: Option[Id[User]], auth: SlackAuthorizationResponse, identity: SlackIdentifyResponse): Option[Id[SlackIncomingWebhookInfo]]
+  def registerAuthorization(userIdOpt: Option[Id[User]], auth: SlackAuthorizationResponse): Future[((SlackTeamId, SlackUserId), Option[Id[SlackIncomingWebhookInfo]])]
   def internSlackIdentity(userIdOpt: Option[Id[User]], identity: SlackIdentity)(implicit session: RWSession): Boolean
   def getIdentityAndExistingScopes(userId: Option[Id[User]], slackTeamIdOpt: Option[SlackTeamId]): Future[(Option[(SlackTeamId, SlackUserId)], Set[SlackAuthScope])]
 }
@@ -47,12 +47,22 @@ class SlackIdentityCommanderImpl @Inject() (
   implicit val publicIdConfig: PublicIdConfiguration)
     extends SlackIdentityCommander with Logging {
 
-  def registerAuthorization(userIdOpt: Option[Id[User]], auth: SlackAuthorizationResponse, identity: SlackIdentifyResponse): Option[Id[SlackIncomingWebhookInfo]] = {
-    require(auth.teamId == identity.teamId && auth.teamName == identity.teamName)
+  def registerAuthorization(userIdOpt: Option[Id[User]], auth: SlackAuthorizationResponse): Future[((SlackTeamId, SlackUserId), Option[Id[SlackIncomingWebhookInfo]])] = {
+    auth match {
+      case appAuth: SlackAppAuthorizationResponse => slackClient.identifyUser(auth.accessToken).map { identity =>
+        registerAppAuthorization(userIdOpt, appAuth, identity)
+      }
+      case identityAuth: SlackIdentityAuthorizationResponse => slackClient.getUserIdentity(auth.accessToken).map { identity =>
+        (registerIdentityAuthorization(userIdOpt, identityAuth, identity), None)
+      }
+    }
+  }
+
+  private def registerAppAuthorization(userIdOpt: Option[Id[User]], auth: SlackAppAuthorizationResponse, identity: SlackIdentifyResponse): ((SlackTeamId, SlackUserId), Option[Id[SlackIncomingWebhookInfo]]) = {
     db.readWrite { implicit s =>
       slackTeamRepo.internSlackTeam(auth.teamId, auth.teamName, auth.botAuth)
       internSlackIdentity(userIdOpt, SlackIdentity(auth, identity, None))
-      auth.incomingWebhook.map { webhook =>
+      val webhookId = auth.incomingWebhook.map { webhook =>
         slackChannelRepo.getOrCreate(identity.teamId, webhook.channelId, webhook.channelName)
         slackIncomingWebhookInfoRepo.save(SlackIncomingWebhookInfo(
           slackUserId = identity.userId,
@@ -63,10 +73,22 @@ class SlackIdentityCommanderImpl @Inject() (
           lastPostedAt = None
         )).id.get
       }
+      ((identity.teamId, identity.userId), webhookId)
+    }
+  }
+
+  private def registerIdentityAuthorization(userIdOpt: Option[Id[User]], auth: SlackIdentityAuthorizationResponse, identity: SlackUserIdentityResponse): (SlackTeamId, SlackUserId) = {
+    db.readWrite { implicit s =>
+      internSlackIdentity(userIdOpt, SlackIdentity(auth, identity, None))
+      (auth.teamId, auth.userId)
     }
   }
 
   def internSlackIdentity(userIdOpt: Option[Id[User]], identity: SlackIdentity)(implicit session: RWSession): Boolean = {
+    identity.team.foreach { team =>
+      slackTeamRepo.internSlackTeam(team.id, team.name, None)
+    }
+
     // Disconnect previous identity (enforce 1 Slack User <=> Kifi User x Slack Team)
     userIdOpt.foreach { userId =>
       slackTeamMembershipRepo.getByUserIdAndSlackTeam(userId, identity.teamId).foreach { existingMembership =>

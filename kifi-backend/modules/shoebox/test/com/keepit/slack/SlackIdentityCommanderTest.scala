@@ -1,9 +1,8 @@
 package com.keepit.slack
 
-import java.lang.IllegalStateException
-
 import com.keepit.common.actor.TestKitSupport
 import com.keepit.common.concurrent.FakeExecutionContextModule
+import com.keepit.common.oauth.SlackIdentity
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.UserFactoryHelper._
@@ -21,9 +20,9 @@ class SlackIdentityCommanderTest extends TestKitSupport with SpecificationLike w
     FakeSocialGraphModule()
   )
 
-  "SlackCommander" should {
-    "register slack authorizations" in {
-      "let not two users share one Slack auth" in {
+  "SlackIdentityCommander" should {
+    "register slack identities" in {
+      "let not two users share one Slack identity" in {
         withDb(modules: _*) { implicit injector =>
           val (user1, user2, slackTeam) = db.readWrite { implicit s =>
             val Seq(user1, user2) = UserFactory.users(2).saved
@@ -31,16 +30,21 @@ class SlackIdentityCommanderTest extends TestKitSupport with SpecificationLike w
             (user1, user2, slackTeam)
           }
           val slackUser = SlackUserFactory.user()
-          val ident = SlackIdentifyResponse("http://www.rando.slack.com/", slackTeam.slackTeamName, slackUser.username, slackTeam.slackTeamId, slackUser.userId)
-          val auth = SlackAuthorizationResponse(SlackUserAccessToken(RandomStringUtils.randomAlphanumeric(30)), SlackAuthScope.newPush, slackTeam.slackTeamName, slackTeam.slackTeamId, None, botAuth = None)
+          val slackIdentity = SlackIdentity(
+            slackTeam.slackTeamId,
+            slackUser.userId,
+            Some(BasicSlackTeamInfo(slackTeam.slackTeamId, slackTeam.slackTeamName)),
+            None,
+            None
+          )
 
           db.readOnlyMaster { implicit s => inject[SlackTeamMembershipRepo].all must beEmpty }
-          slackCommander.registerAuthorization(Some(user1.id.get), auth, ident)
+          db.readWrite { implicit s => slackCommander.internSlackIdentity(Some(user1.id.get), slackIdentity) }
           db.readOnlyMaster { implicit s =>
             inject[SlackTeamMembershipRepo].all must haveSize(1)
             inject[SlackTeamMembershipRepo].getBySlackTeamAndUser(slackTeam.slackTeamId, slackUser.userId).get.userId must beSome(user1.id.get)
           }
-          slackCommander.registerAuthorization(Some(user2.id.get), auth, ident) should throwAn[SlackActionFail.MembershipAlreadyConnected]
+          db.readWrite { implicit s => slackCommander.internSlackIdentity(Some(user2.id.get), slackIdentity) should throwAn[SlackActionFail.MembershipAlreadyConnected] }
         }
       }
     }

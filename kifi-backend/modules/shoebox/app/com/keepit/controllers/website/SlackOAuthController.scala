@@ -31,11 +31,8 @@ class SlackOAuthController @Inject() (
       code <- codeOpt.map(Future.successful).getOrElse(Future.failed(SlackFail.NoAuthCode))
       action <- slackAuthCommander.getSlackAction(SlackAuthState(state)).map(Future.successful).getOrElse(Future.failed(SlackFail.InvalidAuthState))
       slackAuth <- slackClient.processAuthorizationResponse(SlackAuthorizationCode(code), SlackOAuthController.REDIRECT_URI)
-      slackIdentity <- slackClient.identifyUser(slackAuth.accessToken)
-      result <- {
-        val webhookIdOpt = slackIdentityCommander.registerAuthorization(request.userIdOpt, slackAuth, slackIdentity)
-        slackAuthCommander.processAuthorizedAction(request.userId, slackIdentity.teamId, slackIdentity.userId, action, webhookIdOpt)
-      }
+      ((slackTeamId, slackUserId), webhookIdOpt) <- slackIdentityCommander.registerAuthorization(request.userIdOpt, slackAuth)
+      result <- slackAuthCommander.processAuthorizedAction(request.userId, slackTeamId, slackUserId, action, webhookIdOpt)
     } yield {
       result match {
         case SlackResponse.RedirectClient(url) => Redirect(url, SEE_OTHER)
