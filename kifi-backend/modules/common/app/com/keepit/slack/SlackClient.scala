@@ -38,6 +38,7 @@ object SlackAPI {
   def OAuthAuthorize(scopes: Set[SlackAuthScope], state: SlackAuthState, teamId: Option[SlackTeamId], redirectUri: String) = Route(GET, "https://slack.com/oauth/authorize", CLIENT_ID, scopes, state, "redirect_uri" -> redirectUri, "team" -> teamId.map(_.value))
   def OAuthAccess(code: SlackAuthorizationCode, redirectUri: String) = Route(GET, "https://slack.com/api/oauth.access", CLIENT_ID, CLIENT_SECRET, code, "redirect_uri" -> redirectUri)
   def Identify(token: SlackAccessToken) = Route(GET, "https://slack.com/api/auth.test", token)
+  def UserIdentity(token: SlackAccessToken) = Route(GET, "https://slack.com/api/users.identity", token)
   def SearchMessages(token: SlackAccessToken, request: SlackSearchRequest) = {
     val params = Seq[Param](token, request.query) ++ request.optional.map(fromSearchParam)
     Route(GET, "https://slack.com/api/search.messages", params: _*)
@@ -71,6 +72,7 @@ trait SlackClient {
   def deleteMessage(token: SlackAccessToken, channelId: SlackChannelId, timestamp: SlackTimestamp): Future[Unit]
   def testToken(token: SlackAccessToken): Future[Unit]
   def identifyUser(token: SlackAccessToken): Future[SlackIdentifyResponse]
+  def getUserIdentity(token: SlackAccessToken): Future[SlackUserIdentityInfo]
   def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse]
   def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackTimestamp): Future[Unit]
   def getTeamInfo(token: SlackAccessToken): Future[FullSlackTeamInfo]
@@ -154,6 +156,10 @@ class SlackClientImpl(
 
   def identifyUser(token: SlackAccessToken): Future[SlackIdentifyResponse] = {
     slackCall[SlackIdentifyResponse](SlackAPI.Identify(token))
+  }
+
+  def getUserIdentity(token: SlackAccessToken): Future[SlackUserIdentityInfo] = {
+    slackCall[SlackUserIdentityInfo](SlackAPI.Identify(token))
   }
 
   def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackTimestamp): Future[Unit] = {

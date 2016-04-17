@@ -167,6 +167,15 @@ object SlackIdentifyResponse {
   )(SlackIdentifyResponse.apply _)
 }
 
+case class SlackUserIdentityInfo(user: PartialSlackUserInfo, teamId: SlackTeamId, team: Option[PartialSlackTeamInfo])
+object SlackUserIdentityInfo {
+  implicit val reads = (
+    (__ \ 'user).read[PartialSlackUserInfo] and
+    (__ \ 'team \ 'id).read[SlackTeamId] and
+    (__ \ 'team).readNullable[PartialSlackTeamInfo]
+  )(SlackUserIdentityInfo.apply _)
+}
+
 sealed abstract class SlackUserPresenceState(val name: String)
 
 object SlackUserPresenceState {

@@ -3,6 +3,7 @@ package com.keepit.slack
 import java.util.concurrent.atomic.AtomicLong
 
 import com.google.inject.{ Provides, Singleton }
+import com.keepit.common.routes.GET
 import com.keepit.slack.models._
 import org.apache.commons.lang3.RandomStringUtils
 import play.api.libs.json.Json
@@ -35,6 +36,7 @@ class FakeSlackClientImpl extends SlackClient {
 
   def testToken(token: SlackAccessToken): Future[Unit] = Future.successful(())
   def identifyUser(token: SlackAccessToken): Future[SlackIdentifyResponse] = ???
+  def getUserIdentity(token: SlackAccessToken): Future[SlackUserIdentityInfo] = ???
   def processAuthorizationResponse(code: SlackAuthorizationCode, redirectUri: String): Future[SlackAuthorizationResponse] = ???
   def pushToWebhook(url: String, msg: SlackMessageRequest): Future[Unit] = () match {
     case _ if isSlackDown => Future.failed(new Exception("slack_is_down"))

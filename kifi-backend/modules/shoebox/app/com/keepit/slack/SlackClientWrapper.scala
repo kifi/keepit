@@ -32,6 +32,7 @@ trait SlackClientWrapper {
 
   // These APIs are token-specific
   def identifyUser(token: SlackAccessToken): Future[SlackIdentifyResponse]
+  def getUserIdentity(token: SlackAccessToken): Future[SlackUserIdentityInfo]
   def processAuthorizationResponse(code: SlackAuthorizationCode, redirectUri: String): Future[SlackAuthorizationResponse]
   def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse]
   def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackTimestamp): Future[Unit]
@@ -189,6 +190,10 @@ class SlackClientWrapperImpl @Inject() (
 
   def identifyUser(token: SlackAccessToken): Future[SlackIdentifyResponse] = {
     slackClient.identifyUser(token)
+  }
+
+  def getUserIdentity(token: SlackAccessToken): Future[SlackUserIdentityInfo] = {
+    slackClient.getUserIdentity(token)
   }
 
   def processAuthorizationResponse(code: SlackAuthorizationCode, redirectUri: String): Future[SlackAuthorizationResponse] = {
