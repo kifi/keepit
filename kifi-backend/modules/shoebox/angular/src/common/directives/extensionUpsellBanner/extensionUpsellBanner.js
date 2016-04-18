@@ -39,6 +39,16 @@ angular.module('kifi')
           scope.showBanner = false;
           profileService.savePrefs({hide_extension_upsell: true});
         };
+
+        var onExtensionInstall = function () {
+          scope.showBanner = false;
+        };
+
+        [
+          $rootScope.$on('kifiExt', onExtensionInstall)
+        ].forEach(function (deregister) {
+          scope.$on('$destroy', deregister);
+        });
       }
     };
   }
