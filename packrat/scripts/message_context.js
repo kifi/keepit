@@ -72,12 +72,6 @@ k.messageContext = k.messageContext || (function ($) {
       $(document).data('esc').add(this.handeEsc);
 
       $view
-      .on('mousedown', '.kifi-message-context-edit', function () {
-        this.dataset.focused = $view.find('.kifi-message-context-controls-title').is(':focus') ? true : '';
-      })
-      .on('click', '.kifi-message-context-edit', function () {
-        self.toggleEditTitle(!this.dataset.focused);
-      })
       .on('input', '.kifi-message-context-controls-title', $.proxy(debouncedSaveKeepTitleIfChanged, this, $view))
       .on('keydown', '.kifi-message-context-controls-title', function (e) {
         switch (e.keyCode) {
