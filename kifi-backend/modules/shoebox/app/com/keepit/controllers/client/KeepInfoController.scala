@@ -105,7 +105,7 @@ class KeepInfoController @Inject() (
 
   def suggestTags(keepIdStr: Option[String], query: Option[String], limit: Option[Int]) = UserAction.async { request =>
     val keepId = keepIdStr.flatMap(Keep.decodePublicIdStr(_).toOption)
-    keepCommander.suggestTags(request.userId, None, query, limit.getOrElse(10)).imap { tagsAndMatches =>
+    keepCommander.suggestTags(request.userId, keepId, query, limit.getOrElse(10)).imap { tagsAndMatches =>
       implicit val matchesWrites = TupleFormat.tuple2Writes[Int, Int]
       val result = JsArray(tagsAndMatches.map { case (tag, matches) => json.aggressiveMinify(Json.obj("tag" -> tag, "matches" -> matches)) })
       Ok(result)

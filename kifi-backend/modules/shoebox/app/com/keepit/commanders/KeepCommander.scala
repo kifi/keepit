@@ -63,7 +63,7 @@ trait KeepCommander {
 
   // Tagging
   def searchTags(userId: Id[User], query: String, limit: Option[Int]): Future[Seq[HashtagHit]]
-  def suggestTags(userId: Id[User], keepIdOpt: Option[ExternalId[Keep]], query: Option[String], limit: Int): Future[Seq[(Hashtag, Seq[(Int, Int)])]]
+  def suggestTags(userId: Id[User], keepIdOpt: Option[Id[Keep]], query: Option[String], limit: Int): Future[Seq[(Hashtag, Seq[(Int, Int)])]]
 
   // Destroying
   def unkeepOneFromLibrary(keepId: ExternalId[Keep], libId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[String, PartialKeepInfo]
@@ -380,13 +380,12 @@ class KeepCommanderImpl @Inject() (
     hashtagTypeahead.topN(userId, query, limit).map(_.map(_.info)).map(HashtagHit.highlight(query, _))
   }
 
-  private def searchTagsForKeep(userId: Id[User], keepIdOpt: Option[ExternalId[Keep]], query: String, limit: Option[Int]): Future[Seq[HashtagHit]] = {
+  private def searchTagsForKeep(userId: Id[User], keepIdOpt: Option[Id[Keep]], query: String, limit: Option[Int]): Future[Seq[HashtagHit]] = {
     val futureHits = searchTags(userId, query, None)
     val existingTags = keepIdOpt.map { keepId =>
       db.readOnlyMaster { implicit session =>
-        keepRepo.getOpt(keepId).map { keep =>
-          tagCommander.getTagsForKeep(keep.id.get).toSet
-        }.getOrElse(Set.empty)
+        val keep = keepRepo.get(keepId)
+        tagCommander.getTagsForKeep(keep.id.get).toSet
       }
     }.getOrElse(Set.empty)
     futureHits.imap { hits =>
@@ -395,30 +394,34 @@ class KeepCommanderImpl @Inject() (
     }
   }
 
-  private def suggestTagsForKeep(userId: Id[User], keepId: ExternalId[Keep], limit: Option[Int]): Future[Seq[Hashtag]] = {
-    val keep = db.readOnlyMaster { implicit session => keepRepo.get(keepId) }
-    val item = AugmentableItem(keep.uriId, Some(keep.id.get))
-    val futureAugmentationResponse = searchClient.augmentation(ItemAugmentationRequest.uniform(userId, item))
-    val existingNormalizedTags = db.readOnlyMaster { implicit session => tagCommander.getTagsForKeep(keep.id.get).map(_.normalized) }
-    futureAugmentationResponse.map { response =>
-      val suggestedTags = {
-        val restrictedKeeps = response.infos(item).keeps.toSet
-        val safeTags = restrictedKeeps.flatMap {
-          case myKeep if myKeep.owner.contains(userId) => myKeep.tags
-          case anotherKeep => anotherKeep.tags.filterNot(_.isSensitive)
+  private def suggestTagsForKeep(userId: Id[User], keepIdOpt: Option[Id[Keep]], limit: Option[Int]): Future[Seq[Hashtag]] = {
+    keepIdOpt match {
+      case None =>
+        Future.successful(tagCommander.tagsForUser(userId, 0, limit.getOrElse(10), TagSorting.LastKept).map(t => Hashtag(t.name)))
+      case Some(keepId) =>
+        val keep = db.readOnlyMaster { implicit session => keepRepo.get(keepId) }
+        val item = AugmentableItem(keep.uriId, Some(keep.id.get))
+        val futureAugmentationResponse = searchClient.augmentation(ItemAugmentationRequest.uniform(userId, item))
+        val existingNormalizedTags = db.readOnlyMaster { implicit session => tagCommander.getTagsForKeep(keep.id.get).map(_.normalized) }
+        futureAugmentationResponse.map { response =>
+          val suggestedTags = {
+            val restrictedKeeps = response.infos(item).keeps.toSet
+            val safeTags = restrictedKeeps.flatMap {
+              case myKeep if myKeep.owner.contains(userId) => myKeep.tags
+              case anotherKeep => anotherKeep.tags.filterNot(_.isSensitive)
+            }
+            val validTags = safeTags.filterNot(tag => existingNormalizedTags.contains(tag.normalized))
+            CollectionHelpers.dedupBy(validTags.toSeq.sortBy(-response.scores.byTag(_)))(_.normalized)
+          }
+          limit.map(suggestedTags.take) getOrElse suggestedTags
         }
-        val validTags = safeTags.filterNot(tag => existingNormalizedTags.contains(tag.normalized))
-        CollectionHelpers.dedupBy(validTags.toSeq.sortBy(-response.scores.byTag(_)))(_.normalized)
-      }
-      limit.map(suggestedTags.take) getOrElse suggestedTags
     }
   }
 
-  def suggestTags(userId: Id[User], keepIdOpt: Option[ExternalId[Keep]], query: Option[String], limit: Int): Future[Seq[(Hashtag, Seq[(Int, Int)])]] = {
+  def suggestTags(userId: Id[User], keepIdOpt: Option[Id[Keep]], query: Option[String], limit: Int): Future[Seq[(Hashtag, Seq[(Int, Int)])]] = {
     query.map(_.trim).filter(_.nonEmpty) match {
       case Some(validQuery) => searchTagsForKeep(userId, keepIdOpt, validQuery, Some(limit)).map(_.map(hit => (hit.tag, hit.matches)))
-      case None if keepIdOpt.isDefined => suggestTagsForKeep(userId, keepIdOpt.get, Some(limit)).map(_.map((_, Seq.empty[(Int, Int)])))
-      case None => Future.successful(Seq.empty) // We don't support this case yet
+      case None => suggestTagsForKeep(userId, keepIdOpt, Some(limit)).map(_.map((_, Seq.empty[(Int, Int)])))
     }
   }
 
