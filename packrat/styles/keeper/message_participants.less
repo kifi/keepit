@@ -1,5 +1,5 @@
 @import (reference) 'lib_icons.less';
-
+@import (reference) 'symbol-sprite.less';
 @fgColor: #111111;
 @buttonBgColor: #67829c;
 @borderColor: #ccc;
@@ -254,25 +254,26 @@
 
 .kifi-message-participants-avatars-actions {
   display: inline-block;
-  border-radius: 5px !important;
-  padding: 4px 5px;
-  line-height: 12px;
-  font-size: 12px;
-  text-align: center;
-  color: white;
-  background: @dotBgColor;
+  border-radius: 50%!important;
+  background-color: @dotBgColor;
+  width: 28px;
+  height: 28px;
 
   &:hover, &:focus {
-    color: white;
-    background: shade(@dotBgColor, 10%);
+    background-color: shade(@dotBgColor, 10%);
   }
 
   &:active {
-    color: white;
-    background: shade(@dotBgColor, 20%);
+    background-color: shade(@dotBgColor, 20%);
   }
 }
-
+.kifi-message-participants-avatars-add {
+  @url: %(@kifi-symbol-plus, #fff, #fff, #fff);
+  background-image: url(@url);
+  background-size: 50%;
+  background-position: center;
+  background-repeat: no-repeat;
+}
 .kifi-message-participant-email-image {
   cursor: default;
   -webkit-user-select: none;

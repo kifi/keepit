@@ -129,7 +129,7 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
 
         this.get$()
         .on('click', '.kifi-message-participant-avatar>a,.kifi-message-participant-a', this.openUserProfile.bind(this))
-        .on('click', '.kifi-message-participants-avatars-expand,.kifi-message-participant-1-add', function (e) {
+        .on('click', '.kifi-message-participants-avatars-add,.kifi-message-participant-1-add', function (e) {
           api.port.emit('track_pane_click', {
             type: 'discussion',
             action: 'add_participants',
