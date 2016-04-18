@@ -95,6 +95,8 @@ k.toaster = k.toaster || (function () {
     .appendTo($parent);
 
     var compose = k.compose($toast, send.bind(null, $toast));
+    compose.initTagSuggest();
+
     $toast.data('compose', compose);
     $(document).data('esc').add(hide);
 

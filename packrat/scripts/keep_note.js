@@ -380,7 +380,6 @@ k.keepNote = k.keepNote || (function () {
     api.port.emit('suggest_tags', {
       q: node.data.substr(1),
       n: 4,
-      libraryId: data.libraryId,
       keepId: data.keepId,
       tags: []
     }, function (results) {
@@ -597,13 +596,12 @@ k.keepNote = k.keepNote || (function () {
   }
 
   return {
-    init: function ($note, $bounds, libraryId, keepId, noteText) {
+    init: function ($note, $bounds, keepId, noteText) {
       $note
       .empty()
       .append(k.formatting.parseStringToElement(noteTextToHtml(noteText)));
 
       var data = $note.data({
-        libraryId: libraryId,
         keepId: keepId,
         $bounds: $bounds,
         seq: 0
