@@ -1042,10 +1042,10 @@ class AdminUserController @Inject() (
   }
 
   def backfillTags(startPage: Int, endPage: Int, doItForReal: Boolean) = AdminUserAction { implicit request =>
-    val chunked = ChunkedResponseHelper.chunked((startPage to endPage).toList) { page =>
+    (startPage to endPage).foreach { page =>
       val collectionById = mutable.Map.empty[Id[Collection], Collection]
       db.readWrite { implicit session =>
-        val grp = keepToCollectionRepo.pageAscending(page, 1000, Set(KeepToCollectionStates.INACTIVE))
+        val grp = keepToCollectionRepo.pageAscending(page, 2000, Set(KeepToCollectionStates.INACTIVE))
           .groupBy(_.keepId)
         val keepIds = grp.keys.toSet
         val existingTags = keepTagRepo.getByKeepIds(keepIds).mapValues(_.map(_.tag.normalized))
@@ -1071,9 +1071,9 @@ class AdminUserController @Inject() (
             newTags.length
         }
 
-        s"$page: ${cnts.sum} new tags on ${grp.size} keeps\n"
+        log.info(s"[backfillTags] $page: ${cnts.sum} new tags on ${grp.size} keeps")
       }
     }
-    Ok.chunked(chunked)
+    Ok("going!")
   }
 }
