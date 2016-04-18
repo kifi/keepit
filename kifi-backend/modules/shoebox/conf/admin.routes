@@ -127,6 +127,8 @@ POST    /admin/user/:userId/hideOrganizationRecommendation @com.keepit.controlle
 POST    /admin/experiment/:exp/add  @com.keepit.controllers.admin.AdminUserController.addExperimentForUsers(exp: String)
 GET    /admin/user/:id/slack/online          @com.keepit.controllers.admin.AdminUserController.slackUserOnline(id: Id[User])
 GET    /admin/user/:id/slack/presence        @com.keepit.controllers.admin.AdminUserController.slackUserPresence(id: Id[User])
+GET    /admin/backfillTags        @com.keepit.controllers.admin.AdminUserController.backfillTags(startPage: Int, endPage: Int, doItForReal: Boolean)
+
 
 
 GET     /admin/organization/:id                              @com.keepit.controllers.admin.AdminOrganizationController.organizationViewByEitherId(id: String, numMemberRecos: Int ?= 60)

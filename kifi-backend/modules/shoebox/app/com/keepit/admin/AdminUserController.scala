@@ -6,7 +6,7 @@ import com.keepit.abook.model.{ OrganizationUserMayKnow, RichContact }
 import com.keepit.commanders._
 import com.keepit.commanders.emails.ActivityFeedEmailSender
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.concurrent.FutureHelpers
+import com.keepit.common.concurrent.{ ChunkedResponseHelper, FutureHelpers }
 import com.keepit.common.controller._
 import com.keepit.common.db._
 import com.keepit.common.core.mapExtensionOps
@@ -33,6 +33,7 @@ import play.api.libs.json._
 import play.api.mvc.{ Action, AnyContent, Result }
 import views.html
 
+import scala.collection.mutable
 import scala.concurrent.duration.{ Duration, DurationInt }
 import scala.concurrent.{ Await, Future, Promise }
 import scala.util.Try
@@ -1038,5 +1039,41 @@ class AdminUserController @Inject() (
       }
       Ok(Json.toJson(body))
     }
+  }
+
+  def backfillTags(startPage: Int, endPage: Int, doItForReal: Boolean) = AdminUserAction { implicit request =>
+    val chunked = ChunkedResponseHelper.chunked((startPage to endPage).toSeq) { page =>
+      val collectionById = mutable.Map.empty[Id[Collection], Collection]
+      db.readWrite { implicit session =>
+        val grp = keepToCollectionRepo.pageAscending(page, 2000, Set(KeepToCollectionStates.INACTIVE))
+          .groupBy(_.keepId)
+        val keepIds = grp.keys.toSet
+        val existingTags = keepTagRepo.getByKeepIds(keepIds)
+        val keeps = keepRepo.getActiveByIds(keepIds)
+
+        val cnts = grp.map {
+          case (keepId, ktcs) =>
+            val existing = existingTags.getOrElse(keepId, Seq.empty).map(_.tag.normalized).toSet
+            val newTags = ktcs.filter { ktc =>
+              val coll = collectionById.getOrElseUpdate(ktc.collectionId, collectionRepo.get(ktc.collectionId))
+              !existing.contains(coll.name.normalized) && coll.isActive && keeps.get(keepId).isDefined
+            }.map { ktc =>
+              val coll = collectionById.getOrElseUpdate(ktc.collectionId, collectionRepo.get(ktc.collectionId))
+              (coll.userId, coll.name)
+            }
+
+            if (doItForReal) {
+              newTags.map {
+                case (userId, tag) =>
+                  keepTagRepo.save(KeepTag(tag = tag, keepId = keepId, messageId = None, userId = Some(userId)))
+              }
+            }
+            newTags.length
+        }
+
+        s"$page: ${cnts.sum} new tags on ${grp.size} keeps\n"
+      }
+    }
+    Ok.chunked(chunked)
   }
 }
