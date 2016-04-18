@@ -8,6 +8,8 @@ import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.json
+import com.keepit.common.json.TupleFormat
 import com.keepit.common.logging.SlackLog
 import com.keepit.common.performance.Stopwatch
 import com.keepit.common.time._
@@ -19,7 +21,8 @@ import com.keepit.slack.{ InhouseSlackClient, InhouseSlackChannel }
 import com.kifi.macros.json
 import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.DateTime
-import play.api.libs.json.{ JsObject, Json }
+import play.api.libs.json.{ JsArray, JsObject, Json }
+import com.keepit.common.core._
 
 import scala.concurrent.{ ExecutionContext, Future }
 
@@ -97,6 +100,15 @@ class KeepInfoController @Inject() (
         case l: LibraryResult => Json.toJson(l).as[JsObject] ++ Json.obj("kind" -> "library")
       }
       Ok(Json.toJson(RecipientSuggestion(query.map(_.trim).filter(_.nonEmpty), body, suggestions.nonEmpty, limit, offset)))
+    }
+  }
+
+  def suggestTags(keepIdStr: Option[String], query: Option[String], limit: Option[Int]) = UserAction.async { request =>
+    val keepId = keepIdStr.flatMap(Keep.decodePublicIdStr(_).toOption)
+    keepCommander.suggestTags(request.userId, None, query, limit.getOrElse(10)).imap { tagsAndMatches =>
+      implicit val matchesWrites = TupleFormat.tuple2Writes[Int, Int]
+      val result = JsArray(tagsAndMatches.map { case (tag, matches) => json.aggressiveMinify(Json.obj("tag" -> tag, "matches" -> matches)) })
+      Ok(result)
     }
   }
 
