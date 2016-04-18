@@ -10,6 +10,9 @@
   display: none;
 }
 .kifi-message-sent {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
   margin: 0 9px;
   padding: 10px 10px 10px 0;
   position: relative;
@@ -80,7 +83,9 @@
 }
 a.kifi-message-pic-a,
 span.kifi-message-pic-email {
-  float: left;
+  flex-shrink: 0;
+  margin-top: 0;
+  margin-bottom: auto;
   width: 30px;
   height: 30px;
   border-radius: 50% !important;
@@ -110,7 +115,7 @@ span.kifi-message-pic-email {
   display: inline;
 }
 .kifi-message-body {
-  margin-left: 40px;
+  margin-left: 10px;
   word-wrap: break-word;
 }
 .kifi-message-content {
