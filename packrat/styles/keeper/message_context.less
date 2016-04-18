@@ -9,6 +9,7 @@
 .kifi-message-context-image {
   width: 54px;
   height: 54px;
+  margin-left: 5px;
   background-size: cover;
 }
 .kifi-message-context-image-empty {
@@ -20,7 +21,6 @@
   flex-flow: column nowrap;
   justify-content: center;
   flex: 1 0 0;
-  margin-left: 5px;
   overflow: hidden;
 }
 .kifi-message-context-controls-title {
@@ -53,23 +53,4 @@
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-}
-.kifi-message-context-edit {
-  @url: %(@kifi-symbol-pencil, #ababab, #ababab, #ababab);
-  width: 22px;
-  height: 22px;
-  margin: 8px 0px auto 5px;
-  border: 0;
-  background: url(@url);
-  background-size: 100%;
-  background-position: center;
-  background-repeat: no-repeat;
-  cursor: pointer;
-
-  &:hover {
-    opacity: .6;
-  }
-  &:active {
-    opacity: 1;
-  }
 }
