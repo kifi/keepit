@@ -5,7 +5,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.util.DescriptionElements._
-import com.keepit.common.util.{ UserElement, AuthorElement, DescriptionElements, DescriptionElement, ShowOriginalElement }
+import com.keepit.common.util._
 import com.keepit.model.BasicKeepEvent.BasicKeepEventId
 import com.keepit.model.{ BasicKeepEventSource, CommonKeepEvent, KifiAttribution, KeepEvent, KeepRecipientsDiff, BasicKeepEvent, KeepEventKind, KeepActivity, TwitterAttribution, SlackAttribution, BasicOrganization, BasicLibrary, Library, User, KeepToUser, KeepToLibrary, SourceAttribution, Keep }
 import com.keepit.discussion.Discussion
@@ -29,7 +29,7 @@ object KeepActivityGen {
 
     import com.keepit.common.util.DescriptionElements._
 
-    lazy val initialEvent = {
+    lazy val initialEvents = {
       val basicAuthor = sourceAttrOpt.map {
         case (sourceAttr, basicUserOpt) => BasicAuthor(sourceAttr, basicUserOpt)
       }.orElse(keep.userId.flatMap(info.userById.get).map(BasicAuthor.fromUser))
@@ -53,37 +53,49 @@ object KeepActivityGen {
           )
       }
 
-      val body = sourceAttrOpt.map {
-        case (ka: KifiAttribution, _) => keep.note.getOrElse("")
-        case (SlackAttribution(msg, _), _) => msg.text
-        case (TwitterAttribution(tweet), _) => tweet.text
+      val noteBody = sourceAttrOpt.flatMap {
+        case (ka: KifiAttribution, _) => keep.note
+        case (SlackAttribution(msg, _), _) => Some(msg.text)
+        case (TwitterAttribution(tweet), _) => Some(tweet.text)
       }
 
       val source = sourceAttrOpt.flatMap { case (attr, _) => BasicKeepEventSource.fromSourceAttribution(attr) }
 
-      BasicKeepEvent(
-        id = BasicKeepEventId.initial,
+      val noteEvent = noteBody.map { body =>
+        BasicKeepEvent(
+          id = BasicKeepEventId.NoteId(Keep.publicId(keep.id.get)),
+          author = basicAuthor.get,
+          KeepEventKind.Note,
+          header = DescriptionElements(authorElement, "added a note"),
+          body = DescriptionElements(noteBody),
+          timestamp = keep.keptAt,
+          source = source)
+      }
+      val initialEvent = BasicKeepEvent(
+        id = BasicKeepEventId.InitialId(Keep.publicId(keep.id.get)),
         author = basicAuthor.get,
         KeepEventKind.Initial,
         header = header,
-        body = DescriptionElements(body),
+        body = DescriptionElements(),
         timestamp = keep.keptAt,
-        source = source
-      )
+        source = source)
+
+      noteEvent.toSeq :+ initialEvent
     }
 
     val keepEvents = events.map(event => generateKeepEvent(keep.id.get, event))
     val comments = discussionOpt.map(_.messages.map(BasicKeepEvent.fromMessage)).getOrElse(Seq.empty)
 
     val basicEvents = {
-      val subsequentEvents = (keepEvents ++ comments).sortBy(_.timestamp.getMillis * -1).take(maxEvents)
-      if (subsequentEvents.size < maxEvents) subsequentEvents :+ initialEvent else subsequentEvents
+      val subsequentEvents = (keepEvents ++ comments).sortBy(_.timestamp.getMillis)(Ord.descending).take(maxEvents)
+      if (subsequentEvents.size < maxEvents) subsequentEvents ++ initialEvents else subsequentEvents
     }
 
     val latestEvent = {
-      val lastEvent = basicEvents.headOption.getOrElse(initialEvent)
+      val lastEvent = basicEvents.headOption.getOrElse(initialEvents.head)
       val newHeader = lastEvent.kind match {
         case KeepEventKind.Initial => DescriptionElements(lastEvent.author, "sent this page")
+        case KeepEventKind.Note => DescriptionElements(lastEvent.author, "added a note") // should never happen, as the note should always come with the initial keep event
         case KeepEventKind.Comment => DescriptionElements(lastEvent.author, "commented on this page")
         case KeepEventKind.EditTitle => DescriptionElements(lastEvent.author, "edited the title")
         case KeepEventKind.ModifyRecipients => DescriptionElements(lastEvent.author, "added recipients to this discussion")

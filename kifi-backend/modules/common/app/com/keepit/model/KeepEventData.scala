@@ -22,14 +22,14 @@ import play.api.mvc.QueryStringBindable
 sealed abstract class KeepEventKind(val value: String)
 object KeepEventKind extends Enumerator[KeepEventKind] {
   case object Initial extends KeepEventKind("initial")
+  case object Note extends KeepEventKind("note")
   case object Comment extends KeepEventKind("comment")
   case object EditTitle extends KeepEventKind("edit_title")
   case object ModifyRecipients extends KeepEventKind("modify_recipients")
 
   val all = _all
-  def contains(str: String) = all.exists(_.value == str)
   def fromStr(str: String) = all.find(_.value == str)
-  def apply(str: String) = fromStr(str).get
+  def apply(str: String) = fromStr(str).getOrElse(throw new Exception(s"Invalid KeepEventKind: $str"))
 
   implicit val format: Format[KeepEventKind] = EnumFormat.format(fromStr, _.value)
   val hideForNow: Set[KeepEventKind] = Set(EditTitle)
@@ -111,7 +111,7 @@ object KeepEventData {
         (js \ "kind").validate[KeepEventKind].flatMap {
           case KeepEventKind.EditTitle => Json.reads[EditTitle].reads(js)
           case KeepEventKind.ModifyRecipients => Json.reads[ModifyRecipients].reads(js)
-          case KeepEventKind.Initial | KeepEventKind.Comment => throw new Exception(s"unsupported reads for activity event kind, js $js}")
+          case KeepEventKind.Initial | KeepEventKind.Note | KeepEventKind.Comment => throw new Exception(s"unsupported reads for activity event kind, js $js}")
         }
     },
     Writes {
@@ -144,21 +144,29 @@ case class BasicKeepEvent(
 
   def withHeader(newHeader: DescriptionElements) = this.copy(header = newHeader)
 }
+
 object BasicKeepEvent {
-
-  case class BasicKeepEventId(id: Option[Either[PublicId[Message], PublicId[CommonKeepEvent]]]) // id = None when BasicKeepEvent.kind = "initial"
+  sealed abstract class BasicKeepEventId
   object BasicKeepEventId {
-    implicit val writes: Writes[BasicKeepEventId] = Writes { o =>
-      o.id match {
-        case None => JsNull
-        case Some(Left(msgId)) => JsString(msgId.id)
-        case Some(Right(eventId)) => JsString(eventId.id)
-      }
+    final case class MessageId(id: PublicId[Message]) extends BasicKeepEventId
+    final case class EventId(id: PublicId[CommonKeepEvent]) extends BasicKeepEventId
+    final case class InitialId(id: PublicId[Keep]) extends BasicKeepEventId
+    final case class NoteId(id: PublicId[Keep]) extends BasicKeepEventId
+    implicit val writes: Writes[BasicKeepEventId] = Writes {
+      case InitialId(kId) => JsString(s"init_${kId.id}")
+      case NoteId(kId) => JsString(s"note_${kId.id}")
+      case MessageId(msgId) => JsString(msgId.id)
+      case EventId(eventId) => JsString(eventId.id)
     }
+    private val reads: Reads[BasicKeepEventId] = Reads(js => Stream(
+      CommonKeepEvent.readsPublicId.reads(js).map(EventId(_)),
+      Message.readsPublicId.reads(js).map(MessageId(_)),
+      js.validate[String].filter(_.startsWith("init_")).flatMap(s => Keep.readsPublicId.reads(JsString(s.stripPrefix("init_"))).map(InitialId(_))),
+      js.validate[String].filter(_.startsWith("note_")).flatMap(s => Keep.readsPublicId.reads(JsString(s.stripPrefix("note_"))).map(NoteId(_)))
+    ).reduce(_ orElse _))
 
-    def initial = BasicKeepEventId(None)
-    def fromMsg(id: PublicId[Message]) = BasicKeepEventId(Some(Left(id)))
-    def fromEvent(id: PublicId[CommonKeepEvent]) = BasicKeepEventId(Some(Right(id)))
+    def fromMsg(id: PublicId[Message]) = MessageId(id)
+    def fromEvent(id: PublicId[CommonKeepEvent]) = EventId(id)
   }
 
   implicit val idFormat = EitherFormat(Message.formatPublicId, CommonKeepEvent.formatPublicId)

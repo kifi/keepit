@@ -74,7 +74,7 @@ class KeepActivityGenTest extends Specification with ShoeboxTestInjector {
         implicit val info = SerializationInfo(basicUserById, basicLibById, orgByLibraryId = Map.empty)
         val activity = KeepActivityGen.generateKeepActivity(keep, sourceAttrOpt = None, events = events, discussionOpt = None, ktls = Seq.empty, ktus, maxEvents = 5)
 
-        activity.events.size === 5
+        activity.events.size === 5 // NB(ryan): There may be 6 events because of "event-splitting" with the note
         activity.events.map { event => DescriptionElements.formatPlain(event.header) } === (eventHeaders.reverse :+ "Benjamin Button kept this")
 
         val jsActivity = Json.toJson(activity)

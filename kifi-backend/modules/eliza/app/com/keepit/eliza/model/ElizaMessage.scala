@@ -109,9 +109,9 @@ object SystemMessageData {
       val emails = addedNonUsers.collect {
         case NonUserEmailParticipant(email) => email
       }.toSet
-      Some(KeepEventData.ModifyRecipients(addedBy, KeepRecipientsDiff(users = DeltaSet.empty.addAll(addedUsers.toSet), libraries = DeltaSet.empty, emails = DeltaSet.empty.addAll(emails))))
+      Some(KeepEventData.ModifyRecipients(addedBy, KeepRecipientsDiff(users = DeltaSet.addOnly(addedUsers.toSet), libraries = DeltaSet.empty, emails = DeltaSet.addOnly(emails))))
     case AddLibraries(addedBy, addedLibraries) =>
-      Some(KeepEventData.ModifyRecipients(addedBy, KeepRecipientsDiff(users = DeltaSet.empty, libraries = DeltaSet.empty.addAll(addedLibraries), emails = DeltaSet.empty)))
+      Some(KeepEventData.ModifyRecipients(addedBy, KeepRecipientsDiff(users = DeltaSet.empty, libraries = DeltaSet.addOnly(addedLibraries), emails = DeltaSet.empty)))
     case EditTitle(editedBy, original, updated) =>
       Some(KeepEventData.EditTitle(editedBy, original, updated))
   }
