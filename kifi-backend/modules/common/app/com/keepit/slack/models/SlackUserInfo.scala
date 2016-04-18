@@ -59,9 +59,9 @@ sealed trait SlackUserInfo {
 }
 
 object SlackUserInfo {
-  private val reads: Reads[SlackUserInfo] = {
-    FullSlackUserInfo.format.map[SlackUserInfo](identity) orElse
-      PartialSlackUserInfo.format.map[SlackUserInfo](identity)
+  private val reads = Reads[SlackUserInfo] { jsValue =>
+    FullSlackUserInfo.format.reads(jsValue) orElse
+      PartialSlackUserInfo.format.reads(jsValue)
   }
 
   private val writes: Writes[SlackUserInfo] = Writes {
