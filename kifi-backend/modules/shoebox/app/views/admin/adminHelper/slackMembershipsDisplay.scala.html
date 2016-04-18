@@ -3,6 +3,6 @@
 
 <ul>
     @for( (team, membership) <- memberships ) {
-        <li> @{"@" + membership.slackUsername.value} in @{team.slackTeamName.value} </li>
+        <li> @{"@" + membership.slackUsername.map(_.value).getOrElse(membership.slackUserId.value)} in @{team.slackTeamName.value} </li>
     }
 </ul>

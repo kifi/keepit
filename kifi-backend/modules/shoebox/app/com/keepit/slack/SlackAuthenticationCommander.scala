@@ -52,6 +52,7 @@ class SlackAuthenticationCommanderImpl @Inject() (
   }
 
   def getAuthLink(action: SlackAuthenticatedAction, teamId: Option[SlackTeamId], scopes: Set[SlackAuthScope], redirectUri: String): SlackAPI.Route = {
+    if (SlackAuthScope.mixesScopes(scopes)) throw new IllegalArgumentException(s"Invalid mix of Slack scopes for action $action in team $teamId: $scopes")
     val state = setNewSlackState(action)
     SlackAPI.OAuthAuthorize(scopes, state, teamId, redirectUri)
   }
@@ -181,7 +182,11 @@ class SlackAuthenticationCommanderImpl @Inject() (
       case (Some((slackTeamId, slackUserId)), missingScopes) if missingScopes.isEmpty =>
         processAuthorizedAction(userId, slackTeamId, slackUserId, action, None)
       case (identityOpt, missingScopes) =>
-        val scopes = if (identityOpt.isDefined) missingScopes else missingScopes + SlackAuthScope.Identify
+        val scopes = {
+          if (SlackAuthScope.containsIdentityScope(missingScopes) || (identityOpt.isEmpty && !(SlackAuthScope.containsAppScope(missingScopes)))) missingScopes + SlackAuthScope.Identity.Basic
+          else if (identityOpt.isEmpty) missingScopes + SlackAuthScope.Identify
+          else missingScopes
+        }
         val authUrl = getAuthLink(action, slackTeamIdOpt, scopes, SlackOAuthController.REDIRECT_URI).url
         Future.successful(SlackResponse.RedirectClient(authUrl))
     }

@@ -65,7 +65,7 @@ case class UserSlackTeamInfo(
   orgId: Option[PublicId[Organization]],
   teamName: SlackTeamName,
   slackUserId: SlackUserId,
-  username: SlackUsername,
+  username: Option[SlackUsername],
   privateChannelsLastSyncedAt: Option[DateTime],
   personalDigestSetting: SlackPersonalDigestSetting)
 

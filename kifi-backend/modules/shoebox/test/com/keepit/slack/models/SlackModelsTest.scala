@@ -66,7 +66,7 @@ class SlackModelsTest extends Specification {
       }
       "users.list" in {
         val raw = io.Source.fromFile(new File("test/data/slack_kifi.json"), UTF8).mkString
-        val res = (Json.parse(raw) \ "members").validate[Seq[SlackUserInfo]]
+        val res = (Json.parse(raw) \ "members").validate[Seq[FullSlackUserInfo]]
         res match {
           case e: JsError => throw new Exception(e.errors.mkString)
           case JsSuccess(users, _) =>

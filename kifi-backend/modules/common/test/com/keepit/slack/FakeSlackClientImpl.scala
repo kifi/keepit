@@ -3,6 +3,7 @@ package com.keepit.slack
 import java.util.concurrent.atomic.AtomicLong
 
 import com.google.inject.{ Provides, Singleton }
+import com.keepit.common.routes.GET
 import com.keepit.slack.models._
 import org.apache.commons.lang3.RandomStringUtils
 import play.api.libs.json.Json
@@ -26,7 +27,7 @@ class FakeSlackClientImpl extends SlackClient {
   val pushedMessagesByWebhook: mutable.Map[String, List[SlackMessageRequest]] = mutable.Map.empty.withDefaultValue(List.empty)
   val channelLog: mutable.Map[(SlackTeamId, SlackChannelName), List[SlackMessage]] = mutable.Map.empty.withDefaultValue(List.empty)
   val membershipToken: mutable.Map[SlackAccessToken, (SlackTeamId, SlackUserId)] = mutable.Map.empty
-  val teamByToken: mutable.Map[SlackAccessToken, SlackTeamInfo] = mutable.Map.empty
+  val teamByToken: mutable.Map[SlackAccessToken, FullSlackTeamInfo] = mutable.Map.empty
   var isSlackDown = false
   var isSlackThrowingAFit = false
   private val inc = new AtomicLong(1442527939)
@@ -35,6 +36,7 @@ class FakeSlackClientImpl extends SlackClient {
 
   def testToken(token: SlackAccessToken): Future[Unit] = Future.successful(())
   def identifyUser(token: SlackAccessToken): Future[SlackIdentifyResponse] = ???
+  def getUserIdentity(token: SlackAccessToken): Future[SlackUserIdentityResponse] = ???
   def processAuthorizationResponse(code: SlackAuthorizationCode, redirectUri: String): Future[SlackAuthorizationResponse] = ???
   def pushToWebhook(url: String, msg: SlackMessageRequest): Future[Unit] = () match {
     case _ if isSlackDown => Future.failed(new Exception("slack_is_down"))
@@ -86,7 +88,7 @@ class FakeSlackClientImpl extends SlackClient {
   }
 
   def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackTimestamp): Future[Unit] = Future.successful(())
-  def getTeamInfo(token: SlackAccessToken): Future[SlackTeamInfo] = ???
+  def getTeamInfo(token: SlackAccessToken): Future[FullSlackTeamInfo] = ???
   def getPublicChannels(token: SlackAccessToken, excludeArchived: Boolean): Future[Seq[SlackPublicChannelInfo]] = Future.successful(Seq.range(1, 10).map { x =>
     SlackPublicChannelInfo(
       SlackChannelId.Public("C" + RandomStringUtils.randomAlphanumeric(8)),
@@ -103,8 +105,8 @@ class FakeSlackClientImpl extends SlackClient {
   def getPublicChannelInfo(token: SlackAccessToken, channelId: SlackChannelId): Future[SlackPublicChannelInfo] = ???
   def getPrivateChannels(token: SlackAccessToken, excludeArchived: Boolean): Future[Seq[SlackPrivateChannelInfo]] = ???
   def getPrivateChannelInfo(token: SlackAccessToken, channelId: SlackChannelId): Future[SlackPrivateChannelInfo] = ???
-  def getUserInfo(token: SlackAccessToken, userId: SlackUserId): Future[SlackUserInfo] = ???
-  def getUsers(token: SlackAccessToken): Future[Seq[SlackUserInfo]] = ???
+  def getUserInfo(token: SlackAccessToken, userId: SlackUserId): Future[FullSlackUserInfo] = ???
+  def getUsers(token: SlackAccessToken): Future[Seq[FullSlackUserInfo]] = ???
   def getIMChannels(token: SlackAccessToken): Future[Seq[SlackIMChannelInfo]] = ???
   def getIMHistory(token: SlackAccessToken, channelId: SlackChannelId, fromTimestamp: Option[SlackTimestamp], limit: Int, inclusive: Boolean = false): Future[Seq[SlackHistoryMessage]] = ???
   def inviteToChannel(token: SlackAccessToken, invitee: SlackUserId, channelId: SlackChannelId): Future[Unit] = ???

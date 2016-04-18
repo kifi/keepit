@@ -3,11 +3,7 @@ package com.keepit.slack.models
 import java.util.UUID
 import com.keepit.common.cache._
 import com.keepit.common.time._
-import com.keepit.common.db.Id
 import com.keepit.common.logging.AccessLog
-import com.keepit.common.mail.EmailAddress
-import com.keepit.common.strings.ValidInt
-import com.keepit.model.User
 import com.keepit.slack.models.SlackUserPresenceState.{ Away, Active }
 import com.kifi.macros.json
 import org.joda.time.DateTime
@@ -18,6 +14,33 @@ import scala.concurrent.duration.Duration
 
 case class SlackAuthScope(value: String)
 object SlackAuthScope {
+  def containsIdentityScope(scopes: Set[SlackAuthScope]): Boolean = scopes.exists(Identity.all.contains)
+  def containsAppScope(scopes: Set[SlackAuthScope]): Boolean = scopes.exists(!Identity.all.contains(_))
+  def mixesScopes(scopes: Set[SlackAuthScope]): Boolean = containsIdentityScope(scopes) && containsAppScope(scopes)
+
+  object Identity {
+    // should not be mixed with other scopes
+    val Basic = SlackAuthScope("identity.basic")
+    val Email = SlackAuthScope("identity.email")
+    val Team = SlackAuthScope("identity.team")
+    val Avatar = SlackAuthScope("identity.avatar")
+
+    val all = Set(Basic, Email, Team, Avatar)
+
+    val signup: Set[SlackAuthScope] = Set(Basic, Email, Avatar, Team)
+    val login: Set[SlackAuthScope] = Set(Basic)
+
+    private val pilotTeams: Set[SlackTeamId] = Set(
+      "T02A81H50", // Kifi
+      "T0F5KKU3T", // Kinetic Inc.
+      "T0GKSNJKW", // Purple
+      "T0FUL04N4", // Brewstercorp
+      "T06NHNNJW" // JRuff
+    ).map(SlackTeamId(_))
+
+    def areAvailableForTeam(slackTeamId: SlackTeamId): Boolean = pilotTeams.contains(slackTeamId)
+  }
+
   val Identify = SlackAuthScope("identify")
   val Bot = SlackAuthScope("bot")
   val Commands = SlackAuthScope("commands")
@@ -108,22 +131,52 @@ object SlackBotUserAuthorization {
   )(SlackBotUserAuthorization.apply _)
 }
 
-case class SlackAuthorizationResponse(
+sealed trait SlackAuthorizationResponse {
+  def accessToken: SlackUserAccessToken
+  def scopes: Set[SlackAuthScope]
+  def teamId: SlackTeamId
+}
+
+object SlackAuthorizationResponse {
+  implicit val reads: Reads[SlackAuthorizationResponse] = {
+    SlackAppAuthorizationResponse.reads.map[SlackAuthorizationResponse](identity) orElse
+      SlackIdentityAuthorizationResponse.reads.map[SlackAuthorizationResponse](identity)
+  }
+}
+
+case class SlackIdentityAuthorizationResponse(
   accessToken: SlackUserAccessToken,
   scopes: Set[SlackAuthScope],
-  teamName: SlackTeamName,
   teamId: SlackTeamId,
-  incomingWebhook: Option[SlackIncomingWebhook],
-  botAuth: Option[SlackBotUserAuthorization])
-object SlackAuthorizationResponse {
-  implicit val reads: Reads[SlackAuthorizationResponse] = (
+  userId: SlackUserId,
+  userFullName: String) extends SlackAuthorizationResponse
+
+object SlackIdentityAuthorizationResponse {
+  val reads: Reads[SlackIdentityAuthorizationResponse] = (
     (__ \ 'access_token).read[SlackUserAccessToken] and
     (__ \ 'scope).read[Set[SlackAuthScope]](SlackAuthScope.slackFormat) and
-    (__ \ 'team_name).read[SlackTeamName] and
+    (__ \ 'team \ 'id).read[SlackTeamId] and
+    (__ \ 'user \ 'id).read[SlackUserId] and
+    (__ \ 'user \ 'name).read[String]
+  )(SlackIdentityAuthorizationResponse.apply _)
+}
+
+case class SlackAppAuthorizationResponse(
+  accessToken: SlackUserAccessToken,
+  scopes: Set[SlackAuthScope],
+  teamId: SlackTeamId,
+  teamName: SlackTeamName,
+  incomingWebhook: Option[SlackIncomingWebhook],
+  botAuth: Option[SlackBotUserAuthorization]) extends SlackAuthorizationResponse
+object SlackAppAuthorizationResponse {
+  val reads: Reads[SlackAppAuthorizationResponse] = (
+    (__ \ 'access_token).read[SlackUserAccessToken] and
+    (__ \ 'scope).read[Set[SlackAuthScope]](SlackAuthScope.slackFormat) and
     (__ \ 'team_id).read[SlackTeamId] and
+    (__ \ 'team_name).read[SlackTeamName] and
     (__ \ 'incoming_webhook).readNullable[SlackIncomingWebhook] and
     (__ \ 'bot).readNullable[SlackBotUserAuthorization]
-  )(SlackAuthorizationResponse.apply _)
+  )(SlackAppAuthorizationResponse.apply _)
 }
 
 case class SlackIdentifyResponse(
@@ -142,77 +195,15 @@ object SlackIdentifyResponse {
   )(SlackIdentifyResponse.apply _)
 }
 
-case class SlackTeamInfo(
-  id: SlackTeamId,
-  name: SlackTeamName,
-  domain: SlackTeamDomain,
-  emailDomains: Seq[SlackTeamEmailDomain],
-  icon: Map[Int, String])
-
-object SlackTeamInfo {
-  private val slackIconReads = new Reads[Map[Int, String]] {
-    private val sizePattern = """^image_(\d+)$""".r
-    def reads(value: JsValue) = value.validate[JsObject].map { obj =>
-      val isDefaultImage = (obj \ "image_default").asOpt[Boolean].getOrElse(false)
-      if (isDefaultImage) Map.empty[Int, String] else obj.value.collect { case (sizePattern(ValidInt(size)), JsString(imageUrl)) => size -> imageUrl }.toMap
-    }
-  }
-
-  implicit val slackReads: Reads[SlackTeamInfo] = (
-    (__ \ 'id).read[SlackTeamId] and
-    (__ \ 'name).read[SlackTeamName] and
-    (__ \ 'domain).read[SlackTeamDomain] and
-    (__ \ 'email_domain).read[String].map(domains => domains.split(',').toList.map(_.trim).collect { case domain if domain.nonEmpty => SlackTeamEmailDomain(domain) }) and
-    (__ \ 'icon).read(slackIconReads)
-  )(SlackTeamInfo.apply _)
+case class SlackUserIdentityResponse(user: PartialSlackUserInfo, teamId: SlackTeamId, team: Option[PartialSlackTeamInfo]) {
+  def userId = user.id
 }
-
-case class SlackUserProfile(
-  firstName: Option[String],
-  lastName: Option[String],
-  fullName: Option[String],
-  emailAddress: Option[EmailAddress],
-  avatarUrl: Option[String],
-  originalJson: JsValue)
-
-object SlackUserProfile {
-  implicit val reads: Reads[SlackUserProfile] = (
-    (__ \ 'first_name).readNullable[String].map(_.filter(_.nonEmpty)) and
-    (__ \ 'last_name).readNullable[String].map(_.filter(_.nonEmpty)) and
-    (__ \ 'real_name).readNullable[String].map(_.filter(_.nonEmpty)) and
-    (__ \ 'email).readNullable[EmailAddress] and
-    (__ \ "image_original").readNullable[String] and
-    Reads(JsSuccess(_))
-  )(SlackUserProfile.apply _)
-}
-
-case class SlackUserInfo(
-  id: SlackUserId,
-  name: SlackUsername,
-  profile: SlackUserProfile,
-  deleted: Boolean,
-  admin: Boolean,
-  owner: Boolean,
-  bot: Boolean,
-  restricted: Boolean,
-  originalJson: JsValue)
-
-object SlackUserInfo {
-  private val reads: Reads[SlackUserInfo] = (
-    (__ \ 'id).read[SlackUserId] and
-    (__ \ 'name).read[SlackUsername] and
-    (__ \ 'profile).read[SlackUserProfile] and
-    (__ \ 'deleted).readNullable[Boolean].map(_.contains(true)) and
-    (__ \ 'is_admin).readNullable[Boolean].map(_.contains(true)) and
-    (__ \ 'is_owner).readNullable[Boolean].map(_.contains(true)) and
-    (__ \ 'is_bot).readNullable[Boolean].map(_.contains(true)) and
-    (__ \ 'is_restricted).readNullable[Boolean].map(_.contains(true)) and
-    Reads(JsSuccess(_))
-  )(SlackUserInfo.apply _)
-
-  private val writes: Writes[SlackUserInfo] = Writes(_.originalJson)
-
-  implicit val format: Format[SlackUserInfo] = Format(reads, writes)
+object SlackUserIdentityResponse {
+  implicit val reads = (
+    (__ \ 'user).read[PartialSlackUserInfo] and
+    (__ \ 'team \ 'id).read[SlackTeamId] and
+    (__ \ 'team).readNullable[PartialSlackTeamInfo]
+  )(SlackUserIdentityResponse.apply _)
 }
 
 sealed abstract class SlackUserPresenceState(val name: String)
@@ -251,23 +242,23 @@ object SlackUserPresence {
   implicit val format: Format[SlackUserPresence] = Format(reads, writes)
 }
 
-case class SlackTeamMembersKey(slackTeamId: SlackTeamId) extends Key[Seq[SlackUserInfo]] {
+case class SlackTeamMembersKey(slackTeamId: SlackTeamId) extends Key[Seq[FullSlackUserInfo]] {
   override val version = 3
   val namespace = "slack_team_members"
   def toKey(): String = slackTeamId.value
 }
 
 class SlackTeamMembersCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[SlackTeamMembersKey, Seq[SlackUserInfo]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+  extends JsonCacheImpl[SlackTeamMembersKey, Seq[FullSlackUserInfo]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
-case class SlackTeamBotsKey(slackTeamId: SlackTeamId) extends Key[Set[String]] {
-  override val version = 1
+case class SlackTeamBotsKey(slackTeamId: SlackTeamId) extends Key[Set[SlackUsername]] {
+  override val version = 2
   val namespace = "slack_team_bots"
   def toKey(): String = slackTeamId.value
 }
 
 class SlackTeamBotsCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[SlackTeamBotsKey, Set[String]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+  extends JsonCacheImpl[SlackTeamBotsKey, Set[SlackUsername]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class SlackTeamMembersCountKey(slackTeamId: SlackTeamId) extends Key[Int] {
   override val version = 3

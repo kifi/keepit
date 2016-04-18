@@ -7,7 +7,7 @@ import com.keepit.common.db.slick.{ DataBaseComponent, DbRepo, Repo }
 import com.keepit.common.db.{ Id, ModelWithState, State, States }
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.time._
-import com.keepit.model.{ SlackTeamIdOrgIdKey, SlackTeamIdOrgIdCache, Organization }
+import com.keepit.model._
 import org.joda.time.{ DateTime, Duration }
 import play.api.libs.functional.syntax._
 import play.api.libs.json._

@@ -16,7 +16,7 @@ import com.keepit.common.time.{ Clock }
 import com.keepit.common.core._
 import com.keepit.model.view.UserSessionView
 import com.keepit.slack.SlackIdentityCommander
-import com.keepit.slack.models.{ SlackTeamRepo, SlackTeamMembership, SlackTeamMembershipRepo }
+import com.keepit.slack.models.{ BasicSlackTeamInfo, SlackTeamRepo, SlackTeamMembership, SlackTeamMembershipRepo }
 import com.keepit.social.SocialNetworks._
 
 import play.api.{ Application }
@@ -81,11 +81,10 @@ class UserIdentityHelper @Inject() (
             } yield UserIdentity(
               SlackIdentity(
                 membership.slackTeamId,
-                team.slackTeamName,
-                membership.tokenWithScopes,
                 membership.slackUserId,
-                membership.slackUsername,
-                membership.slackUser
+                Some(BasicSlackTeamInfo(team.slackTeamId, team.slackTeamName)),
+                membership.slackUser,
+                membership.tokenWithScopes
               ),
               membership.userId
             )

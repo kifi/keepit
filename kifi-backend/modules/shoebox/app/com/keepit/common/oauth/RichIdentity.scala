@@ -13,17 +13,28 @@ case class LinkedInIdentity(socialUser: SocialUser) extends RichIdentity
 case class TwitterIdentity(socialUser: SocialUser, pictureUrl: Option[String], profileUrl: Option[String]) extends RichIdentity
 case class EmailPasswordIdentity(firstName: String, lastName: String, email: EmailAddress, password: Option[PasswordInfo]) extends RichIdentity
 
-case class SlackIdentity(teamId: SlackTeamId, teamName: SlackTeamName, tokenWithScopes: Option[SlackTokenWithScopes], userId: SlackUserId, username: SlackUsername, user: Option[SlackUserInfo]) extends RichIdentity
+case class SlackIdentity(teamId: SlackTeamId, userId: SlackUserId, team: Option[SlackTeamInfo], user: Option[SlackUserInfo], tokenWithScopes: Option[SlackTokenWithScopes]) extends RichIdentity
 object SlackIdentity {
-  def apply(auth: SlackAuthorizationResponse, identity: SlackIdentifyResponse, user: Option[SlackUserInfo]): SlackIdentity = {
-    require(auth.teamId == identity.teamId && auth.teamName == identity.teamName && !user.exists(_.id != identity.userId))
+  def apply(auth: SlackAppAuthorizationResponse, identity: SlackIdentifyResponse, fullUser: Option[FullSlackUserInfo]): SlackIdentity = {
+    require(auth.teamId == identity.teamId && fullUser.forall(_.id == identity.userId))
+    SlackIdentity(
+      identity.teamId,
+      identity.userId,
+      Some(BasicSlackTeamInfo(auth.teamId, auth.teamName)),
+      fullUser,
+      Some(SlackTokenWithScopes(auth.accessToken, auth.scopes))
+    )
+  }
+
+  // todo(Léo): making SlackUserIdentityResponse optional could save a call to Slack in some scenarios that we don't have
+  def apply(auth: SlackIdentityAuthorizationResponse, identity: SlackUserIdentityResponse, fullUser: Option[FullSlackUserInfo]): SlackIdentity = {
+    require(fullUser.forall(_.id == auth.userId) && identity.user.id == auth.userId && identity.team.forall(_.id == auth.teamId))
     SlackIdentity(
       auth.teamId,
-      auth.teamName,
-      Some(SlackTokenWithScopes(auth.accessToken, auth.scopes)),
-      identity.userId,
-      identity.userName,
-      user
+      auth.userId,
+      identity.team,
+      fullUser orElse Some(identity.user),
+      Some(SlackTokenWithScopes(auth.accessToken, auth.scopes))
     )
   }
 }
@@ -35,11 +46,11 @@ object RichIdentity {
     case TwitterIdentity(socialUser, _, _) => socialUser
     case slackIdentity: SlackIdentity => SocialUser(
       identityId = IdentityHelpers.toIdentityId(slackIdentity.teamId, slackIdentity.userId),
-      firstName = slackIdentity.user.flatMap(_.profile.firstName).getOrElse(slackIdentity.username.value),
-      lastName = slackIdentity.user.flatMap(_.profile.lastName).getOrElse(""),
-      fullName = slackIdentity.user.flatMap(_.profile.fullName).orElse(slackIdentity.user.flatMap(_.profile.firstName)).getOrElse(slackIdentity.username.value),
-      email = slackIdentity.user.map(_.profile.emailAddress.get.address),
-      avatarUrl = slackIdentity.user.flatMap(_.profile.avatarUrl),
+      firstName = slackIdentity.user.flatMap(_.firstName).getOrElse(""),
+      lastName = slackIdentity.user.flatMap(_.lastName).getOrElse(""),
+      fullName = slackIdentity.user.flatMap(_.fullName).getOrElse(""),
+      email = slackIdentity.user.map(_.emailAddress.get.address),
+      avatarUrl = slackIdentity.user.flatMap(_.avatarUrl),
       authMethod = AuthenticationMethod.OAuth2,
       oAuth2Info = slackIdentity.tokenWithScopes.map(ts => (OAuth2Info(ts.token.token, None, None, None)))
     )

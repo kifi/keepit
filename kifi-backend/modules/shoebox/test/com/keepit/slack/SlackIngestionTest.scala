@@ -59,7 +59,7 @@ class SlackIngestionTest extends TestKitSupport with SpecificationLike with Shoe
             ktlRepo.getCountByLibraryId(lib.id.get) === 0
           }
 
-          slackClient.sayInChannel(stm.slackUserId, stm.slackUsername, stm.slackTeamId, stm.token, channel.idAndName)("<http://www.google.com|Google>")
+          slackClient.sayInChannel(stm.slackUserId, stm.slackUsername.get, stm.slackTeamId, stm.token, channel.idAndName)("<http://www.google.com|Google>")
           ingestFromSlackSurely()
 
           db.readOnlyMaster { implicit s =>
@@ -102,7 +102,7 @@ class SlackIngestionTest extends TestKitSupport with SpecificationLike with Shoe
             now = now.plusHours(2)
             inject[FakeClock].setTimeValue(now)
             val preIngestCount = db.readOnlyMaster { implicit s => ktlRepo.getCountByLibraryId(lib.id.get) }
-            slackClient.sayInChannel(stm.slackUserId, stm.slackUsername, stm.slackTeamId, stm.token, channel.idAndName)(msg)
+            slackClient.sayInChannel(stm.slackUserId, stm.slackUsername.get, stm.slackTeamId, stm.token, channel.idAndName)(msg)
             ingestFromSlackSurely()
             val postIngestCount = db.readOnlyMaster { implicit s => ktlRepo.getCountByLibraryId(lib.id.get) }
             (postIngestCount === preIngestCount + expectedLinkCount).setMessage(s"got ${postIngestCount - preIngestCount} links out of $msg")
@@ -120,7 +120,7 @@ class SlackIngestionTest extends TestKitSupport with SpecificationLike with Shoe
             val channel = SlackChannelFactory.channel().withTeam(slackTeam).withName("#eng").saved
             val userMembership = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).withUsername("ryanpbrewster").withScopes(SlackAuthScope.ingest).saved
             val stl = SlackChannelToLibraryFactory.stl().withMembership(userMembership).withLibrary(lib).withChannel(channel).withNextIngestionAt(fakeClock.now).on().saved
-            val slackUser = (userMembership.slackUserId, userMembership.slackUsername, userMembership.token.get)
+            val slackUser = (userMembership.slackUserId, userMembership.slackUsername.get, userMembership.token.get)
             val kifiBot = (slackTeam.kifiBot.get.userId, SlackUsername("Kifi"), slackTeam.kifiBot.get.token)
             (slackTeam.slackTeamId, slackUser, kifiBot, lib, channel, stl)
           }

@@ -1014,7 +1014,7 @@ class AdminUserController @Inject() (
       val presencesJson = presences.map {
         case (membership, presence) =>
           JsObject.apply(Seq(
-            "user" -> JsString(membership.slackUsername.value),
+            "user" -> JsString(membership.slackUsername.map(_.value) getOrElse membership.slackUserId.value),
             "slackUserId" -> JsString(membership.slackUserId.value),
             "team" -> JsString(slackTeamById(membership.slackTeamId).slackTeamName.value),
             "state" -> JsString(presence.state.name),

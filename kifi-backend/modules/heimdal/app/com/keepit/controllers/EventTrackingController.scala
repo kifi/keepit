@@ -7,13 +7,10 @@ import com.keepit.common.controller.HeimdalServiceController
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.curator.RecommendationUserAction
 import com.keepit.heimdal._
 import com.keepit.model._
 import com.keepit.model.tracking.LibraryViewTrackingCommander
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.slack.models.{InternalSlackTeamInfoCache, SlackUserId}
-import com.keepit.social.NonUserKinds
 import com.kifi.franz.SQSQueue
 import play.api.libs.json.{ JsArray, JsValue }
 import com.keepit.common.core._

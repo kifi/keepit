@@ -85,7 +85,7 @@ class SlackOnboarderImpl @Inject() (
       debouncer.debounce(s"${integ.slackTeamId.value}_${channel.slackChannelName.value}", 10 minutes) {
         slackLog.info(s"Sent a welcome message to channel ${channel.slackChannelName} saying", welcomeMsg.text)
         slackClient.sendToSlackHoweverPossible(integ.slackTeamId, integ.slackChannelId, welcomeMsg).map { _ =>
-          slackAnalytics.trackNotificationSent(integ.slackTeamId, integ.slackChannelId, channel.slackChannelName, NotificationCategory.NonUser.INTEGRATION_WELCOME)
+          slackAnalytics.trackNotificationSent(integ.slackTeamId, integ.slackChannelId, Some(channel.slackChannelName), NotificationCategory.NonUser.INTEGRATION_WELCOME)
           ()
         }
       }
@@ -217,7 +217,7 @@ class SlackOnboarderImpl @Inject() (
           val contextBuilder = heimdalContextBuilder()
           contextBuilder += ("numChannelMembers", 1)
           contextBuilder += ("slackTeamName", agent.team.slackTeamName.value)
-          slackAnalytics.trackNotificationSent(agent.membership.slackTeamId, agent.membership.slackUserId.asChannel, agent.membership.slackUsername.asChannelName, NotificationCategory.NonUser.INTEGRATOR_PRESYNC)
+          slackAnalytics.trackNotificationSent(agent.membership.slackTeamId, agent.membership.slackUserId.asChannel, agent.membership.slackUsername.map(_.asChannelName), NotificationCategory.NonUser.INTEGRATOR_PRESYNC)
           ()
         }
       }) getOrElse {
@@ -293,7 +293,7 @@ class SlackOnboarderImpl @Inject() (
               val contextBuilder = heimdalContextBuilder()
               contextBuilder += ("numChannelMembers", 1)
               contextBuilder += ("slackTeamName", agent.team.slackTeamName.value)
-              slackAnalytics.trackNotificationSent(agent.membership.slackTeamId, sendTo, agent.membership.slackUsername.asChannelName, category, contextBuilder.build)
+              slackAnalytics.trackNotificationSent(agent.membership.slackTeamId, sendTo, agent.membership.slackUsername.map(_.asChannelName), category, contextBuilder.build)
               ()
             }
         }) getOrElse {
@@ -387,8 +387,8 @@ class SlackOnboarderImpl @Inject() (
     }
 
     private def logFTUI(agent: TeamOnboardingAgent, msg: SlackMessageRequest): PartialFunction[Try[_], Unit] = {
-      case Success(_) => slackLog.info("Pushed a team FTUI to", agent.membership.slackUsername.value, "in", agent.team.slackTeamName.value, "saying", msg.text)
-      case Failure(fail) => slackLog.warn("Failed to push team FTUI to", agent.membership.slackUsername.value, "in", agent.team.slackTeamName.value, "because:", fail.getMessage)
+      case Success(_) => slackLog.info("Pushed a team FTUI to", agent.membership.slackUserId.value, "in", agent.team.slackTeamName.value, "saying", msg.text)
+      case Failure(fail) => slackLog.warn("Failed to push team FTUI to", agent.membership.slackUserId.value, "in", agent.team.slackTeamName.value, "because:", fail.getMessage)
     }
   }
 }

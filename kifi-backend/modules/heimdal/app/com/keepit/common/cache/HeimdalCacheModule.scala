@@ -6,7 +6,7 @@ import com.keepit.model.cache.UserSessionViewExternalIdCache
 import com.keepit.model.helprank.{ UriReKeepCountCache, UriDiscoveryCountCache }
 import com.keepit.model.{ AnonymousEventDescriptorNameCache, UserEventDescriptorNameCache, SystemEventDescriptorNameCache, NonUserEventDescriptorNameCache }
 import com.keepit.shoebox.model.KeepImagesCache
-import com.keepit.slack.models.{ InternalSlackTeamInfoCache, SlackChannelIntegrationsCache }
+import com.keepit.slack.models.SlackChannelIntegrationsCache
 
 import scala.concurrent.duration._
 import com.keepit.common.logging.AccessLog

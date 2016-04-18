@@ -263,7 +263,7 @@ class SlackPushingActor @Inject() (
                   contextBuilder += ("threadId", k.id.get.id)
                   NotificationCategory.NonUser.NEW_COMMENT
               }
-              slackAnalytics.trackNotificationSent(integration.slackTeamId, integration.slackChannelId, channel.slackChannelName, category, contextBuilder.build)
+              slackAnalytics.trackNotificationSent(integration.slackTeamId, integration.slackChannelId, Some(channel.slackChannelName), category, contextBuilder.build)
               ()
           }
         }

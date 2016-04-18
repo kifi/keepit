@@ -22,13 +22,12 @@ import play.api.libs.json.{ Format, JsValue, Json }
 case class SlackTeamMembershipInternRequest(
   userId: Option[Id[User]],
   slackUserId: SlackUserId,
-  slackUsername: SlackUsername,
   slackTeamId: SlackTeamId,
   tokenWithScopes: Option[SlackTokenWithScopes],
   slackUser: Option[SlackUserInfo])
 
 case class InvalidSlackAccountOwnerException(requestingUserId: Id[User], membership: SlackTeamMembership)
-  extends Exception(s"Slack account ${membership.slackUsername.value} in team ${membership.slackTeamId.value} already belongs to Kifi user ${membership.userId}")
+  extends Exception(s"Slack account ${membership.slackUserId} in team ${membership.slackTeamId.value} already belongs to Kifi user ${membership.userId}")
 
 sealed abstract class SlackAccountKind(val kind: String)
 object SlackAccountKind {
@@ -64,7 +63,7 @@ case class SlackTeamMembership(
   seq: SequenceNumber[SlackTeamMembership] = SequenceNumber.ZERO,
   userId: Option[Id[User]],
   slackUserId: SlackUserId,
-  slackUsername: SlackUsername,
+  slackUsername: Option[SlackUsername],
   slackTeamId: SlackTeamId,
   kind: SlackAccountKind,
   tokenWithScopes: Option[SlackTokenWithScopes],
@@ -92,7 +91,7 @@ case class SlackTeamMembership(
   def withIngestedMessage(msg: SlackMessage) = {
     require(this.slackUserId == msg.userId)
     this.copy(
-      slackUsername = if (lastIngestedMessageTimestamp.exists(_ >= msg.timestamp)) slackUsername else msg.username,
+      slackUsername = if (slackUsername.isDefined && lastIngestedMessageTimestamp.exists(_ >= msg.timestamp)) slackUsername else Some(msg.username),
       lastIngestedMessageTimestamp = Some(lastIngestedMessageTimestamp.filter(_ >= msg.timestamp).getOrElse(msg.timestamp))
     )
   }
@@ -178,7 +177,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
     seq: SequenceNumber[SlackTeamMembership],
     userId: Option[Id[User]],
     slackUserId: SlackUserId,
-    slackUsername: SlackUsername,
+    slackUsername: Option[SlackUsername],
     slackTeamId: SlackTeamId,
     kind: SlackAccountKind,
     tokenOpt: Option[SlackUserAccessToken],
@@ -242,7 +241,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
   class SlackTeamMembershipTable(tag: Tag) extends RepoTable[SlackTeamMembership](db, tag, "slack_team_membership") with SeqNumberColumn[SlackTeamMembership] {
     def userId = column[Option[Id[User]]]("user_id", O.Nullable)
     def slackUserId = column[SlackUserId]("slack_user_id", O.NotNull)
-    def slackUsername = column[SlackUsername]("slack_username", O.NotNull)
+    def slackUsername = column[Option[SlackUsername]]("slack_username", O.Nullable)
     def slackTeamId = column[SlackTeamId]("slack_team_id", O.NotNull)
     def kind = column[SlackAccountKind]("kind", O.NotNull)
     def token = column[Option[SlackUserAccessToken]]("token", O.Nullable)
@@ -294,11 +293,11 @@ class SlackTeamMembershipRepoImpl @Inject() (
           }
         }
         val updated = membership.copy(
-          slackUsername = request.slackUsername,
+          slackUsername = request.slackUser.collect { case fullInfo: FullSlackUserInfo => fullInfo.username } orElse membership.slackUsername,
           kind = if (request.slackUser.exists(_.bot)) SlackAccountKind.Bot else membership.kind,
           userId = request.userId orElse membership.userId,
           tokenWithScopes = request.tokenWithScopes orElse membership.tokenWithScopes,
-          slackUser = request.slackUser orElse membership.slackUser
+          slackUser = request.slackUser.filter(_.isFull) orElse membership.slackUser.filter(_.isFull) orElse request.slackUser orElse membership.slackUser
         )
         if (updated == membership) (membership, false) else (save(updated), (updated.userId != membership.userId))
       case inactiveMembershipOpt =>
@@ -306,7 +305,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
           id = inactiveMembershipOpt.map(_.id.get),
           userId = request.userId,
           slackUserId = request.slackUserId,
-          slackUsername = request.slackUsername,
+          slackUsername = request.slackUser.collect { case fullInfo: FullSlackUserInfo => fullInfo.username },
           slackTeamId = request.slackTeamId,
           kind = if (request.slackUser.exists(_.bot)) SlackAccountKind.Bot else SlackAccountKind.User,
           tokenWithScopes = request.tokenWithScopes,
@@ -326,7 +325,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
           id = inactiveMembershipOpt.map(_.id.get),
           userId = None,
           slackUserId = message.userId,
-          slackUsername = message.username,
+          slackUsername = Some(message.username),
           slackTeamId = slackTeam.slackTeamId,
           kind = SlackAccountKind.User,
           tokenWithScopes = None,
