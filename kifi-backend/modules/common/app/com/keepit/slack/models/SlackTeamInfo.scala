@@ -54,9 +54,9 @@ sealed trait SlackTeamInfo {
 }
 
 object SlackTeamInfo {
-  implicit val slackReads: Reads[SlackTeamInfo] = {
-    FullSlackTeamInfo.slackReads.map[SlackTeamInfo](identity) orElse
-      PartialSlackTeamInfo.slackReads.map[SlackTeamInfo](identity)
+  implicit val slackReads = Reads[SlackTeamInfo] { jsValue =>
+    FullSlackTeamInfo.slackReads.reads(jsValue) orElse
+      PartialSlackTeamInfo.slackReads.reads(jsValue)
   }
 }
 
