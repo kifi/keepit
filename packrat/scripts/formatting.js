@@ -122,7 +122,7 @@ var formatMessage = (function () {
             processEmailAddressesThen.bind(null,
               processHashtagsThen.bind(null, true, // yes, make tags into links
                 processEmojiThen.bind(null, identity)))),
-          processHashtagsThen.bind(null, // processInside
+          processHashtagsThen.bind(null, true, // processInside
             processEmojiThen.bind(null, identity))));
 
   var formatAsHtmlSnippet =
