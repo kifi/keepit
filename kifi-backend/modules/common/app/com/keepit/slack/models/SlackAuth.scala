@@ -202,7 +202,7 @@ object SlackUserIdentityResponse {
   implicit val reads = (
     (__ \ 'user).read[PartialSlackUserInfo] and
     (__ \ 'team \ 'id).read[SlackTeamId] and
-    (__ \ 'team).readNullable[PartialSlackTeamInfo]
+    (__ \ 'team).readNullable[PartialSlackTeamInfo].orElse(Reads.pure(None))
   )(SlackUserIdentityResponse.apply _)
 }
 
