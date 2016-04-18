@@ -387,6 +387,9 @@ function convertHtmlDraftToMarkdown(html) {
     .replace(/<\/div>/gi, '')
     .replace(/<a(?: [\w-]+="[^"]*")*? href="x-kifi-sel:([^"]*)"(?: [\w-]+="[^"]*")*>(.*?)<\/a>/gi, function($0, $1, $2) {
       return '[' + $2.replace(/([\]\\])/g, '\\$1') + '](x-kifi-sel:' + $1.replace(/([\)\\])/g, '\\$1') + ')';
+    })
+    .replace(/<span(?: [\w-]+="[^"]*")*? class="[^"]*?kifi-tag[^"]*"(?: [\w-]+="[^"]*")*>(.*?)<\/span>/gi, function($0, $1, $2) {
+      return '[' + $1 + ']';
     });
   html2 = emoji.encode(html2);
 

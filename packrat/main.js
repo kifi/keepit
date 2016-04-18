@@ -928,7 +928,7 @@ api.port.on({
     }
   },
   suggest_tags: function (data, respond) {
-    ajax('GET', '/ext/libraries/' + data.libraryId + '/keeps/' + data.keepId + '/tags/suggest', {q: data.q, n: data.n}, respond, respond.bind(null, []));
+    ajax('GET', '/api/1/keeps/suggestTags', { query: data.q, limit: data.n, keepId: data.keepId }, respond, respond.bind(null, []));
   },
   suppress_on_site: function(data, _, tab) {
     ajax('POST', '/ext/pref/keeperHidden', {url: tab.url, suppress: data});

@@ -7,6 +7,7 @@
 // @require scripts/send_chooser.js
 // @require scripts/snap.js
 // @require scripts/look.js
+// @require scripts/keep_note.js
 // @require scripts/prevent_ancestor_scroll.js
 
 k.compose = k.compose || (function() {
@@ -391,6 +392,9 @@ k.compose = k.compose || (function() {
       },
       save: saveDraft.bind(null, $form, $to, editor),
       lookHere: k.snap.createLookHere(getDraft),
+      initTagSuggest: function (keepId) {
+        k.keepNote.init($form.find('.kifi-compose-draft'), $container, keepId, editor.getRaw());
+      },
       destroy: function () {
         $forms = $forms.not($form);
         if ($to.length) {

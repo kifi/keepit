@@ -113,6 +113,8 @@ k.panes.thread = k.panes.thread || function () {
     .prependTo($tall);
 
     var compose = k.compose($tall, sendReply.bind(null, threadId));
+    compose.initTagSuggest(threadId);
+
     var $holder = $tall.find('.kifi-scroll-inner')
       .preventAncestorScroll()
       .handleLookClicks('chat')
