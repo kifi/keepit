@@ -66,7 +66,9 @@ class MobileKeepsController @Inject() (
   }
 
   def suggestTags(keepIdOptStringHack: Option[String], query: Option[String], limit: Int) = UserAction.async { request =>
-    val keepIdOpt = keepIdOptStringHack.map(ExternalId.apply[Keep])
+    val keepIdOpt = keepIdOptStringHack.flatMap(ExternalId.asOpt[Keep]).flatMap { extId =>
+      db.readOnlyReplica { implicit s => keepRepo.getOpt(extId).flatMap(_.id) }
+    }
     keepsCommander.suggestTags(request.userId, keepIdOpt, query, limit).imap { tagsAndMatches =>
       implicit val matchesWrites = TupleFormat.tuple2Writes[Int, Int]
       val result = JsArray(tagsAndMatches.map { case (tag, matches) => json.aggressiveMinify(Json.obj("tag" -> tag, "matches" -> matches)) })

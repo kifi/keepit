@@ -1042,18 +1042,18 @@ class AdminUserController @Inject() (
   }
 
   def backfillTags(startPage: Int, endPage: Int, doItForReal: Boolean) = AdminUserAction { implicit request =>
-    val chunked = ChunkedResponseHelper.chunked((startPage to endPage).toSeq) { page =>
+    val chunked = ChunkedResponseHelper.chunked((startPage to endPage).toList) { page =>
       val collectionById = mutable.Map.empty[Id[Collection], Collection]
       db.readWrite { implicit session =>
-        val grp = keepToCollectionRepo.pageAscending(page, 2000, Set(KeepToCollectionStates.INACTIVE))
+        val grp = keepToCollectionRepo.pageAscending(page, 1000, Set(KeepToCollectionStates.INACTIVE))
           .groupBy(_.keepId)
         val keepIds = grp.keys.toSet
-        val existingTags = keepTagRepo.getByKeepIds(keepIds)
+        val existingTags = keepTagRepo.getByKeepIds(keepIds).mapValues(_.map(_.tag.normalized))
         val keeps = keepRepo.getActiveByIds(keepIds)
 
         val cnts = grp.map {
           case (keepId, ktcs) =>
-            val existing = existingTags.getOrElse(keepId, Seq.empty).map(_.tag.normalized).toSet
+            val existing = existingTags.getOrElse(keepId, Seq.empty).toSet
             val newTags = ktcs.filter { ktc =>
               val coll = collectionById.getOrElseUpdate(ktc.collectionId, collectionRepo.get(ktc.collectionId))
               !existing.contains(coll.name.normalized) && coll.isActive && keeps.get(keepId).isDefined
