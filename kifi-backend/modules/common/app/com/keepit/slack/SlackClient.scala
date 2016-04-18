@@ -159,7 +159,7 @@ class SlackClientImpl(
   }
 
   def getUserIdentity(token: SlackAccessToken): Future[SlackUserIdentityResponse] = {
-    slackCall[SlackUserIdentityResponse](SlackAPI.Identify(token))
+    slackCall[SlackUserIdentityResponse](SlackAPI.UserIdentity(token))
   }
 
   def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackTimestamp): Future[Unit] = {
