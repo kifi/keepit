@@ -3,13 +3,16 @@
     <div kf-loading-spinner class="kf-keep-page-loading-spinner" hide="loaded"></div>
   </div>
   <div class="kf-keep-page-container" ng-if="keep">
-    <div class="kf-keep-page"
-         kf-keep-card="keep"
-         boxed="true"
-         force-gallery-view="true"
-         click-callback="keepClick(keep, event)"
-         delete-callback="unkeepFromLibrary"
-         max-initial-comments="maxInitialComments"></div>
+    <div>
+      <div kf-extension-upsell-banner></div>
+      <div class="kf-keep-page"
+          kf-keep-card="keep"
+          boxed="true"
+          force-gallery-view="true"
+          click-callback="keepClick(keep, event)"
+          delete-callback="unkeepFromLibrary"
+          max-initial-comments="maxInitialComments"></div>
+    </div>
     <div class="kf-keep-page-rhr" ng-if="enableRHR">
       <div class="kf-keep-page-rhr-container" ng-if="keep.keepers.length">
         <div class="kf-keep-page-rhr-header">Other people kept this</div>
