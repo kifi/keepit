@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfExtensionUpsellBanner', [
-  '$analytics', '$rootScope', '$timeout', '$window', 'installService', 'modalService', 'profileService',
-  function ($analytics, $rootScope, $timeout, $window, installService, modalService, profileService) {
+  '$analytics', '$rootScope', '$state', '$timeout', '$window', 'installService', 'modalService', 'profileService',
+  function ($analytics, $rootScope, $state, $timeout, $window, installService, modalService, profileService) {
     return {
       restrict: 'A',
       replace: true,
@@ -21,7 +21,7 @@ angular.module('kifi')
 
         scope.triggerInstall = function () {
           $analytics.eventTrack('user_clicked_page', {
-            'type': 'keepPage',
+            'type': $state.$current.name,
             'action': 'clickedInstall'
           });
           installService.triggerInstall(function () {
@@ -33,7 +33,7 @@ angular.module('kifi')
 
         scope.dismiss = function () {
           $analytics.eventTrack('user_clicked_page', {
-            'type': 'keepPage',
+            'type': $state.$current.name,
             'action': 'clickedClosed'
           });
           scope.showBanner = false;
