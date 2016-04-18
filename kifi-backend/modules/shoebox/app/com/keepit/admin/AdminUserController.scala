@@ -5,7 +5,7 @@ import com.keepit.abook.ABookServiceClient
 import com.keepit.abook.model.{ OrganizationUserMayKnow, RichContact }
 import com.keepit.commanders._
 import com.keepit.commanders.emails.ActivityFeedEmailSender
-import com.keepit.common.akka.SafeFuture
+import com.keepit.common.akka.{ SlowRunningExecutionContext, SafeFuture }
 import com.keepit.common.concurrent.{ ChunkedResponseHelper, FutureHelpers }
 import com.keepit.common.controller._
 import com.keepit.common.db._
@@ -1042,38 +1042,41 @@ class AdminUserController @Inject() (
   }
 
   def backfillTags(startPage: Int, endPage: Int, doItForReal: Boolean) = AdminUserAction { implicit request =>
-    (startPage to endPage).foreach { page =>
-      val collectionById = mutable.Map.empty[Id[Collection], Collection]
-      db.readWrite { implicit session =>
-        val grp = keepToCollectionRepo.pageAscending(page, 2000, Set(KeepToCollectionStates.INACTIVE))
-          .groupBy(_.keepId)
-        val keepIds = grp.keys.toSet
-        val existingTags = keepTagRepo.getByKeepIds(keepIds).mapValues(_.map(_.tag.normalized))
-        val keeps = keepRepo.getActiveByIds(keepIds)
+    SafeFuture {
+      (startPage to endPage).foreach { page =>
+        val collectionById = mutable.Map.empty[Id[Collection], Collection]
+        db.readWrite { implicit session =>
+          val grp = keepToCollectionRepo.pageAscending(page, 2000, Set(KeepToCollectionStates.INACTIVE))
+            .groupBy(_.keepId)
+          val keepIds = grp.keys.toSet
+          val existingTags = keepTagRepo.getByKeepIds(keepIds).mapValues(_.map(_.tag.normalized))
+          val keeps = keepRepo.getActiveByIds(keepIds)
 
-        val cnts = grp.map {
-          case (keepId, ktcs) =>
-            val existing = existingTags.getOrElse(keepId, Seq.empty).toSet
-            val newTags = ktcs.filter { ktc =>
-              val coll = collectionById.getOrElseUpdate(ktc.collectionId, collectionRepo.get(ktc.collectionId))
-              !existing.contains(coll.name.normalized) && coll.isActive && keeps.get(keepId).isDefined
-            }.map { ktc =>
-              val coll = collectionById.getOrElseUpdate(ktc.collectionId, collectionRepo.get(ktc.collectionId))
-              (coll.userId, coll.name)
-            }
-
-            if (doItForReal) {
-              newTags.map {
-                case (userId, tag) =>
-                  keepTagRepo.save(KeepTag(tag = tag, keepId = keepId, messageId = None, userId = Some(userId)))
+          val cnts = grp.map {
+            case (keepId, ktcs) =>
+              val existing = existingTags.getOrElse(keepId, Seq.empty).toSet
+              val newTags = ktcs.filter { ktc =>
+                val coll = collectionById.getOrElseUpdate(ktc.collectionId, collectionRepo.get(ktc.collectionId))
+                !existing.contains(coll.name.normalized) && coll.isActive && keeps.get(keepId).isDefined
+              }.map { ktc =>
+                val coll = collectionById.getOrElseUpdate(ktc.collectionId, collectionRepo.get(ktc.collectionId))
+                (coll.userId, coll.name, ktc.createdAt)
               }
-            }
-            newTags.length
-        }
 
-        log.info(s"[backfillTags] $page: ${cnts.sum} new tags on ${grp.size} keeps")
+              if (doItForReal) {
+                newTags.map {
+                  case (userId, tag, createdAt) =>
+                    keepTagRepo.save(KeepTag(createdAt = createdAt, tag = tag, keepId = keepId, messageId = None, userId = Some(userId)))
+                }
+              }
+              newTags.length
+          }
+
+          log.info(s"[backfillTags] $page: ${cnts.sum} new tags on ${grp.size} keeps")
+        }
       }
-    }
+    }(SlowRunningExecutionContext.ec)
+
     Ok("going!")
   }
 }

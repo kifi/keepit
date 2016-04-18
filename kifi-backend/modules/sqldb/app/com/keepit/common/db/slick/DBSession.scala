@@ -38,8 +38,8 @@ object DBSession {
     private def timeCheck(): Unit = {
       val t = runningTime()
       if (t > 5000) { // tweak
-        val msg = s"DBSession($sessionId,$name,$masterSlave) takes too long: $t ms"
-        log.error(msg, new IllegalStateException(msg))
+        val msg = s"DBSession($sessionId,$name,$masterSlave) @ ${location.className}.${location.methodName}:${location.line} takes too long: $t ms"
+        log.warn(msg)
       }
     }
 
