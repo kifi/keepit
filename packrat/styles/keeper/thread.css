@@ -58,6 +58,9 @@
   text-align: right;
   color: #a9a9a9;
 }
+.kifi-message-source {
+  font-style: italic;
+}
 .kifi-message-source-icon {
   display: none;
   width: 15px;
