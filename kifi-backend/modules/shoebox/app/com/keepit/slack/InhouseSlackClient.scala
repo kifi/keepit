@@ -5,7 +5,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.time.Clock
 import com.keepit.slack.models._
-
+import play.api.Mode._
 import scala.concurrent.{ ExecutionContext, Future }
 
 @Singleton
@@ -13,9 +13,10 @@ class InhouseSlackClient @Inject() (
     slackClient: SlackClient,
     clock: Clock,
     airbrake: AirbrakeNotifier,
-    implicit val executionContext: ExecutionContext) {
+    implicit val executionContext: ExecutionContext,
+    mode: Mode) {
   def sendToSlack(channel: InhouseSlackChannel, msg: SlackMessageRequest): Future[Unit] = {
-    slackClient.pushToWebhook(channel.webhookUrl, msg)
+    if (mode == Prod) slackClient.pushToWebhook(channel.webhookUrl, msg) else Future.successful(())
   }
 }
 
