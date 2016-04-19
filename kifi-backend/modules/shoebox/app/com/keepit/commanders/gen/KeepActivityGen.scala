@@ -56,7 +56,7 @@ object KeepActivityGen {
       val noteBody = sourceAttrOpt.flatMap {
         case (ka: KifiAttribution, _) => keep.note.map("added a note" -> _)
         case (SlackAttribution(msg, _), _) => Some(msg.text).filter(_ != keep.url).map("shared a link in Slack" -> _)
-        case (TwitterAttribution(tweet), _) => Some(tweet.tweet).filter(_ != keep.url).map("tweeted a link" -> _)
+        case (TwitterAttribution(tweet), _) => Some(tweet.text).filter(_ != keep.url).map("tweeted a link" -> _)
       }
 
       val source = sourceAttrOpt.flatMap { case (attr, _) => BasicKeepEventSource.fromSourceAttribution(attr) }
