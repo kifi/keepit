@@ -35,6 +35,18 @@ object KeepEventKind extends Enumerator[KeepEventKind] {
   val hideForNow: Set[KeepEventKind] = Set(EditTitle)
 }
 
+sealed abstract class KeepEventDisplayStyle(val value: String)
+object KeepEventDisplayStyle extends Enumerator[KeepEventDisplayStyle] {
+  case object Primary extends KeepEventDisplayStyle("primary")
+  case object GreyedOut extends KeepEventDisplayStyle("greyed_out")
+
+  def fromKind(kind: KeepEventKind): KeepEventDisplayStyle = kind match {
+    case KeepEventKind.Note | KeepEventKind.Comment => Primary
+    case KeepEventKind.Initial | KeepEventKind.EditTitle | KeepEventKind.ModifyRecipients => GreyedOut
+  }
+  implicit val writes: Writes[KeepEventDisplayStyle] = Writes { o => JsString(o.value) }
+}
+
 @json case class BasicKeepEventSource(kind: KeepEventSource, url: Option[String])
 object BasicKeepEventSource {
   def fromSourceAttribution(attribution: SourceAttribution): Option[BasicKeepEventSource] = {
@@ -170,7 +182,7 @@ object BasicKeepEvent {
   }
 
   implicit val idFormat = EitherFormat(Message.formatPublicId, CommonKeepEvent.formatPublicId)
-  implicit val writes: Writes[BasicKeepEvent] = (
+  private val bareWrites: OWrites[BasicKeepEvent] = (
     (__ \ 'id).write[BasicKeepEventId] and
     (__ \ 'author).write[BasicAuthor] and
     (__ \ 'kind).write[KeepEventKind] and
@@ -179,6 +191,14 @@ object BasicKeepEvent {
     (__ \ 'timestamp).write[DateTime] and
     (__ \ 'source).writeNullable[BasicKeepEventSource]
   )(unlift(BasicKeepEvent.unapply))
+
+  private val extraWrites: OWrites[BasicKeepEvent] = OWrites { o =>
+    Json.obj(
+      "displayStyle" -> KeepEventDisplayStyle.fromKind(o.kind)
+    )
+  }
+
+  implicit val writes: OWrites[BasicKeepEvent] = OWrites { o => bareWrites.writes(o) ++ extraWrites.writes(o) }
 
   def fromMessage(message: Message)(implicit imageConfig: S3ImageConfig): BasicKeepEvent = {
     val author = message.sentBy.fold(BasicAuthor.fromNonUser, BasicAuthor.fromUser)
