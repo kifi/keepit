@@ -73,7 +73,12 @@ case class Keep(
 
   def isOlderThan(other: Keep): Boolean = keptAt < other.keptAt || (keptAt == other.keptAt && id.get.id < other.id.get.id)
 
-  def titlePathString = this.title.getOrElse(this.url).trim.replaceAll("^https?://", "").replaceAll("[^A-Za-z0-9]", " ").replaceAll("  *", "-").replaceAll("^-|-$", "").take(40)
+  def titlePathString = {
+    Stream(this.title, Some(this.url))
+      .map(_.map(_.trim.replaceAll("^https?://", "").replaceAll("[^A-Za-z0-9]", " ").replaceAll("  *", "-").replaceAll("^-|-$", "").take(40)))
+      .find(_.nonEmpty)
+      .getOrElse("keep")
+  }
 
   def path(implicit config: PublicIdConfiguration) = Path(s"k/$titlePathString/${Keep.publicId(this.id.get).id}")
 
