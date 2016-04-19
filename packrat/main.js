@@ -741,12 +741,11 @@ api.port.on({
     var d = pageData[tab.nUri];
     var newUsers = data.newUsers;
     var newEmails = data.newEmails;
-    var newLibrary = data.newLibrary;
-    var oldLibrary = data.newLibrary ? (data.oldLibraries || []).filter(function (l) { return l.id !== newLibrary.id; })[0] : null;
+    var newLibraries = data.newLibraries;
     var params = {
       libraries: {
-        add: newLibrary ? [ newLibrary.id ] : [],
-        remove: oldLibrary ? [ oldLibrary.id ] : []
+        add: newLibraries.map(getId),
+        remove: []
       },
       users: {
         add: newUsers.map(getId),
@@ -762,27 +761,10 @@ api.port.on({
     var permissions = keep && keep.viewer && keep.viewer.permissions || [];
 
     if (keep && permissions.indexOf('add_participants') === -1) {
-      return respond({ success: false });
+      return respond(false);
     }
 
-    ajax('POST', '/ext/keeps/' + data.keepId + '/recipients', params, function (result) {
-      keep.recipients.users = keep.recipients.users.concat(newUsers);
-      keep.recipients.emails = keep.recipients.emails.concat(newEmails);
-
-      if (newLibrary) {
-        if (keep) {
-          keep.recipients.libraries = [ newLibrary ];
-        }
-        var pageKeep = d.keeps.find(libraryIdIs(oldLibrary && oldLibrary.id));
-        if (pageKeep) {
-          pageKeep.libraryId = newLibrary.id;
-        }
-      }
-
-      respond({ success: true, response: keep });
-    }, function (failData) {
-      respond({ success: false })
-    });
+    ajax('POST', '/ext/keeps/' + data.keepId + '/recipients', params, respond.bind(null, true), respond.bind(null, false));
   },
   keeps_and_libraries_and_organizations_and_me_and_experiments: function (_, respond, tab) {
     var d = pageData[tab.nUri];

@@ -169,7 +169,7 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
       var $input = this.$input;
       var keep = this.parent.keep;
       var permissions = keep && keep.viewer && keep.viewer.permissions || [];
-      var canChangeLibrary = permissions.indexOf('add_libraries') > -1 && permissions.indexOf('remove_libraries') > -1;
+      var canAddLibrary = permissions.indexOf('add_libraries') > -1;
 
       if (!$input) {
         $input = this.$input = this.get$('.kifi-message-participant-dialog-input');
@@ -183,7 +183,7 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
               this.getAddDialog().removeClass('kifi-non-empty');
             }
           }.bind(this)
-        }, { user: true, email: true, library: canChangeLibrary });
+        }, { user: true, email: true, library: canAddLibrary });
       }
 
       setTimeout(function () {
@@ -484,18 +484,22 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
 
     sendModifyKeep: function (users, emails, libraries) {
       var deferred = Q.defer();
+      users = users || [];
+      emails = emails || [];
+      libraries = libraries || [];
 
       var keep = this.parent.keep;
       api.port.emit('update_keepscussion_recipients', {
         keepId: keep.id,
         newUsers: users || [],
         newEmails: emails || [],
-        newLibrary: libraries[0],
-        oldLibraries: keep.recipients.libraries
-      }, function success(d) {
-        var keep = d.response;
-        if (d.success) {
-          this.parent.keep = keep;
+        newLibraries: libraries || [],
+      }, function (success) {
+        if (success) {
+          keep.recipients.users = keep.recipients.users.concat(users);
+          keep.recipients.emails = keep.recipients.emails.concat(emails);
+          keep.recipients.libraries = keep.recipients.libraries.concat(libraries);
+          this.parent.participants = this.parent.participants.concat(users).concat(emails).concat(libraries);
           this.parent.refresh();
           this.updateView();
           deferred.resolve(keep);
@@ -591,7 +595,7 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
         return $(k.render(template, p));
       });
       var avatarList = $el.find('.kifi-message-participants-avatars');
-      avatarList.find('> :not(:last)').remove();
+      avatarList.find('> :not(:last)').remove(); // don't remove the add icon
       avatarList.prepend(renderedAvatars);
       $el.find('.kifi-message-participant-list-inner').empty().append(renderedParticipants);
       this.updateParticipantsHeight();
