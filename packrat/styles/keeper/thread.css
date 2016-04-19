@@ -84,6 +84,33 @@
 .kifi-message-sent .kifi-tag.kifi-tag.kifi-tag:not(:hover) {
   text-decoration: none!important;
 }
+.kifi-message-sent-display-greyed_out .kifi-message-pic-a {
+  display: none;
+}
+.kifi-message-sent-display-greyed_out .kifi-message-sent-header {
+  margin-bottom: 0;
+}
+.kifi-message-sent-display-greyed_out {
+  text-align: center;
+  color: #b8c5d0;
+  margin-top: 0;
+  margin-bottom: 0;
+  padding: 13px;
+  border-top: 1px solid #b8c5d0;
+  border-bottom: 1px solid #b8c5d0;
+}
+.kifi-message-sent-display-greyed_out .kifi-message-p {
+  color: inherit;
+}
+.kifi-message-sent-display-greyed_out .kifi-message-sent-stamp {
+  position: absolute;
+  bottom: -8px;
+  padding: 0 3px;
+  background-color: #fafafa;
+}
+.kifi-message-sent-display-greyed_out + .kifi-message-sent {
+  border-top: 0;
+}
 a.kifi-message-pic-a,
 span.kifi-message-pic-email {
   flex-shrink: 0;
@@ -118,6 +145,7 @@ span.kifi-message-pic-email {
   display: inline;
 }
 .kifi-message-body {
+  flex-grow: 1;
   margin-left: 10px;
   word-wrap: break-word;
 }
