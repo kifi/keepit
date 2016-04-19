@@ -54,23 +54,22 @@ object KeepActivityGen {
       }
 
       val noteBody = sourceAttrOpt.flatMap {
-        case (ka: KifiAttribution, _) => keep.note.map("added a note" -> _)
-        case (SlackAttribution(msg, _), _) => Some(msg.text).filter(_ != keep.url).map("shared a link in Slack" -> _)
-        case (TwitterAttribution(tweet), _) => Some(tweet.text).filter(_ != keep.url).map("tweeted a link" -> _)
+        case (ka: KifiAttribution, _) => keep.note.filter(_.nonEmpty)
+        case (SlackAttribution(msg, _), _) => Some(msg.text).filter(_ != keep.url)
+        case (TwitterAttribution(tweet), _) => Some(tweet.text).filter(_ != keep.url)
       }
 
       val source = sourceAttrOpt.flatMap { case (attr, _) => BasicKeepEventSource.fromSourceAttribution(attr) }
 
-      val noteEvent = noteBody.map {
-        case (headerDescription, note) =>
-          BasicKeepEvent(
-            id = BasicKeepEventId.NoteId(Keep.publicId(keep.id.get)),
-            author = basicAuthor.get,
-            KeepEventKind.Note,
-            header = DescriptionElements(authorElement, headerDescription),
-            body = DescriptionElements(note),
-            timestamp = keep.keptAt,
-            source = source)
+      val noteEvent = noteBody.map { note =>
+        BasicKeepEvent(
+          id = BasicKeepEventId.NoteId(Keep.publicId(keep.id.get)),
+          author = basicAuthor.get,
+          KeepEventKind.Note,
+          header = authorElement,
+          body = DescriptionElements(note),
+          timestamp = keep.keptAt,
+          source = source)
       }
       val initialEvent = BasicKeepEvent(
         id = BasicKeepEventId.InitialId(Keep.publicId(keep.id.get)),
@@ -96,7 +95,7 @@ object KeepActivityGen {
       val lastEvent = basicEvents.headOption.getOrElse(initialEvents.head)
       val newHeader = lastEvent.kind match {
         case KeepEventKind.Initial => DescriptionElements(lastEvent.author, "sent this page")
-        case KeepEventKind.Note => DescriptionElements(lastEvent.author, "added a note") // should never happen, as the note should always come with the initial keep event
+        case KeepEventKind.Note => DescriptionElements(lastEvent.author, "commented on this page") // NB(ryan): we are pretending that notes are comments
         case KeepEventKind.Comment => DescriptionElements(lastEvent.author, "commented on this page")
         case KeepEventKind.EditTitle => DescriptionElements(lastEvent.author, "edited the title")
         case KeepEventKind.ModifyRecipients => DescriptionElements(lastEvent.author, "added recipients to this discussion")
