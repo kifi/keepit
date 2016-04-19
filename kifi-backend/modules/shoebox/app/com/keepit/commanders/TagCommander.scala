@@ -293,7 +293,9 @@ class BulkTagCommander @Inject() (
   }
 
   def replaceAllForUserTag(userId: Id[User], oldTag: Hashtag, newTag: Hashtag)(implicit session: RWSession) = {
-    val renamedTags = keepTagRepo.getAllByTagAndUser(oldTag, userId).map { kt =>
+    // todo / note: Notice that the message was not updated. Worth it? Until then, skipping tags from messages.
+
+    val renamedTags = keepTagRepo.getAllByTagAndUser(oldTag, userId).filter(_.messageId.isEmpty).map { kt =>
       keepTagRepo.save(kt.copy(tag = newTag))
     }
     val keepsToChange = renamedTags.flatMap { kt =>
@@ -319,7 +321,6 @@ class BulkTagCommander @Inject() (
     }
 
     renamedTags.length
-    // todo: Clean up CollectionRepo, KeepToCollectionRepo
   }
 }
 
