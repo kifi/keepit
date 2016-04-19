@@ -59,13 +59,13 @@ class KeepActivityGenTest extends Specification with ShoeboxTestInjector {
               keepEventCommander.persistKeepEventAndUpdateEliza(keep.id.get, KeepEventData.ModifyRecipients(user.id.get, KeepRecipientsDiff.addUsers(adding)), eventTime = Some(fakeClock.now()), source = None)
               fakeClock += Hours.ONE
               val entities = adding.map(id => generateUserElement(basicUserById(id), fullName = false)).toSeq
-              DescriptionElements.formatPlain(DescriptionElements(basicUser, "added", unwordsPretty(entities), "to this discussion"))
+              DescriptionElements.formatPlain(DescriptionElements(basicUser, "sent this to", unwordsPretty(entities)))
             case (ids, false) => // libraries
               val adding = ids.map(id => Id[Library](id.id))
               keepEventCommander.persistKeepEventAndUpdateEliza(keep.id.get, KeepEventData.ModifyRecipients(user.id.get, KeepRecipientsDiff.addLibraries(adding)), eventTime = Some(fakeClock.now()), source = None)
               fakeClock += Hours.ONE
               val entities = adding.map(id => fromBasicLibrary(basicLibById(id))).toSeq
-              DescriptionElements.formatPlain(DescriptionElements(basicUser, "added", unwordsPretty(entities), "to this discussion"))
+              DescriptionElements.formatPlain(DescriptionElements(basicUser, "sent this to", unwordsPretty(entities)))
           }.toSeq
         }
 
@@ -75,7 +75,7 @@ class KeepActivityGenTest extends Specification with ShoeboxTestInjector {
         val activity = KeepActivityGen.generateKeepActivity(keep, sourceAttrOpt = None, events = events, discussionOpt = None, ktls = Seq.empty, ktus, maxEvents = 5)
 
         activity.events.size === 5 // NB(ryan): There may be 6 events because of "event-splitting" with the note
-        activity.events.map { event => DescriptionElements.formatPlain(event.header) } === (eventHeaders.reverse :+ "Benjamin Button kept this")
+        activity.events.map { event => DescriptionElements.formatPlain(event.header) } === (eventHeaders.reverse :+ "Benjamin Button sent this")
 
         val jsActivity = Json.toJson(activity)
 
