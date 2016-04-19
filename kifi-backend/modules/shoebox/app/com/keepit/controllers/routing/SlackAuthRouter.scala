@@ -204,7 +204,7 @@ class SlackAuthRouter @Inject() (
 
     val slackAuthPage = pathCommander.orgPage(org) + s"?$modelParams&slackTeamId=${slackTeamId.value}"
 
-    Redirect(slackAuthPage.absolute).withSession(request.session + (SecureSocial.OriginalUrlKey -> url)).withCookies(Cookie(PostRegIntent.onFailUrlKey, slackAuthPage.absolute))
+    Redirect(slackAuthPage.absolute).withSession(request.session + (SecureSocial.OriginalUrlKey -> url))
   }
 
   private def notFound(request: MaybeUserRequest[_]): Result = {

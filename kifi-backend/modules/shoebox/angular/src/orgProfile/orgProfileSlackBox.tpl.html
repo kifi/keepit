@@ -2,7 +2,7 @@
   <span class="kf-org-profile-slack-box-title">Get access to your Slack team's libraries of links on Kifi</span>
   <a
     class="kf-button kf-button-large kf-org-profile-slack-box-button"
-    ng-href="{{ 'https://www.kifi.com/signup/slack?slackTeamId=' + slackTeamId }}"
+    ng-href="{{ 'https://www.kifi.com/signup/slack?returnOnFail=true&slackTeamId=' + slackTeamId }}"
     target="_self"
     ng-click="linkSlack($event)"
     ng-show="!requestFailed"
