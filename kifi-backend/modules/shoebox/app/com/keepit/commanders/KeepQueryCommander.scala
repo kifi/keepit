@@ -26,7 +26,7 @@ object KeepQuery {
   // ForLibrary(libId) => keeps in library `libId`
   case class ForLibrary(libId: Id[Library]) extends Target
   // ForUri(uriId, recips) => keeps on `uriId` with k.recipients isSupersetOf recips
-  case class ForUri(uriId: Id[NormalizedURI], recipientSubset: KeepRecipients) extends Target
+  case class ForUri(uriId: Id[NormalizedURI], viewer: Id[User], recipientSubset: KeepRecipients) extends Target
 
   final case class Paging(fromId: Option[Id[Keep]], offset: Offset, limit: Limit)
   final case class Arrangement(ordering: KeepOrdering, direction: SortDirection)

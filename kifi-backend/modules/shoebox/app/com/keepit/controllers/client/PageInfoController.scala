@@ -49,7 +49,7 @@ class PageInfoController @Inject() (
     stopwatch.logTimeWith("uri_retrieved")
     uriOpt.fold(Future.successful(NewKeepInfosForPage.empty)) { uriId =>
       val query = KeepQuery(
-        target = ForUri(uriId, recipients.plusUser(viewer)), // N.B. this `plusUser` is the only thing limiting visibility, be careful when messing around here
+        target = ForUri(uriId, viewer, recipients),
         paging = KeepQuery.Paging(fromId = None, offset = Offset(0), limit = Limit(10)),
         arrangement = None
       )

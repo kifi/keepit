@@ -102,6 +102,8 @@ class OrganizationMembershipRepoImpl @Inject() (
   def table(tag: Tag) = new OrganizationMembershipTable(tag)
   initTable()
 
+  def activeRows = rows.filter(_.state === OrganizationMembershipStates.ACTIVE)
+
   override def save(model: OrganizationMembership)(implicit session: RWSession): OrganizationMembership = {
     super.save(model.copy(seq = deferredSeqNum()))
   }

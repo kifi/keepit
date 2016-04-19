@@ -103,6 +103,8 @@ class LibraryMembershipRepoImpl @Inject() (
   def table(tag: Tag) = new LibraryMemberTable(tag)
   initTable()
 
+  def activeRows = rows.filter(_.state === LibraryMembershipStates.ACTIVE)
+
   override def save(libraryMembership: LibraryMembership)(implicit session: RWSession): LibraryMembership = {
     val toSave = libraryMembership.copy(seq = deferredSeqNum())
     super.save(toSave)
