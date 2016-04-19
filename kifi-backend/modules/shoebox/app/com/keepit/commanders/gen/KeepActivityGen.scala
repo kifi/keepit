@@ -54,22 +54,23 @@ object KeepActivityGen {
       }
 
       val noteBody = sourceAttrOpt.flatMap {
-        case (ka: KifiAttribution, _) => keep.note
-        case (SlackAttribution(msg, _), _) => Some(msg.text)
-        case (TwitterAttribution(tweet), _) => Some(tweet.text)
+        case (ka: KifiAttribution, _) => keep.note.map("added a note" -> _)
+        case (SlackAttribution(msg, _), _) => Some(msg.text).filter(_ != keep.url).map("shared a link in Slack" -> _)
+        case (TwitterAttribution(tweet), _) => Some(tweet.tweet).filter(_ != keep.url).map("tweeted a link" -> _)
       }
 
       val source = sourceAttrOpt.flatMap { case (attr, _) => BasicKeepEventSource.fromSourceAttribution(attr) }
 
-      val noteEvent = noteBody.map { body =>
-        BasicKeepEvent(
-          id = BasicKeepEventId.NoteId(Keep.publicId(keep.id.get)),
-          author = basicAuthor.get,
-          KeepEventKind.Note,
-          header = DescriptionElements(authorElement, "added a note"),
-          body = DescriptionElements(noteBody),
-          timestamp = keep.keptAt,
-          source = source)
+      val noteEvent = noteBody.map {
+        case (headerDescription, note) =>
+          BasicKeepEvent(
+            id = BasicKeepEventId.NoteId(Keep.publicId(keep.id.get)),
+            author = basicAuthor.get,
+            KeepEventKind.Note,
+            header = DescriptionElements(authorElement, headerDescription),
+            body = DescriptionElements(note),
+            timestamp = keep.keptAt,
+            source = source)
       }
       val initialEvent = BasicKeepEvent(
         id = BasicKeepEventId.InitialId(Keep.publicId(keep.id.get)),
