@@ -78,7 +78,7 @@ class KeepActivityAssemblerImpl @Inject() (
   }
 
   def getActivityForKeep(keepId: Id[Keep], fromTime: Option[DateTime], limit: Int): Future[KeepActivity] = {
-    getActivityForKeeps(Set(keepId), fromTime, limit).map(_.getOrElse(keepId, throw new Exception()))
+    getActivityForKeeps(Set(keepId), fromTime, limit).map(_.getOrElse(keepId, throw new Exception(s"Could not generate activity for keep $keepId")))
   }
 
   private def keepActivityAssemblyHelper(
