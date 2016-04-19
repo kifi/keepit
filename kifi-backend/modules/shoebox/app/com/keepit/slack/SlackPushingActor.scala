@@ -223,7 +223,7 @@ class SlackPushingActor @Inject() (
           } yield slackClient.sendToSlackAsUser(user, integration.slackTeamId, integration.slackChannelId, userMsg).map(Option(_))
 
           userPush.getOrElse(Future.failed(SlackFail.NoValidToken)).recoverWith {
-            case SlackFail.NoValidToken =>
+            case SlackFail.NoValidToken | SlackErrorCode(_) =>
               slackClient.sendToSlackHoweverPossible(integration.slackTeamId, integration.slackChannelId, itemMsg.asBot).recoverWith {
                 case SlackFail.NoValidPushMethod => Future.failed(BrokenSlackIntegration(integration, None, Some(SlackFail.NoValidPushMethod)))
               }
