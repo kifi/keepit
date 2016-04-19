@@ -525,6 +525,7 @@ class KeepRepoImpl @Inject() (
     type Rows = Query[KeepTable, Keep, Seq]
     val arrangement = query.arrangement.getOrElse(Arrangement.GLOBAL_DEFAULT)
     val paging = query.paging
+    val orgVisibilities: Set[LibraryVisibility] = Set(LibraryVisibility.ORGANIZATION, LibraryVisibility.PUBLISHED)
 
     def filterByTarget(rs: Rows): Rows = query.target match {
       case ForLibrary(targetLib) =>
@@ -550,7 +551,10 @@ class KeepRepoImpl @Inject() (
               } yield ktl.keepId).exists ||
               (for {
                 om <- omRows if om.userId === viewer
-                ktl <- ktlRows if ktl.keepId === k.id && ktl.organizationId === om.organizationId
+                ktl <- ktlRows if ktl.keepId === k.id && ktl.organizationId === om.organizationId && ktl.visibility.inSet(orgVisibilities)
+              } yield ktl.keepId).exists ||
+              (for {
+                ktl <- ktlRows if ktl.keepId === k.id && ktl.visibility === (LibraryVisibility.PUBLISHED: LibraryVisibility)
               } yield ktl.keepId).exists
             )
         } yield k
