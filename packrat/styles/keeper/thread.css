@@ -94,7 +94,7 @@
   text-align: center;
   color: #b8c5d0;
   margin-top: 0;
-  margin-bottom: 0;
+  margin-bottom: 8px;
   padding: 13px;
   border-top: 1px solid #b8c5d0;
   border-bottom: 1px solid #b8c5d0;
@@ -110,6 +110,7 @@
 }
 .kifi-message-sent-display-greyed_out + .kifi-message-sent {
   border-top: 0;
+  margin-top: -8px;
 }
 a.kifi-message-pic-a,
 span.kifi-message-pic-email {
