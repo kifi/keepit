@@ -41,7 +41,7 @@ class PageInfoController @Inject() (
   private implicit val publicIdConfig: PublicIdConfiguration)
     extends UserActions with ShoeboxServiceController {
 
-  def getKeepInfosForPage(viewer: Id[User], url: String, recipients: KeepRecipients): Future[NewKeepInfosForPage] = {
+  private def getKeepInfosForPage(viewer: Id[User], url: String, recipients: KeepRecipients): Future[NewKeepInfosForPage] = {
     val stopwatch = new Stopwatch(s"[PIC-PAGE-${RandomStringUtils.randomAlphanumeric(5)}]")
     val uriOpt = db.readOnlyReplica { implicit s =>
       uriInterner.getByUri(url).map(_.id.get)
@@ -105,7 +105,10 @@ class PageInfoController @Inject() (
 
     resultIfEverythingChecksOut.fold(
       fail => Future.successful(schemaHelper.hintResponse(request.body, schema)),
-      result => result.map(ans => Ok(outputWrites.writes(ans)))
+      result => result.map { ans =>
+        if ((request.body \ "dryRun").asOpt[Boolean].getOrElse(false)) Ok(Json.obj("ok" -> true, "note" -> "dryRun"))
+        else Ok(outputWrites.writes(ans))
+      }
     )
   }
 }
