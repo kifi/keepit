@@ -41,10 +41,10 @@
       </span>
     </div>
     <div class="kf-keep-activity-event-body"
-         ng-if="body.length && activityEvent.kind !== 'initial'"
+         ng-if="body.length && activityEvent.kind !== 'note'"
          kf-activity-event-segments="body">
     </div>
-    <div class="kf-keep-card-note-container" ng-if="activityEvent.kind === 'initial'">
+    <div class="kf-keep-card-note-container" ng-if="activityEvent.kind === 'note'">
       <div class="kf-keep-card-note" ng-show="::keep.displayNote"><!--
           --><span ng-if="!keep.noteAttribution" ng-bind-html="::keep.displayNote|noteHtml"></span><!--
           --><span ng-if="keep.noteAttribution" ng-bind-html="::keep.displayNote"></span>
