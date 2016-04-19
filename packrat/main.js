@@ -462,11 +462,12 @@ var socketHandlers = {
     log('[socket:event]', keepId, activityEvent);
 
     var activity = activityData[keepId];
-    activity.events.unshift(activityEvent);
-
-    forEachTabAtLocator('/messages/' + keepId, function (tab) {
-      api.tabs.emit(tab, 'activity', { keepId: keepId, activity: activity });
-    });
+    if (activity && activity.events) {
+      activity.events.unshift(activityEvent);
+      forEachTabAtLocator('/messages/' + keepId, function (tab) {
+        api.tabs.emit(tab, 'activity', { keepId: keepId, activity: activity });
+      });
+    }
   },
   new_pic: function (name) {
     log('[socket:new_pic]', name);
