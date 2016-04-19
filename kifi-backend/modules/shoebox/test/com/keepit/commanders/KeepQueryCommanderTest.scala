@@ -77,15 +77,15 @@ class KeepQueryCommanderTest extends Specification with ShoeboxTestInjector {
         }
 
         val query = KeepQuery(
-          target = ForUri(uri, KeepRecipients.EMPTY),
+          target = ForUri(uri, user.id.get, KeepRecipients.EMPTY),
           arrangement = None,
           paging = KeepQuery.Paging(fromId = None, offset = Offset(0), limit = Limit(10))
         )
         db.readOnlyMaster { implicit s =>
-          inject[KeepQueryCommander].getKeeps(Some(user.id.get), query).length === 4
-          inject[KeepQueryCommander].getKeeps(Some(user.id.get), query.copy(target = ForUri(uri, KeepRecipients.EMPTY.plusUser(user.id.get)))).length === 2
-          inject[KeepQueryCommander].getKeeps(Some(user.id.get), query.copy(target = ForUri(uri, KeepRecipients.EMPTY.plusLibrary(lib.id.get)))).length === 2
-          inject[KeepQueryCommander].getKeeps(Some(user.id.get), query.copy(target = ForUri(uri, KeepRecipients.EMPTY.plusUser(user.id.get).plusLibrary(lib.id.get)))).length === 1
+          inject[KeepQueryCommander].getKeeps(Some(user.id.get), query).length === 3 // of the four keeps, only 3 are visible
+          inject[KeepQueryCommander].getKeeps(Some(user.id.get), query.copy(target = ForUri(uri, user.id.get, KeepRecipients.EMPTY.plusUser(user.id.get)))).length === 2
+          inject[KeepQueryCommander].getKeeps(Some(user.id.get), query.copy(target = ForUri(uri, user.id.get, KeepRecipients.EMPTY.plusLibrary(lib.id.get)))).length === 2
+          inject[KeepQueryCommander].getKeeps(Some(user.id.get), query.copy(target = ForUri(uri, user.id.get, KeepRecipients.EMPTY.plusUser(user.id.get).plusLibrary(lib.id.get)))).length === 1
         }
         1 === 1
       }
