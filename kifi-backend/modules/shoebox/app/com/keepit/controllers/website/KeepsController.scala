@@ -27,7 +27,6 @@ class KeepsController @Inject() (
   keepDecorator: KeepDecorator,
   tagCommander: TagCommander,
   keepsCommander: KeepCommander,
-  keepMutator: KeepMutator,
   keepActivityAssembler: KeepActivityAssembler,
   keepInfoAssembler: KeepInfoAssembler,
   keepExportCommander: KeepExportCommander,
@@ -136,24 +135,15 @@ class KeepsController @Inject() (
   }
 
   def editKeepNote(keepPubId: PublicId[Keep]) = UserAction(parse.tolerantJson) { request =>
-    Keep.decodePublicId(keepPubId) match {
-      case Failure(_) => KeepFail.INVALID_KEEP_ID.asErrorResponse
-      case Success(keepId) =>
-        db.readOnlyMaster { implicit s =>
-          if (permissionCommander.getKeepPermissions(keepId, Some(request.userId)).contains(KeepPermission.EDIT_KEEP))
-            keepRepo.getActive(keepId)
-          else None
-        } match {
-          case None =>
-            KeepFail.KEEP_NOT_FOUND.asErrorResponse
-          case Some(keep) =>
-            val newNote = (request.body \ "note").as[String]
-            db.readWrite { implicit session =>
-              keepMutator.updateKeepNote(request.userId, keep, newNote)
-            }
-            NoContent
-        }
-    }
+    val resultIfEverythingWentWell = for {
+      keepId <- Keep.decodePublicId(keepPubId).toOption.withLeft(KeepFail.INVALID_KEEP_ID: KeepFail)
+      newNote <- (request.body \ "note").asOpt[String].withLeft(KeepFail.COULD_NOT_PARSE: KeepFail)
+      updatedKeep <- keepsCommander.updateKeepNote(keepId, request.userId, newNote)
+    } yield updatedKeep
+    resultIfEverythingWentWell.fold(
+      fail => fail.asErrorResponse,
+      updatedKeep => NoContent
+    )
   }
 
   def deleteCollectionByTag(tag: String) = UserAction { request =>
