@@ -348,7 +348,7 @@ class AuthController @Inject() (
     provider: String,
     publicLibraryId: Option[String], intent: Option[String], libAuthToken: Option[String],
     publicOrgId: Option[String], orgAuthToken: Option[String],
-    publicKeepId: Option[String], keepAuthToken: Option[String], slackTeamId: Option[String], slackExtraScopes: Option[String]) = Action.async(parse.anyContent) { implicit request =>
+    publicKeepId: Option[String], keepAuthToken: Option[String], slackTeamId: Option[String], slackExtraScopes: Option[String], returnOnFail: Boolean) = Action.async(parse.anyContent) { implicit request =>
     val authRes = ProviderController.authenticate(provider)
     authRes(request).map {
       case badResult if badResult.header.status == 400 =>
@@ -362,7 +362,9 @@ class AuthController @Inject() (
           // This could be a POST, url encoded body. If so, there may be a registration hook for us to add to their session.
           // ie, auto follow library, auto friend, etc
 
-          val cookies = PostRegIntent.requestToCookies(request)
+          val onFailUrlCookie = if (returnOnFail) request.headers.get(REFERER).map(Cookie(onFailUrlKey, _)) else None
+
+          val cookies = PostRegIntent.requestToCookies(request) ++ onFailUrlCookie.toSeq
           result.withCookies(cookies: _*).withSession(session)
         }
     }
@@ -593,18 +595,16 @@ class AuthController @Inject() (
     Redirect(com.keepit.controllers.core.routes.AuthController.startWithSlack(slackTeamId = None).url, SEE_OTHER)
   }
 
-  def startWithSlack(slackTeamId: Option[SlackTeamId], extraScopes: Option[String], returnOnFail: Boolean) = (MaybeUserAction andThen SlackClickTracking(slackTeamId, "startWithSlack")) { implicit request =>
-    val onFailCookie = if (returnOnFail) request.headers.get(REFERER).map(Cookie(onFailUrlKey, _)) else None
+  def startWithSlack(slackTeamId: Option[SlackTeamId], extraScopes: Option[String]) = (MaybeUserAction andThen SlackClickTracking(slackTeamId, "startWithSlack")) { implicit request =>
     request match {
       case userRequest: UserRequest[_] =>
         val slackTeamIdFromCookie = request.cookies.get(Slack.slackTeamIdKey).map(_.value).map(SlackTeamId(_))
         val discardedCookies = Slack.cookieKeys.map(DiscardingCookie(_)).toSeq
         val slackTeamIdThatWasAroundForSomeMysteriousReason = slackTeamId orElse slackTeamIdFromCookie
-        Redirect(com.keepit.controllers.website.routes.SlackOAuthController.addSlackTeam(slackTeamIdThatWasAroundForSomeMysteriousReason, extraScopes).url, SEE_OTHER)
-          .withCookies(onFailCookie.toSeq: _*).discardingCookies(discardedCookies: _*).withSession(request.session)
+        Redirect(com.keepit.controllers.website.routes.SlackOAuthController.addSlackTeam(slackTeamIdThatWasAroundForSomeMysteriousReason, extraScopes).url, SEE_OTHER).discardingCookies(discardedCookies: _*).withSession(request.session)
       case nonUserRequest: NonUserRequest[_] =>
         val signupUrl = com.keepit.controllers.core.routes.AuthController.signup(provider = "slack", intent = slackTeamId.map(_ => PostRegIntent.Slack.intentValue), slackTeamId = slackTeamId.map(_.value), slackExtraScopes = extraScopes).url
-        Redirect(signupUrl, SEE_OTHER).withCookies(onFailCookie.toSeq: _*).withSession(request.session)
+        Redirect(signupUrl, SEE_OTHER).withSession(request.session)
     }
   }
 }
