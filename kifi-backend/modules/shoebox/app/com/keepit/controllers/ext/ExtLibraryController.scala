@@ -211,13 +211,14 @@ class ExtLibraryController @Inject() (
   }
 
   def addKeep(libraryPubId: PublicId[Library]) = UserAction.async(parse.tolerantJson) { request =>
+    import com.keepit.common.http._
     decodeAsync(libraryPubId) { libraryId =>
       db.readOnlyMaster { implicit s =>
         (libRepo.get(libraryId), libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, request.userId))
       } match {
         case (lib, Some(mem)) if mem.canWrite =>
           val body = request.body
-          val source = KeepSource.keeper
+          val source = request.userAgentOpt.flatMap(KeepSource.fromUserAgent).getOrElse(KeepSource.keeper)
           val hcb = heimdalContextBuilder.withRequestInfoAndSource(request, source)
           if ((body \ "guided").asOpt[Boolean].getOrElse(false)) {
             hcb += ("guided", true)

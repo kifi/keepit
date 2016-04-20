@@ -28,7 +28,8 @@ class ExtKeepController @Inject() (
 
   def createKeep() = UserAction(parse.tolerantJson) { implicit request =>
     import com.keepit.common.http._
-    implicit val context = contextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
+    val source = request.userAgentOpt.flatMap(KeepSource.fromUserAgent).getOrElse(KeepSource.keeper)
+    implicit val context = contextBuilder.withRequestInfoAndSource(request, source).build
     val rawBookmark = request.body.as[RawBookmarkRepresentation]
     val libIds = (request.body \ "libraries").as[Set[PublicId[Library]]]
     if (libIds.size > 1) BadRequest(Json.obj("error" -> "please_no_multilib_keeps_yet"))
@@ -40,7 +41,7 @@ class ExtKeepController @Inject() (
       }
     } yield lib
 
-    val response = keepInterner.internRawBookmarksWithStatus(Seq(rawBookmark), Some(request.userId), libOpt, usersAdded = Set.empty, KeepSource.keeper)
+    val response = keepInterner.internRawBookmarksWithStatus(Seq(rawBookmark), Some(request.userId), libOpt, usersAdded = Set.empty, source)
 
     response.successes.headOption.map { k =>
       Ok(Json.obj("id" -> Keep.publicId(k.id.get)))

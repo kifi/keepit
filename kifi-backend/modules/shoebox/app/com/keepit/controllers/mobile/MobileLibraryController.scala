@@ -560,6 +560,8 @@ class MobileLibraryController @Inject() (
   }
 
   def keepToLibraryV2(pubId: PublicId[Library]) = (UserAction andThen LibraryWriteAction(pubId))(parse.tolerantJson) { request =>
+    import com.keepit.common.http._
+
     val libraryId = Library.decodePublicId(pubId).get
     val jsonBody = request.body
     val title = (jsonBody \ "title").asOpt[String]
@@ -567,7 +569,7 @@ class MobileLibraryController @Inject() (
     val imageUrlOpt = (jsonBody \ "imageUrl").asOpt[String]
     val note = (jsonBody \ "note").asOpt[String]
     val rawKeep = RawBookmarkRepresentation(title, url, None, keptAt = Some(clock.now), note = note)
-    val source = KeepSource.mobile
+    val source = request.userAgentOpt.flatMap(KeepSource.fromUserAgent).getOrElse(KeepSource.mobile)
 
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
     val (keep, _) = keepsCommander.keepOne(rawKeep, request.userId, libraryId, source, SocialShare(jsonBody))

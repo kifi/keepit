@@ -47,14 +47,12 @@ class AdminBookmarksController @Inject() (
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   libraryChecker: LibraryChecker,
   clock: Clock,
-  rawKeepRepo: RawKeepRepo,
   sourceRepo: KeepSourceAttributionRepo,
   keepSourceCommander: KeepSourceCommander,
   keepEventRepo: KeepEventRepo,
   userIdentityHelper: UserIdentityHelper,
   uriInterner: NormalizedURIInterner,
   eliza: ElizaServiceClient,
-  bulkTagCommander: BulkTagCommander,
   implicit val inhouseSlackClient: InhouseSlackClient,
   implicit val imageConfig: S3ImageConfig)
     extends AdminUserActions {
@@ -312,7 +310,7 @@ class AdminBookmarksController @Inject() (
                   keepId = msg.keep,
                   eventData = eventData,
                   eventTime = msg.sentAt,
-                  source = KeepEventSource.fromMessageSource(msg.source),
+                  source = msg.source.flatMap(KeepEventSource.fromMessageSource),
                   messageId = Some(msg.id)
                 )
                 Try(db.readWrite(implicit s => keepEventRepo.save(event))).failed.map {
