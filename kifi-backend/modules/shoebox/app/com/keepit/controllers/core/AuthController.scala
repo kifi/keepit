@@ -604,7 +604,7 @@ class AuthController @Inject() (
           .withCookies(onFailCookie.toSeq: _*).discardingCookies(discardedCookies: _*).withSession(request.session)
       case nonUserRequest: NonUserRequest[_] =>
         val signupUrl = com.keepit.controllers.core.routes.AuthController.signup(provider = "slack", intent = slackTeamId.map(_ => PostRegIntent.Slack.intentValue), slackTeamId = slackTeamId.map(_.value), slackExtraScopes = extraScopes).url
-        Redirect(signupUrl, SEE_OTHER).withSession(request.session)
+        Redirect(signupUrl, SEE_OTHER).withCookies(onFailCookie.toSeq: _*).withSession(request.session)
     }
   }
 }
