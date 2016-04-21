@@ -535,6 +535,19 @@ class KeepRepoImpl @Inject() (
           if k.id === ktl.keepId &&
             ktl.libraryId === targetLib
         } yield k
+      case FirstOrder(uri, viewer) =>
+        for {
+          k <- rs if k.uriId === uri &&
+            (
+              (for {
+                ktu <- ktuRows if ktu.keepId === k.id && ktu.userId === viewer
+              } yield ktu.keepId).exists ||
+              (for {
+                lm <- lmRows if lm.userId === viewer
+                ktl <- ktlRows if ktl.keepId === k.id && ktl.libraryId === lm.libraryId
+              } yield ktl.keepId).exists
+            )
+        } yield k
       case ForUri(uri, viewer, recips) =>
         for {
           k <- rs if k.uriId === uri &&
