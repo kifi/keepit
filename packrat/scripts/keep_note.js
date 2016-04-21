@@ -566,8 +566,12 @@ k.keepNote = k.keepNote || (function () {
 
   function onInput(e) {
     var sel = window.getSelection();
-    var r = sel.getRangeAt(0);
-    var node = r.endContainer;
+    var r;
+    var node;
+    if (sel.rangeCount > 0) {
+      r = sel.getRangeAt(0);
+      node = r.endContainer;
+    }
     if (!r) {
       log('[input] no selection range');
     } else if (!r.collapsed) {
