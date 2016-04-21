@@ -3,10 +3,11 @@
 angular.module('kifi')
 
 .controller('OrgProfileSlackCtrl', [
-  '$window', '$rootScope', '$scope', '$stateParams', 'orgProfileService', 'profile', '$timeout',
-  function ($window, $rootScope, $scope, $stateParams, orgProfileService, profile, $timeout) {
+  '$window', '$rootScope', '$scope', '$stateParams', 'profileService', 'orgProfileService', 'profile', '$timeout',
+  function ($window, $rootScope, $scope, $stateParams, profileService, orgProfileService, profile, $timeout) {
     $window.document.title = profile.organization.name + ' • Kifi <3 Slack';
     $scope.organization = profile.organization;
+    $scope.showNewSlackButton = profileService.hasExperiment('sign_in_with_slack');
     var trackingType = 'orgLanding';
 
     $timeout(function () {
