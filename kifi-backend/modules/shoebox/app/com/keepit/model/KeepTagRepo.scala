@@ -80,9 +80,9 @@ class KeepTagRepoImpl @Inject() (
       .map { case (normalizedTag, q) => (q.map(_.tagName).max, q.map(_.createdAt).max, q.length) }
       .sortBy { s: (Column[Option[Hashtag]], Column[Option[DateTime]], Column[Int]) =>
         sort match {
-          case TagSorting.LastKept => s._2.desc
-          case TagSorting.Name => s._1.desc
-          case TagSorting.NumKeeps => s._3.desc
+          case TagSorting.LastKept => (s._2.desc, s._1.asc)
+          case TagSorting.Name => (s._1.asc, s._2.desc)
+          case TagSorting.NumKeeps => (s._3.desc, s._1.asc)
         }
       }.drop(offset)
       .take(pageSize)

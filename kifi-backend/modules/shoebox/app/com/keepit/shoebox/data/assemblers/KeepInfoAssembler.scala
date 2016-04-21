@@ -10,6 +10,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.SlackLog
 import com.keepit.common.mail.{ BasicContact, EmailAddress }
+import com.keepit.common.performance.Stopwatch
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ ImageSize, S3ImageConfig }
 import com.keepit.common.util.RightBias
@@ -22,6 +23,7 @@ import com.keepit.shoebox.data.assemblers.KeepInfoAssemblerConfig.KeepViewAssemb
 import com.keepit.shoebox.data.keep._
 import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
 import com.keepit.social.BasicAuthor
+import org.apache.commons.lang3.RandomStringUtils
 
 import scala.concurrent.{ ExecutionContext, Future }
 
@@ -127,15 +129,18 @@ class KeepInfoAssemblerImpl @Inject() (
     }
   }
   private def keepInfoAssemblyHelper(viewer: Option[Id[User]], keepsAndConnections: KeepsAndConnections, config: KeepViewAssemblyOptions = KeepInfoAssemblerConfig.default): Future[Map[Id[Keep], RightBias[KeepFail, NewKeepInfo]]] = {
+    val stopwatch = new Stopwatch(s"[KIA-KEEPINFO-${RandomStringUtils.randomAlphanumeric(5)}]")
     val keepsById = keepsAndConnections.keepsById
     val ktlsByKeep = keepsAndConnections.ktlsByKeep
     val ktusByKeep = keepsAndConnections.ktusByKeep
     val ktesByKeep = keepsAndConnections.ktesByKeep
     val keepSet = keepsById.keySet
+    stopwatch.logTimeWith(s"start_${keepSet.size}")
 
     val sourceInfoFut = db.readOnlyReplicaAsync { implicit s =>
       keepSourceCommander.getSourceAttributionForKeeps(keepSet)
     }
+    stopwatch.logTimeWith("launched_source")
     val imageInfoFut = keepImageCommander.getBestImagesForKeepsPatiently(keepSet, ScaleImageRequest(config.idealImageSize)).map { keepImageByKeep =>
       keepImageByKeep.collect {
         case (keepId, Some(keepImage)) => keepId -> NewKeepImageInfo(
@@ -144,9 +149,11 @@ class KeepInfoAssemblerImpl @Inject() (
         )
       }
     }
+    stopwatch.logTimeWith("launched_image")
     val permissionsFut = db.readOnlyReplicaAsync { implicit s =>
       permissionCommander.getKeepsPermissions(keepSet, viewer)
     }
+    stopwatch.logTimeWith("launched_permission")
 
     val activityFut = {
       val viewerHasActivityLogExperiment = viewer.exists { viewerId =>
@@ -157,12 +164,13 @@ class KeepInfoAssemblerImpl @Inject() (
       if (!viewerHasActivityLogExperiment) Future.successful(Map.empty[Id[Keep], KeepActivity])
       else activityAssembler.getActivityForKeeps(keepSet, fromTime = None, numEventsPerKeep = config.numEventsPerKeep)
     }
+    stopwatch.logTimeWith("launched_activity")
 
     for {
-      sourceByKeep <- sourceInfoFut
-      imagesByKeep <- imageInfoFut
-      permissionsByKeep <- permissionsFut
-      activityByKeep <- activityFut
+      sourceByKeep <- sourceInfoFut.tap(_.onComplete(_ => stopwatch.logTimeWith("complete_source")))
+      imagesByKeep <- imageInfoFut.tap(_.onComplete(_ => stopwatch.logTimeWith("complete_image")))
+      permissionsByKeep <- permissionsFut.tap(_.onComplete(_ => stopwatch.logTimeWith("complete_permission")))
+      activityByKeep <- activityFut.tap(_.onComplete(_ => stopwatch.logTimeWith("complete_activity")))
     } yield {
       val (usersById, libsById) = db.readOnlyMaster { implicit s =>
         val userSet = ktusByKeep.values.flatMap(_.map(_.userId)).toSet ++ keepsById.values.flatMap(_.userId).toSet
@@ -203,12 +211,14 @@ class KeepInfoAssemblerImpl @Inject() (
         }
       }
     }.toMap tap { result =>
+      stopwatch.logTimeWith("done")
       val failures = result.collect { case (kId, LeftSide(fail)) => kId -> fail }
       if (failures.nonEmpty) slackLog.error(s"When generating keep infos for $viewer, ran into errors: " + failures)
     }
   }
 
   private def pageInfoAssemblyHelper(viewer: Option[Id[User]], uriIds: Set[Id[NormalizedURI]], config: KeepViewAssemblyOptions = KeepInfoAssemblerConfig.default): Future[Map[Id[NormalizedURI], NewPageInfo]] = {
+    val stopwatch = new Stopwatch(s"[KIA-PAGEINFO-${RandomStringUtils.randomAlphanumeric(5)}]")
     val sortedUris = uriIds.toSeq.sorted
     val (augmentationFut, summaryFut) = {
       val augmentation = search.augment(
@@ -226,10 +236,11 @@ class KeepInfoAssemblerImpl @Inject() (
       val summary = rover.getUriSummaryByUris(uriIds)
       (augmentation, summary)
     }
+    stopwatch.logTimeWith("launched_both")
 
     for {
-      augmentationByUri <- augmentationFut
-      summaryByUri <- summaryFut
+      augmentationByUri <- augmentationFut.tap(_.onComplete(_ => stopwatch.logTimeWith("complete_augment")))
+      summaryByUri <- summaryFut.tap(_.onComplete(_ => stopwatch.logTimeWith("complete_summary")))
     } yield {
       val (usersById, libsById) = db.readOnlyMaster { implicit s =>
         val userSet = augmentationByUri.values.flatMap(_.keepers.map(_._1)).toSet
@@ -261,7 +272,9 @@ class KeepInfoAssemblerImpl @Inject() (
           history = Seq.empty
         ))
         Some(NewPageInfo(content = content, context = context)).filter(_.nonEmpty)
-      }.toMap
+      }.toMap tap { result =>
+        stopwatch.logTimeWith("done")
+      }
     }
   }
 

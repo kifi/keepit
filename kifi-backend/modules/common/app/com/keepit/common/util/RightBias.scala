@@ -25,7 +25,7 @@ final class RightBias[L, R](ethr: Either[L, R]) {
 }
 
 object RightBias {
-  val unit: RightBias[Nothing, Unit] = right(())
+  def unit[L]: RightBias[L, Unit] = right(())
 
   def cond[L, R](test: => Boolean, r: => R, l: => L): RightBias[L, R] = new RightBias(Either.cond(test, r, l))
   def right[L, R](r: => R): RightBias[L, R] = new RightBias(Right(r))

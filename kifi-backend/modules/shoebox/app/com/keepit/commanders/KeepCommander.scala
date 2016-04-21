@@ -47,6 +47,7 @@ import scala.util.{ Failure, Success, Try }
 @ImplementedBy(classOf[KeepCommanderImpl])
 trait KeepCommander {
   def updateKeepTitle(keepId: Id[Keep], userId: Id[User], title: String, source: Option[KeepEventSource]): RightBias[KeepFail, Keep]
+  def updateKeepNote(keepId: Id[Keep], userId: Id[User], newNote: String): RightBias[KeepFail, Keep]
 
   // Getting
   def getKeepsCountFuture: Future[Int]
@@ -355,7 +356,7 @@ class KeepCommanderImpl @Inject() (
         oldKeep <- keepRepo.getActive(keepId).withLeft(KeepFail.KEEP_NOT_FOUND: KeepFail)
         _ <- RightBias.unit.filter(_ => canEdit(oldKeep.id.get), KeepFail.INSUFFICIENT_PERMISSIONS: KeepFail)
       } yield {
-        (oldKeep, keepRepo.save(oldKeep.withTitle(Some(title.trim))))
+        (oldKeep, keepMutator.updateKeepTitle(oldKeep, title.trim))
       }
     }
     result.foreach {
@@ -364,8 +365,25 @@ class KeepCommanderImpl @Inject() (
           keepMutator.unsafeModifyKeepRecipients(keepId, KeepRecipientsDiff.addUser(userId), Some(userId))
           eventCommander.persistKeepEventAndUpdateEliza(keepId, KeepEventData.EditTitle(userId, oldKeep.title, newKeep.title), source, eventTime = None)
         }
+        slackPusher.schedule(newKeep.recipients.libraries)
     }
     result.map(_._2)
+  }
+
+  def updateKeepNote(keepId: Id[Keep], userId: Id[User], newNote: String): RightBias[KeepFail, Keep] = {
+    val result = db.readWrite { implicit s =>
+      for {
+        keep <- keepRepo.getActive(keepId).withLeft(KeepFail.KEEP_NOT_FOUND: KeepFail)
+        _ <- RightBias.unit.filter(_ => permissionCommander.getKeepPermissions(keepId, Some(userId)).contains(KeepPermission.EDIT_KEEP), KeepFail.INSUFFICIENT_PERMISSIONS: KeepFail)
+      } yield keepMutator.updateKeepNote(userId, keep, newNote)
+    }
+    result.foreach { newKeep =>
+      db.readWrite { implicit s =>
+        keepMutator.unsafeModifyKeepRecipients(keepId, KeepRecipientsDiff.addUser(userId), userAttribution = None)
+      }
+      slackPusher.schedule(newKeep.recipients.libraries)
+    }
+    result
   }
 
   private def postSingleKeepReporting(keep: Keep, isNewKeep: Boolean, library: Library, socialShare: SocialShare): Unit = SafeFuture {
