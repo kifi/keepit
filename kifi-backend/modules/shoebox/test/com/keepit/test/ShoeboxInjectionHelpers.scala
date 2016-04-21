@@ -50,6 +50,7 @@ trait ShoeboxInjectionHelpers { self: TestInjectorProvider =>
   def phraseRepo(implicit injector: Injector) = inject[PhraseRepo]
   def collectionRepo(implicit injector: Injector) = inject[CollectionRepo]
   def keepToCollectionRepo(implicit injector: Injector) = inject[KeepToCollectionRepo]
+  def keepTagRepo(implicit injector: Injector) = inject[KeepTagRepo]
   def electronicMailRepo(implicit injector: Injector) = inject[ElectronicMailRepo]
   def failedContentCheckRepo(implicit injector: Injector) = inject[FailedContentCheckRepo]
   def changedURIRepo(implicit injector: Injector) = inject[ChangedURIRepo]

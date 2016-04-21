@@ -79,52 +79,6 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
 
   "MobileKeepsController" should {
 
-    "allCollections" in {
-      withDb(controllerTestModules: _*) { implicit injector =>
-        val (user, collections) = db.readWrite { implicit session =>
-          val user = UserFactory.user().withName("Eishay", "Smith").withUsername("test").saved
-
-          val collectionRepo = inject[CollectionRepo]
-          val collections = collectionRepo.save(Collection(userId = user.id.get, name = Hashtag("myCollaction1"))) ::
-            collectionRepo.save(Collection(userId = user.id.get, name = Hashtag("myCollaction2"))) ::
-            collectionRepo.save(Collection(userId = user.id.get, name = Hashtag("myCollaction3"))) ::
-            Nil
-
-          val lib = LibraryFactory.library().saved
-          collections.map { c =>
-            val k = KeepFactory.keep().withLibrary(lib).saved
-            inject[KeepToCollectionRepo].save(KeepToCollection(keepId = k.id.get, collectionId = c.id.get))
-          }
-          (user, collections)
-        }
-
-        val path = com.keepit.controllers.mobile.routes.MobileKeepsController.allCollections().url
-        path === "/m/1/collections/all"
-
-        inject[FakeUserActionsHelper].setUser(user)
-        val request = FakeRequest("GET", path)
-        val result = inject[MobileKeepsController].allCollections(sort = "name")(request)
-        status(result) must equalTo(OK);
-        contentType(result) must beSome("application/json");
-
-        val (ext1, ext2, ext3) = db.readOnlyMaster { implicit session =>
-          val collections = collectionRepo.all
-          collections.length === 3
-          (collections(0).externalId, collections(1).externalId, collections(2).externalId)
-        }
-
-        val expected = Json.parse(s"""
-          {"keeps":0,
-           "collections":[
-               {"id":"myCollaction1","name":"myCollaction1","keeps":1},
-               {"id":"myCollaction2","name":"myCollaction2","keeps":1},
-               {"id":"myCollaction3","name":"myCollaction3","keeps":1}
-            ]}
-        """)
-        Json.parse(contentAsString(result)) must equalTo(expected)
-      }
-    }
-
     "edit note v2" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user, keep1, keepWithTags, keepInactive) = db.readWrite { implicit session =>
@@ -179,7 +133,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
           val currentKeep = keepRepo.get(keep1.externalId)
           currentKeep.title === Some("a real keep")
           currentKeep.note === Some("a real note")
-          keepToCollectionRepo.count === 0
+          keepTagRepo.count === 0
         }
 
         val testEditWithHashtags = editKeepInfoV2(user, keep1, Json.obj("note" -> "a real [#note]"))
