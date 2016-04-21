@@ -18,7 +18,7 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.normalizer.NormalizedURIInterner
-import com.keepit.shoebox.data.assemblers.KeepInfoAssembler
+import com.keepit.shoebox.data.assemblers.{ KeepInfoAssemblerConfig, KeepInfoAssembler }
 import com.keepit.shoebox.data.keep.NewKeepInfosForPage
 import org.apache.commons.lang3.RandomStringUtils
 import play.api.libs.json._
@@ -59,7 +59,7 @@ class PageInfoController @Inject() (
         (pageInfo, keepInfos) <- {
           // Launch these in parallel
           val pageInfoFut = keepInfoAssembler.assemblePageInfos(Some(viewer), Set(uriId)).map(_.get(uriId))
-          val keepInfosFut = keepInfoAssembler.assembleKeepInfos(Some(viewer), keepIds.toSet)
+          val keepInfosFut = keepInfoAssembler.assembleKeepInfos(Some(viewer), keepIds.toSet, config = KeepInfoAssemblerConfig.default.copy(numEventsPerKeep = 0))
           for (p <- pageInfoFut; k <- keepInfosFut) yield (p, k)
         }
       } yield {
