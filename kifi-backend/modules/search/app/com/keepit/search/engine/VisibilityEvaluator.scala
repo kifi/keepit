@@ -135,7 +135,7 @@ object KeepVisibilityEvaluator {
     myOrgIds: LongArraySet,
     filter: SearchFilter)(reader: WrappedSubReader): KeepVisibilityEvaluator = {
     val ownerIdDocValues: NumericDocValues = reader.getNumericDocValues(KeepFields.ownerIdField)
-    val userIdsDocValues: BinaryDocValues = reader.getBinaryDocValues(KeepFields.userIdsDiscoverableField)
+    val userIdsDocValues: BinaryDocValues = reader.getBinaryDocValues(KeepFields.userIdsField)
     val libraryIdsDocValues: BinaryDocValues = reader.getBinaryDocValues(KeepFields.libraryIdsField)
     val orgIdsDocValues: BinaryDocValues = reader.getBinaryDocValues(KeepFields.orgIdsField)
     val orgIdsDiscoverableDocValues: BinaryDocValues = reader.getBinaryDocValues(KeepFields.orgIdsDiscoverableField)
