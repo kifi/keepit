@@ -531,7 +531,7 @@ k.keepNote = k.keepNote || (function () {
   function onPaste(e) {
     e.preventDefault();
     var cd = e.originalEvent.clipboardData;
-    if (cd && e.originalEvent.isTrusted !== false) {
+    if (cd && e.originalEvent.isTrusted !== false && !e.pasteAlreadyHandled) {
       var pasteText = cd.getData('text/plain').replace(multipleBlankLinesRe, '\n\n');
       if (pasteText) {
         var sel = window.getSelection();
