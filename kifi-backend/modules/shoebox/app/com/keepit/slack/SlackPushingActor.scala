@@ -250,7 +250,13 @@ class SlackPushingActor @Inject() (
           }
         } tap { msgFut =>
           msgFut.onComplete {
-            case Failure(_) =>
+            case Failure(fail) =>
+              airbrake.notify(fail)
+              slackLog.error("Could not push", item match {
+                case _: PushItem.Digest => "a digest"
+                case PushItem.KeepToPush(k, ktl) => s"keep ${k.id.get.id}"
+                case PushItem.MessageToPush(k, msg) => s"msg ${msg.id.id}"
+              }, "because", fail.getMessage)
             case Success(_) =>
               implicit val contextBuilder = heimdalContextBuilder()
               val category = item match {
