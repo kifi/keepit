@@ -31,7 +31,9 @@ angular.module('kifi')
       return tryGetFullPage(pageSize, lastKeep);
     }
 
-    var feedLazyLoader = new Paginator(feedSource, 10, Paginator.DONE_WHEN_RESPONSE_IS_EMPTY);
+    var FIRST_FETCH_SIZE = 3;
+    var SUBSEQUENT_FETCH_SIZE = 10;
+    var feedLazyLoader = new Paginator(feedSource, FIRST_FETCH_SIZE, Paginator.DONE_WHEN_RESPONSE_IS_EMPTY);
 
     $scope.feed = [];
 
@@ -75,6 +77,7 @@ angular.module('kifi')
       .fetch()
       .then(function (keeps) {
         $scope.feed = keeps;
+        feedLazyLoader.fetchPageSize = SUBSEQUENT_FETCH_SIZE;
       })
       ['catch'](modalService.openGenericErrorModal);
     };
