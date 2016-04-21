@@ -107,6 +107,8 @@
   bottom: -8px;
   padding: 0 3px;
   background-color: #fafafa;
+}
+.kifi-message-sent-display-greyed_out:not(:last-child) .kifi-message-sent-stamp {
   z-index: 2;
 }
 .kifi-message-sent-display-greyed_out + .kifi-message-sent {
