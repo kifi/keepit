@@ -3,6 +3,7 @@ package com.keepit.typeahead
 import com.amazonaws.services.s3.AmazonS3
 import com.google.inject.{ Provider, Inject }
 import com.keepit.commanders._
+import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.core._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
@@ -65,6 +66,17 @@ class LibraryTypeahead @Inject() (
       }
     }
     Future.successful(filterOpt.map(filter => PersonalTypeahead(userId, filter, getInfos(userId))))
+  }
+
+  // Useful on library creation, name changes, or when it's deleted
+  def refreshForAllCollaborators(libraryId: Id[Library]): Future[Unit] = {
+    db.readOnlyReplicaAsync { implicit s =>
+      libraryMembershipRepo.getCollaboratorsByLibrary(Set(libraryId)).values.headOption
+    }.flatMap {
+      case Some(userIds) =>
+        FutureHelpers.sequentialExec(userIds)(refresh)
+      case None => Future.successful(())
+    }
   }
 
   private def getInfos(userId: Id[User])(ids: Seq[Id[Library]]): Future[Seq[LibraryTypeaheadResult]] = {
