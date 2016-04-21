@@ -185,18 +185,14 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
       val keep2 = KeepFactory.keep().withTitle("Freedom").withUser(userCaptain).withUri(uri2).withLibrary(libMurica).withKeptAt(t1.plusMinutes(15)).saved
       val keep3 = KeepFactory.keep().withTitle("McDonalds").withUser(userCaptain).withUri(uri3).withLibrary(libMurica).withKeptAt(t1.plusMinutes(30)).saved
 
-      val tag1 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = Hashtag("USA")))
-      val tag2 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = Hashtag("food")))
-
-      keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tag1.id.get))
-      keepToCollectionRepo.save(KeepToCollection(keepId = keep2.id.get, collectionId = tag1.id.get))
-      keepToCollectionRepo.save(KeepToCollection(keepId = keep3.id.get, collectionId = tag1.id.get))
-      keepToCollectionRepo.save(KeepToCollection(keepId = keep3.id.get, collectionId = tag2.id.get))
+      tagCommander.addTagsToKeep(keep1.id.get, Seq(Hashtag("tag1")), userCaptain.id, None)
+      tagCommander.addTagsToKeep(keep1.id.get, Seq(Hashtag("tag2")), userCaptain.id, None)
+      tagCommander.addTagsToKeep(keep2.id.get, Seq(Hashtag("tag2")), userCaptain.id, None)
+      tagCommander.addTagsToKeep(keep3.id.get, Seq(Hashtag("tag2")), userCaptain.id, None)
     }
     db.readOnlyMaster { implicit s =>
       keepRepo.count === 3
-      collectionRepo.count(userCaptain.id.get) === 2
-      keepToCollectionRepo.count === 4
+      keepTagRepo.count === 4
     }
     (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience)
   }
@@ -1321,7 +1317,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         val site2 = "http://www.freedom.org/"
         val site3 = "http://www.mcdonalds.com/"
 
-        val (tag1, tag2, libUSA, k1, k2, k3) = db.readWrite { implicit s =>
+        val (libUSA, k1, k2, k3) = db.readWrite { implicit s =>
           val libUSA = libraryRepo.save(Library(name = "USA", slug = LibrarySlug("usa"), ownerId = userCaptain.id.get, visibility = LibraryVisibility.DISCOVERABLE, kind = LibraryKind.USER_CREATED, memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = libUSA.id.get, userId = userCaptain.id.get, access = LibraryAccess.OWNER))
 
@@ -1334,20 +1330,13 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val keep2 = KeepFactory.keep().withTitle("Freedom").withUser(userCaptain).withUri(uri2).withLibrary(libMurica).saved
           val keep3 = KeepFactory.keep().withTitle("McDonalds").withUser(userCaptain).withUri(uri3).withLibrary(libMurica).saved
 
-          val tag1 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = Hashtag("tag1")))
-          keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tag1.id.get))
+          tagCommander.addTagsToKeep(keep1.id.get, Seq(Hashtag("tag1")), userCaptain.id, None)
+          tagCommander.addTagsToKeep(keep1.id.get, Seq(Hashtag("tag2")), userCaptain.id, None)
+          tagCommander.addTagsToKeep(keep2.id.get, Seq(Hashtag("tag2")), userCaptain.id, None)
+          tagCommander.addTagsToKeep(keep3.id.get, Seq(Hashtag("tag2")), userCaptain.id, None)
 
-          val tag2 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = Hashtag("tag2")))
-          keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tag2.id.get))
-          keepToCollectionRepo.save(KeepToCollection(keepId = keep2.id.get, collectionId = tag2.id.get))
-          keepToCollectionRepo.save(KeepToCollection(keepId = keep3.id.get, collectionId = tag2.id.get))
-
-          collectionRepo.count(userCaptain.id.get) === 2
           keepRepo.count === 3
-          keepToCollectionRepo.count === 4
-          keepToCollectionRepo.getByCollection(tag1.id.get).length === 1
-          keepToCollectionRepo.getByCollection(tag2.id.get).length === 3
-          (tag1, tag2, libUSA, keep1, keep2, keep3)
+          (libUSA, keep1, keep2, keep3)
         }
 
         val libraryCommander = inject[LibraryCommander]
@@ -1359,16 +1348,17 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         res1.right.get._2.length === 0 // all successes
         db.readOnlyMaster { implicit s =>
           keepRepo.count === 4
-          keepToCollectionRepo.count === 4
-          keepToCollectionRepo.getByCollection(tag1.id.get).length === 1
-          keepToCollectionRepo.getByCollection(tag2.id.get).length === 3
+          keepTagRepo.count === 4
+          keepTagRepo.getAllByTagAndUser(Hashtag("tag1"), userCaptain.id.get).length === 1
+          keepTagRepo.getAllByTagAndUser(Hashtag("tag2"), userCaptain.id.get).length === 3
         }
 
         // unkeep k1
+        keepCommander.unkeepManyFromLibrary(Seq(k1.externalId), libMurica.id.get, k1.userId.get)
         db.readWrite { implicit s =>
-          keepRepo.deactivate(k1)
+          //          keepRepo.deactivate(k1)
           keepRepo.pageByLibrary(libMurica.id.get, 0, 10).length === 2
-          keepToCollectionRepo.getKeepsForTag(tag2.id.get).length === 2
+          keepTagRepo.getAllByTagAndUser(Hashtag("tag2"), userCaptain.id.get).length === 2
         }
         // There should be 3 active keeps now with 'tag2' try to copy them into libMurica
         val res2 = libraryCommander.copyKeepsFromCollectionToLibrary(userCaptain.id.get, libMurica.id.get, Hashtag("tag2"))
@@ -1406,19 +1396,12 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val keep2 = KeepFactory.keep().withTitle("Freedom").withUser(userCaptain).withUri(uri2).withLibrary(libMurica).saved
           val keep3 = KeepFactory.keep().withTitle("McDonalds").withUser(userCaptain).withUri(uri3).withLibrary(libMurica).saved
 
-          val tag1 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = Hashtag("tag1")))
-          keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tag1.id.get))
+          tagCommander.addTagsToKeep(keep1.id.get, Seq(Hashtag("tag1")), userCaptain.id, None)
+          tagCommander.addTagsToKeep(keep1.id.get, Seq(Hashtag("tag2")), userCaptain.id, None)
+          tagCommander.addTagsToKeep(keep2.id.get, Seq(Hashtag("tag2")), userCaptain.id, None)
+          tagCommander.addTagsToKeep(keep3.id.get, Seq(Hashtag("tag2")), userCaptain.id, None)
 
-          val tag2 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = Hashtag("tag2")))
-          keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tag2.id.get))
-          keepToCollectionRepo.save(KeepToCollection(keepId = keep2.id.get, collectionId = tag2.id.get))
-          keepToCollectionRepo.save(KeepToCollection(keepId = keep3.id.get, collectionId = tag2.id.get))
-
-          collectionRepo.count(userCaptain.id.get) === 2
           keepRepo.count === 3
-          keepToCollectionRepo.count === 4
-          keepToCollectionRepo.getByCollection(tag1.id.get).length === 1
-          keepToCollectionRepo.getByCollection(tag2.id.get).length === 3
           (libUSA, keep2)
         }
 
