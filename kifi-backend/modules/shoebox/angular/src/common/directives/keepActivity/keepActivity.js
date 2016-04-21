@@ -56,7 +56,11 @@ angular.module('kifi')
             };
           }
 
-          $scope.activity = $scope.keep.activity.events.slice().sort(eventComparator); // don't mutate the original array, in case we need it later
+          // Filter out the note event since it is currently displayed under the initial event
+          var filterEvents = function (events) {
+            return events.filter(function (event) { return event.kind !== 'note'; });
+          };
+          $scope.activity = filterEvents($scope.keep.activity.events).sort(eventComparator); // don't mutate the original array, in case we need it later
 
           $scope.visibleCount = Math.min($scope.maxInitialComments || 3, $scope.activity.length);
           $scope.hasMoreToFetch = $scope.activity[0].kind !== 'initial';
@@ -176,10 +180,11 @@ angular.module('kifi')
             return keepService
             .getActivityForKeepId($scope.keep.pubId, lastTimestamp, batchSize || MESSAGES_PER_LOAD + 1)
             .then(function (o) {
+              var newEvents = filterEvents(o.activity.events);
               var existingNewest = _.max($scope.activity, function (c) {
                 return c.timestamp;
               });
-              var batchOldest = _.min(o.activity.events, function (c) {
+              var batchOldest = _.min(newEvents, function (c) {
                 return c.timestamp;
               });
 
@@ -187,8 +192,8 @@ angular.module('kifi')
                 fetchMessages(batchOldest.timestamp);
               }
 
-              var updatedActivity = _.uniq($scope.activity.concat(o.activity.events), 'id').sort(eventComparator);
-              if (o.activity.events.length === 0 || o.activity.events[o.activity.events.length - 1].kind === 'initial') {
+              var updatedActivity = _.uniq($scope.activity.concat(newEvents), 'id').sort(eventComparator);
+              if (newEvents.length === 0 || newEvents[newEvents.length - 1].kind === 'initial') {
                 $scope.hasMoreToFetch = false; // We're at the beginning, can't possible paginate more.
               } else if (updatedActivity.length > $scope.visibleCount) {
                 $scope.showViewPreviousComments = true;
