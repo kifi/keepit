@@ -171,6 +171,7 @@ class PermissionCommanderImpl @Inject() (
       LibraryPermission.EDIT_OWN_KEEPS,
       LibraryPermission.EDIT_OTHER_KEEPS,
       LibraryPermission.REMOVE_OWN_KEEPS,
+      LibraryPermission.REMOVE_OTHER_KEEPS,
       LibraryPermission.ADD_COMMENTS
     )
 

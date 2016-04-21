@@ -1,7 +1,7 @@
 package com.keepit.controllers.client
 
 import com.google.inject.Inject
-import com.keepit.commanders.KeepQuery.ForUri
+import com.keepit.commanders.KeepQuery.{ FirstOrder, ForUri }
 import com.keepit.common.json
 import com.keepit.common.core.anyExtensionOps
 import com.keepit.common.json.SchemaReads
@@ -18,7 +18,7 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.normalizer.NormalizedURIInterner
-import com.keepit.shoebox.data.assemblers.KeepInfoAssembler
+import com.keepit.shoebox.data.assemblers.{ KeepInfoAssemblerConfig, KeepInfoAssembler }
 import com.keepit.shoebox.data.keep.NewKeepInfosForPage
 import org.apache.commons.lang3.RandomStringUtils
 import play.api.libs.json._
@@ -40,6 +40,66 @@ class PageInfoController @Inject() (
   private implicit val defaultContext: ExecutionContext,
   private implicit val publicIdConfig: PublicIdConfiguration)
     extends UserActions with ShoeboxServiceController {
+
+  private def getKeepInfosForFirstOrderKeepsOnPage(viewer: Id[User], url: String, limit: Int): Future[NewKeepInfosForPage] = {
+    val stopwatch = new Stopwatch(s"[PIC-FOKS-${RandomStringUtils.randomAlphanumeric(5)}]")
+    val uriOpt = db.readOnlyReplica { implicit s =>
+      uriInterner.getByUri(url).map(_.id.get)
+    }
+    stopwatch.logTimeWith("uri_retrieved")
+    uriOpt.fold(Future.successful(NewKeepInfosForPage.empty)) { uriId =>
+      val query = KeepQuery(
+        target = FirstOrder(uriId, viewer),
+        paging = KeepQuery.Paging(fromId = None, offset = Offset(0), limit = Limit(limit)),
+        arrangement = None
+      )
+      for {
+        keepIds <- db.readOnlyReplicaAsync { implicit s => queryCommander.getKeeps(Some(viewer), query) }
+        _ = stopwatch.logTimeWith(s"query_complete_n_${keepIds.length}")
+        (pageInfo, keepInfos) <- {
+          // Launch these in parallel
+          val pageInfoFut = keepInfoAssembler.assemblePageInfos(Some(viewer), Set(uriId)).map(_.get(uriId))
+          val keepInfosFut = keepInfoAssembler.assembleKeepInfos(Some(viewer), keepIds.toSet, config = KeepInfoAssemblerConfig.default.copy(numEventsPerKeep = 0))
+          for (p <- pageInfoFut; k <- keepInfosFut) yield (p, k)
+        }
+      } yield {
+        stopwatch.logTimeWith("done")
+        NewKeepInfosForPage(
+          page = pageInfo,
+          keeps = keepIds.flatMap(kId => keepInfos.get(kId).flatMap(_.getRight))
+        )
+      }
+    }
+  }
+
+  private object GetFirstOrderKeepsByUri {
+    import json.SchemaReads._
+    final case class GetFirstOrderKeepsByUri(
+      url: String,
+      limit: Int)
+    val schemaReads: SchemaReads[GetFirstOrderKeepsByUri] = (
+      (__ \ 'url).readWithSchema[String] and
+      (__ \ 'limit).readNullableWithSchema[Int].map(_ getOrElse 100)
+    )(GetFirstOrderKeepsByUri.apply _)
+    implicit val reads = schemaReads.reads
+    val schema = schemaReads.schema
+    val schemaHelper = json.schemaHelper(reads)
+    val outputWrites: Writes[NewKeepInfosForPage] = NewKeepInfosForPage.writes
+  }
+  def getFirstOrderKeepsByUri() = UserAction.async(parse.tolerantJson) { implicit request =>
+    import GetFirstOrderKeepsByUri._
+    val resultIfEverythingChecksOut = for {
+      input <- request.body.asOpt[GetFirstOrderKeepsByUri].withLeft(KeepFail.COULD_NOT_PARSE: KeepFail)
+    } yield getKeepInfosForFirstOrderKeepsOnPage(request.userId, input.url, input.limit)
+
+    resultIfEverythingChecksOut.fold(
+      fail => Future.successful(schemaHelper.hintResponse(request.body, schema)),
+      result => result.map { ans =>
+        if ((request.body \ "dryRun").asOpt[Boolean].getOrElse(false)) Ok(Json.obj("ok" -> true, "note" -> "dryRun"))
+        else Ok(NewKeepInfosForPage.writes.writes(ans))
+      }
+    )
+  }
 
   private def getKeepInfosForPage(viewer: Id[User], url: String, recipients: KeepRecipients): Future[NewKeepInfosForPage] = {
     val stopwatch = new Stopwatch(s"[PIC-PAGE-${RandomStringUtils.randomAlphanumeric(5)}]")

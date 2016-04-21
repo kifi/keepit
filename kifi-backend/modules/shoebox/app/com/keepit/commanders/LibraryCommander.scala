@@ -1,6 +1,6 @@
 package com.keepit.commanders
 
-import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.google.inject.{ Provider, ImplementedBy, Inject, Singleton }
 import com.keepit.common.akka.SafeFuture
 
 import com.keepit.common.core._
@@ -19,6 +19,7 @@ import com.keepit.model._
 import com.keepit.search.SearchServiceClient
 import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
 import com.keepit.slack.models.{ SlackChannelToLibraryRepo, LibraryToSlackChannelRepo, SlackChannelToLibrary }
+import com.keepit.typeahead.LibraryTypeahead
 import com.kifi.macros.json
 import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.DateTime
@@ -85,6 +86,7 @@ class LibraryCommanderImpl @Inject() (
   searchClient: SearchServiceClient,
   libraryAnalytics: LibraryAnalytics,
   tagCommander: TagCommander,
+  libraryTypeahead: LibraryTypeahead,
   implicit val defaultContext: ExecutionContext,
   implicit val publicIdConfig: PublicIdConfiguration,
   implicit val inhouseSlackClient: InhouseSlackClient,
@@ -202,6 +204,9 @@ class LibraryCommanderImpl @Inject() (
       val newMembership = LibraryMembership(libraryId = libraryId, userId = ownerId, access = LibraryAccess.OWNER, subscribedToUpdates = true, listed = newListed)
       libraryMembershipRepo.save(newMembership.copy(id = existingMembershipOpt.flatMap(_.id)))
     }
+
+    libraryTypeahead.refreshForAllCollaborators(newLib.id.get)
+
     newLib
   }
 
@@ -331,6 +336,8 @@ class LibraryCommanderImpl @Inject() (
       )
     }
 
+    libraryTypeahead.refreshForAllCollaborators(library.id.get)
+
     // Update visibility of keeps
     // TODO(ryan): Change this method so that it operates exclusively on KTLs. Keeps should not have visibility anymore
     def updateKeepVisibility(changedVisibility: LibraryVisibility, iter: Int): Future[Unit] = Future {
@@ -422,6 +429,8 @@ class LibraryCommanderImpl @Inject() (
           case library => log.info(s"[zombieLibrary] Successfully deleted lib: $library")
         }
       }
+
+      libraryTypeahead.refreshForAllCollaborators(oldLibrary.id.get)
       searchClient.updateLibraryIndex()
       None
     }

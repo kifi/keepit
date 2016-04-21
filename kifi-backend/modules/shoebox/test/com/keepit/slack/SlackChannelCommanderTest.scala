@@ -48,7 +48,7 @@ class SlackChannelCommanderTest extends TestKitSupport with SpecificationLike wi
         db.readOnlyMaster { implicit s =>
           libraryRepo.getBySpace(org.id.get) must haveSize(libByChannel.size) // we created one library per channel
           val List(orgGeneral) = libraryRepo.getBySpaceAndKind(org.id.get, LibraryKind.SYSTEM_ORG_GENERAL).toList
-          orgGeneral.name === "#general"
+          orgGeneral.name === "General" // the General library does not change names
         }
         1 === 1
       }

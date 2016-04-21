@@ -168,7 +168,7 @@ class LibraryRepoImpl @Inject() (
     idCache.bulkGetOrElse(ids.map(LibraryIdKey)) { missingKeys =>
       val q = rows.filter(lib => lib.id.inSet(missingKeys.map(_.id)) && lib.state === LibraryStates.ACTIVE)
       q.list.map { x => LibraryIdKey(x.id.get) -> x }.toMap
-    }.map { case (key, lib) => key.id -> lib }
+    }.collect { case (key, lib) if lib.isActive => key.id -> lib }
   }
 
   override def deleteCache(library: Library)(implicit session: RSession): Unit = {

@@ -98,6 +98,7 @@ class PermissionCommanderTest extends TestKitSupport with SpecificationLike with
                 LibraryPermission.EDIT_OWN_KEEPS,
                 LibraryPermission.EDIT_OTHER_KEEPS,
                 LibraryPermission.REMOVE_OWN_KEEPS,
+                LibraryPermission.REMOVE_OTHER_KEEPS,
                 LibraryPermission.ADD_COMMENTS,
                 LibraryPermission.CREATE_SLACK_INTEGRATION
               )
@@ -120,6 +121,7 @@ class PermissionCommanderTest extends TestKitSupport with SpecificationLike with
                 LibraryPermission.EDIT_OTHER_KEEPS,
                 LibraryPermission.CREATE_SLACK_INTEGRATION,
                 LibraryPermission.REMOVE_OWN_KEEPS,
+                LibraryPermission.REMOVE_OTHER_KEEPS,
                 LibraryPermission.ADD_COMMENTS
               )
               permissionCommander.getLibraryPermissions(lib, data.member) === Set(
@@ -129,6 +131,7 @@ class PermissionCommanderTest extends TestKitSupport with SpecificationLike with
                 LibraryPermission.EDIT_OTHER_KEEPS,
                 LibraryPermission.CREATE_SLACK_INTEGRATION,
                 LibraryPermission.REMOVE_OWN_KEEPS,
+                LibraryPermission.REMOVE_OTHER_KEEPS,
                 LibraryPermission.ADD_COMMENTS
               )
               permissionCommander.getLibraryPermissions(lib, data.rando) === Set.empty
