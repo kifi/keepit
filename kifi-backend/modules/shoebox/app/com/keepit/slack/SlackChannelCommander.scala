@@ -295,8 +295,7 @@ class SlackChannelCommanderImpl @Inject() (
     val librarySpace = LibrarySpace.fromOrganizationId(organizationId)
 
     val maybeOrgGeneralLibrary = if (channel.isGeneral) {
-      val generalLib = db.readOnlyMaster { implicit s => libraryRepo.getBySpaceAndKind(librarySpace, LibraryKind.SYSTEM_ORG_GENERAL).headOption }
-      generalLib.map { lib => libraryCommander.unsafeModifyLibrary(lib, LibraryModifications(name = Some(channel.channelName.value))).modifiedLibrary }
+      db.readOnlyMaster { implicit s => libraryRepo.getBySpaceAndKind(librarySpace, LibraryKind.SYSTEM_ORG_GENERAL).headOption }
     } else None
 
     maybeOrgGeneralLibrary.map(Right(_)).getOrElse {
