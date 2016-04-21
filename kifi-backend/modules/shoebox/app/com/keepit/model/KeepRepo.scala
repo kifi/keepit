@@ -543,7 +543,7 @@ class KeepRepoImpl @Inject() (
                 ktu <- ktuRows if ktu.keepId === k.id && ktu.userId === viewer
               } yield ktu.keepId).exists ||
               (for {
-                lm <- lmRows if lm.userId === viewer
+                lm <- lmRows if lm.userId === viewer && lm.access.inSet(LibraryAccess.collaborativePermissions)
                 ktl <- ktlRows if ktl.keepId === k.id && ktl.libraryId === lm.libraryId
               } yield ktl.keepId).exists
             )
