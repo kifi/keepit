@@ -161,7 +161,7 @@ class KeepInfoAssemblerImpl @Inject() (
           userExperimentRepo.hasExperiment(viewerId, UserExperimentType.ACTIVITY_LOG)
         }
       }
-      if (!viewerHasActivityLogExperiment) Future.successful(Map.empty[Id[Keep], KeepActivity])
+      if (!viewerHasActivityLogExperiment || config.numEventsPerKeep <= 0) Future.successful(Map.empty[Id[Keep], KeepActivity])
       else activityAssembler.getActivityForKeeps(keepSet, fromTime = None, numEventsPerKeep = config.numEventsPerKeep)
     }
     stopwatch.logTimeWith("launched_activity")
