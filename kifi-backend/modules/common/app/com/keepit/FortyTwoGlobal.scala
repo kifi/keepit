@@ -298,7 +298,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
 
   private def speaksJson(request: RequestHeader) = {
     // todo: check if request.accepts works better
-    request.path.startsWith("/site/") || request.path.startsWith("/m/") || request.path.startsWith("/ext/") || request.path.startsWith("/search/") || request.path.startsWith("/eliza/")
+    request.path.startsWith("/site/") || request.path.startsWith("/m/") || request.path.startsWith("/ext/") || request.path.startsWith("/search/") || request.path.startsWith("/eliza/") || request.path.startsWith("/api/")
   }
 
 }

@@ -459,7 +459,7 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
       var $input = this.$input;
       var participants = $input.tokenInput('get');
       var users = participants.filter(function (p) { return !p.email && p.id[0] !== 'l'; });
-      var libraries = participants.filter(function (p) { return p.id[0] === 'l'; });
+      var libraries = participants.filter(function (p) { return p.id && p.id[0] === 'l' && p.id.indexOf('@') === -1; });
       var emails = participants.filter(function (p) { return p.email; });
 
       api.port.emit('track_pane_click', {

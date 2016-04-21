@@ -5,10 +5,11 @@ import java.util.UUID
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.concurrent.{ FutureHelpers, ExecutionContext }
+import com.keepit.common.concurrent.{ ReactiveLock, FutureHelpers, ExecutionContext }
 import com.keepit.common.mail.EmailAddress
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.Author
+import com.keepit.typeahead.{ LibraryResultTypeaheadKey, LibraryResultTypeaheadCache }
 import scala.concurrent.duration._
 import com.keepit.common.core._
 import com.keepit.common.db._
@@ -104,6 +105,8 @@ class KeepInternerImpl @Inject() (
   userInteractionCommander: UserInteractionCommander,
   normalizationService: NormalizationService,
   searchClient: SearchServiceClient,
+  libResCache: LibraryResultTypeaheadCache,
+  relevantSuggestedLibrariesCache: RelevantSuggestedLibrariesCache,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
     extends KeepInterner with Logging {
@@ -301,39 +304,50 @@ class KeepInternerImpl @Inject() (
     }
   }
 
+  private val reportingLock = new ReactiveLock(2)
   private def reportNewKeeps(keeps: Seq[Keep], libraryOpt: Option[Library], ctx: HeimdalContext, notifyExternalSources: Boolean): Unit = {
     if (keeps.nonEmpty) {
-      // Analytics
-      libraryOpt.foreach { lib => libraryAnalytics.keptPages(keeps, lib, ctx) }
-      keeps.groupBy(_.userId).collect { case (Some(userId), ks) => heimdalClient.processKeepAttribution(userId, ks) }
-      searchClient.updateKeepIndex()
-
-      // Make external notifications & fetch
-      if (notifyExternalSources) { // Only report first to not spam
+      // Don't block keeping for these
+      reportingLock.withLockFuture {
         SafeFuture {
-          libraryOpt.foreach { lib =>
-            libraryNewFollowersCommander.notifyFollowersOfNewKeeps(lib, keeps)
-            libToSlackProcessor.schedule(Set(lib.id.get))
-            if (KeepSource.manual.contains(keeps.head.source)) {
-              keeps.groupBy(_.userId).keySet.flatten.foreach { userId =>
-                userInteractionCommander.addInteractions(userId, Seq(LibraryInteraction(lib.id.get) -> UserInteraction.KEPT_TO_LIBRARY))
+          // Analytics & typeaheads
+          libraryOpt.foreach { lib => libraryAnalytics.keptPages(keeps, lib, ctx) }
+          keeps.groupBy(_.userId).collect {
+            case (Some(userId), ks) =>
+              libraryOpt.foreach { lib =>
+                libResCache.direct.remove(LibraryResultTypeaheadKey(userId, lib.id.get))
+                relevantSuggestedLibrariesCache.direct.remove(RelevantSuggestedLibrariesKey(userId))
+              }
+              heimdalClient.processKeepAttribution(userId, ks)
+          }
+          searchClient.updateKeepIndex()
+
+          // Make external notifications & fetch
+          if (notifyExternalSources) { // Only report first to not spam
+            libraryOpt.foreach { lib =>
+              libraryNewFollowersCommander.notifyFollowersOfNewKeeps(lib, keeps)
+              libToSlackProcessor.schedule(Set(lib.id.get))
+              if (KeepSource.manual.contains(keeps.head.source)) {
+                keeps.groupBy(_.userId).keySet.flatten.foreach { userId =>
+                  userInteractionCommander.addInteractions(userId, Seq(LibraryInteraction(lib.id.get) -> UserInteraction.KEPT_TO_LIBRARY))
+                }
               }
             }
+            FutureHelpers.sequentialExec(keeps) { keep =>
+              val nuri = db.readOnlyMaster { implicit session =>
+                normalizedURIRepo.get(keep.uriId)
+              }
+              roverClient.fetchAsap(nuri.id.get, nuri.url)
+            }
           }
-        }
-        FutureHelpers.sequentialExec(keeps) { keep =>
-          val nuri = db.readOnlyMaster { implicit session =>
-            normalizedURIRepo.get(keep.uriId)
-          }
-          roverClient.fetchAsap(nuri.id.get, nuri.url)
-        }
-      }
 
-      // Update data-dependencies
-      db.readWrite(attempts = 3) { implicit s =>
-        libraryOpt.foreach { lib =>
-          libraryRepo.updateLastKept(lib.id.get)
-          Try(libraryRepo.save(libraryRepo.getNoCache(lib.id.get).copy(keepCount = ktlRepo.getCountByLibraryId(lib.id.get)))) // wrapped in a Try because this is super deadlock prone
+          // Update data-dependencies
+          db.readWrite(attempts = 3) { implicit s =>
+            libraryOpt.foreach { lib =>
+              libraryRepo.updateLastKept(lib.id.get)
+              Try(libraryRepo.save(libraryRepo.getNoCache(lib.id.get).copy(keepCount = ktlRepo.getCountByLibraryId(lib.id.get)))) // wrapped in a Try because this is super deadlock prone
+            }
+          }
         }
       }
     }

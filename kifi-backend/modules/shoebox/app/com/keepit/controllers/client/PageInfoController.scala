@@ -1,7 +1,8 @@
 package com.keepit.controllers.client
 
 import com.google.inject.Inject
-import com.keepit.commanders.KeepQuery.ForUri
+import com.keepit.commanders.KeepQuery.{ FirstOrder, ForUri }
+import com.keepit.commanders.gen.BasicLibraryGen
 import com.keepit.common.json
 import com.keepit.common.core.anyExtensionOps
 import com.keepit.common.json.SchemaReads
@@ -20,6 +21,7 @@ import com.keepit.model._
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.shoebox.data.assemblers.KeepInfoAssembler
 import com.keepit.shoebox.data.keep.NewKeepInfosForPage
+import com.kifi.macros.json
 import org.apache.commons.lang3.RandomStringUtils
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
@@ -35,13 +37,61 @@ class PageInfoController @Inject() (
   uriInterner: NormalizedURIInterner,
   queryCommander: KeepQueryCommander,
   keepInfoAssembler: KeepInfoAssembler,
+  keepToLibraryRepo: KeepToLibraryRepo,
   clock: Clock,
+  basicLibraryGen: BasicLibraryGen,
   implicit val airbrake: AirbrakeNotifier,
   private implicit val defaultContext: ExecutionContext,
   private implicit val publicIdConfig: PublicIdConfiguration)
     extends UserActions with ShoeboxServiceController {
 
-  def getKeepInfosForPage(viewer: Id[User], url: String, recipients: KeepRecipients): Future[NewKeepInfosForPage] = {
+  private def getAllLibrariesForUserOnUrl(viewer: Id[User], url: String, limit: Int): Seq[BasicLibrary] = {
+    db.readOnlyReplica { implicit s =>
+      uriInterner.getByUri(url).map(_.id.get).fold(Seq.empty[BasicLibrary]) { uriId =>
+        val query = KeepQuery(
+          target = FirstOrder(uriId, viewer),
+          paging = KeepQuery.Paging(fromId = None, offset = Offset(0), limit = Limit(limit)),
+          arrangement = None
+        )
+        val keepIds = keepRepo.getKeepIdsForQuery(query).toSet
+        val libs = keepToLibraryRepo.getAllByKeepIds(keepIds).values.flatten.map(_.libraryId)
+        basicLibraryGen.getBasicLibraries(libs.toSet).values.toList
+      }
+    }
+  }
+
+  private object GetFirstOrderLibrariesByUri {
+    import json.SchemaReads._
+    final case class GetFirstOrderKeepsByUri(
+      url: String,
+      limit: Int)
+    val schemaReads: SchemaReads[GetFirstOrderKeepsByUri] = (
+      (__ \ 'url).readWithSchema[String] and
+      (__ \ 'limit).readNullableWithSchema[Int].map(_ getOrElse 100)
+    )(GetFirstOrderKeepsByUri.apply _)
+    implicit val reads = schemaReads.reads
+    val schema = schemaReads.schema
+    val schemaHelper = json.schemaHelper(reads)
+  }
+  def getFirstOrderLibrariesForUserByUri() = UserAction(parse.tolerantJson) { implicit request =>
+    import GetFirstOrderLibrariesByUri._
+    val resultIfEverythingChecksOut = for {
+      input <- request.body.asOpt[GetFirstOrderKeepsByUri].withLeft(KeepFail.COULD_NOT_PARSE: KeepFail)
+    } yield getAllLibrariesForUserOnUrl(request.userId, input.url, input.limit)
+
+    resultIfEverythingChecksOut.fold(
+      fail => schemaHelper.hintResponse(request.body, schema),
+      result =>
+        // Legacy formatter
+        Ok(Json.obj("keeps" -> Json.arr(
+          Json.obj("recipients" -> Json.obj(
+            "libraries" -> Json.toJson(result)
+          ))
+        )))
+    )
+  }
+
+  private def getKeepInfosForPage(viewer: Id[User], url: String, recipients: KeepRecipients): Future[NewKeepInfosForPage] = {
     val stopwatch = new Stopwatch(s"[PIC-PAGE-${RandomStringUtils.randomAlphanumeric(5)}]")
     val uriOpt = db.readOnlyReplica { implicit s =>
       uriInterner.getByUri(url).map(_.id.get)
@@ -105,7 +155,10 @@ class PageInfoController @Inject() (
 
     resultIfEverythingChecksOut.fold(
       fail => Future.successful(schemaHelper.hintResponse(request.body, schema)),
-      result => result.map(ans => Ok(outputWrites.writes(ans)))
+      result => result.map { ans =>
+        if ((request.body \ "dryRun").asOpt[Boolean].getOrElse(false)) Ok(Json.obj("ok" -> true, "note" -> "dryRun"))
+        else Ok(outputWrites.writes(ans))
+      }
     )
   }
 }

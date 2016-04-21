@@ -112,6 +112,7 @@ k.compose = k.compose || (function() {
       var cd = e.originalEvent.clipboardData;
       if (cd && e.originalEvent.isTrusted !== false) {
         e.preventDefault();
+        e.pasteAlreadyHandled = !!$d.attr('data-kifi-note');
         document.execCommand('insertText', false, cd.getData('text/plain'));
       }
     })
@@ -393,7 +394,9 @@ k.compose = k.compose || (function() {
       save: saveDraft.bind(null, $form, $to, editor),
       lookHere: k.snap.createLookHere(getDraft),
       initTagSuggest: function (keepId) {
-        k.keepNote.init($form.find('.kifi-compose-draft'), $container, keepId, editor.getRaw());
+        var $d = getDraft();
+        k.keepNote.init($d, $container, keepId, editor.getRaw());
+        $d.attr('data-kifi-note', true);
       },
       destroy: function () {
         $forms = $forms.not($form);

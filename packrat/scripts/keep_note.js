@@ -400,7 +400,7 @@ k.keepNote = k.keepNote || (function () {
           }
           data.$suggestions
             .empty()
-            .append(k.formatting.parseStringToElement(results.map(formatTagSuggestion).join('')))
+            .append(k.formatting.parseStringToElement(results.map(formatTagSuggestion).join('')).childNodes)
             .position(data.$suggestions.data('position'));
           selectSuggestion(data, data.$suggestions[0].firstChild);
         } else if (data.$suggestions) {
@@ -531,7 +531,7 @@ k.keepNote = k.keepNote || (function () {
   function onPaste(e) {
     e.preventDefault();
     var cd = e.originalEvent.clipboardData;
-    if (cd && e.originalEvent.isTrusted !== false) {
+    if (cd && e.originalEvent.isTrusted !== false && !e.pasteAlreadyHandled) {
       var pasteText = cd.getData('text/plain').replace(multipleBlankLinesRe, '\n\n');
       if (pasteText) {
         var sel = window.getSelection();
@@ -566,8 +566,12 @@ k.keepNote = k.keepNote || (function () {
 
   function onInput(e) {
     var sel = window.getSelection();
-    var r = sel.getRangeAt(0);
-    var node = r.endContainer;
+    var r;
+    var node;
+    if (sel.rangeCount > 0) {
+      r = sel.getRangeAt(0);
+      node = r.endContainer;
+    }
     if (!r) {
       log('[input] no selection range');
     } else if (!r.collapsed) {

@@ -74,7 +74,6 @@ class KeepMutatorImpl @Inject() (
   // Updates note on keep, making sure tags are in sync.
   // i.e., the note is the source of truth, and tags are added/removed appropriately
   def updateKeepNote(userId: Id[User], oldKeep: Keep, newNote: String)(implicit session: RWSession): Keep = {
-    // todo IMPORTANT: check permissions here, this lets anyone edit anyone's keep.
     val noteToPersist = Some(newNote.trim).filter(_.nonEmpty)
     val updatedKeep = oldKeep.withOwner(userId).withNote(noteToPersist)
 
@@ -84,7 +83,6 @@ class KeepMutatorImpl @Inject() (
 
     session.onTransactionSuccess {
       searchClient.updateKeepIndex()
-      slackPusher.schedule(oldKeep.recipients.libraries)
     }
 
     syncTagsFromNote(updatedKeep, userId)

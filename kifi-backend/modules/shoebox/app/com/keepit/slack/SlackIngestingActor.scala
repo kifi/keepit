@@ -56,6 +56,8 @@ class SlackIngestingActor @Inject() (
   clock: Clock,
   airbrake: AirbrakeNotifier,
   slackOnboarder: SlackOnboarder,
+  slackPushForKeepRepo: SlackPushForKeepRepo,
+  slackPushForMessageRepo: SlackPushForMessageRepo,
   orgConfigRepo: OrganizationConfigurationRepo,
   userValueRepo: UserValueRepo,
   implicit val ec: ExecutionContext,
@@ -192,15 +194,20 @@ class SlackIngestingActor @Inject() (
   private def ingestMessages(integration: SlackChannelToLibrary, settings: Option[OrganizationSettings], messages: Seq[SlackMessage]): (Option[SlackTimestamp], Set[SlackMessage]) = {
     val slackIdentities = messages.map(_.userId).map(slackUserId => (integration.slackTeamId, slackUserId)).toSet
     val blacklist = settings.flatMap(_.settingFor(ClassFeature.SlackIngestionDomainBlacklist).collect { case blk: ClassFeature.Blacklist => blk })
-    val (library, slackTeam, slackMemberships) = db.readOnlyMaster { implicit s =>
+    val (library, slackTeam, slackMemberships, pushedTimestamps) = db.readOnlyMaster { implicit s =>
       val lib = libraryRepo.get(integration.libraryId)
       val slackTeam = slackTeamRepo.getBySlackTeamId(integration.slackTeamId).getOrElse(throw new Exception(s"There is supposed to be a db-level integrity constraint for ${integration.slackTeamId}"))
       val slackMemberships = slackTeamMembershipRepo.getBySlackIdentities(slackIdentities)
-      (lib, slackTeam, slackMemberships)
+      val pushedTimestamps = messages.map(_.timestamp).minOpt.fold(Set.empty[SlackTimestamp]) { minTimestamp =>
+        slackPushForKeepRepo.getPushedTimestampsByChannel(integration.slackChannelId, minTimestamp) ++
+          slackPushForMessageRepo.getPushedTimestampsByChannel(integration.slackChannelId, minTimestamp)
+      }
+      (lib, slackTeam, slackMemberships, pushedTimestamps)
     }
     // The following block sucks, it should all happen within the same session but that KeepInterner doesn't allow it
     val rawBookmarksByUser = messages.groupBy(msg => slackMemberships.get((integration.slackTeamId, msg.userId))).collect {
-      case (membershipOpt, msgs) if !membershipOpt.exists(_.isBot) => membershipOpt.flatMap(_.userId) -> msgs.flatMap(toRawBookmarks(_, slackTeam, blacklist)).distinctBy(_.url)
+      case (membershipOpt, msgs) if !membershipOpt.exists(_.isBot) =>
+        membershipOpt.flatMap(_.userId) -> msgs.flatMap(toRawBookmarks(_, slackTeam, blacklist, pushedTimestamps)).distinctBy(_.url)
     }
     val ingestedMessages = rawBookmarksByUser.flatMap {
       case (kifiUserOpt, rawBookmarks) =>
@@ -234,9 +241,10 @@ class SlackIngestingActor @Inject() (
     (lastMessageTimestamp, ingestedMessages)
   }
 
-  private def ignoreMessage(message: SlackMessage, userIdsToIgnore: Set[SlackUserId]): Boolean = {
+  private def ignoreMessage(message: SlackMessage, userIdsToIgnore: Set[SlackUserId], timestampsToIgnore: Set[SlackTimestamp]): Boolean = {
     message.userId.value.trim.isEmpty ||
       userIdsToIgnore.contains(message.userId) ||
+      timestampsToIgnore.contains(message.timestamp) ||
       SlackUsername.doNotIngest.contains(message.username)
   }
   private def ignoreUrl(url: String, blacklist: Option[ClassFeature.Blacklist]): Boolean = {
@@ -246,8 +254,8 @@ class SlackIngestingActor @Inject() (
       urlClassifier.isSlackArchivedMessage(url)
   }
 
-  private def toRawBookmarks(message: SlackMessage, slackTeam: SlackTeam, blacklist: Option[ClassFeature.Blacklist]): Set[RawBookmarkRepresentation] = {
-    if (ignoreMessage(message, slackTeam.kifiBot.map(_.userId).toSet)) Set.empty[RawBookmarkRepresentation]
+  private def toRawBookmarks(message: SlackMessage, slackTeam: SlackTeam, blacklist: Option[ClassFeature.Blacklist], timestampsToIgnore: Set[SlackTimestamp]): Set[RawBookmarkRepresentation] = {
+    if (ignoreMessage(message, slackTeam.kifiBot.map(_.userId).toSet, timestampsToIgnore)) Set.empty[RawBookmarkRepresentation]
     else {
       val linksFromText = slackLinkPattern.findAllMatchIn(message.text).toList.flatMap { m =>
         m.subgroups.map(maybeNullStr => Option(maybeNullStr).map(_.trim).filter(_.nonEmpty)) match {

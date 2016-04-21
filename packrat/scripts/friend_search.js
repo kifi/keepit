@@ -91,7 +91,7 @@ var initFriendSearch = (function () {
     api.port.emit('search_recipients', {q: query, n: n, exclude: excludeIds.concat(ids), searchFor: searchFor }, function (recipients) {
       recipients = recipients || [];
       var contacts = recipients.filter(function (r) { return r.id[0] !== 'l'; });
-      var libraries = recipients.filter(function (r) { return r.id[0] === 'l'; });
+      var libraries = recipients.filter(function (r) { return r.id && r.id[0] === 'l' && r.id.indexOf('@') === -1; });
       var percentContacts = contacts.length / (libraries.length + contacts.length); // keep it a good mix of users + libs
       var contactsCount = Math.floor(n * percentContacts);
       contacts = contacts.slice(0, contactsCount);

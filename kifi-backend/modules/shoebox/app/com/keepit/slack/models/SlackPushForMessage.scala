@@ -56,6 +56,7 @@ object SlackPushForMessage {
 trait SlackPushForMessageRepo extends Repo[SlackPushForMessage] {
   def intern(model: SlackPushForMessage)(implicit session: RWSession): SlackPushForMessage // interns by (integrationId, messageId)
   def getEditableByIntegrationAndKeepIds(integrationId: Id[LibraryToSlackChannel], msgIds: Set[Id[Message]])(implicit session: RSession): Map[Id[Message], SlackPushForMessage]
+  def getPushedTimestampsByChannel(channel: SlackChannelId, from: SlackTimestamp)(implicit session: RSession): Set[SlackTimestamp]
 }
 
 @Singleton
@@ -100,5 +101,8 @@ class SlackPushForMessageRepoImpl @Inject() (
   }
   def getEditableByIntegrationAndKeepIds(integrationId: Id[LibraryToSlackChannel], msgIds: Set[Id[Message]])(implicit session: RSession): Map[Id[Message], SlackPushForMessage] = {
     editableRows.filter(r => r.integrationId === integrationId && r.messageId.inSet(msgIds)).list.map(mp => mp.messageId -> mp).toMap
+  }
+  def getPushedTimestampsByChannel(channel: SlackChannelId, from: SlackTimestamp)(implicit session: RSession): Set[SlackTimestamp] = {
+    activeRows.filter(r => r.slackChannelId === channel && r.timestamp >= from).map(_.timestamp).list.toSet
   }
 }

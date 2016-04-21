@@ -2,7 +2,9 @@ package com.keepit.controllers.mobile
 
 import com.keepit.commanders._
 import com.keepit.common.json
-import com.keepit.common.net.URISanitizer
+import com.keepit.common.net.{ UserAgent, URISanitizer }
+import com.keepit.common.util.RightBias
+import com.keepit.common.util.RightBias._
 import com.keepit.heimdal._
 import com.keepit.common.controller.{ UserRequest, ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.db._
@@ -22,13 +24,14 @@ import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.common.core._
 import com.keepit.common.json.TupleFormat
 
+import scala.util.Try
+
 class MobileKeepsController @Inject() (
   db: Database,
   keepRepo: KeepRepo,
   val userActionsHelper: UserActionsHelper,
   keepDecorator: KeepDecorator,
   keepsCommander: KeepCommander,
-  keepMutator: KeepMutator,
   tagCommander: TagCommander,
   normalizedURIInterner: NormalizedURIInterner,
   libraryInfoCommander: LibraryInfoCommander,
@@ -106,28 +109,20 @@ class MobileKeepsController @Inject() (
   }
 
   def editKeepInfoV2(id: ExternalId[Keep]) = UserAction(parse.tolerantJson) { request =>
-    db.readOnlyMaster { implicit s =>
-      keepRepo.getOpt(id).filter(_.isActive)
-    } match {
-      case None =>
-        NotFound(Json.obj("error" -> "not_found"))
-      case Some(keep) =>
-        val json = request.body
-        val titleOpt = (json \ "title").asOpt[String]
-        val noteOpt = (json \ "note").asOpt[String]
-
-        val titleToPersist = (titleOpt orElse keep.title) map (_.trim) filterNot (_.isEmpty)
-        val noteToPersist = (noteOpt orElse keep.note) map (_.trim) filterNot (_.isEmpty)
-
-        if (titleToPersist != keep.title || noteToPersist != keep.note) {
-          db.readWrite { implicit s =>
-            val updatedKeep = keepRepo.save(keep.withTitle(titleToPersist))
-            keepMutator.updateKeepNote(request.userId, updatedKeep, noteToPersist.getOrElse(""))
-          }
-        }
-
-        NoContent
-    }
+    val source = KeepEventSource.fromUserAgent(UserAgent(request))
+    val resultIfEverythingWentWell = for {
+      keepId <- db.readOnlyMaster { implicit s => Try(keepRepo.convertExternalId(id)).toOption }.withLeft(KeepFail.INVALID_KEEP_ID: KeepFail)
+      _ <- (request.body \ "note").asOpt[String].fold[RightBias[KeepFail, Unit]](RightBias.unit) { note =>
+        keepsCommander.updateKeepNote(keepId, request.userId, note).map(_ => ())
+      }
+      _ <- (request.body \ "title").asOpt[String].fold[RightBias[KeepFail, Unit]](RightBias.unit) { title =>
+        keepsCommander.updateKeepTitle(keepId, request.userId, title, source).map(_ => ())
+      }
+    } yield ()
+    resultIfEverythingWentWell.fold(
+      fail => fail.asErrorResponse,
+      _ => NoContent
+    )
   }
 
   def getKeepStream(limit: Int, beforeId: Option[String], afterId: Option[String], filterKind: Option[String], filterId: Option[String], maxMessagesShown: Int) = UserAction.async { request =>

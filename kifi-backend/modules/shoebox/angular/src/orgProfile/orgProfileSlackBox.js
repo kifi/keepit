@@ -11,7 +11,8 @@ angular.module('kifi')
   return {
     restrict: 'A',
     scope: {
-      organization: '='
+      organization: '=',
+      showNewSlackButton: '='
     },
     templateUrl: 'orgProfile/orgProfileSlackBox.tpl.html',
     link: function(scope) {

@@ -2,6 +2,7 @@ package com.keepit.controllers.ext
 
 import com.google.inject.Inject
 import com.keepit.commanders._
+import com.keepit.common.util.RightBias._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{ UserActions, UserActionsHelper, ShoeboxServiceController, _ }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
@@ -35,7 +36,6 @@ class ExtLibraryController @Inject() (
   libraryMembershipCommander: LibraryMembershipCommander,
   libraryImageCommander: LibraryImageCommander,
   keepsCommander: KeepCommander,
-  keepMutator: KeepMutator,
   basicUserRepo: BasicUserRepo,
   libRepo: LibraryRepo,
   libraryMembershipRepo: LibraryMembershipRepo,
@@ -309,21 +309,15 @@ class ExtLibraryController @Inject() (
   }
 
   def editKeepNote(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep]) = UserAction(parse.tolerantJson) { request =>
-    decode(libraryPubId) { libraryId =>
-      db.readOnlyMaster { implicit s =>
-        keepRepo.getOpt(keepExtId)
-      } match {
-        case None =>
-          NotFound(Json.obj("error" -> "keep_id_not_found"))
-        case Some(keep) =>
-          val body = request.body.as[JsObject]
-          val newNote = (body \ "note").as[String]
-          db.readWrite { implicit session =>
-            keepMutator.updateKeepNote(request.userId, keep, newNote)
-          }
-          NoContent
-      }
-    }
+    val resultIfEverythingWentWell = for {
+      keepId <- db.readOnlyMaster { implicit s => Try(keepRepo.convertExternalId(keepExtId)).toOption }.withLeft(KeepFail.INVALID_KEEP_ID: KeepFail)
+      newNote <- (request.body \ "note").asOpt[String].withLeft(KeepFail.COULD_NOT_PARSE: KeepFail)
+      updatedKeep <- keepsCommander.updateKeepNote(keepId, request.userId, newNote)
+    } yield updatedKeep
+    resultIfEverythingWentWell.fold(
+      fail => fail.asErrorResponse,
+      updatedKeep => NoContent
+    )
   }
 
   def suggestTags(pubId: PublicId[Library], keepId: ExternalId[Keep], query: Option[String], limit: Int) = (UserAction andThen LibraryWriteAction(pubId)).async { request =>

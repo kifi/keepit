@@ -62,7 +62,7 @@ angular.module('kifi')
             });
           }
 
-          if ($scope.editKeepNote && $scope.activityEvent && $scope.activityEvent.kind === 'initial') {
+          if ($scope.editKeepNote && $scope.activityEvent && $scope.activityEvent.kind === 'note') {
             $scope.eventActionItems.push({
               title: 'Edit Note',
               action: function (event) {
