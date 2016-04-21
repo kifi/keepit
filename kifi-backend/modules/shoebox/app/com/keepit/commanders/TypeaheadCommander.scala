@@ -470,24 +470,25 @@ class TypeaheadCommander @Inject() (
 
       (libs, collaborators, memberships, permissions, basicUserById, orgAvatarsById)
     }
-    libs.map { lib =>
-      val collabs = (collaborators.getOrElse(lib.id.get, Set.empty) - userId).map(basicUserById(_)).toSeq
-      val orgAvatarPath = lib.organizationId.flatMap { orgId => orgAvatarsById.get(orgId).map(_.imagePath) }
-      val membershipInfo = memberships.get(lib.id.get).map { mem =>
-        LibraryMembershipInfo(mem.access, mem.listed, mem.subscribedToUpdates, permissions.getOrElse(lib.id.get, Set.empty))
-      }
+    libs.collect {
+      case lib if lib.isActive =>
+        val collabs = (collaborators.getOrElse(lib.id.get, Set.empty) - userId).map(basicUserById(_)).toSeq
+        val orgAvatarPath = lib.organizationId.flatMap { orgId => orgAvatarsById.get(orgId).map(_.imagePath) }
+        val membershipInfo = memberships.get(lib.id.get).map { mem =>
+          LibraryMembershipInfo(mem.access, mem.listed, mem.subscribedToUpdates, permissions.getOrElse(lib.id.get, Set.empty))
+        }
 
-      lib.id.get -> LibraryResult(
-        id = Library.publicId(lib.id.get),
-        name = lib.name,
-        color = lib.color,
-        visibility = lib.visibility,
-        path = pathCommander.getPathForLibrary(lib),
-        hasCollaborators = collabs.nonEmpty,
-        collaborators = collabs,
-        orgAvatar = orgAvatarPath,
-        membership = membershipInfo
-      )
+        lib.id.get -> LibraryResult(
+          id = Library.publicId(lib.id.get),
+          name = lib.name,
+          color = lib.color,
+          visibility = lib.visibility,
+          path = pathCommander.getPathForLibrary(lib),
+          hasCollaborators = collabs.nonEmpty,
+          collaborators = collabs,
+          orgAvatar = orgAvatarPath,
+          membership = membershipInfo
+        )
     }
   }
 

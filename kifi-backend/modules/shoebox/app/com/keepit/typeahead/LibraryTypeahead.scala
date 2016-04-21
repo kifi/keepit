@@ -106,8 +106,8 @@ class LibraryTypeahead @Inject() (
   def getAllRelevantLibraries(id: Id[User]): Seq[(Id[Library], LibraryTypeaheadResult)] = {
     db.readOnlyReplica { implicit session =>
       libraryInfoCommander.get.getLibrariesUserCanKeepTo(id, includeOrgLibraries = true)
-    }.map {
-      case (l, mOpt, _) =>
+    }.collect {
+      case (l, mOpt, _) if l.isActive =>
         l.id.get -> LibraryTypeaheadResult(l.id.get, l.name, calcImportance(l, mOpt))
     }
   }
