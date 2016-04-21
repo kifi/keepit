@@ -44,5 +44,5 @@ GET    /api/1/libraries/:id/keeps              @com.keepit.controllers.client.Li
 # PAGES
 ##
 
-POST    /api/1/pages/query              @com.keepit.controllers.client.PageInfoController.getFirstOrderKeepsByUri()
+POST    /api/1/pages/query              @com.keepit.controllers.client.PageInfoController.getFirstOrderLibrariesForUserByUri()
 POST    /api/1/pages/intersection       @com.keepit.controllers.client.PageInfoController.getKeepsByUriAndRecipients()
