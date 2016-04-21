@@ -139,7 +139,7 @@ class KeepInfoAssemblerImpl @Inject() (
 
     val sourceInfoFut = db.readOnlyReplicaAsync { implicit s =>
       keepSourceCommander.getSourceAttributionForKeeps(keepSet)
-    }
+    } tap { _.onComplete(_ => stopwatch.logTimeWith("complete_source")) }
     stopwatch.logTimeWith("launched_source")
     val imageInfoFut = keepImageCommander.getBestImagesForKeepsPatiently(keepSet, ScaleImageRequest(config.idealImageSize)).map { keepImageByKeep =>
       keepImageByKeep.collect {
@@ -148,11 +148,12 @@ class KeepInfoAssemblerImpl @Inject() (
           dimensions = keepImage.dimensions
         )
       }
-    }
+    } tap { _.onComplete(_ => stopwatch.logTimeWith("complete_image")) }
     stopwatch.logTimeWith("launched_image")
+
     val permissionsFut = db.readOnlyReplicaAsync { implicit s =>
       permissionCommander.getKeepsPermissions(keepSet, viewer)
-    }
+    } tap { _.onComplete(_ => stopwatch.logTimeWith("complete_permission")) }
     stopwatch.logTimeWith("launched_permission")
 
     val activityFut = {
@@ -163,14 +164,14 @@ class KeepInfoAssemblerImpl @Inject() (
       }
       if (!viewerHasActivityLogExperiment || config.numEventsPerKeep <= 0) Future.successful(Map.empty[Id[Keep], KeepActivity])
       else activityAssembler.getActivityForKeeps(keepSet, fromTime = None, numEventsPerKeep = config.numEventsPerKeep)
-    }
+    } tap { _.onComplete(_ => stopwatch.logTimeWith("complete_activity")) }
     stopwatch.logTimeWith("launched_activity")
 
     for {
-      sourceByKeep <- sourceInfoFut.tap(_.onComplete(_ => stopwatch.logTimeWith("complete_source")))
-      imagesByKeep <- imageInfoFut.tap(_.onComplete(_ => stopwatch.logTimeWith("complete_image")))
-      permissionsByKeep <- permissionsFut.tap(_.onComplete(_ => stopwatch.logTimeWith("complete_permission")))
-      activityByKeep <- activityFut.tap(_.onComplete(_ => stopwatch.logTimeWith("complete_activity")))
+      sourceByKeep <- sourceInfoFut
+      imagesByKeep <- imageInfoFut
+      permissionsByKeep <- permissionsFut
+      activityByKeep <- activityFut
     } yield {
       val (usersById, libsById) = db.readOnlyMaster { implicit s =>
         val userSet = ktusByKeep.values.flatMap(_.map(_.userId)).toSet ++ keepsById.values.flatMap(_.userId).toSet
