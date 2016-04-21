@@ -64,7 +64,7 @@ object KeepActivityGen {
       val noteEvent = noteBody.map { note =>
         BasicKeepEvent(
           id = BasicKeepEventId.NoteId(Keep.publicId(keep.id.get)),
-          author = basicAuthor.get,
+          author = basicAuthor.getOrElse(BasicAuthor.Fake),
           KeepEventKind.Note,
           header = authorElement,
           body = DescriptionElements(note),
@@ -73,7 +73,7 @@ object KeepActivityGen {
       }
       val initialEvent = BasicKeepEvent(
         id = BasicKeepEventId.InitialId(Keep.publicId(keep.id.get)),
-        author = basicAuthor.get,
+        author = basicAuthor.getOrElse(BasicAuthor.Fake),
         KeepEventKind.Initial,
         header = header,
         body = DescriptionElements(),
