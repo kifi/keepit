@@ -9,7 +9,9 @@
     >
     Continue with <img class="kf-org-profile-slack-box-image" src="/img/slack-monochrome-white.2x.png" />
   </a>
-  <a class="kf-org-profile-slack-box-button-new" ng-if="showNewSlackButton" ng-href="{{ 'https://www.kifi.com/signup/slack?returnOnFail=true&slackTeamId=' + slackTeamId }}"><img src="/img/sign-in-with-slack.png" srcset="/img/sign-in-with-slack.2x.png 2x"/></a>
+  <a class="kf-org-profile-slack-box-button-new" ng-if="showNewSlackButton" ng-href="{{ 'https://www.kifi.com/signup/slack?returnOnFail=true&slackTeamId=' + slackTeamId }}" target="_self">
+    <img src="/img/sign-in-with-slack.png" srcset="/img/sign-in-with-slack.2x.png 2x"/>
+  </a>
   <div ng-if="requestFailed">
     <div ng-if="!inviteResult">
       <label class="kf-org-profile-slack-box-invite-text">Can't sign in with Slack? Ask @Kifi bot for an invite!</label>
