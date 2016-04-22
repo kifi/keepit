@@ -95,23 +95,26 @@ heightWithoutOptions = 120px
     text-overflow: ellipsis
     font-size: 18px
     font-weight: bold
-    margin-right: 2px
     padding: 0
     text-shadow: 1px 1px 1px rgba(0, 0, 0, .3)
 
   > svg
+    position: relative
+    top: 1.5px
+    left: 3px
     fill: white
     flex-shrink: 0
     width: 20px
     height: 20px
-    margin-right: 5px
-    margin-top: 1px
 
   > img
+    position: relative
+    top: 3.75px
     width: 16px
     height: 16px
-    margin-right: 8.5px
-    margin-top: 3px
+
+  > * + *
+    margin-left: 8px
 
 
 .user-lib-tooltip-authors
