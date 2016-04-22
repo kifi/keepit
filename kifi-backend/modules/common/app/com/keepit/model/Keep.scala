@@ -17,6 +17,7 @@ import com.keepit.common.time._
 import com.keepit.discussion.{ MessageSource, Message }
 import com.kifi.macros.json
 import org.joda.time.DateTime
+import play.api.data.validation.ValidationError
 import play.api.http.Status._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -164,7 +165,8 @@ class KeepByIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPlugi
 
 object KeepStates extends States[Keep]
 
-abstract class KeepSource(val value: String) {
+abstract class KeepSource(init: String) {
+  def value = init
   override def toString = value
 }
 object KeepSource extends Enumerator[KeepSource] {
@@ -202,7 +204,6 @@ object KeepSource extends Enumerator[KeepSource] {
 
   val all = _all
   def fromStr(str: String) = all.find(_.value.toLowerCase == str.toLowerCase)
-  def apply(str: String) = fromStr(str).get
 
   // will parse Kifi.com and browser ext UserAgents as "Chrome", so use KeepSource.site for more accuracy
   def fromUserAgent(agent: UserAgent): Option[KeepSource] = {
@@ -229,7 +230,7 @@ object KeepSource extends Enumerator[KeepSource] {
   val manual: Set[KeepSource] = Set(Keeper, Site, Mobile, Email)
 
   implicit val format: Format[KeepSource] = Format(
-    Reads { j => j.validate[String].map(KeepSource(_)) },
+    Reads { j => j.validate[String].flatMap(str => KeepSource.fromStr(str).map(JsSuccess(_)).getOrElse(JsError(s"Invalid KeepSource: $str"))) },
     Writes { o => JsString(o.value) }
   )
   implicit val schemaReads: SchemaReads[KeepSource] = SchemaReads.trivial("keep_source")
