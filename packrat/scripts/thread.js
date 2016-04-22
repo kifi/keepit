@@ -41,6 +41,9 @@ k.panes.thread = k.panes.thread || function () {
         } else {
           participants = o.th.participants;
         }
+        if (o.activity && o.activity.events) {
+          updateAllActivity(o.id, o.activity.events);
+        }
         k.messageHeader.init($who.find('.kifi-message-header'), o.th.thread, participants, o.keep);
       }
     },
