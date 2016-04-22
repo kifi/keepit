@@ -166,7 +166,7 @@ class SlackTeamDigestNotificationActor @Inject() (
       ingestedLinksByChannel = librariesByChannel.map {
         case (channelId, libs) =>
           val newKeepIds = ktlRepo.getByLibrariesAddedSince(libs.map(_.id.get), slackTeam.unnotifiedSince).map(_.keepId).toSet
-          val newSlackKeepsById = keepRepo.getActiveByIds(newKeepIds).filter { case (_, keep) => keep.source == KeepSource.slack }
+          val newSlackKeepsById = keepRepo.getActiveByIds(newKeepIds).filter { case (_, keep) => keep.source == KeepSource.Slack }
           val ingestedLinks = attributionRepo.getByKeepIds(newSlackKeepsById.keySet).collect {
             case (kId, SlackAttribution(msg, teamId)) if teamId == slackTeam.slackTeamId && msg.channel.id == channelId =>
               newSlackKeepsById.get(kId).map(_.url)

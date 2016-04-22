@@ -53,14 +53,14 @@ class TweetImportCommanderImpl @Inject() (urlClassifier: UrlClassifier) extends 
       }.flatten
     }
 
-    (Option(KeepSource.twitterFileImport), links)
+    (Option(KeepSource.TwitterFileImport), links)
   }
 
   def parseTwitterJson(jsons: Seq[JsObject]): (Option[KeepSource], List[Bookmark]) = {
     val links = twitterJsonToRawTweets(jsons).collect {
       case tweet if tweet.entities.urls.nonEmpty => rawTweetToBookmarks(tweet)
     }.flatten
-    (Option(KeepSource.twitterSync), links.toList)
+    (Option(KeepSource.TwitterSync), links.toList)
   }
 
   private def rawTweetToBookmarks(tweet: RawTweet): Seq[Bookmark] = {

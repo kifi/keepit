@@ -135,7 +135,7 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
         userId = Some(Id[User](1)),
         uriId = Id[NormalizedURI](1),
         state = State[CortexKeep]("active"),
-        source = KeepSource.keeper,
+        source = KeepSource.Keeper,
         seq = SequenceNumber[CortexKeep](1L)
       ),
         CortexKeep(
@@ -147,7 +147,7 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
           userId = Some(Id[User](1)),
           uriId = Id[NormalizedURI](2),
           state = State[CortexKeep]("active"),
-          source = KeepSource.keeper,
+          source = KeepSource.Keeper,
           seq = SequenceNumber[CortexKeep](2L)
         ),
 
@@ -160,7 +160,7 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
           userId = Some(Id[User](1)),
           uriId = Id[NormalizedURI](3),
           state = State[CortexKeep]("inactive"),
-          source = KeepSource.keeper,
+          source = KeepSource.Keeper,
           seq = SequenceNumber[CortexKeep](3L)
         )
       )
@@ -319,7 +319,7 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
         userId = Some(Id[User](1)),
         uriId = Id[NormalizedURI](1),
         state = State[CortexKeep]("active"),
-        source = KeepSource.keeper,
+        source = KeepSource.Keeper,
         seq = SequenceNumber[CortexKeep](1L)
       ),
         CortexKeep(
@@ -331,7 +331,7 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
           userId = Some(Id[User](1)),
           uriId = Id[NormalizedURI](2),
           state = State[CortexKeep]("active"),
-          source = KeepSource.bookmarkImport,
+          source = KeepSource.BookmarkImport,
           seq = SequenceNumber[CortexKeep](2L)
         ))
 

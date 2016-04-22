@@ -47,14 +47,12 @@ class AdminBookmarksController @Inject() (
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   libraryChecker: LibraryChecker,
   clock: Clock,
-  rawKeepRepo: RawKeepRepo,
   sourceRepo: KeepSourceAttributionRepo,
   keepSourceCommander: KeepSourceCommander,
   keepEventRepo: KeepEventRepo,
   userIdentityHelper: UserIdentityHelper,
   uriInterner: NormalizedURIInterner,
   eliza: ElizaServiceClient,
-  bulkTagCommander: BulkTagCommander,
   implicit val inhouseSlackClient: InhouseSlackClient,
   implicit val imageConfig: S3ImageConfig)
     extends AdminUserActions {
@@ -159,12 +157,12 @@ class AdminBookmarksController @Inject() (
       counts <- bookmarkTodayAllCountsFuture
     } yield {
       val pageCount: Int = overallCount / PAGE_SIZE + 1
-      val keeperKeepCount = counts.find(_._1 == KeepSource.keeper).map(_._2)
+      val keeperKeepCount = counts.find(_._1 == KeepSource.Keeper).map(_._2)
       val total = counts.map(_._2).sum
       val tweakedCounts = counts.map {
-        case cnt if cnt._1 == KeepSource.bookmarkFileImport => ("Unknown/other file import", cnt._2)
-        case cnt if cnt._1 == KeepSource.bookmarkImport => ("Browser bookmark import", cnt._2)
-        case cnt if cnt._1 == KeepSource.default => ("Default new user keeps", cnt._2)
+        case cnt if cnt._1 == KeepSource.BookmarkFileImport => ("Unknown/other file import", cnt._2)
+        case cnt if cnt._1 == KeepSource.BookmarkImport => ("Browser bookmark import", cnt._2)
+        case cnt if cnt._1 == KeepSource.Default => ("Default new user keeps", cnt._2)
         case cnt => (cnt._1.value, cnt._2)
       }.sortBy(v => -v._2)
       Ok(html.admin.bookmarks(bookmarksAndUsers, page, overallCount, pageCount, keeperKeepCount, tweakedCounts, total))
@@ -249,8 +247,8 @@ class AdminBookmarksController @Inject() (
     val chunkSize = 100
     val numPages = limit / chunkSize
     val enum = ChunkedResponseHelper.chunkedFuture(1 to numPages) { page =>
-      val keeps = db.readOnlyMaster(implicit s => keepRepo.pageAscendingWithUserExcludingSources(fromId, chunkSize, excludeStates = Set.empty, excludeSources = Set(KeepSource.slack, KeepSource.twitterFileImport, KeepSource.twitterSync)))
-      def mightBeDiscussion(k: Keep) = k.source == KeepSource.discussion || (k.isActive && k.recipients.libraries.isEmpty && k.recipients.users.exists(uid => !k.userId.contains(uid)))
+      val keeps = db.readOnlyMaster(implicit s => keepRepo.pageAscendingWithUserExcludingSources(fromId, chunkSize, excludeStates = Set.empty, excludeSources = Set(KeepSource.Slack, KeepSource.TwitterFileImport, KeepSource.TwitterSync)))
+      def mightBeDiscussion(k: Keep) = k.source == KeepSource.Discussion || (k.isActive && k.recipients.libraries.isEmpty && k.recipients.users.exists(uid => !k.userId.contains(uid)))
       val (discussionKeeps, otherKeeps) = keeps.partition(mightBeDiscussion)
       val discussionConnectionsFut = eliza.getInitialRecipientsByKeepId(discussionKeeps.map(_.id.get).toSet).map { connectionsByKeep =>
         discussionKeeps.flatMap { keep =>
@@ -312,7 +310,7 @@ class AdminBookmarksController @Inject() (
                   keepId = msg.keep,
                   eventData = eventData,
                   eventTime = msg.sentAt,
-                  source = KeepEventSource.fromMessageSource(msg.source),
+                  source = msg.source.flatMap(KeepEventSource.fromMessageSource),
                   messageId = Some(msg.id)
                 )
                 Try(db.readWrite(implicit s => keepEventRepo.save(event))).failed.map {

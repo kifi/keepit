@@ -20,7 +20,7 @@ object KeepFactory {
       title = None,
       keptAt = currentDateTime.minusYears(10).plusMinutes(idx.incrementAndGet().toInt),
       userId = Some(userId),
-      source = KeepSource.keeper,
+      source = KeepSource.Keeper,
       note = None,
       recipients = KeepRecipients(libraries = Set.empty, users = Set(userId), emails = Set.empty),
       originalKeeperId = Some(userId),
