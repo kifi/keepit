@@ -4,13 +4,13 @@ import com.keepit.common.crypto.PublicId
 import com.keepit.common.path.Path
 import com.keepit.slack.models.SlackChannelName
 import com.keepit.social.BasicUser
-import com.kifi.macros.json
+import com.kifi.macros.{ jsonstrict, json }
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
-@json case class BasicSlackChannel(slackChannelName: SlackChannelName)
-@json case class LiteLibrarySlackInfo(toSlackChannels: Seq[BasicSlackChannel]) // everything needed for slack UI on libraries
+@jsonstrict case class BasicSlackChannel(slackChannelName: SlackChannelName)
+@jsonstrict case class LiteLibrarySlackInfo(toSlackChannels: Seq[BasicSlackChannel]) // everything needed for slack UI on libraries
 
 case class LibraryCardInfo(
   id: PublicId[Library],
