@@ -76,7 +76,7 @@ trait MessagingCommander {
   def unmuteThreadForNonUser(id: Id[NonUserThread]): Boolean
   def setUserThreadMuteState(userId: Id[User], keepId: Id[Keep], mute: Boolean)(implicit context: HeimdalContext): Boolean
   def setNonUserThreadMuteState(id: Id[NonUserThread], mute: Boolean): Boolean
-  def addParticipantsToThread(adderUserId: Id[User], keepId: Id[Keep], newUsers: Seq[Id[User]], emailContacts: Seq[BasicContact],
+  def addParticipantsToThread(adderUserId: Id[User], keepId: Id[Keep], newUsers: Seq[Id[User]], emailContacts: Seq[BasicContact], newLibraries: Seq[Id[Library]],
     orgIds: Seq[Id[Organization]], source: Option[KeepEventSource], updateShoebox: Boolean)(implicit context: HeimdalContext): Future[Boolean]
 
   def getChatter(userId: Id[User], urls: Seq[String]): Future[Map[String, Seq[Id[Keep]]]]
@@ -482,7 +482,7 @@ class MessagingCommanderImpl @Inject() (
 
   // todo(cam): make this `editParticipantsOnThread` with inactivation behavior
   def addParticipantsToThread(adderUserId: Id[User], keepId: Id[Keep],
-    newUsers: Seq[Id[User]], emailContacts: Seq[BasicContact], orgIds: Seq[Id[Organization]],
+    newUsers: Seq[Id[User]], emailContacts: Seq[BasicContact], newLibraries: Seq[Id[Library]], orgIds: Seq[Id[Organization]],
     source: Option[KeepEventSource], updateShoebox: Boolean)(implicit context: HeimdalContext): Future[Boolean] = {
     val newUserParticipantsFuture = Future.successful(newUsers)
     val newNonUserParticipantsFuture = constructNonUserRecipients(adderUserId, emailContacts)
@@ -513,7 +513,7 @@ class MessagingCommanderImpl @Inject() (
         val actuallyNewUsers = (newUserParticipants ++ newOrgParticipants).filterNot(oldThread.containsUser)
         val actuallyNewNonUsers = newNonUserParticipants.filterNot(oldThread.containsNonUser)
 
-        if (actuallyNewNonUsers.isEmpty && actuallyNewUsers.isEmpty) {
+        if (actuallyNewNonUsers.isEmpty && actuallyNewUsers.isEmpty && newLibraries.isEmpty) {
           None
         } else {
           // this block might be unnecessary since ElizaDiscussionCommander.addParticipantsToThread is the only caller of this method and already does all this interning.
@@ -542,13 +542,13 @@ class MessagingCommanderImpl @Inject() (
             ))
           }
 
-          Some((actuallyNewUsers, actuallyNewNonUsers, message, thread))
+          Some((actuallyNewUsers, actuallyNewNonUsers, newLibraries, message, thread))
 
         }
       }
 
       resultInfoOpt.exists {
-        case (newUsers, newNonUsers, message, thread) =>
+        case (newUsers, newNonUsers, newLibraries, message, thread) =>
 
           SafeFuture {
             db.readOnlyMaster { implicit session =>
@@ -561,7 +561,7 @@ class MessagingCommanderImpl @Inject() (
             shoebox.editRecipientsOnKeep(adderUserId, keepId, KeepRecipientsDiff(DeltaSet.addOnly(newUsers.toSet), libraries = DeltaSet.empty, DeltaSet.addOnly(newEmails.toSet)), persistKeepEvent = true, source)
           }
 
-          if (newUsers.nonEmpty || newNonUsers.nonEmpty) {
+          if (newUsers.nonEmpty || newNonUsers.nonEmpty || newLibraries.nonEmpty) {
             notificationDeliveryCommander.notifyAddParticipants(adderUserId, newUsers, newNonUsers, thread, message, source)
             messagingAnalytics.addedParticipantsToConversation(adderUserId, newUsers, newNonUsers, thread, source, context)
           }

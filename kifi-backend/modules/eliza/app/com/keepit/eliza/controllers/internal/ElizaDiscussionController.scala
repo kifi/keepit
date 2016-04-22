@@ -124,8 +124,8 @@ class ElizaDiscussionController @Inject() (
     import EditParticipantsOnKeep._
     implicit val context = heimdalContextBuilder().build
     val input = request.body.as[Request]
-    val KeepRecipientsDiff(users, _, emails) = input.diff
-    discussionCommander.editParticipantsOnKeep(input.keepId, input.editor, users.added.toSeq, emails.added.map(BasicContact(_)).toSeq, orgs = Seq.empty, input.source, updateShoebox = false).map { success =>
+    val KeepRecipientsDiff(users, libraries, emails) = input.diff
+    discussionCommander.editParticipantsOnKeep(input.keepId, input.editor, users.added.toSeq, emails.added.map(BasicContact(_)).toSeq, libraries.added.toSeq, orgs = Seq.empty, input.source, updateShoebox = false).map { success =>
       val output = Response(success)
       Ok(Json.toJson(output))
     }
