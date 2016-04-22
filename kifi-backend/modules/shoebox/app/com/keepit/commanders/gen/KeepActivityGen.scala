@@ -42,7 +42,7 @@ object KeepActivityGen {
         case Some(KifiAttribution(keptBy, _, users, emails, libraries, _)) =>
           val nonKeeperRecipients = users.filter(_.externalId != keptBy.externalId)
           val recipientsElement = DescriptionElements.unwordsPretty(Seq(nonKeeperRecipients.map(fromBasicUser).toSeq, emails.map(e => fromText(e.address)).toSeq, libraries.map(fromBasicLibrary).toSeq).flatten)
-          val actionElement = if (recipientsElement.flatten.nonEmpty) DescriptionElements("sent this to", recipientsElement) else DescriptionElements("sent this page")
+          val actionElement = if (recipientsElement.flatten.nonEmpty) DescriptionElements("sent this to", recipientsElement) else DescriptionElements("sent this")
 
           DescriptionElements(authorElement, actionElement)
         case _ =>
@@ -94,11 +94,11 @@ object KeepActivityGen {
     val latestEvent = {
       val lastEvent = basicEvents.headOption.getOrElse(initialEvents.head)
       val newHeader = lastEvent.kind match {
-        case KeepEventKind.Initial => DescriptionElements(lastEvent.author, "sent this page")
-        case KeepEventKind.Note => DescriptionElements(lastEvent.author, "commented on this page") // NB(ryan): we are pretending that notes are comments
-        case KeepEventKind.Comment => DescriptionElements(lastEvent.author, "commented on this page")
+        case KeepEventKind.Initial => DescriptionElements(lastEvent.author, "sent this")
+        case KeepEventKind.Note => DescriptionElements(lastEvent.author, "commented on this") // NB(ryan): we are pretending that notes are comments
+        case KeepEventKind.Comment => DescriptionElements(lastEvent.author, "commented on this")
         case KeepEventKind.EditTitle => DescriptionElements(lastEvent.author, "edited the title")
-        case KeepEventKind.ModifyRecipients => DescriptionElements(lastEvent.author, "added recipients to this discussion")
+        case KeepEventKind.ModifyRecipients => DescriptionElements(lastEvent.author, "sent this")
       }
       lastEvent.withHeader(newHeader)
     }
@@ -158,7 +158,7 @@ object KeepActivityGen {
       fromLib <- info.libById.get(libraries.removed.head)
       toLib <- info.libById.get(libraries.added.head)
     } yield {
-      DescriptionElements("moved this discussion from", fromLib, "to", toLib)
+      DescriptionElements("moved this from", fromLib, "to", toLib)
     }
     else None
   }
