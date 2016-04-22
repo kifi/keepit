@@ -26,7 +26,7 @@ trait ElizaDiscussionCommander {
   def getCrossServiceDiscussionsForKeeps(keepIds: Set[Id[Keep]], fromTime: Option[DateTime], maxMessagesShown: Int): Map[Id[Keep], CrossServiceDiscussion]
   def syncAddParticipants(keepId: Id[Keep], event: KeepEventData.ModifyRecipients, source: Option[KeepEventSource]): Future[Unit]
   def getEmailParticipantsForKeeps(keepIds: Set[Id[Keep]]): Map[Id[Keep], Map[EmailAddress, (Id[User], DateTime)]]
-  def sendMessage(userId: Id[User], txt: String, keepId: Id[Keep], source: Option[MessageSource] = None)(implicit context: HeimdalContext): Future[Message]
+  def sendMessage(userId: Id[User], txt: String, keepId: Id[Keep], source: Option[MessageSource])(implicit context: HeimdalContext): Future[Message]
   def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], newUsers: Seq[Id[User]], newNonUsers: Seq[BasicContact], libraries: Seq[Id[Library]], orgs: Seq[Id[Organization]], source: Option[KeepEventSource], updateShoebox: Boolean)(implicit context: HeimdalContext): Future[Boolean]
   def muteThread(userId: Id[User], keepId: Id[Keep])(implicit context: HeimdalContext): Future[Boolean]
   def unmuteThread(userId: Id[User], keepId: Id[Keep])(implicit context: HeimdalContext): Future[Boolean]

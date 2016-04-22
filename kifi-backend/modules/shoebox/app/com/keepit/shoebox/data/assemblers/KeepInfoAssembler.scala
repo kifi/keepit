@@ -26,6 +26,7 @@ import com.keepit.social.BasicAuthor
 import org.apache.commons.lang3.RandomStringUtils
 
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.Try
 
 @ImplementedBy(classOf[KeepInfoAssemblerImpl])
 trait KeepInfoAssembler {
@@ -36,14 +37,20 @@ trait KeepInfoAssembler {
 
 object KeepInfoAssemblerConfig {
   final case class KeepViewAssemblyOptions(
-    idealImageSize: ImageSize,
-    numEventsPerKeep: Int,
-    showPublishedLibraries: Boolean,
-    numContextualKeeps: Int,
-    numContextualKeepers: Int,
-    numContextualLibraries: Int,
-    numContextualTags: Int,
-    sanitizeUrls: Boolean)
+      idealImageSize: ImageSize,
+      numEventsPerKeep: Int,
+      showPublishedLibraries: Boolean,
+      numContextualKeeps: Int,
+      numContextualKeepers: Int,
+      numContextualLibraries: Int,
+      numContextualTags: Int,
+      sanitizeUrls: Boolean) {
+    def withQueryString(qs: Map[String, Seq[String]]): KeepViewAssemblyOptions = {
+      val qsNumEventsPerKeep = qs.get("numEventsPerKeep").flatMap(_.headOption.flatMap(str => Try(str.toInt).toOption))
+
+      qsNumEventsPerKeep.fold(this)(n => this.copy(numEventsPerKeep = n))
+    }
+  }
 
   val default = KeepViewAssemblyOptions(
     idealImageSize = ProcessedImageSize.Large.idealSize,

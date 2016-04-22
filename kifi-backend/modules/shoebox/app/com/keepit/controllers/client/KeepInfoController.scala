@@ -16,7 +16,7 @@ import com.keepit.common.time._
 import com.keepit.common.util.{ TimedComputation, RightBias }
 import com.keepit.common.util.RightBias.FromOption
 import com.keepit.model._
-import com.keepit.shoebox.data.assemblers.{ KeepActivityAssembler, KeepInfoAssembler }
+import com.keepit.shoebox.data.assemblers.{ KeepInfoAssemblerConfig, KeepActivityAssembler, KeepInfoAssembler }
 import com.keepit.slack.{ InhouseSlackClient, InhouseSlackChannel }
 import com.kifi.macros.json
 import org.apache.commons.lang3.RandomStringUtils
@@ -47,7 +47,7 @@ class KeepInfoController @Inject() (
 
   def getKeepView(pubId: PublicId[Keep]) = MaybeUserAction.async { implicit request =>
     val keepId = Keep.decodePublicId(pubId).get
-    keepInfoAssembler.assembleKeepViews(request.userIdOpt, Set(keepId)).map { viewMap =>
+    keepInfoAssembler.assembleKeepViews(request.userIdOpt, Set(keepId), config = KeepInfoAssemblerConfig.default.withQueryString(request.queryString)).map { viewMap =>
       viewMap.getOrElse(keepId, RightBias.left(KeepFail.KEEP_NOT_FOUND)).fold(
         fail => fail.asErrorResponse,
         view => Ok(Json.toJson(view))
@@ -69,7 +69,7 @@ class KeepInfoController @Inject() (
         keepRepo.getRecentKeepsByActivity(request.userId, limit = limit, beforeIdOpt = ugh, afterIdOpt = None, filterOpt = None).map(_._1.id.get)
       }
       stopwatch.logTimeWith(s"query_complete_n_${keepIds.length}")
-      keepInfoAssembler.assembleKeepViews(request.userIdOpt, keepSet = keepIds.toSet).map { viewMap =>
+      keepInfoAssembler.assembleKeepViews(request.userIdOpt, keepSet = keepIds.toSet, config = KeepInfoAssemblerConfig.default.withQueryString(request.queryString)).map { viewMap =>
         stopwatch.logTimeWith("done")
         Ok(Json.obj("keeps" -> keepIds.flatMap(kId => viewMap.get(kId).flatMap(_.getRight))))
       }
@@ -92,7 +92,7 @@ class KeepInfoController @Inject() (
 
   @json case class RecipientSuggestion(query: Option[String], results: Seq[JsObject /* TypeaheadResult */ ], mayHaveMore: Boolean, limit: Option[Int], offset: Option[Int])
   def suggestRecipient(query: Option[String], limit: Option[Int], offset: Option[Int], requested: Option[String]) = UserAction.async { request =>
-    val requestedSet = requested.map(_.split(",").map(_.trim).flatMap(TypeaheadRequest.applyOpt).toSet).filter(_.nonEmpty).getOrElse(TypeaheadRequest.all)
+    val requestedSet = requested.map(_.split(',').map(_.trim).flatMap(TypeaheadRequest.applyOpt).toSet).filter(_.nonEmpty).getOrElse(TypeaheadRequest.all)
     typeaheadCommander.searchForKeepRecipients(request.userId, query.getOrElse(""), limit, offset, requestedSet).map { suggestions =>
       val body = suggestions.take(limit.getOrElse(20)).collect {
         case u: UserContactResult => Json.toJson(u).as[JsObject] ++ Json.obj("kind" -> "user")
