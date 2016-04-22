@@ -8,13 +8,12 @@ import com.keepit.common.db._
 import com.keepit.common.json.{ SchemaReads, EnumFormat, TraversableFormat }
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.mail.EmailAddress
-import com.keepit.common.net.UserAgent
 import com.keepit.common.path.Path
 import com.keepit.common.core.traversableOnceExtensionOps
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.strings.StringWithNoLineBreaks
 import com.keepit.common.time._
-import com.keepit.discussion.{ MessageSource, Message }
+import com.keepit.discussion.Message
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.http.Status._
@@ -164,69 +163,48 @@ class KeepByIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPlugi
 
 object KeepStates extends States[Keep]
 
-abstract class KeepSource(val value: String) {
+final case class KeepSource(value: String) {
   override def toString = value
 }
-object KeepSource extends Enumerator[KeepSource] {
+object KeepSource {
+  val keeper = KeepSource("keeper")
+  val bookmarkImport = KeepSource("bookmarkImport")
+  val bookmarkFileImport = KeepSource("bookmarkFileImport")
+  val site = KeepSource("site")
+  val mobile = KeepSource("mobile")
+  val email = KeepSource("email")
+  val default = KeepSource("default")
+  val unknown = KeepSource("unknown")
+  val kippt = KeepSource("Kippt")
+  val pocket = KeepSource("Pocket")
+  val instapaper = KeepSource("Instapaper")
+  val evernote = KeepSource("Evernote")
+  val diigo = KeepSource("Diigo")
+  val tagImport = KeepSource("tagImport")
+  val emailReco = KeepSource("emailReco")
+  val userCopied = KeepSource("userCopied")
+  val systemCopied = KeepSource("systemCopied")
+  val twitterFileImport = KeepSource("twitterFileImport")
+  val twitterSync = KeepSource("twitterSync")
+  val slack = KeepSource("slack")
+  val discussion = KeepSource("discussion")
 
-  case object Chrome extends KeepSource("Chrome")
-  case object Firefox extends KeepSource("Firefox")
-  case object Safari extends KeepSource("Safari")
-  case object IPhone extends KeepSource("iPhone")
-  case object Android extends KeepSource("Android")
-  case object Slack extends KeepSource("Slack")
-
-  // deprecated, use a more specific source such as the ext's browser name or mobile platform
-  case object Keeper extends KeepSource("keeper")
-  case object Mobile extends KeepSource("mobile")
-  case object Discussion extends KeepSource("discussion")
-
-  case object BookmarkImport extends KeepSource("bookmarkImport")
-  case object BookmarkFileImport extends KeepSource("bookmarkFileImport")
-  case object Site extends KeepSource("site")
-  case object Email extends KeepSource("email")
-  case object Default extends KeepSource("default")
-  case object Unknown extends KeepSource("unknown")
-  case object Kippt extends KeepSource("Kippt")
-  case object Pocket extends KeepSource("Pocket")
-  case object Instapaper extends KeepSource("Instapaper")
-  case object Evernote extends KeepSource("Evernote")
-  case object Diigo extends KeepSource("Diigo")
-  case object TagImport extends KeepSource("tagImport")
-  case object EmailReco extends KeepSource("emailReco")
-  case object UserCopied extends KeepSource("userCopied")
-  case object SystemCopied extends KeepSource("systemCopied")
-  case object TwitterFileImport extends KeepSource("twitterFileImport")
-  case object TwitterSync extends KeepSource("twitterSync")
-  case object Fake extends KeepSource("fake")
-
-  val all = _all
-  def fromStr(str: String) = all.find(_.value.toLowerCase == str.toLowerCase)
-  def apply(str: String) = fromStr(str).get
-
-  // will parse Kifi.com and browser ext UserAgents as "Chrome", so use KeepSource.site for more accuracy
-  def fromUserAgent(agent: UserAgent): Option[KeepSource] = {
-    if (agent.isKifiAndroidApp) Some(Android)
-    else if (agent.isKifiIphoneApp) Some(IPhone)
-    else fromStr(agent.name)
-  }
-
-  def fromMessageSource(msgSrc: MessageSource): Option[KeepSource] = msgSrc match {
-    case MessageSource.SITE => Some(Site)
-    case MessageSource.IPHONE => Some(IPhone)
-    case source => fromStr(source.value)
-  }
-
-  val imports: Set[KeepSource] = Set(BookmarkImport, Kippt, Pocket, Instapaper, Evernote, Diigo, BookmarkFileImport, TwitterFileImport, Slack)
+  val imports = Set(bookmarkImport, kippt, pocket, instapaper, evernote, diigo, bookmarkFileImport, twitterFileImport, slack)
 
   // Sources that are from users uploading files, bulk actions, inputting URLs, etc.
   // These may be old links
-  val bulk: Set[KeepSource] = imports ++ Set(UserCopied, Unknown, Discussion)
+  val bulk = imports ++ Set(userCopied, unknown, discussion)
 
   // One-at-a-time keeps
-  val discrete: Set[KeepSource] = Set(Keeper, Site, Mobile, Email, TwitterSync)
+  val discrete = Set(keeper, site, mobile, email, twitterSync)
 
-  val manual: Set[KeepSource] = Set(Keeper, Site, Mobile, Email)
+  val manual = Set(keeper, site, mobile, email)
+
+  def get(value: String): KeepSource = KeepSource(value) match {
+    case KeepSource("HOVER_KEEP") => keeper
+    case KeepSource("INIT_LOAD") => bookmarkImport
+    case source => source
+  }
 
   implicit val format: Format[KeepSource] = Format(
     Reads { j => j.validate[String].map(KeepSource(_)) },

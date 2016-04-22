@@ -26,7 +26,7 @@ class OrganizationAvatarController @Inject() (
     extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
 
   def uploadAvatar(pubId: PublicId[Organization], x: Int, y: Int, s: Int) = OrganizationUserAction(pubId, OrganizationPermission.EDIT_ORGANIZATION).async(parse.temporaryFile) { request =>
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.Site).build
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     val cropRegion = SquareImageCropRegion(ImageOffset(x, y), s)
     val uploadImageF = orgAvatarUploadCommander.persistOrganizationAvatarsFromUserUpload(request.orgId, request.body.file, cropRegion)
     uploadImageF.map { hash =>

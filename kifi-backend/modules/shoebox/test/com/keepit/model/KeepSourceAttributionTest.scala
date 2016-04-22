@@ -22,7 +22,7 @@ class KeepSourceAttributionTest extends Specification with ShoeboxTestInjector {
     "generate from Rawkeep" in {
       val rawKeep = RawKeep(userId = Id[User](1),
         url = "https://twitter.com/connerdelights/status/505809542656303104",
-        source = KeepSource.TwitterFileImport,
+        source = KeepSource.twitterFileImport,
         originalJson = Some(tweetJs),
         libraryId = None)
 
@@ -32,7 +32,7 @@ class KeepSourceAttributionTest extends Specification with ShoeboxTestInjector {
       val rawKeep2 = rawKeep.copy(originalJson = Some(JsString("{}")))
       RawKeep.extractKeepSourceAttribution(rawKeep2) === None
 
-      val rawKeep3 = rawKeep.copy(source = KeepSource.BookmarkFileImport)
+      val rawKeep3 = rawKeep.copy(source = KeepSource.bookmarkFileImport)
       RawKeep.extractKeepSourceAttribution(rawKeep3) === None
     }
 

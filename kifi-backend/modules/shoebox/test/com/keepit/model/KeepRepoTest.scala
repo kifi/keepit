@@ -25,7 +25,7 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
             url = "http://www.kifi.com",
             userId = Some(Id[User](3)),
             originalKeeperId = Some(Id[User](3)),
-            source = KeepSource.Keeper,
+            source = KeepSource.keeper,
             recipients = KeepRecipients(libraries = Set(Id(4)), users = Set(Id(3)), emails = Set(EmailAddress("ryan@kifi.com")))
           ))
           val dbKeep = keepRepo.getNoCache(savedKeep.id.get)

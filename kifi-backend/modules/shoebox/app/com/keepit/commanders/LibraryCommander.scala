@@ -574,7 +574,7 @@ class LibraryCommanderImpl @Inject() (
       val keepIds = tagCommander.getKeepsByTagAndUser(tagName, userId)
       keepRepo.getActiveByIds(keepIds.toSet).values.toSeq
     }
-    Right(copyKeeps(userId, libraryId, keeps.toSet, withSource = Some(KeepSource.TagImport)))
+    Right(copyKeeps(userId, libraryId, keeps.toSet, withSource = Some(KeepSource.tagImport)))
   }
 
   def moveKeepsFromCollectionToLibrary(userId: Id[User], libraryId: Id[Library], tagName: Hashtag)(implicit context: HeimdalContext): Either[LibraryFail, (Seq[Keep], Seq[(Keep, LibraryError)])] = {

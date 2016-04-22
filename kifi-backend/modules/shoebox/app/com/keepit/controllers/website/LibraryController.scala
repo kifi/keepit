@@ -99,7 +99,7 @@ class LibraryController @Inject() (
           )
         }
 
-        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.Site).build
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
         libraryCommander.createLibrary(libCreateRequest, request.userId) match {
           case Left(fail) =>
             Status(fail.status)(Json.obj("error" -> fail.message))
@@ -137,7 +137,7 @@ class LibraryController @Inject() (
       )
     }
 
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.Site).build
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     libraryCommander.modifyLibrary(id, request.userId, libModifyRequest) match {
       case Left(fail) =>
         Status(fail.status)(Json.obj("error" -> fail.message))
@@ -156,7 +156,7 @@ class LibraryController @Inject() (
 
   def removeLibrary(pubId: PublicId[Library]) = (UserAction andThen LibraryWriteAction(pubId)) { request =>
     val id = Library.decodePublicId(pubId).get
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.Site).build
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     libraryCommander.deleteLibrary(id, request.userId) match {
       case Some(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
       case _ => Ok(JsString("success"))
@@ -290,7 +290,7 @@ class LibraryController @Inject() (
             (id, access, message)
           }
         }
-        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.Site).build
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
         libraryInviteCommander.inviteToLibrary(id, request.userId, validInviteList).map {
           case Left(fail) =>
             Status(fail.status)(Json.obj("error" -> fail.message))
@@ -309,7 +309,7 @@ class LibraryController @Inject() (
       case Failure(ex) =>
         BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(libId) =>
-        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.Site).build
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
 
         libraryMembershipCommander.joinLibrary(request.userId, libId, authToken, subscribedOpt) match {
           case Left(fail) =>
@@ -327,7 +327,7 @@ class LibraryController @Inject() (
       Library.decodePublicId(pubId) match {
         case Failure(ex) => (pubId, Left(LibraryFail(BAD_REQUEST, "invalid_public_id")))
         case Success(libId) =>
-          implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.Site).build
+          implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
           libraryMembershipCommander.joinLibrary(request.userId, libId, authToken = None, subscribed = None) match {
             case Left(libFail) => (pubId, Left(libFail))
             case Right((lib, mem)) =>
@@ -359,7 +359,7 @@ class LibraryController @Inject() (
       case Failure(ex) =>
         BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(id) =>
-        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.Site).build
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
         libraryMembershipCommander.leaveLibrary(id, request.userId) match {
           case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
           case Right(_) => Ok(JsString("success"))
@@ -399,7 +399,7 @@ class LibraryController @Inject() (
     val hashtag = Hashtag(tag)
     val id = Library.decodePublicId(libraryId).get
     SafeFuture {
-      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.Site).build
+      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
       libraryCommander.copyKeepsFromCollectionToLibrary(request.userId, id, hashtag) match {
         case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
         case Right((goodKeeps, badKeeps)) =>
@@ -423,7 +423,7 @@ class LibraryController @Inject() (
     val hashtag = Hashtag(tag)
     val id = Library.decodePublicId(libraryId).get
     SafeFuture {
-      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.Site).build
+      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
       libraryCommander.moveKeepsFromCollectionToLibrary(request.userId, id, hashtag) match {
         case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
         case Right((goodKeeps, badKeeps)) =>
@@ -457,9 +457,9 @@ class LibraryController @Inject() (
     Library.decodePublicId(toPubId) match {
       case Failure(ex) => BadRequest(Json.obj("error" -> "dest_invalid_id"))
       case Success(toId) =>
-        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.Site).build
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
         val targetKeeps = db.readOnlyMaster { implicit s => targetKeepsExt.map(keepRepo.getOpt) }.flatten
-        val (goodKeeps, badKeeps) = libraryCommander.copyKeeps(request.userId, toId, targetKeeps, Some(KeepSource.UserCopied))
+        val (goodKeeps, badKeeps) = libraryCommander.copyKeeps(request.userId, toId, targetKeeps, Some(KeepSource.userCopied))
         val errors = badKeeps.map {
           case (keep, error) =>
             Json.obj(
@@ -484,7 +484,7 @@ class LibraryController @Inject() (
     Library.decodePublicId(toPubId) match {
       case Failure(ex) => BadRequest(Json.obj("error" -> "dest_invalid_id"))
       case Success(toId) =>
-        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.Site).build
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
         val targetKeeps = db.readOnlyReplica { implicit s => targetKeepsExt.map { keepRepo.getOpt } }.flatten
         val (goodKeeps, badKeeps) = libraryCommander.moveKeeps(request.userId, toId, targetKeeps)
         val errors = badKeeps.map {
@@ -511,7 +511,7 @@ class LibraryController @Inject() (
   def addKeeps(pubId: PublicId[Library]) = (UserAction andThen LibraryWriteAction(pubId))(parse.tolerantJson) { request =>
     val libraryId = Library.decodePublicId(pubId).get
     (request.body \ "keeps").asOpt[Seq[RawBookmarkRepresentation]] map { fromJson =>
-      val source = KeepSource.Site
+      val source = KeepSource.site
       implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
 
       val existingKeeps = db.readOnlyMaster { implicit s =>
@@ -534,7 +534,7 @@ class LibraryController @Inject() (
 
   def removeKeep(pubId: PublicId[Library], extId: ExternalId[Keep]) = (UserAction andThen LibraryWriteAction(pubId)) { request =>
     val libraryId = Library.decodePublicId(pubId).get
-    val source = KeepSource.Site
+    val source = KeepSource.site
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
     keepsCommander.unkeepOneFromLibrary(extId, libraryId, request.userId) match {
       case Left(failMsg) => BadRequest(Json.obj("error" -> failMsg))
@@ -545,7 +545,7 @@ class LibraryController @Inject() (
   def removeKeeps(pubId: PublicId[Library]) = (UserAction andThen LibraryWriteAction(pubId))(parse.tolerantJson) { request =>
     val libraryId = Library.decodePublicId(pubId).get
     val keepExtIds = (request.body \ "ids").as[Seq[ExternalId[Keep]]]
-    val source = KeepSource.Site
+    val source = KeepSource.site
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
     keepsCommander.unkeepManyFromLibrary(keepExtIds, libraryId, request.userId) match {
       case Left(failMsg) => BadRequest(Json.obj("error" -> failMsg))

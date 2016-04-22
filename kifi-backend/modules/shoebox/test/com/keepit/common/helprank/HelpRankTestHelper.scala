@@ -48,8 +48,8 @@ trait HelpRankTestHelper { self: TestInjector =>
     val raw3 = inject[RawBookmarkFactory].toRawBookmarks(Json.arr(keepKifi, keepStanford, keepFB))
     val raw4 = inject[RawBookmarkFactory].toRawBookmarks(Json.arr(keepKifi, keepGoog, keepApple, keepFB))
 
-    val (keeps1, _) = keepInterner.internRawBookmarks(raw1, u1.id.get, u1m, KeepSource.Email)
-    val (keeps2, _) = keepInterner.internRawBookmarks(raw2, u2.id.get, u2m, KeepSource.Default)
+    val (keeps1, _) = keepInterner.internRawBookmarks(raw1, u1.id.get, u1m, KeepSource.email)
+    val (keeps2, _) = keepInterner.internRawBookmarks(raw2, u2.id.get, u2m, KeepSource.default)
 
     val kdCounter = new FakeIdCounter[KeepDiscovery]
     val kc0 = KeepDiscovery(id = Some(kdCounter.nextId()), createdAt = currentDateTime, hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u1.id.get, keepId = keeps1(0).id.get, uriId = keeps1(0).uriId)
@@ -62,7 +62,7 @@ trait HelpRankTestHelper { self: TestInjector =>
     // u3 -> kifi (u1, u2)
     heimdal.save(kc0, kc1, kc2)
 
-    val (keeps3, _) = keepInterner.internRawBookmarks(raw3, u3.id.get, u3m, KeepSource.Default)
+    val (keeps3, _) = keepInterner.internRawBookmarks(raw3, u3.id.get, u3m, KeepSource.default)
     val kc3 = KeepDiscovery(id = Some(kdCounter.nextId()), createdAt = currentDateTime, hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u3.id.get, keepId = keeps3(0).id.get, uriId = keeps3(0).uriId)
     // u4 -> kifi (u3) [rekeep]
     heimdal.save(kc3)
@@ -84,7 +84,7 @@ trait HelpRankTestHelper { self: TestInjector =>
     val rk2 = ReKeep(id = Some(rkCounter.nextId()), keeperId = u2.id.get, keepId = keeps2(0).id.get, uriId = keeps2(0).uriId, srcKeepId = keeps3(0).id.get, srcUserId = u3.id.get)
     heimdal.save(rk1, rk2)
 
-    val (keeps4, _) = keepInterner.internRawBookmarks(raw4, u4.id.get, u4m, KeepSource.Default)
+    val (keeps4, _) = keepInterner.internRawBookmarks(raw4, u4.id.get, u4m, KeepSource.default)
     val rk3 = ReKeep(id = Some(rkCounter.nextId()), keeperId = u3.id.get, keepId = keeps3(0).id.get, uriId = keeps3(0).uriId, srcKeepId = keeps4(0).id.get, srcUserId = u4.id.get)
     heimdal.save(rk3)
     (u1, u2, u3, keeps1, keeps2, keeps3a, u1m, u3m)

@@ -36,7 +36,7 @@ class LibraryImageController @Inject() (
     val imageRequest = db.readWrite { implicit session =>
       libraryImageRequestRepo.save(LibraryImageRequest(libraryId = libraryId, source = ImageSource.UserUpload))
     }
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.Site).build
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     val uploadImageF = libraryImageCommander.uploadLibraryImageFromFile(request.body.file, libraryId, LibraryImagePosition(posX, posY), ImageSource.UserUpload, request.userId, Some(imageRequest.id.get)).map { s =>
       request.body.file.delete()
       s
@@ -79,7 +79,7 @@ class LibraryImageController @Inject() (
 
   def removeLibraryImage(pubId: PublicId[Library]) = (UserAction andThen LibraryOwnerAction(pubId)) { request =>
     val libraryId = Library.decodePublicId(pubId).get
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.Site).build
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     libraryImageCommander.removeImageForLibrary(libraryId, request.userId)
     NoContent
   }

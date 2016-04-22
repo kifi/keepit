@@ -196,7 +196,7 @@ class RawKeepInterner @Inject() (
           title = titleOpt,
           url = href,
           importId = Some(importId),
-          source = source.getOrElse(KeepSource.BookmarkFileImport),
+          source = source.getOrElse(KeepSource.bookmarkFileImport),
           originalJson = originalJson,
           installationId = None,
           keepTags = hashtagsArray,
@@ -217,7 +217,7 @@ class RawKeepInterner @Inject() (
       val total = deduped.size
 
       keepsAbuseMonitor.inspect(userId, total)
-      libraryAnalytics.keepImport(userId, clock.now, context, total, deduped.headOption.map(_.source).getOrElse(KeepSource.BookmarkImport))
+      libraryAnalytics.keepImport(userId, clock.now, context, total, deduped.headOption.map(_.source).getOrElse(KeepSource.bookmarkImport))
 
       deduped.grouped(500).foreach { rawKeepGroup =>
         // insertAll fails if any of the inserts failed

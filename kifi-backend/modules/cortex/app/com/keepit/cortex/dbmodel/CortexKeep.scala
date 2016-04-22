@@ -35,7 +35,7 @@ object CortexKeep {
     (__ \ 'userId).formatNullable[Id[User]] and
     (__ \ 'uriId).format(Id.format[NormalizedURI]) and
     (__ \ 'state).format(State.format[CortexKeep]) and
-    (__ \ 'source).format[KeepSource] and
+    (__ \ 'source).format(Json.format[KeepSource]) and
     (__ \ 'seq).format(SequenceNumber.format[CortexKeep]) and
     (__ \ 'libraryId).formatNullable[Id[Library]]
   )(CortexKeep.apply, unlift(CortexKeep.unapply))
