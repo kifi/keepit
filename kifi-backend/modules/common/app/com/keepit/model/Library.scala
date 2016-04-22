@@ -361,14 +361,14 @@ object DetailedLibraryView {
   implicit val format = Json.format[DetailedLibraryView]
 }
 
-case class BasicLibrary(id: PublicId[Library], name: String, path: String, visibility: LibraryVisibility, color: Option[LibraryColor]) {
+case class BasicLibrary(id: PublicId[Library], name: String, path: String, visibility: LibraryVisibility, color: Option[LibraryColor], slack: Option[LiteLibrarySlackInfo]) {
   def isSecret = visibility == LibraryVisibility.SECRET
 }
 
 object BasicLibrary {
-  def apply(library: Library, owner: BasicUser, orgHandle: Option[OrganizationHandle])(implicit publicIdConfig: PublicIdConfiguration): BasicLibrary = {
+  def apply(library: Library, owner: BasicUser, orgHandle: Option[OrganizationHandle], slack: Option[LiteLibrarySlackInfo])(implicit publicIdConfig: PublicIdConfiguration): BasicLibrary = {
     val path = LibraryPathHelper.formatLibraryPath(owner, orgHandle, library.slug)
-    BasicLibrary(Library.publicId(library.id.get), library.name, path, library.visibility, library.color)
+    BasicLibrary(Library.publicId(library.id.get), library.name, path, library.visibility, library.color, slack)
   }
   implicit val format: Format[BasicLibrary] = Format(
     Reads { js =>
@@ -378,9 +378,10 @@ object BasicLibrary {
         path <- (js \ "path").validate[String]
         visibility <- (js \ "visibility").validate[LibraryVisibility]
         color = (js \ "color").asOpt[LibraryColor]
-      } yield BasicLibrary.apply(id, name, path, visibility, color)
+        slack = (js \ "slack").asOpt[LiteLibrarySlackInfo]
+      } yield BasicLibrary.apply(id, name, path, visibility, color, slack)
     },
-    Writes { library => Json.obj("id" -> library.id, "name" -> library.name, "path" -> library.path, "visibility" -> library.visibility, "color" -> library.color, "secret" -> library.isSecret) } //todo(Léo): remove secret field }
+    Writes { library => Json.obj("id" -> library.id, "name" -> library.name, "path" -> library.path, "visibility" -> library.visibility, "color" -> library.color, "secret" -> library.isSecret, "slack" -> library.slack) } //todo(Léo): remove secret field }
   )
 }
 

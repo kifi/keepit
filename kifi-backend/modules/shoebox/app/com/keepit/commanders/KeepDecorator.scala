@@ -119,11 +119,14 @@ class KeepDecoratorImpl @Inject() (
           val emailParticipantsAddedBy = emailParticipantsByKeep.values.flatMap(_.values.map(_._1))
           db.readOnlyMaster { implicit s => basicUserRepo.loadAll(keepersShown ++ libraryContributorsShown ++ libraryOwners ++ keepers ++ ktuUsers ++ emailParticipantsAddedBy ++ usersFromEvents) } //cached
         }
+
+        val idToLibrarySlackInfo = slackInfoCommander.getLiteSlackInfoForLibraries(idToLibrary.keySet)
+
         val idToBasicLibrary = idToLibrary.map {
           case (libId, library) =>
             val orgOpt = basicOrgByLibId.get(libId)
             val user = idToBasicUser(library.ownerId)
-            libId -> BasicLibrary(library, user, orgOpt.map(_.handle))
+            libId -> BasicLibrary(library, user, orgOpt.map(_.handle), idToLibrarySlackInfo.get(libId))
         }
         val libraryCardByLibId = {
           val libraries = idToLibrary.values.toSeq

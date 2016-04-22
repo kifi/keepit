@@ -50,7 +50,7 @@ class SlackInfoCommanderTest extends TestKitSupport with SpecificationLike with 
 
             (user, lib1, lib2)
           }
-          val slackInfo = slackInfoCommander.getSlackIntegrationsForLibraries(user.id.get, Set(lib1.id.get, lib2.id.get))
+          val slackInfo = slackInfoCommander.getFullSlackInfoForLibraries(user.id.get, Set(lib1.id.get, lib2.id.get))
 
           slackInfo.get(lib1.id.get).map(_.integrations.length) must beSome(1)
           slackInfo.get(lib2.id.get).map(_.integrations.length) must beSome(2)
@@ -79,7 +79,7 @@ class SlackInfoCommanderTest extends TestKitSupport with SpecificationLike with 
 
             (user, lib)
           }
-          val slackInfo = slackInfoCommander.getSlackIntegrationsForLibraries(user.id.get, Set(lib.id.get))
+          val slackInfo = slackInfoCommander.getFullSlackInfoForLibraries(user.id.get, Set(lib.id.get))
           // Uncomment to visually inspect the slack info
           // println(Json.prettyPrint(Json.toJson(slackInfo(lib.id.get))))
           slackInfo.get(lib.id.get).map(_.integrations.length) must beSome(2)

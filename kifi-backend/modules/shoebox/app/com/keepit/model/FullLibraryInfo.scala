@@ -5,7 +5,7 @@ import com.keepit.common.json
 import com.keepit.common.mail.BasicContact
 import com.keepit.discussion.Message
 import com.keepit.shoebox.data.keep.KeepInfo
-import com.keepit.slack.LibrarySlackInfo
+import com.keepit.slack.FullLibrarySlackInfo
 import com.keepit.slack.models.{ SlackIntegrationStatus, SlackChannelToLibrary, LibraryToSlackChannel, SlackChannelName }
 import com.keepit.social.BasicUser
 import com.keepit.social.twitter.TwitterHandle
@@ -260,7 +260,7 @@ case class FullLibraryInfo(
   membership: Option[LibraryMembershipInfo],
   invite: Option[LibraryInviteInfo],
   permissions: Set[LibraryPermission],
-  slack: Option[LibrarySlackInfo])
+  slack: Option[FullLibrarySlackInfo])
 
 object FullLibraryInfo {
   implicit val sourceWrites = LibrarySourceAttribution.writes

@@ -16,7 +16,7 @@ import com.keepit.common.store.ImageSize
 import com.keepit.common.time._
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
-import com.keepit.slack.{ LibrarySlackInfo, SlackInfoCommander }
+import com.keepit.slack.{ FullLibrarySlackInfo, SlackInfoCommander }
 import com.keepit.social.{ BasicNonUser, BasicUser }
 import org.joda.time.DateTime
 import play.api.http.Status._
@@ -256,11 +256,11 @@ class LibraryInfoCommanderImpl @Inject() (
     val permissionsByLibraryId = db.readOnlyMaster { implicit s => permissionCommander.getLibrariesPermissions(libIds, viewerUserIdOpt) }
 
     // I refuse to allow something small, like Slack integrations, take down the important stuff like Libraries
-    val slackInfoByLibraryId: Map[Id[Library], LibrarySlackInfo] = viewerUserIdOpt.map { viewerId =>
-      Try(slackInfoCommander.getSlackIntegrationsForLibraries(viewerId, libIds)).recover {
+    val slackInfoByLibraryId: Map[Id[Library], FullLibrarySlackInfo] = viewerUserIdOpt.map { viewerId =>
+      Try(slackInfoCommander.getFullSlackInfoForLibraries(viewerId, libIds)).recover {
         case fail =>
           airbrake.notify(s"Exploded while getting Slack integrations for user $viewerId and libraries $libIds", fail)
-          Map.empty[Id[Library], LibrarySlackInfo]
+          Map.empty[Id[Library], FullLibrarySlackInfo]
       }.get
     }.getOrElse(Map.empty)
 

@@ -616,7 +616,11 @@ class LibraryController @Inject() (
               path = Path(info.path),
               org = info.org,
               orgMemberAccess = info.orgMemberAccess,
-              whoCanComment = info.whoCanComment
+              whoCanComment = info.whoCanComment,
+              slack = info.slack.map { slack =>
+                val channels = slack.integrations.collect { case integration if integration.toSlack.isDefined => BasicSlackChannel(integration.channelName) }
+                LiteLibrarySlackInfo(channels)
+              }
             )
           }
           val t2 = System.currentTimeMillis()
