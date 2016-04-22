@@ -8,7 +8,7 @@ import com.keepit.heimdal.HeimdalContext
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.SpecificationLike
 
-class SlackPushingActorTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
+class SlackPushGeneratorTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
   implicit val context = HeimdalContext.empty
   val modules = Seq(
     FakeExecutionContextModule(),
@@ -16,7 +16,7 @@ class SlackPushingActorTest extends TestKitSupport with SpecificationLike with S
     FakeClockModule()
   )
 
-  "SlackPushingActor" should {
+  "SlackPushGenerator" should {
     "do magic parsing on look-heres" in {
       val goodUrls = Set(
         "http://i.imgur.com/Lg9iNlB.gifv",
@@ -27,8 +27,8 @@ class SlackPushingActorTest extends TestKitSupport with SpecificationLike with S
         "http://google.com",
         "http://www.wsj.com/articles/donald-trump-poised-for-string-of-super-tuesday-wins-amid-gop-split-1456830163"
       )
-      goodUrls.foreach { str => SlackPushingActor.imageUrlRegex.findFirstIn(str) must beSome }
-      badUrls.foreach { str => SlackPushingActor.imageUrlRegex.findFirstIn(str) must beNone }
+      goodUrls.foreach { str => SlackPushGenerator.imageUrlRegex.findFirstIn(str) must beSome }
+      badUrls.foreach { str => SlackPushGenerator.imageUrlRegex.findFirstIn(str) must beNone }
       1 === 1
     }
   }
