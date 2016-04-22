@@ -174,7 +174,7 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
       if (!$input) {
         $input = this.$input = this.get$('.kifi-message-participant-dialog-input');
         initFriendSearch($input, 'threadPane', this.getParticipants(), api.noop, {
-          placeholder: 'Type a name...',
+          placeholder: 'Type a library, name, or an email',
           onAdd: function () {
             this.getAddDialog().addClass('kifi-non-empty');
           }.bind(this),
