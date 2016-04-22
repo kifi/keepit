@@ -234,7 +234,7 @@ k.compose = k.compose || (function() {
     api.port.on(handlers);
 
     if ($to.length) {
-      initFriendSearch($to, 'composePane', [], function includeSelf(numTokens) {
+      initFriendSearch($to, 'composePane', Array, function includeSelf(numTokens) {
         return numTokens === 0;
       }, {
         placeholder: 'name@example.com, Kifi user, etc.',
