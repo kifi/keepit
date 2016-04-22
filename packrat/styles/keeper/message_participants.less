@@ -253,11 +253,19 @@
 }
 
 .kifi-message-participants-avatars-actions {
+  display: flex;
+}
+.kifi-message-participants-avatars-action {
   display: inline-block;
   border-radius: 50%!important;
   background-color: @dotBgColor;
   width: 28px;
   height: 28px;
+  margin-right: 3px;
+  font-size: 14px;
+  color: #fff!important;
+  line-height: 28px;
+  text-align: center;
 
   &:hover, &:focus {
     background-color: shade(@dotBgColor, 10%);
@@ -273,6 +281,17 @@
   background-size: 50%;
   background-position: center;
   background-repeat: no-repeat;
+}
+.kifi-message-participants-avatars-more {
+  &[data-elided="0"] {
+    display: none;
+  }
+  &::before {
+    content: '+'
+  }
+  &::after {
+    content: attr(data-elided);
+  }
 }
 .kifi-message-participant-email-image {
   cursor: default;

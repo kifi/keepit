@@ -504,6 +504,24 @@ var socketHandlers = {
     log('[socket:lost_friends]', fr);
     contactSearchCache = null;
   },
+  thread_recipients: function (keepId, users, emails, libraries) {
+    log('[socket:thread_recipients]', keepId, users, emails, libraries);
+    users = users || [];
+    emails = emails || [];
+    libraries = libraries || [];
+
+    emails = emails.map(function (email) {
+      return (typeof email === 'string' ? { id: email, email: email } : email);
+    });
+
+    var keep = keepData[keepId];
+    keep.recipients.users = users;
+    keep.recipients.emails = emails;
+    keep.recipients.libraries = libraries;
+    forEachTabAtLocator('/messages/' + keepId, function (tab) {
+      api.tabs.emit(tab, 'recipients', users.concat(emails).concat(libraries));
+    });
+  },
   thread_participants: function(threadId, participants) {
     log('[socket:thread_participants]', threadId, participants);
     var thread = notificationsById[threadId];
