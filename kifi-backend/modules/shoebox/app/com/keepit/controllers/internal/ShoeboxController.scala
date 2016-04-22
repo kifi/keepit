@@ -642,7 +642,7 @@ class ShoeboxController @Inject() (
       keepInterner.internKeepByRequest(KeepInternRequest.onKifi(
         keeper = input.creator,
         url = input.url,
-        source = input.source.getOrElse(KeepSource.Discussion),
+        source = KeepSource.discussion,
         title = input.title,
         note = input.note,
         keptAt = Some(clock.now),

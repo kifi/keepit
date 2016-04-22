@@ -121,7 +121,7 @@ class ExtLibraryController @Inject() (
           )
         }
 
-        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.Keeper).build
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
         libraryCommander.createLibrary(libCreateRequest, request.userId) match {
           case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
           case Right(lib) =>
@@ -174,7 +174,7 @@ class ExtLibraryController @Inject() (
 
   def deleteLibrary(libraryPubId: PublicId[Library]) = UserAction { request =>
     decode(libraryPubId) { libraryId =>
-      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.Keeper).build
+      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
       libraryCommander.deleteLibrary(libraryId, request.userId) match {
         case Some(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
         case _ => NoContent
@@ -184,7 +184,7 @@ class ExtLibraryController @Inject() (
 
   def joinLibrary(libraryPubId: PublicId[Library]) = UserAction { request =>
     decode(libraryPubId) { libraryId =>
-      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.Keeper).build
+      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
       libraryMembershipCommander.joinLibrary(request.userId, libraryId) match {
         case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
         case Right(lib) => NoContent
@@ -194,7 +194,7 @@ class ExtLibraryController @Inject() (
 
   def leaveLibrary(libraryPubId: PublicId[Library]) = UserAction { request =>
     decode(libraryPubId) { libraryId =>
-      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.Keeper).build
+      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
       libraryMembershipCommander.leaveLibrary(libraryId, request.userId) match {
         case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
         case Right(_) => NoContent
@@ -211,14 +211,13 @@ class ExtLibraryController @Inject() (
   }
 
   def addKeep(libraryPubId: PublicId[Library]) = UserAction.async(parse.tolerantJson) { request =>
-    import com.keepit.common.http._
     decodeAsync(libraryPubId) { libraryId =>
       db.readOnlyMaster { implicit s =>
         (libRepo.get(libraryId), libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, request.userId))
       } match {
         case (lib, Some(mem)) if mem.canWrite =>
           val body = request.body
-          val source = request.userAgentOpt.flatMap(KeepSource.fromUserAgent).getOrElse(KeepSource.Keeper)
+          val source = KeepSource.keeper
           val hcb = heimdalContextBuilder.withRequestInfoAndSource(request, source)
           if ((body \ "guided").asOpt[Boolean].getOrElse(false)) {
             hcb += ("guided", true)
@@ -283,7 +282,7 @@ class ExtLibraryController @Inject() (
 
   def removeKeep(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep]) = UserAction { request =>
     decode(libraryPubId) { libraryId =>
-      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.Keeper).build
+      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
       keepsCommander.unkeepOneFromLibrary(keepExtId, libraryId, request.userId) match {
         case Left(failMsg) => BadRequest(Json.obj("error" -> failMsg))
         case Right(info) => NoContent
@@ -338,9 +337,9 @@ class ExtLibraryController @Inject() (
     SafeFuture {
       log.debug(s"adding bookmarks import of user $userId")
 
-      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.BookmarkImport).build
+      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.bookmarkImport).build
       val libraryId = Library.decodePublicId(id).get
-      rawKeepInterner.persistRawKeeps(rawKeepFactory.toRawKeep(userId, KeepSource.BookmarkImport, json, installationId = installationId, libraryId = Some(libraryId)))
+      rawKeepInterner.persistRawKeeps(rawKeepFactory.toRawKeep(userId, KeepSource.bookmarkImport, json, installationId = installationId, libraryId = Some(libraryId)))
     }
     Status(ACCEPTED)(JsNumber(0))
   }

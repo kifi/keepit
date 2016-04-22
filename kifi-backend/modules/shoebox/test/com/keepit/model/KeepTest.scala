@@ -15,8 +15,8 @@ import com.keepit.model.LibraryFactoryHelper._
 
 class KeepTest extends Specification with ShoeboxTestInjector {
 
-  val hover = KeepSource.Keeper
-  val initLoad = KeepSource.BookmarkImport
+  val hover = KeepSource.keeper
+  val initLoad = KeepSource.bookmarkImport
 
   def setup()(implicit injector: Injector) = {
     val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
@@ -33,10 +33,10 @@ class KeepTest extends Specification with ShoeboxTestInjector {
 
       val libPublic = LibraryFactory.library().withOwner(user1).withVisibility(LibraryVisibility.PUBLISHED).saved
 
-      KeepFactory.keep().withTitle("G1").withUser(user1).withUri(uri1).withLibrary(libPublic).withKeptAt(t1 plusHours 3).withSource(KeepSource.Keeper).saved
-      KeepFactory.keep().withTitle("A1").withUser(user1).withUri(uri2).withLibrary(libPublic).withKeptAt(t1 plusHours 5).withSource(KeepSource.Keeper).saved
-      KeepFactory.keep().withTitle("A2").withUser(user1).withUri(uri3).withKeptAt(t1 plusHours 7).withSource(KeepSource.Keeper).saved
-      KeepFactory.keep().withUser(user2).withUri(uri1).withLibrary(libPublic).withKeptAt(t2 plusDays 1).withSource(KeepSource.BookmarkImport).saved
+      KeepFactory.keep().withTitle("G1").withUser(user1).withUri(uri1).withLibrary(libPublic).withKeptAt(t1 plusHours 3).withSource(KeepSource.keeper).saved
+      KeepFactory.keep().withTitle("A1").withUser(user1).withUri(uri2).withLibrary(libPublic).withKeptAt(t1 plusHours 5).withSource(KeepSource.keeper).saved
+      KeepFactory.keep().withTitle("A2").withUser(user1).withUri(uri3).withKeptAt(t1 plusHours 7).withSource(KeepSource.keeper).saved
+      KeepFactory.keep().withUser(user2).withUri(uri1).withLibrary(libPublic).withKeptAt(t2 plusDays 1).withSource(KeepSource.bookmarkImport).saved
 
       (user1, user2, uri1, uri2, uri3, libPublic)
     }

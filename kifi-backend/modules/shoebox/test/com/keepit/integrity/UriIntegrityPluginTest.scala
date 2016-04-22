@@ -48,7 +48,7 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
 
             val main = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.DISCOVERABLE, kind = LibraryKind.SYSTEM_MAIN, slug = LibrarySlug("asdf"), memberCount = 1))
 
-            val hover = KeepSource.Keeper
+            val hover = KeepSource.keeper
             val bm1 = KeepFactory.keep().withUser(user).withUri(nuri0).withLibrary(main).saved
             val bm2 = KeepFactory.keep().withUser(user).withUri(nuri2).withLibrary(main).saved
             val bm3 = KeepFactory.keep().withUser(user2).withUri(nuri2).withLibrary(main).saved

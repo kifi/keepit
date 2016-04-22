@@ -217,7 +217,7 @@ class MessagingCommanderImpl @Inject() (
     }
   }
 
-  private def getOrCreateThread(from: Id[User], userParticipants: Seq[Id[User]], nonUserRecipients: Seq[NonUserParticipant], url: String, nUriId: Id[NormalizedURI], nUrl: String, titleOpt: Option[String], source: Option[KeepSource]): Future[(MessageThread, Boolean)] = {
+  private def getOrCreateThread(from: Id[User], userParticipants: Seq[Id[User]], nonUserRecipients: Seq[NonUserParticipant], url: String, nUriId: Id[NormalizedURI], nUrl: String, titleOpt: Option[String]): Future[(MessageThread, Boolean)] = {
     val mtParticipants = MessageThreadParticipants(userParticipants.toSet, nonUserRecipients.toSet)
     val matches = db.readOnlyMaster { implicit s =>
       threadRepo.getByUriAndParticipants(nUriId, mtParticipants)
@@ -225,7 +225,7 @@ class MessagingCommanderImpl @Inject() (
     matches.headOption match {
       case Some(mt) => Future.successful(mt, false)
       case None =>
-        shoebox.internKeep(from, userParticipants.toSet, nonUserRecipients.collect { case NonUserEmailParticipant(address) => address }.toSet, nUriId, url, titleOpt, None, source).map { csKeep =>
+        shoebox.internKeep(from, userParticipants.toSet, nonUserRecipients.collect { case NonUserEmailParticipant(address) => address }.toSet, nUriId, url, titleOpt, None).map { csKeep =>
           db.readWrite { implicit s =>
             val thread = threadRepo.save(MessageThread(
               uriId = nUriId,
@@ -252,11 +252,9 @@ class MessagingCommanderImpl @Inject() (
       case Failure(e) => throw new Exception(s"can't send message for bad URL: [$url] from $from with title $titleOpt and source $source")
     }
 
-    val keepSource = source.flatMap(KeepSource.fromMessageSource)
-
     for {
       ((uri, nUriId, nUrl, nTitleOpt)) <- uriFetch
-      (thread, isNew) <- getOrCreateThread(from, userParticipants, nonUserRecipients, url, nUriId, nUrl, titleOpt.orElse(nTitleOpt), keepSource)
+      (thread, isNew) <- getOrCreateThread(from, userParticipants, nonUserRecipients, url, nUriId, nUrl, titleOpt.orElse(nTitleOpt))
     } yield {
       if (isNew) {
         db.readWrite { implicit s =>
@@ -343,7 +341,7 @@ class MessagingCommanderImpl @Inject() (
     SafeFuture {
       db.readOnlyMaster { implicit session => messageRepo.refreshCache(thread.keepId) }
       shoebox.registerMessageOnKeep(thread.keepId, ElizaMessage.toCrossServiceMessage(message))
-      from.asUser.foreach(user => shoebox.editRecipientsOnKeep(editorId = user, keepId = thread.keepId, diff = KeepRecipientsDiff.addUser(user), persistKeepEvent = false, source = source.flatMap(KeepEventSource.fromMessageSource)))
+      from.asUser.foreach(user => shoebox.editRecipientsOnKeep(editorId = user, keepId = thread.keepId, diff = KeepRecipientsDiff.addUser(user), persistKeepEvent = false, source = KeepEventSource.fromMessageSource(source)))
     }
 
     val participantSet = thread.participants.allUsers

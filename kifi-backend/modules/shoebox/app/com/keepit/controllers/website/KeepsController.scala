@@ -147,7 +147,7 @@ class KeepsController @Inject() (
   }
 
   def deleteCollectionByTag(tag: String) = UserAction { request =>
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.Site).build
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     val removed = db.readWrite(attempts = 3) { implicit s =>
       bulkTagCommander.removeAllForUserTag(request.userId, Hashtag(tag))
     }

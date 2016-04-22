@@ -113,7 +113,7 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater with Logging {
     writer.removeVertexIfExists(keepVertexId) // build the vertex and its neighbors from empty state. (e.g. LibraryId can change, this removes old links)
 
     update.state match {
-      case KeepStates.ACTIVE if update.source != KeepSource.Default =>
+      case KeepStates.ACTIVE if update.source != KeepSource.default =>
         writer.saveVertex(KeepData(keepVertexId))
         writer.saveVertex(UriData(uriVertexId))
         userVertexIds.foreach { uv => writer.saveVertex(UserData(uv)) }

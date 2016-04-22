@@ -66,7 +66,7 @@ class FeedControllerTest extends Specification with ShoeboxTestInjector {
       val uri2 = uriRepo.save(NormalizedURI.withHash("http://www.amazon.com/", Some("Amazon")))
       val uri3 = uriRepo.save(NormalizedURI.withHash("http://www.amazon.com/foo", Some("AmazonFoo")))
 
-      val hover = KeepSource.Keeper
+      val hover = KeepSource.keeper
 
       KeepFactory.keep().withTitle("G1").withUser(user1).withUri(uri1).withLibrary(lib1).saved
       KeepFactory.keep().withTitle("A1").withUser(user1).withUri(uri2).withLibrary(lib1).saved

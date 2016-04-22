@@ -755,8 +755,7 @@ api.port.on({
       emails: {
         add: newEmails.map(getId),
         remove: []
-      },
-      source: api.browser.name
+      }
     };
     var keep = keepData[data.keepId];
     var activity = activityData[data.keepId];

@@ -32,7 +32,7 @@ case class RawKeep(
 object RawKeep extends Logging {
   def extractKeepSourceAttribution(keep: RawKeep): Option[RawSourceAttribution] = {
     keep.source match {
-      case KeepSource.TwitterFileImport | KeepSource.TwitterSync =>
+      case KeepSource.twitterFileImport | KeepSource.twitterSync =>
         val attrOpt = keep.originalJson.flatMap(_.asOpt[RawTweet].map(RawTwitterAttribution(_)))
         if (attrOpt.isEmpty) log.warn(s"empty KeepSourceAttribtuion extracted. rawKeep id: ${keep.id.get}")
         attrOpt

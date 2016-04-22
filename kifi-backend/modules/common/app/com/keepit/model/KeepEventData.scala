@@ -62,7 +62,7 @@ sealed abstract class KeepEventSource(val value: String)
 object KeepEventSource extends Enumerator[KeepEventSource] {
   case object Slack extends KeepEventSource("Slack")
   case object Twitter extends KeepEventSource("Twitter")
-  case object iPhone extends KeepEventSource("iPhone")
+  case object iOS extends KeepEventSource("iOS")
   case object Android extends KeepEventSource("Android")
   case object Extension extends KeepEventSource("the extension")
   case object Chrome extends KeepEventSource("Chrome")
@@ -71,40 +71,33 @@ object KeepEventSource extends Enumerator[KeepEventSource] {
   case object Email extends KeepEventSource("Email")
   case object Site extends KeepEventSource("Kifi.com")
 
-  // deprecated, use iPhone instead
-  case object iOS extends KeepEventSource("iOS")
-
   val all = _all
-  def fromStr(str: String) = all.find(_.value.toLowerCase == str.toLowerCase)
+  def fromStr(str: String) = all.find(_.value == str)
   def apply(str: String) = fromStr(str).get
 
   implicit val format: Format[KeepEventSource] = EnumFormat.format(fromStr, _.value)
   implicit val schemaReads: SchemaReads[KeepEventSource] = SchemaReads.trivial("keep_event_source")
 
-  def fromMessageSource(msgSrc: MessageSource): Option[KeepEventSource] = KeepEventSource.fromStr(msgSrc.value)
-  def toMessageSource(eventSrc: KeepEventSource): Option[MessageSource] = MessageSource.fromStr(eventSrc.value)
-
-  def fromKeepSource(keepSrc: KeepSource): Option[KeepEventSource] = keepSrc match {
-    case KeepSource.Keeper => Some(KeepEventSource.Extension)
-    case KeepSource.Site => Some(KeepEventSource.Site)
-    case KeepSource.Email => Some(KeepEventSource.Email)
-    case KeepSource.Slack => Some(KeepEventSource.Slack)
-    case KeepSource.TwitterFileImport | KeepSource.TwitterSync => Some(KeepEventSource.Twitter)
+  def fromMessageSource(msgSrc: Option[MessageSource]): Option[KeepEventSource] = msgSrc.flatMap {
+    case MessageSource.IPHONE => Some(iOS)
     case src => KeepEventSource.fromStr(src.value)
   }
-
-  def toKeepSource(eventSrc: KeepEventSource): Option[KeepSource] = eventSrc match {
-    case KeepEventSource.Site => Some(KeepSource.Site)
-    case KeepEventSource.Twitter => Some(KeepSource.TwitterSync) // many to one from KeepSource -> KeepEventSource, so this is the lossy choice
-    case KeepEventSource.Extension => Some(KeepSource.Keeper)
-    case source => KeepSource.fromStr(source.value)
+  def toMessageSource(eventSrc: KeepEventSource): Option[MessageSource] = eventSrc match {
+    case KeepEventSource.iOS => Some(MessageSource.IPHONE) // only 8 iPad messages total, all before 2015
+    case src => MessageSource.fromStr(src.value)
   }
 
-  def fromUserAgent(agent: UserAgent): Option[KeepEventSource] = {
-    if (agent.isKifiIphoneApp) Some(iPhone)
-    else if (agent.isKifiAndroidApp) Some(Android)
-    else KeepEventSource.fromStr(agent.name)
+  def fromKeepSource(keepSrc: KeepSource): Option[KeepEventSource] = keepSrc match {
+    case KeepSource.keeper => Some(KeepEventSource.Extension)
+    case KeepSource.site => Some(KeepEventSource.Site)
+    case KeepSource.email => Some(KeepEventSource.Email)
+    case KeepSource.slack => Some(KeepEventSource.Slack)
+    case KeepSource.twitterFileImport | KeepSource.twitterSync => Some(KeepEventSource.Twitter)
+    case _ => None
   }
+
+  def fromUserAgent(userAgent: UserAgent): Option[KeepEventSource] = fromStr(userAgent.name)
+
   implicit def queryStringBinder[T](implicit stringBinder: QueryStringBindable[String]): QueryStringBindable[KeepEventSource] = new QueryStringBindable[KeepEventSource] {
     override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, KeepEventSource]] = {
       stringBinder.bind(key, params) map {
@@ -220,7 +213,7 @@ object BasicKeepEvent {
       header = DescriptionElements(author),
       body = text,
       timestamp = sentAt,
-      source = source.flatMap(KeepEventSource.fromMessageSource).map(BasicKeepEventSource(_, url = None))
+      source = KeepEventSource.fromMessageSource(source).map(BasicKeepEventSource(_, url = None))
     )
   }
 }

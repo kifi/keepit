@@ -103,7 +103,7 @@ class BookmarkImporter @Inject() (
   case class LoggingFields(startMillis: Long, id: String, request: UserRequest[Either[MaxSizeExceeded, play.api.libs.Files.TemporaryFile]])
 
   private def processBookmarkExtraction(sourceOpt: Option[KeepSource], parsed: Seq[Bookmark], pubId: PublicId[Library], lf: LoggingFields): Future[Option[(Int, Int)]] = {
-    implicit val context = heimdalContextBuilderFactoryBean.withRequestInfoAndSource(lf.request, sourceOpt.getOrElse(KeepSource.BookmarkFileImport)).build
+    implicit val context = heimdalContextBuilderFactoryBean.withRequestInfoAndSource(lf.request, sourceOpt.getOrElse(KeepSource.bookmarkFileImport)).build
     SafeFuture("processBookmarkExtraction") {
       log.info(s"[bmFileImport:${lf.id}] Parsed in ${clock.getMillis() - lf.startMillis}ms")
 
@@ -247,7 +247,7 @@ class EvernoteParser @Inject() () extends ImportParser {
       links
     }
 
-    (Option(KeepSource.Evernote), parsed.toList)
+    (Option(KeepSource.evernote), parsed.toList)
   }
 
   private val formatter = new DateTimeFormatterBuilder().append(
@@ -312,14 +312,14 @@ class TwitterArchiveParserImpl @Inject() (urlClassifier: UrlClassifier) extends 
       res
     }.getOrElse(List.empty)
 
-    (Option(KeepSource.TwitterFileImport), links)
+    (Option(KeepSource.twitterFileImport), links)
   }
 
   def parseTwitterJson(jsons: Seq[JsObject]): (Option[KeepSource], List[Bookmark]) = {
     val links = twitterJsonToRawTweets(jsons).collect {
       case tweet if tweet.entities.urls.nonEmpty => rawTweetToBookmarks(tweet)
     }.flatten
-    (Option(KeepSource.TwitterSync), links.toList)
+    (Option(KeepSource.twitterSync), links.toList)
   }
 
   private def rawTweetToBookmarks(tweet: RawTweet): Seq[Bookmark] = {

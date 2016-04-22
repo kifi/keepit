@@ -211,7 +211,7 @@ class SlackIngestingActor @Inject() (
     }
     val ingestedMessages = rawBookmarksByUser.flatMap {
       case (kifiUserOpt, rawBookmarks) =>
-        val interned = keepInterner.internRawBookmarksWithStatus(rawBookmarks, kifiUserOpt, Some(library), usersAdded = Set.empty, KeepSource.Slack)(HeimdalContext.empty)
+        val interned = keepInterner.internRawBookmarksWithStatus(rawBookmarks, kifiUserOpt, Some(library), usersAdded = Set.empty, KeepSource.slack)(HeimdalContext.empty)
         (rawBookmarks.toSet -- interned.failures).flatMap(_.sourceAttribution.collect { case slack: RawSlackAttribution => slack.message })
     }.toSet
     airbrake.verify(ingestedMessages.forall(_.channel.id == integration.slackChannelId), s"Ingested a message from the wrong channel (integration ${integration.id.get}): ${ingestedMessages.filter(_.channel.id != integration.slackChannelId)}")

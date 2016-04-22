@@ -39,7 +39,7 @@ class OrganizationController @Inject() (
   implicit val organizationViewWrites = OrganizationView.defaultWrites
 
   def createOrganization = UserAction(parse.tolerantJson) { request =>
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.Site).build
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     request.body.validate[OrganizationInitialValues](OrganizationInitialValues.website) match {
       case _: JsError => OrganizationFail.BAD_PARAMETERS.asErrorResponse
       case JsSuccess(initialValues, _) =>
@@ -54,7 +54,7 @@ class OrganizationController @Inject() (
   }
 
   def modifyOrganization(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.EDIT_ORGANIZATION)(parse.tolerantJson) { request =>
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.Site).build
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     request.body.validate[OrganizationModifications](OrganizationModifications.website) match {
       case JsError(errs) =>
         airbrake.notify(s"Could not json-validate modify request from ${request.request.userId}: ${request.body}", new JsResultException(errs))
@@ -69,7 +69,7 @@ class OrganizationController @Inject() (
   }
 
   def transferOrganization(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.EDIT_ORGANIZATION)(parse.tolerantJson) { request =>
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.Site).build
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     (request.body \ "newOwner").validate[ExternalId[User]] match {
       case JsError(errs) =>
         airbrake.notify(s"Could not json-validate transfer request from ${request.request.userId}: ${request.body}", new JsResultException(errs))
@@ -85,7 +85,7 @@ class OrganizationController @Inject() (
   }
 
   def deleteOrganization(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.EDIT_ORGANIZATION) { request =>
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.Site).build
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     val deleteRequest = OrganizationDeleteRequest(requesterId = request.request.userId, orgId = request.orgId)
     orgCommander.deleteOrganization(deleteRequest) match {
       case Left(fail) => fail.asErrorResponse
