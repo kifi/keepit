@@ -84,6 +84,20 @@ object Discussion {
   )(Discussion.apply, unlift(Discussion.unapply))
 }
 
+case class CrossServiceDiscussion(
+  startedAt: DateTime,
+  numMessages: Int,
+  locator: DeepLocator,
+  messages: Seq[CrossServiceMessage])
+object CrossServiceDiscussion {
+  implicit val format: Format[CrossServiceDiscussion] = (
+    (__ \ 'startedAt).format[DateTime] and
+    (__ \ 'numMessages).format[Int] and
+    (__ \ 'locator).format[DeepLocator] and
+    (__ \ 'messages).format[Seq[CrossServiceMessage]]
+  )(CrossServiceDiscussion.apply, unlift(CrossServiceDiscussion.unapply))
+}
+
 // God forgive me, I'm creating yet another "_____-info" model
 // May this be the start of a new convention where keeps have
 //     `libraries: Seq[T]` instead of `library: T`

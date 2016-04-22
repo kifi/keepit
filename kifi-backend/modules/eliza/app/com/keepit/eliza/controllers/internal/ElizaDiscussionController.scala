@@ -39,6 +39,13 @@ class ElizaDiscussionController @Inject() (
       Ok(Json.toJson(output))
     }
   }
+  def getCrossServiceDiscussionsForKeeps = Action(parse.tolerantJson) { request =>
+    import GetCrossServiceDiscussionsForKeeps._
+    val input = request.body.as[Request]
+    val discussions = discussionCommander.getCrossServiceDiscussionsForKeeps(input.keepIds, input.fromTime, input.maxMessagesShown)
+    val output = Response(discussions)
+    Ok(Json.toJson(output))
+  }
 
   def getCrossServiceMessages = Action(parse.tolerantJson) { request =>
     import GetCrossServiceMessages._
