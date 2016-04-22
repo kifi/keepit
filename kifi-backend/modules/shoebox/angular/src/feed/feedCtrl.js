@@ -33,7 +33,7 @@ angular.module('kifi')
 
     var FIRST_FETCH_SIZE = 3;
     var SUBSEQUENT_FETCH_SIZE = 10;
-    var feedLazyLoader = new Paginator(feedSource, FIRST_FETCH_SIZE, Paginator.DONE_WHEN_RESPONSE_IS_EMPTY);
+    var feedLazyLoader = new Paginator(feedSource, SUBSEQUENT_FETCH_SIZE, Paginator.DONE_WHEN_RESPONSE_IS_EMPTY);
 
     $scope.feed = [];
 
@@ -72,12 +72,11 @@ angular.module('kifi')
     $scope.isLoading = function () {
       return !feedLazyLoader.hasLoaded();
     };
-    $scope.fetchKeeps = function () {
+    $scope.fetchKeeps = function (fetchSize) {
       return feedLazyLoader
-      .fetch()
+      .fetch(null, null, fetchSize)
       .then(function (keeps) {
         $scope.feed = keeps;
-        feedLazyLoader.fetchPageSize = SUBSEQUENT_FETCH_SIZE;
       })
       ['catch'](modalService.openGenericErrorModal);
     };
@@ -162,6 +161,8 @@ angular.module('kifi')
 
     // Initialize
     $window.document.title = 'Kifi • Your stream';
-    $scope.fetchKeeps();
+    $scope.fetchKeeps(FIRST_FETCH_SIZE).then(function() { // populate the visible keeps fast, then fetch the rest of the page
+      $scope.fetchKeeps();
+    });
   }
 ]);
