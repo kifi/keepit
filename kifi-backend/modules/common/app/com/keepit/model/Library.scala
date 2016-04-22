@@ -366,6 +366,7 @@ case class BasicLibrary(id: PublicId[Library], name: String, path: String, visib
 }
 
 object BasicLibrary {
+  val fake = BasicLibrary(PublicId("l42424242"), "a deleted library", "/", LibraryVisibility.SECRET, None, None)
   def apply(library: Library, owner: BasicUser, orgHandle: Option[OrganizationHandle], slack: Option[LiteLibrarySlackInfo])(implicit publicIdConfig: PublicIdConfiguration): BasicLibrary = {
     val path = LibraryPathHelper.formatLibraryPath(owner, orgHandle, library.slug)
     BasicLibrary(Library.publicId(library.id.get), library.name, path, library.visibility, library.color, slack)

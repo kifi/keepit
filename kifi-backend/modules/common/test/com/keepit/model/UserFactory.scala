@@ -24,6 +24,7 @@ object UserFactory {
     def withCreatedAt(createdAt: DateTime) = this.copy(user = user.copy(createdAt = createdAt))
     def withUpdatedAt(updatedAt: DateTime) = this.copy(user = user.copy(updatedAt = updatedAt))
     def withName(first: String, last: String) = this.copy(user = user.copy(firstName = first, lastName = last))
+    def withFullName(firstAndLast: (String, String)) = this.copy(user = user.copy(firstName = firstAndLast._1, lastName = firstAndLast._2))
     def withEmailAddress(emailAddress: String) = this.copy(emailAddressOpt = Some(EmailAddress(emailAddress)))
     def withUsername(name: String): PartialUser = this.copy(user = user.copy(primaryUsername = Some(PrimaryUsername(Username(name), Username(name)))))
     def withPictureName(name: String) = this.copy(user = user.copy(pictureName = Some(name)))

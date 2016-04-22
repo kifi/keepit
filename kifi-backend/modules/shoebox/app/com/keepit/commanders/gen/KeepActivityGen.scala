@@ -3,22 +3,17 @@ package com.keepit.commanders.gen
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.core.regexExtensionOps
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.util.DescriptionElements._
 import com.keepit.common.util._
+import com.keepit.discussion.{ CrossServiceDiscussion, Message }
 import com.keepit.model.BasicKeepEvent.BasicKeepEventId
-import com.keepit.model.{ BasicKeepEventSource, CommonKeepEvent, KifiAttribution, KeepEvent, KeepRecipientsDiff, BasicKeepEvent, KeepEventKind, KeepActivity, TwitterAttribution, SlackAttribution, BasicOrganization, BasicLibrary, Library, User, KeepToUser, KeepToLibrary, SourceAttribution, Keep }
-import com.keepit.discussion.{ Message, CrossServiceDiscussion, Discussion }
-import com.keepit.model.KeepEventData.{ ModifyRecipients, EditTitle }
-import com.keepit.social.{ BasicUser, BasicAuthor }
+import com.keepit.model.KeepEventData.{ EditTitle, ModifyRecipients }
+import com.keepit.model._
+import com.keepit.social.{ BasicAuthor, BasicUser }
+import play.api.libs.functional.syntax._
 
 object KeepActivityGen {
-  final case class SerializationInfo(
-    userById: Map[Id[User], BasicUser],
-    libById: Map[Id[Library], BasicLibrary],
-    orgByLibraryId: Map[Id[Library], BasicOrganization])
-
   def generateKeepActivity(
     keep: Keep,
     sourceAttrOpt: Option[(SourceAttribution, Option[BasicUser])],
@@ -26,32 +21,32 @@ object KeepActivityGen {
     discussionOpt: Option[CrossServiceDiscussion],
     ktls: Seq[KeepToLibrary],
     ktus: Seq[KeepToUser],
-    maxEvents: Int)(implicit info: SerializationInfo, airbrake: AirbrakeNotifier, imageConfig: S3ImageConfig, pubIdConfig: PublicIdConfiguration): KeepActivity = {
+    maxEvents: Int)(implicit airbrake: AirbrakeNotifier, imageConfig: S3ImageConfig, pubIdConfig: PublicIdConfiguration): BatchFetchable[KeepActivity] = {
 
     import com.keepit.common.util.DescriptionElements._
 
-    lazy val initialEvents = {
-      val basicAuthor = sourceAttrOpt.map {
-        case (sourceAttr, basicUserOpt) => BasicAuthor(sourceAttr, basicUserOpt)
-      }.orElse(keep.userId.flatMap(info.userById.get).map(BasicAuthor.fromUser))
-      if (basicAuthor.isEmpty) airbrake.notify(s"[activityLog] can't generate author for keep ${keep.id.get}, keep.user = ${keep.userId}")
-      val authorElement: DescriptionElement = basicAuthor.map(fromBasicAuthor).getOrElse(fromText("Someone"))
-
-      val (firstLibrary, orgOpt) = (ktls.headOption.flatMap(ktl => info.libById.get(ktl.libraryId)), ktls.headOption.flatMap(ktl => info.orgByLibraryId.get(ktl.libraryId)))
-
-      val header = sourceAttrOpt.map(_._1) match {
+    lazy val initialEventsBF = {
+      val basicAuthorBF = sourceAttrOpt.map {
+        case (sourceAttr, basicUserOpt) => BatchFetchable.trivial(BasicAuthor(sourceAttr, basicUserOpt))
+      }.getOrElse {
+        BatchFetchable.userOpt(keep.userId).map(_.map(BasicAuthor.fromUser).getOrElse(BasicAuthor.Fake))
+      }
+      val headerBF = sourceAttrOpt.map(_._1) match {
         case Some(KifiAttribution(keptBy, _, users, emails, libraries, _)) =>
           val nonKeeperRecipients = users.filter(_.externalId != keptBy.externalId)
           val recipientsElement = DescriptionElements.unwordsPretty(Seq(nonKeeperRecipients.map(fromBasicUser).toSeq, emails.map(e => fromText(e.address)).toSeq, libraries.map(fromBasicLibrary).toSeq).flatten)
           val actionElement = if (recipientsElement.flatten.nonEmpty) DescriptionElements("sent this to", recipientsElement) else DescriptionElements("sent this")
 
-          DescriptionElements(authorElement, actionElement)
+          basicAuthorBF.map(ba => DescriptionElements(ba, actionElement))
         case _ =>
-          DescriptionElements(
-            authorElement, "sent this",
-            firstLibrary.map(lib => DescriptionElements("to", lib)),
-            orgOpt.map(org => DescriptionElements("in", org))
-          )
+          val (firstLibrary, orgOpt) = (BatchFetchable.libraryOpt(ktls.headOption.map(_.libraryId)), BatchFetchable.orgOpt(ktls.headOption.flatMap(_.organizationId)))
+          (basicAuthorBF and firstLibrary and orgOpt).tupled.map {
+            case (ba, fl, oo) => DescriptionElements(
+              ba, "sent this",
+              fl.map(lib => DescriptionElements("to", lib)),
+              oo.map(org => DescriptionElements("in", org))
+            )
+          }
       }
 
       val noteBody = sourceAttrOpt.flatMap {
@@ -65,115 +60,130 @@ object KeepActivityGen {
 
       val source = sourceAttrOpt.flatMap { case (attr, _) => BasicKeepEventSource.fromSourceAttribution(attr) }
 
-      val noteEvent = noteBody.map { note =>
-        BasicKeepEvent(
-          id = BasicKeepEventId.NoteId(Keep.publicId(keep.id.get)),
-          author = basicAuthor.getOrElse(BasicAuthor.Fake),
-          KeepEventKind.Note,
-          header = authorElement,
-          body = DescriptionElements(note),
-          timestamp = keep.keptAt,
-          source = source)
+      (basicAuthorBF and headerBF).tupled.map {
+        case (basicAuthor, header) =>
+          val noteEvent = noteBody.map { note =>
+            BasicKeepEvent(
+              id = BasicKeepEventId.NoteId(Keep.publicId(keep.id.get)),
+              author = basicAuthor,
+              KeepEventKind.Note,
+              header = DescriptionElements(basicAuthor),
+              body = DescriptionElements(note),
+              timestamp = keep.keptAt,
+              source = source)
+          }
+          val initialEvent = BasicKeepEvent(
+            id = BasicKeepEventId.InitialId(Keep.publicId(keep.id.get)),
+            author = basicAuthor,
+            KeepEventKind.Initial,
+            header = header,
+            body = DescriptionElements(),
+            timestamp = keep.keptAt,
+            source = source)
+
+          noteEvent.toSeq :+ initialEvent
       }
-      val initialEvent = BasicKeepEvent(
-        id = BasicKeepEventId.InitialId(Keep.publicId(keep.id.get)),
-        author = basicAuthor.getOrElse(BasicAuthor.Fake),
-        KeepEventKind.Initial,
-        header = header,
-        body = DescriptionElements(),
-        timestamp = keep.keptAt,
-        source = source)
-
-      noteEvent.toSeq :+ initialEvent
     }
 
-    val keepEvents = events.map(event => generateKeepEvent(keep.id.get, event))
-    val comments = discussionOpt.map(_.messages.flatMap { msg =>
-      for {
-        sender <- msg.sentBy
-        myauthor <- sender.fold(u => info.userById.get(u).map(BasicAuthor.fromUser), nu => Some(BasicAuthor.fromNonUser(nu)))
-      } yield BasicKeepEvent.generateCommentEvent(
-        id = Message.publicId(msg.id),
-        author = myauthor,
-        text = msg.text,
-        sentAt = msg.sentAt,
-        source = msg.source
-      )
-    }).getOrElse(Seq.empty)
+    val basicEventsBF = {
+      val keepEvents = events.map(event => generateKeepEvent(keep.id.get, event))
+      val comments = discussionOpt.map(_.messages.flatMap { msg =>
+        msg.sentBy.map { sender =>
+          val myAuthor = sender.fold(u => BatchFetchable.user(u).map(_.map(BasicAuthor.fromUser).getOrElse(BasicAuthor.Fake)), nu => BatchFetchable.trivial(BasicAuthor.fromNonUser(nu)))
+          myAuthor.map { author =>
+            BasicKeepEvent.generateCommentEvent(
+              id = Message.publicId(msg.id),
+              author = author,
+              text = msg.text,
+              sentAt = msg.sentAt,
+              source = msg.source
+            )
+          }
+        }
+      }).getOrElse(Seq.empty)
 
-    val basicEvents = {
-      val subsequentEvents = (keepEvents ++ comments).sortBy(_.timestamp.getMillis)(Ord.descending).take(maxEvents)
-      if (subsequentEvents.size < maxEvents) subsequentEvents ++ initialEvents else subsequentEvents
-    }
-
-    val latestEvent = {
-      val lastEvent = basicEvents.headOption.getOrElse(initialEvents.head)
-      val newHeader = lastEvent.kind match {
-        case KeepEventKind.Initial => DescriptionElements(lastEvent.author, "sent this")
-        case KeepEventKind.Note => DescriptionElements(lastEvent.author, "commented on this") // NB(ryan): we are pretending that notes are comments
-        case KeepEventKind.Comment => DescriptionElements(lastEvent.author, "commented on this")
-        case KeepEventKind.EditTitle => DescriptionElements(lastEvent.author, "edited the title")
-        case KeepEventKind.ModifyRecipients => DescriptionElements(lastEvent.author, "sent this")
+      (initialEventsBF and BatchFetchable.seq(keepEvents ++ comments)).tupled.map {
+        case (initialEvents, regularEvents) =>
+          val subsequentEvents = regularEvents.sortBy(_.timestamp.getMillis)(Ord.descending).take(maxEvents)
+          if (subsequentEvents.size < maxEvents) subsequentEvents ++ initialEvents else subsequentEvents
       }
-      lastEvent.withHeader(newHeader)
     }
 
-    KeepActivity(latestEvent, basicEvents, numComments = discussionOpt.map(_.numMessages).getOrElse(0) + keep.note.size)
+    val latestEventBF = (initialEventsBF and basicEventsBF).tupled.map {
+      case (initialEvents, basicEvents) =>
+        val lastEvent = basicEvents.headOption.getOrElse(initialEvents.head)
+        val newHeader = lastEvent.kind match {
+          case KeepEventKind.Initial => DescriptionElements(lastEvent.author, "sent this")
+          case KeepEventKind.Note => DescriptionElements(lastEvent.author, "commented on this") // NB(ryan): we are pretending that notes are comments
+          case KeepEventKind.Comment => DescriptionElements(lastEvent.author, "commented on this")
+          case KeepEventKind.EditTitle => DescriptionElements(lastEvent.author, "edited the title")
+          case KeepEventKind.ModifyRecipients => DescriptionElements(lastEvent.author, "sent this")
+        }
+        lastEvent.withHeader(newHeader)
+    }
+
+    (latestEventBF and basicEventsBF).tupled.map {
+      case (latestEvent, basicEvents) => KeepActivity(latestEvent, basicEvents, numComments = discussionOpt.map(_.numMessages).getOrElse(0) + keep.note.size)
+    }
   }
 
-  def generateKeepEvent(keepId: Id[Keep], event: KeepEvent)(implicit info: SerializationInfo, imageConfig: S3ImageConfig, idConfig: PublicIdConfiguration, airbrake: AirbrakeNotifier): BasicKeepEvent = {
+  def generateKeepEvent(keepId: Id[Keep], event: KeepEvent)(implicit imageConfig: S3ImageConfig, idConfig: PublicIdConfiguration, airbrake: AirbrakeNotifier): BatchFetchable[BasicKeepEvent] = {
     val publicEventId = CommonKeepEvent.publicId(KeepEvent.toCommonId(event.id.get))
-    val (addedBy, kind, header) = event.eventData match {
+    val (addedByBF, kind, headerBF) = event.eventData match {
       case ModifyRecipients(adder, diff) =>
-        val basicAddedBy = {
-          if (!info.userById.contains(adder)) airbrake.notify(s"[activityLog] no basic user stored for user $adder on keep $keepId, event ${event.id}")
-          info.userById.get(adder)
-        }
-        val header = {
-          val userElement = basicAddedBy.map(fromBasicUser).getOrElse(fromText("Someone"))
-          val actionElement = Seq(
+        val basicAddedByBF = BatchFetchable.user(adder)
+        val headerBF = {
+          val actionElementBF = Seq(
             specialCaseForMovedLibrary(diff)
           ).flatten.headOption.getOrElse {
               val KeepRecipientsDiff(users, libraries, emails) = diff
-              val addedUserElements = users.added.flatMap(info.userById.get).map(fromBasicUser)
-              val addedLibElements = libraries.added.flatMap(info.libById.get).map(fromBasicLibrary)
-              val addedEmailElements = emails.added.map(email => fromText(email.address))
-              val addedEntities: Seq[DescriptionElement] = (addedUserElements ++ addedLibElements ++ addedEmailElements).toSeq
-              DescriptionElements("sent this to", unwordsPretty(addedEntities))
+              val addedUserElementsBF = BatchFetchable.seq(users.added.toSeq.map(BatchFetchable.user)).map(_.flatten.map(fromBasicUser))
+              val addedLibElementsBF = BatchFetchable.seq(libraries.added.toSeq.map(BatchFetchable.library)).map(_.flatten.map(fromBasicLibrary))
+              val addedEmailElements = emails.added.toSeq.map(email => fromText(email.address))
+              (addedUserElementsBF and addedLibElementsBF).tupled.map {
+                case (addedUserElements, addedLibElements) =>
+                  val addedEntities = addedUserElements ++ addedLibElements ++ addedEmailElements
+                  DescriptionElements("sent this to", unwordsPretty(addedEntities))
+              }
             }
-          DescriptionElements(userElement, actionElement)
+          val userElementBF = basicAddedByBF.map { basicAddedBy => basicAddedBy.map(fromBasicUser).getOrElse(fromText("Someone")) }
+          (userElementBF and actionElementBF).tupled.map {
+            case (userElement, actionElement) => DescriptionElements(userElement, actionElement)
+          }
         }
-        val body = DescriptionElements()
-
-        (basicAddedBy, KeepEventKind.ModifyRecipients, header)
+        (basicAddedByBF, KeepEventKind.ModifyRecipients, headerBF)
 
       case EditTitle(editedBy, _, updated) =>
-        if (!info.userById.contains(editedBy)) airbrake.notify(s"[activityLog] no basic user stored for user $editedBy on keep $keepId, event ${event.id}")
+        val basicAddedByBF = BatchFetchable.user(editedBy)
+        val headerBF = basicAddedByBF.map { basicAddedBy =>
+          DescriptionElements(basicAddedBy.map(generateUserElement(_, fullName = true)).getOrElse(fromText("Someone")), "edited the title", updated.map(DescriptionElements("to", _)))
+        }
 
-        val basicAddedBy = info.userById.get(editedBy)
-        val header = DescriptionElements(basicAddedBy.map(generateUserElement(_, fullName = true)).getOrElse(fromText("Someone")), "edited the title", updated.map(DescriptionElements("to", _)))
-
-        (basicAddedBy, KeepEventKind.EditTitle, header)
+        (basicAddedByBF, KeepEventKind.EditTitle, headerBF)
     }
 
-    BasicKeepEvent(
-      id = BasicKeepEventId.fromEvent(publicEventId),
-      author = addedBy.map(BasicAuthor.fromUser).getOrElse(BasicAuthor.Fake),
-      kind = kind,
-      header = header,
-      body = DescriptionElements(),
-      timestamp = event.eventTime,
-      source = event.source.map(src => BasicKeepEventSource(src, url = None))
-    )
+    (addedByBF and headerBF).tupled.map {
+      case (addedBy, header) =>
+        BasicKeepEvent(
+          id = BasicKeepEventId.fromEvent(publicEventId),
+          author = addedBy.map(BasicAuthor.fromUser).getOrElse(BasicAuthor.Fake),
+          kind = kind,
+          header = header,
+          body = DescriptionElements(),
+          timestamp = event.eventTime,
+          source = event.source.map(src => BasicKeepEventSource(src, url = None))
+        )
+    }
   }
 
-  private def specialCaseForMovedLibrary(diff: KeepRecipientsDiff)(implicit info: SerializationInfo): Option[DescriptionElements] = {
+  private def specialCaseForMovedLibrary(diff: KeepRecipientsDiff): Option[BatchFetchable[DescriptionElements]] = {
     val KeepRecipientsDiff(users, libraries, emails) = diff
-    if (users.isEmpty && emails.isEmpty && libraries.added.size == 1 && libraries.removed.size == 1) for {
-      fromLib <- info.libById.get(libraries.removed.head)
-      toLib <- info.libById.get(libraries.added.head)
-    } yield {
-      DescriptionElements("moved this from", fromLib, "to", toLib)
+    if (users.isEmpty && emails.isEmpty && libraries.added.size == 1 && libraries.removed.size == 1) Some {
+      val fromLib = BatchFetchable.library(libraries.removed.head).map(_ getOrElse BasicLibrary.fake)
+      val toLib = BatchFetchable.library(libraries.added.head).map(_ getOrElse BasicLibrary.fake)
+      (fromLib and toLib).tupled.map {
+        case (from, to) => DescriptionElements("moved this from", from, "to", to)
+      }
     }
     else None
   }

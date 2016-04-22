@@ -2,12 +2,11 @@ package com.keepit.commanders.gen
 
 import com.google.inject.Inject
 import com.keepit.commanders.PathCommander
+import com.keepit.common.core.mapExtensionOps
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
-import com.keepit.common.core.mapExtensionOps
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.model.Handle.{ fromUsername, fromOrganizationHandle }
 import com.keepit.model._
 import com.keepit.slack.SlackInfoCommander
 

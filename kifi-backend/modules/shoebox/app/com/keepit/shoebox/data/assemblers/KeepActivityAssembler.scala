@@ -2,9 +2,8 @@ package com.keepit.shoebox.data.assemblers
 
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.commanders._
-import com.keepit.commanders.gen.KeepActivityGen.SerializationInfo
-import com.keepit.commanders.gen.{ BasicLibraryGen, BasicOrganizationGen, KeepActivityGen }
-import com.keepit.common.core.{ iterableExtensionOps, mapExtensionOps }
+import com.keepit.commanders.gen.{ BasicULOBatchFetcher, BasicLibraryGen, BasicOrganizationGen, KeepActivityGen }
+import com.keepit.common.core.iterableExtensionOps
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
@@ -13,6 +12,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.performance.StatsdTimingAsync
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageConfig
+import com.keepit.common.util.BatchFetchable
 import com.keepit.discussion.CrossServiceDiscussion
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
@@ -40,6 +40,7 @@ class KeepActivityAssemblerImpl @Inject() (
   eventRepo: KeepEventRepo,
   keepSourceCommander: KeepSourceCommander,
   eliza: ElizaServiceClient,
+  basicULOBatchFetcher: BasicULOBatchFetcher,
   private implicit val airbrake: AirbrakeNotifier,
   private implicit val publicIdConfig: PublicIdConfiguration,
   private implicit val imageConfig: S3ImageConfig,
@@ -61,7 +62,7 @@ class KeepActivityAssemblerImpl @Inject() (
     for {
       (keepsById, sourceAttrsByKeep, eventsByKeep, ktusByKeep, ktlsByKeep) <- shoeboxFut
       discussionsByKeep <- elizaFut
-    } yield keepsById.map {
+    } yield basicULOBatchFetcher.run(BatchFetchable.flipMap(keepsById.map {
       case (kId, keep) => kId -> keepActivityAssemblyHelper(
         keep = keep,
         sourceAttrOpt = sourceAttrsByKeep.get(kId),
@@ -71,7 +72,7 @@ class KeepActivityAssemblerImpl @Inject() (
         discussion = discussionsByKeep.get(kId),
         limit = numEventsPerKeep
       )
-    }
+    }))
   }
 
   def getActivityForKeep(keepId: Id[Keep], fromTime: Option[DateTime], limit: Int): Future[KeepActivity] = {
@@ -85,37 +86,11 @@ class KeepActivityAssemblerImpl @Inject() (
     ktus: Seq[KeepToUser],
     ktls: Seq[KeepToLibrary],
     discussion: Option[CrossServiceDiscussion],
-    limit: Int): KeepActivity = {
-    val (userById, libById, orgByLibId) = db.readOnlyMaster { implicit s =>
-      val (usersFromEvents, libsFromEvents) = KeepEvent.idsInvolved(events)
-      val libById = {
-        val libsNeeded = ktls.map(_.libraryId).toSet ++ libsFromEvents
-        libRepo.getActiveByIds(libsNeeded)
-      }
-      val basicOrgByLibId = {
-        val basicOrgById = basicOrgGen.getBasicOrganizations(libById.values.flatMap(_.organizationId).toSet)
-        libById.flatMapValues(_.organizationId.flatMap(basicOrgById.get))
-      }
-      val basicUserById = {
-        val ktuUsers = ktus.map(_.userId).toSet
-        val msgUsers = discussion.map(_.messages.flatMap(_.sentBy.flatMap(_.left.toOption))).getOrElse(Seq.empty).toSet
-        val libOwners = libById.values.map(_.ownerId).toSet
-        basicUserRepo.loadAll(ktuUsers ++ libOwners ++ msgUsers ++ usersFromEvents)
-      }
-      val basicLibById = basicLibGen.getBasicLibraries(libById.keySet)
-      (basicUserById, basicLibById, basicOrgByLibId)
-    }
-    implicit val info = SerializationInfo(userById, libById, orgByLibId)
+    limit: Int): BatchFetchable[KeepActivity] = {
     KeepActivityGen.generateKeepActivity(keep, sourceAttrOpt, events, discussion, ktls, ktus, limit)
   }
 
   def assembleBasicKeepEvent(keepId: Id[Keep], event: KeepEvent)(implicit session: RSession): BasicKeepEvent = {
-    val (userIds, libraries) = KeepEvent.idsInvolved(Seq(event))
-    implicit val info = KeepActivityGen.SerializationInfo(
-      userById = basicUserRepo.loadAllActive(userIds),
-      libById = basicLibGen.getBasicLibraries(libraries),
-      orgByLibraryId = Map.empty
-    )
-    KeepActivityGen.generateKeepEvent(keepId, event)
+    basicULOBatchFetcher.runInPlace(KeepActivityGen.generateKeepEvent(keepId, event))
   }
 }
