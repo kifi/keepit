@@ -3,7 +3,7 @@ package com.keepit.controllers.internal
 import com.google.inject.Inject
 import com.keepit.commanders._
 import com.keepit.commanders.emails.EmailTemplateSender
-import com.keepit.commanders.gen.BasicOrganizationGen
+import com.keepit.commanders.gen.{ BasicLibraryGen, BasicOrganizationGen }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.ShoeboxServiceController
 import com.keepit.common.crypto.PublicIdConfiguration
@@ -34,6 +34,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import play.api.mvc.Action
 import securesocial.core.IdentityId
+import com.keepit.shoebox.ShoeboxServiceClient._
 
 import scala.concurrent.Future
 import scala.util.{ Failure, Success, Try }
@@ -59,6 +60,7 @@ class ShoeboxController @Inject() (
   keepDecorator: KeepDecorator,
   keepImageCommander: KeepImageCommander,
   basicUserRepo: BasicUserRepo,
+  basicLibraryGen: BasicLibraryGen,
   socialUserInfoRepo: SocialUserInfoRepo,
   socialConnectionRepo: SocialConnectionRepo,
   sessionRepo: UserSessionRepo,
@@ -235,6 +237,15 @@ class ShoeboxController @Inject() (
     implicit val tupleWrites = TupleFormat.tuple2Writes[Id[User], BasicUser]
     val result = Json.toJson(basicUsers.toSeq)
     Ok(result)
+  }
+
+  def getRecipientsOnKeep(keepId: Id[Keep]) = Action(parse.tolerantJson) { request =>
+    import GetRecipientsOnKeep._
+    val response = db.readOnlyMaster { implicit s =>
+      val keep = keepRepo.get(keepId)
+      Response(basicUserRepo.loadAllActive(keep.recipients.users), basicLibraryGen.getBasicLibraries(keep.recipients.libraries), keep.recipients.emails)
+    }
+    Ok(Json.toJson(response))
   }
 
   def getEmailAddressesForUsers() = Action(parse.tolerantJson) { request =>

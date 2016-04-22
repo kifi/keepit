@@ -122,40 +122,42 @@ class NotificationDeliveryCommanderImpl @Inject() (
   }
 
   def notifyAddParticipants(adderUserId: Id[User], newParticipants: Seq[Id[User]], newNonUserParticipants: Seq[NonUserParticipant], thread: MessageThread, message: ElizaMessage, source: Option[KeepEventSource]): Unit = {
-    new SafeFuture(shoebox.getBasicUsers(thread.participants.allUsers.toSeq) map { basicUsers =>
-      val adderUserName = basicUsers.get(adderUserId).map { bu => bu.firstName + " " + bu.lastName }.get
-      val theTitle: String = thread.pageTitle.getOrElse("New conversation")
-      val participants: Seq[BasicUserLikeEntity] =
-        basicUsers.values.toSeq.map(u => BasicUserLikeEntity(u)) ++
-          thread.participants.allNonUsers.toSeq.map(nu => BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nu)))
-      val notificationJson = Json.obj(
-        "id" -> message.pubId,
-        "time" -> message.createdAt,
-        "thread" -> thread.pubKeepId,
-        "text" -> s"$adderUserName added you to a conversation.",
-        "url" -> message.sentOnUrl.getOrElse[String](thread.url),
-        "title" -> theTitle,
-        "author" -> basicUsers(adderUserId),
-        "participants" -> participants,
-        "locator" -> thread.deepLocator,
-        "unread" -> true,
-        "category" -> NotificationCategory.User.MESSAGE.category
-      )
+    new SafeFuture(shoebox.getRecipientsOnKeep(thread.keepId).map {
+      case (basicUsers, basicLibraries, emails) =>
+        val adderUserName = basicUsers.get(adderUserId).map { bu => bu.firstName + " " + bu.lastName }.get
+        val theTitle: String = thread.pageTitle.getOrElse("New conversation")
+        val participants: Seq[BasicUserLikeEntity] =
+          basicUsers.values.toSeq.map(u => BasicUserLikeEntity(u)) ++
+            thread.participants.allNonUsers.toSeq.map(nu => BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nu)))
+        val notificationJson = Json.obj(
+          "id" -> message.pubId,
+          "time" -> message.createdAt,
+          "thread" -> thread.pubKeepId,
+          "text" -> s"$adderUserName added you to a conversation.",
+          "url" -> message.sentOnUrl.getOrElse[String](thread.url),
+          "title" -> theTitle,
+          "author" -> basicUsers(adderUserId),
+          "participants" -> participants,
+          "locator" -> thread.deepLocator,
+          "unread" -> true,
+          "category" -> NotificationCategory.User.MESSAGE.category
+        )
 
-      Future.sequence(newParticipants.map { userId =>
-        recreateNotificationForAddedParticipant(userId, thread)
-      }) map { permanentNotifications =>
-        newParticipants.zip(permanentNotifications) foreach {
-          case (userId, permanentNotification) =>
-            sendToUser(userId, Json.arr("notification", notificationJson, permanentNotification))
+        Future.sequence(newParticipants.map { userId =>
+          recreateNotificationForAddedParticipant(userId, thread)
+        }) map { permanentNotifications =>
+          newParticipants.zip(permanentNotifications) foreach {
+            case (userId, permanentNotification) =>
+              sendToUser(userId, Json.arr("notification", notificationJson, permanentNotification))
+          }
+          val messageWithBasicUser = basicMessageCommander.getMessageWithBasicUser(message, thread, basicUsers)
+          thread.participants.allUsers.par.foreach { userId =>
+            sendToUser(userId, Json.arr("message", thread.pubKeepId, messageWithBasicUser))
+            sendToUser(userId, Json.arr("thread_participants", thread.pubKeepId, participants))
+            sendToUser(userId, Json.arr("thread_recipients", thread.pubKeepId, basicUsers.values, emails.toSeq, basicLibraries.values))
+          }
+          emailCommander.notifyAddedEmailUsers(thread, newNonUserParticipants)
         }
-        val messageWithBasicUser = basicMessageCommander.getMessageWithBasicUser(message, thread, basicUsers)
-        thread.participants.allUsers.par.foreach { userId =>
-          sendToUser(userId, Json.arr("message", thread.pubKeepId, messageWithBasicUser))
-          sendToUser(userId, Json.arr("thread_participants", thread.pubKeepId, participants))
-        }
-        emailCommander.notifyAddedEmailUsers(thread, newNonUserParticipants)
-      }
     })
   }
 
