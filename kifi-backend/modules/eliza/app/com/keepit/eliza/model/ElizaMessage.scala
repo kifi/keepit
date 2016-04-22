@@ -330,7 +330,7 @@ object ElizaMessage extends CommonClassLinker[ElizaMessage, Message] {
 }
 
 case class MessagesKeepIdKey(keepId: Id[Keep]) extends Key[Seq[ElizaMessage]] {
-  override val version = 2
+  override val version = 3
   val namespace = "messages_by_keep_id"
   def toKey(): String = keepId.id.toString
 }
