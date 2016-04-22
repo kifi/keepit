@@ -32,6 +32,7 @@ import org.joda.time.DateTime
 import play.api.libs.json.Json._
 import play.api.libs.json._
 import securesocial.core.IdentityId
+import com.keepit.shoebox.ShoeboxServiceClient._
 
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext => ScalaExecutionContext, Future }
@@ -46,6 +47,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]]
   def getUserIdsByExternalIds(extIds: Set[ExternalId[User]]): Future[Map[ExternalId[User], Id[User]]]
   def getBasicUsers(users: Seq[Id[User]]): Future[Map[Id[User], BasicUser]]
+  def getRecipientsOnKeep(keepId: Id[Keep]): Future[(Map[Id[User], BasicUser], Map[Id[Library], BasicLibrary], Set[EmailAddress])]
   def getCrossServiceKeepsByIds(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], CrossServiceKeep]]
   def getDiscussionKeepsByIds(viewerId: Id[User], keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], DiscussionKeep]]
   def getEmailAddressesForUsers(userIds: Set[Id[User]]): Future[Map[Id[User], Seq[EmailAddress]]]
@@ -293,6 +295,14 @@ class ShoeboxServiceClientImpl @Inject() (
           cached ++ missing
         }
       }
+    }
+  }
+
+  def getRecipientsOnKeep(keepId: Id[Keep]): Future[(Map[Id[User], BasicUser], Map[Id[Library], BasicLibrary], Set[EmailAddress])] = {
+    import GetRecipientsOnKeep._
+    call(Shoebox.internal.getRecipientsOnKeep(keepId)).map { res =>
+      val Response(users, libraries, emails) = res.json.as[Response]
+      (users, libraries, emails)
     }
   }
 
@@ -932,6 +942,11 @@ object ShoeboxServiceClient {
     case class Request(userId: Id[User], uriIds: Set[Id[NormalizedURI]])
     case class Response(keepRecipientsByUriId: Map[Id[NormalizedURI], Set[CrossServiceKeepRecipients]])
     implicit val requestFormat: Format[Request] = Json.format[Request]
+    implicit val responseFormat: Format[Response] = Json.format[Response]
+  }
+
+  object GetRecipientsOnKeep {
+    case class Response(users: Map[Id[User], BasicUser], libraries: Map[Id[Library], BasicLibrary], emails: Set[EmailAddress])
     implicit val responseFormat: Format[Response] = Json.format[Response]
   }
 }
