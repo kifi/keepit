@@ -9,11 +9,13 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.model.Handle.{ fromUsername, fromOrganizationHandle }
 import com.keepit.model._
+import com.keepit.slack.SlackInfoCommander
 
 class BasicLibraryGen @Inject() (
     libRepo: LibraryRepo,
     orgRepo: OrganizationRepo,
     basicUserRepo: BasicUserRepo,
+    slackInfoCommander: SlackInfoCommander,
     pathCommander: PathCommander,
     implicit val publicIdConfig: PublicIdConfiguration) {
 
@@ -27,6 +29,7 @@ class BasicLibraryGen @Inject() (
       val userSet = libById.values.map(_.ownerId).toSet
       basicUserRepo.loadAllActive(userSet)
     }
+    val slackInfoById = slackInfoCommander.getLiteSlackInfoForLibraries(libIds)
     libById.flatMapValues { lib =>
       val spaceHandle = lib.organizationId.fold[Option[Handle]](userById.get(lib.ownerId).map(_.username))(orgId => orgById.get(orgId).map(_.handle))
       spaceHandle.map(handle => pathCommander.libPageByHandleAndSlug(handle, lib.slug)).map { libPath =>
@@ -35,7 +38,8 @@ class BasicLibraryGen @Inject() (
           name = lib.name,
           path = libPath.relativeWithLeadingSlash,
           visibility = lib.visibility,
-          color = lib.color
+          color = lib.color,
+          slack = slackInfoById.get(lib.id.get)
         )
       }
     }

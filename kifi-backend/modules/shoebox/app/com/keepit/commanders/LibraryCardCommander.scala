@@ -13,6 +13,7 @@ import com.keepit.common.performance.{ StatsdTiming, AlertingTimer }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.ImageSize
 import com.keepit.model._
+import com.keepit.slack.SlackInfoCommander
 import com.keepit.social.BasicUser
 import play.api.libs.json.Json
 import scala.concurrent.duration._
@@ -38,6 +39,7 @@ class LibraryCardCommanderImpl @Inject() (
     organizationInfoCommander: OrganizationInfoCommander,
     libraryInviteCommander: LibraryInviteCommander,
     libraryMembershipCommander: LibraryMembershipCommander,
+    slackInfoCommander: SlackInfoCommander,
     permissionCommander: PermissionCommander,
     pathCommander: PathCommander,
     airbrake: AirbrakeNotifier,
@@ -59,6 +61,7 @@ class LibraryCardCommanderImpl @Inject() (
     }
     val orgViews = organizationInfoCommander.getBasicOrganizationViewsHelper(libs.flatMap(_.organizationId).toSet, viewerIdOpt = viewerIdOpt, authTokenOpt = None)
     val libPermissionsById = permissionCommander.getLibrariesPermissions(libIds, viewerIdOpt)
+    val slackInfoById = slackInfoCommander.getLiteSlackInfoForLibraries(libIds)
     libs.par map { lib => // may want to optimize queries below into bulk queries
       val image = ProcessedImageSize.pickBestImage(idealSize, libraryImageRepo.getActiveForLibraryId(lib.id.get), strictAspectRatio = false)
       val (numFollowers, followersSample, numCollaborators, collabsSample) = {
@@ -90,18 +93,20 @@ class LibraryCardCommanderImpl @Inject() (
         None
       }
 
-      createLibraryCardInfo(lib, image, owner, numFollowers, followersSample, numCollaborators, collabsSample, isFollowing, membershipInfoOpt, inviteInfoOpt, libPermissionsById(lib.id.get), path, orgViewOpt)
+      createLibraryCardInfo(lib, image, owner, numFollowers, followersSample, numCollaborators, collabsSample, isFollowing, membershipInfoOpt, inviteInfoOpt, libPermissionsById(lib.id.get), path, orgViewOpt, slackInfoById.get(lib.id.get))
     }
   }
 
   def createLiteLibraryCardInfos(libs: Seq[Library], viewerId: Id[User])(implicit session: RSession): ParSeq[(LibraryCardInfo, Option[MiniLibraryMembership])] = {
+    val libIds = libs.map(_.id.get)
     val memberships = libraryMembershipRepo.getMinisByLibraryIdsAndAccess(
-      libs.map(_.id.get).toSet, Set(LibraryAccess.OWNER, LibraryAccess.READ_WRITE))
+      libIds.toSet, Set(LibraryAccess.OWNER, LibraryAccess.READ_WRITE))
     val userIds = memberships.values.flatMap(_.map(_.userId)).toSet
     val allBasicUsers = basicUserRepo.loadAll(userIds)
 
     val basicOrgViewById = organizationInfoCommander.getBasicOrganizationViewsHelper(libs.flatMap(_.organizationId).toSet, Some(viewerId), authTokenOpt = None)
-    val permissionsById = permissionCommander.getLibrariesPermissions(libs.map(_.id.get).toSet, Some(viewerId))
+    val permissionsById = permissionCommander.getLibrariesPermissions(libIds.toSet, Some(viewerId))
+    val slackInfosById = slackInfoCommander.getLiteSlackInfoForLibraries(libIds.toSet)
 
     libs.par map { lib =>
       val libMems = memberships(lib.id.get)
@@ -150,14 +155,17 @@ class LibraryCardCommanderImpl @Inject() (
         modifiedAt = lib.updatedAt,
         org = basicOrgViewOpt,
         orgMemberAccess = lib.organizationMemberAccess,
-        whoCanComment = lib.whoCanComment)
+        whoCanComment = lib.whoCanComment,
+        slack = slackInfosById.get(lib.id.get))
       (info, viewerMemOpt)
     }
   }
 
   @StatsdTiming("libraryInfoCommander.createLibraryCardInfo")
   private def createLibraryCardInfo(lib: Library, image: Option[LibraryImage], owner: BasicUser, numFollowers: Int,
-    followers: Seq[BasicUser], numCollaborators: Int, collaborators: Seq[BasicUser], isFollowing: Option[Boolean], membershipInfoOpt: Option[LibraryMembershipInfo], inviteInfoOpt: Option[LibraryInviteInfo], permissions: Set[LibraryPermission], path: Path, orgView: Option[BasicOrganizationView]): LibraryCardInfo = {
+    followers: Seq[BasicUser], numCollaborators: Int, collaborators: Seq[BasicUser], isFollowing: Option[Boolean],
+    membershipInfoOpt: Option[LibraryMembershipInfo], inviteInfoOpt: Option[LibraryInviteInfo], permissions: Set[LibraryPermission],
+    path: Path, orgView: Option[BasicOrganizationView], slackInfo: Option[LiteLibrarySlackInfo]): LibraryCardInfo = {
     LibraryCardInfo(
       id = Library.publicId(lib.id.get),
       name = Library.getDisplayName(lib.name, lib.kind),
@@ -182,7 +190,8 @@ class LibraryCardCommanderImpl @Inject() (
       path = path,
       org = orgView,
       orgMemberAccess = if (lib.organizationId.isDefined) Some(lib.organizationMemberAccess.getOrElse(LibraryAccess.READ_WRITE)) else None,
-      whoCanComment = lib.whoCanComment
+      whoCanComment = lib.whoCanComment,
+      slack = slackInfo
     )
   }
 
@@ -238,7 +247,8 @@ class LibraryCardCommanderImpl @Inject() (
               kind = lib.kind,
               org = info.org,
               orgMemberAccess = lib.organizationMemberAccess,
-              whoCanComment = lib.whoCanComment
+              whoCanComment = lib.whoCanComment,
+              slack = None
             )
         }.seq.sortBy(_._1).map(_._2)
       }

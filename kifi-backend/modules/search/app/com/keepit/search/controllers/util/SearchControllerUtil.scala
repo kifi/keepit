@@ -57,7 +57,7 @@ trait SearchControllerUtil {
 
   protected def makeBasicLibrary(library: LibraryRecord, visibility: LibraryVisibility, owner: BasicUser, org: Option[BasicOrganization])(implicit publicIdConfig: PublicIdConfiguration): BasicLibrary = {
     val path = LibraryPathHelper.formatLibraryPath(owner, org.map(_.handle), library.slug)
-    BasicLibrary(Library.publicId(library.id), library.name, path, visibility, library.color)
+    BasicLibrary(Library.publicId(library.id), library.name, path, visibility, library.color, slack = None) // todo(cam): fetch this from shoebox
   }
 
   def getUserAndExperiments(request: MaybeUserRequest[_]): (Id[User], Set[UserExperimentType]) = {

@@ -19,6 +19,7 @@ import com.keepit.common.store.ImagePath
 import com.keepit.common.time.DateTimeJsonFormat
 import com.keepit.model.{ SocialUserConnectionsKey, _ }
 import com.keepit.search.SearchServiceClient
+import com.keepit.slack.SlackInfoCommander
 import com.keepit.social.{ BasicUser, SocialNetworkType, SocialNetworks, TypeaheadUserHit }
 import com.keepit.typeahead._
 import com.kifi.macros.json
@@ -50,6 +51,7 @@ class TypeaheadCommander @Inject() (
     organizationAvatarCommander: Provider[OrganizationAvatarCommander],
     permissionCommander: Provider[PermissionCommander],
     pathCommander: PathCommander,
+    slackInfoCommander: SlackInfoCommander,
     implicit val ec: ExecutionContext,
     implicit val config: PublicIdConfiguration) extends Logging {
 
@@ -458,7 +460,7 @@ class TypeaheadCommander @Inject() (
 
   private def libToResult(userId: Id[User], libIds: Seq[Id[Library]]): Seq[(Id[Library], LibraryResult)] = {
     val idSet = libIds.toSet
-    val (libs, collaborators, memberships, permissions, basicUserById, orgAvatarsById) = db.readOnlyReplica { implicit session =>
+    val (libs, collaborators, memberships, permissions, basicUserById, orgAvatarsById, slackInfoById) = db.readOnlyReplica { implicit session =>
       val libs = libraryRepo.getActiveByIds(idSet).values.toVector
       val collaborators = libraryMembershipRepo.getCollaboratorsByLibrary(idSet)
       val memberships = libraryMembershipRepo.getWithLibraryIdsAndUserId(idSet, userId)
@@ -467,8 +469,9 @@ class TypeaheadCommander @Inject() (
       }.toMap
       val basicUserById = basicUserRepo.loadAll(collaborators.values.flatten.toSet)
       val orgAvatarsById = organizationAvatarCommander.get.getBestImagesByOrgIds(libs.flatMap(_.organizationId).toSet, ProcessedImageSize.Medium.idealSize)
+      val slackInfoById = slackInfoCommander.getLiteSlackInfoForLibraries(idSet)
 
-      (libs, collaborators, memberships, permissions, basicUserById, orgAvatarsById)
+      (libs, collaborators, memberships, permissions, basicUserById, orgAvatarsById, slackInfoById)
     }
     libs.collect {
       case lib if lib.isActive =>
@@ -487,7 +490,8 @@ class TypeaheadCommander @Inject() (
           hasCollaborators = collabs.nonEmpty,
           collaborators = collabs,
           orgAvatar = orgAvatarPath,
-          membership = membershipInfo
+          membership = membershipInfo,
+          slack = slackInfoById.get(lib.id.get)
         )
     }
   }
@@ -513,7 +517,7 @@ sealed trait TypeaheadSearchResult
 @json case class EmailContactResult(name: Option[String], email: EmailAddress) extends TypeaheadSearchResult
 @json case class LibraryResult(id: PublicId[Library], name: String, color: Option[LibraryColor], visibility: LibraryVisibility,
   path: String, hasCollaborators: Boolean, collaborators: Seq[BasicUser], orgAvatar: Option[ImagePath],
-  membership: Option[LibraryMembershipInfo]) extends TypeaheadSearchResult // Same as LibraryData. Duck typing would rock.
+  membership: Option[LibraryMembershipInfo], slack: Option[LiteLibrarySlackInfo]) extends TypeaheadSearchResult // Same as LibraryData. Duck typing would rock.
 
 sealed trait TypeaheadRequest
 object TypeaheadRequest extends Enumerator[TypeaheadRequest] {

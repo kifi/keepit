@@ -47,7 +47,7 @@ class SlackIntegrationCommanderTest extends TestKitSupport with SpecificationLik
           slackIntegrationCommander.setupIntegrations(user.id.get, lib.id.get, siw2.id.get)
 
           val slackInfo = db.readOnlyMaster { implicit s =>
-            slackInfoCommander.getSlackIntegrationsForLibraries(user.id.get, Set(lib.id.get))
+            slackInfoCommander.getFullSlackInfoForLibraries(user.id.get, Set(lib.id.get))
           }
 
           val orgPubId = Organization.publicId(slackTeam.organizationId.get)(inject[PublicIdConfiguration])
