@@ -45,7 +45,11 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
 
   var portHandlers = {
     recipients: function (recipients) {
-      k.messageParticipants.addParticipant.apply(k.messageParticipants, recipients);
+      var keep = k.messageParticipants.getKeep();
+      var users = keep.recipients.users = recipients.users;
+      var emails = keep.recipients.emails = recipients.emails;
+      var libraries = keep.recipients.libraries = recipients.libraries;
+      k.messageParticipants.addParticipant.apply(k.messageParticipants, users.concat(emails).concat(libraries));
     }
   };
 
@@ -545,8 +549,8 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
       for (var i = 0, len = arguments.length, participant, participantId; i < len; i++) {
         participant = args[i];
         participantId = participant && participant.id;
-
         if (participantId && !participants.some(idIs(participantId))) {
+          participant.highlight = true;
           participants.unshift(participant);
           count++;
         }
@@ -554,8 +558,12 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
 
       if (count) {
         this.updateView();
-        this.highlightParticipantsWithIds(args.map(mapId));
+        this.highlightParticipantsWithIds(args.filter(function (a) { return a.highlight; }).map(mapId));
       }
+
+      args.forEach(function (a) {
+        delete a.highlight;
+      });
     },
 
     highlightParticipantsWithIds: function (ids) {
