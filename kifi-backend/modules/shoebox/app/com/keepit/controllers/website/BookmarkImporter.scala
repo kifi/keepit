@@ -153,10 +153,10 @@ class NetscapeBookmarkParser @Inject() () extends ImportParser with ZipParser {
     val title = Option(parsed.select("title").text())
 
     val source = title match {
-      case Some("Kippt Bookmarks") => Some(KeepSource("Kippt"))
-      case Some("Pocket Export") => Some(KeepSource("Pocket"))
-      case Some("Instapaper: Export") => Some(KeepSource("Instapaper"))
-      case Some(title) if title.contains("Diigo") => Some(KeepSource("Diigo"))
+      case Some("Kippt Bookmarks") => Some(KeepSource.Kippt)
+      case Some("Pocket Export") => Some(KeepSource.Pocket)
+      case Some("Instapaper: Export") => Some(KeepSource.Instapaper)
+      case Some(t) if t.contains("Diigo") => Some(KeepSource.Diigo)
       case _ => None
     }
 

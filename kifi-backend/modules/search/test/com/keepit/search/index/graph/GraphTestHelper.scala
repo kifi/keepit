@@ -13,7 +13,7 @@ import play.api.test.Helpers._
 
 trait GraphTestHelper extends SearchTestInjector {
 
-  val source = KeepSource("test")
+  val source = KeepSource.Fake
   val bigDataSize = 8000
 
   def initData()(implicit injector: Injector) = {
