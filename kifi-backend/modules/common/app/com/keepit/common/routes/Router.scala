@@ -261,6 +261,7 @@ object Eliza extends Service {
 
     def getCrossServiceMessages = ServiceRoute(POST, "/internal/eliza/getCrossServiceMessages")
     def getDiscussionsForKeeps = ServiceRoute(POST, "/internal/eliza/getDiscussionsForKeeps")
+    def getCrossServiceDiscussionsForKeeps = ServiceRoute(POST, "/internal/eliza/getCrossServiceDiscussionsForKeeps")
     def markKeepsAsReadForUser() = ServiceRoute(POST, "/internal/eliza/markKeepsAsReadForUser")
     def sendMessageOnKeep() = ServiceRoute(POST, "/internal/eliza/sendMessageOnKeep")
     def getMessagesOnKeep = ServiceRoute(POST, "/internal/eliza/getMessagesOnKeep")

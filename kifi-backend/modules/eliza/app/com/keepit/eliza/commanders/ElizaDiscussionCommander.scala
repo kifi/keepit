@@ -8,9 +8,9 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.{ EmailAddress, BasicContact }
+import com.keepit.common.mail.{ BasicContact, EmailAddress }
 import com.keepit.common.time._
-import com.keepit.discussion.{ MessageSource, DiscussionFail, Discussion, Message }
+import com.keepit.discussion._
 import com.keepit.eliza.model._
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
@@ -23,8 +23,8 @@ import scala.concurrent.{ ExecutionContext, Future }
 @ImplementedBy(classOf[ElizaDiscussionCommanderImpl])
 trait ElizaDiscussionCommander {
   def getMessagesOnKeep(keepId: Id[Keep], fromIdOpt: Option[Id[ElizaMessage]], limit: Int): Future[Seq[Message]]
-  def getDiscussionForKeep(keepId: Id[Keep], fromTime: Option[DateTime], maxMessagesShown: Int): Future[Discussion]
   def getDiscussionsForKeeps(keepIds: Set[Id[Keep]], fromTime: Option[DateTime], maxMessagesShown: Int): Future[Map[Id[Keep], Discussion]]
+  def getCrossServiceDiscussionsForKeeps(keepIds: Set[Id[Keep]], fromTime: Option[DateTime], maxMessagesShown: Int): Map[Id[Keep], CrossServiceDiscussion]
   def syncAddParticipants(keepId: Id[Keep], event: KeepEventData.ModifyRecipients, source: Option[KeepEventSource]): Future[Unit]
   def getEmailParticipantsForKeeps(keepIds: Set[Id[Keep]]): Map[Id[Keep], Map[EmailAddress, (Id[User], DateTime)]]
   def sendMessage(userId: Id[User], txt: String, keepId: Id[Keep], source: Option[MessageSource] = None)(implicit context: HeimdalContext): Future[Message]
@@ -91,9 +91,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
     }
   }
 
-  def getDiscussionForKeep(keepId: Id[Keep], fromTime: Option[DateTime], maxMessagesShown: Int): Future[Discussion] = getDiscussionsForKeeps(Set(keepId), fromTime, maxMessagesShown).imap(dm => dm(keepId))
-
-  def getDiscussionsForKeeps(keepIds: Set[Id[Keep]], fromTime: Option[DateTime], maxMessagesShown: Int) = {
+  def getDiscussionsForKeeps(keepIds: Set[Id[Keep]], fromTime: Option[DateTime], maxMessagesShown: Int): Future[Map[Id[Keep], Discussion]] = {
     val recentsByKeep = db.readOnlyReplica { implicit s =>
       keepIds.map { keepId =>
         keepId -> messageRepo.getByKeepBefore(keepId, fromOpt = fromTime, limit = maxMessagesShown)
@@ -121,6 +119,29 @@ class ElizaDiscussionCommanderImpl @Inject() (
             messages = recentsByKeep(keepId).flatMap(em => extMessageMap.get(em.id.get))
           )
       }
+    }
+  }
+  def getCrossServiceDiscussionsForKeeps(keepIds: Set[Id[Keep]], fromTime: Option[DateTime], maxMessagesShown: Int): Map[Id[Keep], CrossServiceDiscussion] = {
+    val recentsByKeep = db.readOnlyReplica { implicit s =>
+      keepIds.map { keepId =>
+        keepId -> messageRepo.getByKeepBefore(keepId, fromOpt = fromTime, limit = maxMessagesShown)
+      }.toMap
+    }
+
+    val (threadsByKeep, countsByKeep) = db.readOnlyReplica { implicit s =>
+      val threadsByKeep = messageThreadRepo.getByKeepIds(keepIds)
+      val countsByKeep = messageRepo.getAllMessageCounts(keepIds)
+      (threadsByKeep, countsByKeep)
+    }
+
+    threadsByKeep.map {
+      case (keepId, thread) =>
+        keepId -> CrossServiceDiscussion(
+          startedAt = thread.createdAt,
+          numMessages = countsByKeep.getOrElse(keepId, 0),
+          locator = thread.deepLocator,
+          messages = recentsByKeep(keepId).map(ElizaMessage.toCrossServiceMessage)
+        )
     }
   }
 

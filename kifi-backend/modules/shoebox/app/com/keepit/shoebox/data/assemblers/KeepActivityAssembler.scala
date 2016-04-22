@@ -2,22 +2,19 @@ package com.keepit.shoebox.data.assemblers
 
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.commanders._
-import com.keepit.common.core.iterableExtensionOps
 import com.keepit.commanders.gen.KeepActivityGen.SerializationInfo
 import com.keepit.commanders.gen.{ BasicLibraryGen, BasicOrganizationGen, KeepActivityGen }
-import com.keepit.common.concurrent.FutureHelpers
-import com.keepit.common.core.mapExtensionOps
+import com.keepit.common.core.{ iterableExtensionOps, mapExtensionOps }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
+import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.performance.StatsdTimingAsync
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageConfig
-import com.keepit.discussion.Discussion
+import com.keepit.discussion.CrossServiceDiscussion
 import com.keepit.eliza.ElizaServiceClient
-import com.keepit.model.KeepEventData.{ EditTitle, ModifyRecipients }
 import com.keepit.model._
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
@@ -59,7 +56,7 @@ class KeepActivityAssemblerImpl @Inject() (
       val ktlsByKeep = ktlRepo.getAllByKeepIds(keepIds)
       (keepsById, sourceAttrsByKeep, eventsByKeep, ktusByKeep, ktlsByKeep)
     }
-    val elizaFut = eliza.getDiscussionsForKeeps(keepIds, fromTime, numEventsPerKeep)
+    val elizaFut = eliza.getCrossServiceDiscussionsForKeeps(keepIds, fromTime, numEventsPerKeep)
 
     for {
       (keepsById, sourceAttrsByKeep, eventsByKeep, ktusByKeep, ktlsByKeep) <- shoeboxFut
@@ -87,7 +84,7 @@ class KeepActivityAssemblerImpl @Inject() (
     events: Seq[KeepEvent],
     ktus: Seq[KeepToUser],
     ktls: Seq[KeepToLibrary],
-    discussion: Option[Discussion],
+    discussion: Option[CrossServiceDiscussion],
     limit: Int): KeepActivity = {
     val (userById, libById, orgByLibId) = db.readOnlyMaster { implicit s =>
       val (usersFromEvents, libsFromEvents) = KeepEvent.idsInvolved(events)
@@ -101,8 +98,9 @@ class KeepActivityAssemblerImpl @Inject() (
       }
       val basicUserById = {
         val ktuUsers = ktus.map(_.userId).toSet
+        val msgUsers = discussion.map(_.messages.flatMap(_.sentBy.flatMap(_.left.toOption))).getOrElse(Seq.empty).toSet
         val libOwners = libById.values.map(_.ownerId).toSet
-        basicUserRepo.loadAllActive(ktuUsers ++ libOwners ++ usersFromEvents)
+        basicUserRepo.loadAllActive(ktuUsers ++ libOwners ++ msgUsers ++ usersFromEvents)
       }
       val basicLibById = basicLibGen.getBasicLibraries(libById.keySet)
       (basicUserById, basicLibById, basicOrgByLibId)

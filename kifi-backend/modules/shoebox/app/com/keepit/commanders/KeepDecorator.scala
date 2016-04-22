@@ -1,7 +1,5 @@
 package com.keepit.commanders
 
-import java.util.concurrent.TimeoutException
-
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders.gen.KeepActivityGen.SerializationInfo
 import com.keepit.commanders.gen.{ BasicOrganizationGen, KeepActivityGen }
@@ -17,7 +15,7 @@ import com.keepit.common.net.URISanitizer
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ ImageSize, S3ImageConfig, S3ImageStore }
 import com.keepit.common.util.Ord.dateTimeOrdering
-import com.keepit.discussion.{ Discussion }
+import com.keepit.discussion.{ Message, CrossServiceDiscussion, Discussion }
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 import com.keepit.rover.RoverServiceClient
@@ -27,6 +25,8 @@ import com.keepit.shoebox.data.keep.{ BasicLibraryWithKeptAt, KeepInfo }
 import com.keepit.slack.models.SlackTeamId
 import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient, SlackInfoCommander }
 import com.keepit.social.BasicAuthor
+import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient, SlackInfoCommander }
+import com.keepit.social.{ BasicUserLikeEntity, BasicAuthor }
 import org.joda.time.DateTime
 
 import scala.concurrent.duration._
@@ -92,9 +92,40 @@ class KeepDecoratorImpl @Inject() (
         (ktuRepo.getAllByKeepIds(keeps.map(_.id.get).toSet), ktlRepo.getAllByKeepIds(keepIds), eventRepo.getForKeeps(keepIds, limit = Some(maxMessagesShown), excludeKinds = KeepEventKind.hideForNow))
       }
 
+      val pageInfosFuture = getKeepSummaries(keeps, idealImageSize)
+
+      val sourceAttrsFut = db.readOnlyReplicaAsync { implicit s => keepSourceCommander.getSourceAttributionForKeeps(keepIds) }
+
+      val additionalSourcesFuture = augmentationFuture.map { infos =>
+        val keepIdsByUriId = (keeps zip infos).map {
+          case (keep, info) =>
+            keep.uriId -> info.keeps.map(_.id).filter(_ != keep.id.get)
+        }.toMap
+        getAdditionalSources(viewerIdOpt, keepIdsByUriId)
+      }
+
+      val allMyKeeps = viewerIdOpt.map { userId => getPersonalKeeps(userId, keeps.map(_.uriId).toSet) } getOrElse Map.empty[Id[NormalizedURI], Set[PersonalKeep]]
+
+      val librariesWithWriteAccess = viewerIdOpt.map { userId =>
+        db.readOnlyMaster { implicit session => libraryMembershipRepo.getLibrariesWithWriteAccess(userId) } //cached
+      } getOrElse Set.empty
+
+      val discussionsByKeepFut = eliza.getCrossServiceDiscussionsForKeeps(keepIds, fromTime = None, maxMessagesShown).recover {
+        case fail =>
+          airbrake.notify(s"[KEEP-DECORATOR] Failed to get discussions for keeps $keepIds", fail)
+          Map.empty[Id[Keep], CrossServiceDiscussion]
+      }
+      val discussionsWithStrictTimeout = TimeoutFuture(discussionsByKeepFut)(executionContext, 2.seconds).recover {
+        case _ =>
+          log.warn(s"[KEEP-DECORATOR] Timed out fetching discussions for keeps $keepIds")
+          Map.empty[Id[Keep], CrossServiceDiscussion]
+      }
+      val permissionsByKeep = db.readOnlyMaster(implicit s => permissionCommander.getKeepsPermissions(keepIds, viewerIdOpt))
+
       val entitiesFutures = for {
         augmentationInfos <- augmentationFuture
         emailParticipantsByKeep <- emailParticipantsByKeepFuture
+        discussionsByKeep <- discussionsByKeepFut
       } yield {
         val (usersFromEvents, libsFromEvents) = KeepEvent.idsInvolved(eventsByKeep.values.flatten)
 
@@ -116,8 +147,9 @@ class KeepDecoratorImpl @Inject() (
           val libraryOwners = idToLibrary.values.map(_.ownerId).toSet
           val keepers = keeps.flatMap(_.userId).toSet // is this needed? need to double check, it may be redundant
           val ktuUsers = ktusByKeep.values.flatten.map(_.userId) // may need to use .take(someLimit) for performance
+          val msgUsers = discussionsByKeep.values.flatMap(_.messages.flatMap(_.sentBy.flatMap(_.left.toOption))).toSet
           val emailParticipantsAddedBy = emailParticipantsByKeep.values.flatMap(_.values.map(_._1))
-          db.readOnlyMaster { implicit s => basicUserRepo.loadAll(keepersShown ++ libraryContributorsShown ++ libraryOwners ++ keepers ++ ktuUsers ++ emailParticipantsAddedBy ++ usersFromEvents) } //cached
+          db.readOnlyMaster { implicit s => basicUserRepo.loadAll(keepersShown ++ libraryContributorsShown ++ libraryOwners ++ keepers ++ ktuUsers ++ msgUsers ++ emailParticipantsAddedBy ++ usersFromEvents) } //cached
         }
         val idToBasicLibrary = idToLibrary.map {
           case (libId, library) =>
@@ -135,36 +167,6 @@ class KeepDecoratorImpl @Inject() (
 
         (idToBasicUser, idToBasicLibrary, libraryCardByLibId, basicOrgByLibId)
       }
-
-      val pageInfosFuture = getKeepSummaries(keeps, idealImageSize)
-
-      val sourceAttrsFut = db.readOnlyReplicaAsync { implicit s => keepSourceCommander.getSourceAttributionForKeeps(keepIds) }
-
-      val additionalSourcesFuture = augmentationFuture.map { infos =>
-        val keepIdsByUriId = (keeps zip infos).map {
-          case (keep, info) =>
-            keep.uriId -> info.keeps.map(_.id).filter(_ != keep.id.get)
-        }.toMap
-        getAdditionalSources(viewerIdOpt, keepIdsByUriId)
-      }
-
-      val allMyKeeps = viewerIdOpt.map { userId => getPersonalKeeps(userId, keeps.map(_.uriId).toSet) } getOrElse Map.empty[Id[NormalizedURI], Set[PersonalKeep]]
-
-      val librariesWithWriteAccess = viewerIdOpt.map { userId =>
-        db.readOnlyMaster { implicit session => libraryMembershipRepo.getLibrariesWithWriteAccess(userId) } //cached
-      } getOrElse Set.empty
-
-      val discussionsByKeepFut = eliza.getDiscussionsForKeeps(keepIds, fromTime = None, maxMessagesShown).recover {
-        case fail =>
-          airbrake.notify(s"[KEEP-DECORATOR] Failed to get discussions for keeps $keepIds", fail)
-          Map.empty[Id[Keep], Discussion]
-      }
-      val discussionsWithStrictTimeout = TimeoutFuture(discussionsByKeepFut)(executionContext, 2.seconds).recover {
-        case _ =>
-          log.warn(s"[KEEP-DECORATOR] Timed out fetching discussions for keeps $keepIds")
-          Map.empty[Id[Keep], Discussion]
-      }
-      val permissionsByKeep = db.readOnlyMaster(implicit s => permissionCommander.getKeepsPermissions(keepIds, viewerIdOpt))
 
       for {
         augmentationInfos <- augmentationFuture
@@ -222,6 +224,20 @@ class KeepDecoratorImpl @Inject() (
               } else None
             }
 
+            val normalDiscussion = discussionsByKeep.get(keepId).map { csDisc =>
+              Discussion(startedAt = csDisc.startedAt, numMessages = csDisc.numMessages, locator = csDisc.locator,
+                messages = csDisc.messages.flatMap(msg => for {
+                  sender <- msg.sentBy
+                  author <- sender.fold(u => idToBasicUser.get(u).map(BasicUserLikeEntity(_)), nu => Some(BasicUserLikeEntity(nu)))
+                } yield Message(
+                  pubId = Message.publicId(msg.id),
+                  sentAt = msg.sentAt,
+                  sentBy = author,
+                  text = msg.text,
+                  source = msg.source
+                )))
+            }
+
             (for {
               author <- sourceAttrs.get(keepId).map {
                 case (attr, userOpt) => BasicAuthor(attr, userOpt)
@@ -251,7 +267,7 @@ class KeepDecoratorImpl @Inject() (
                 organization = keep.lowestLibraryId.flatMap(idToBasicOrg.get),
                 sourceAttribution = sourceAttrs.get(keepId),
                 note = keep.note,
-                discussion = discussionsByKeep.get(keepId),
+                discussion = normalDiscussion,
                 activity = keepActivity,
                 participants = ktusByKeep.getOrElse(keepId, Seq.empty).flatMap(ktu => idToBasicUser.get(ktu.userId)),
                 members = keepMembers,
