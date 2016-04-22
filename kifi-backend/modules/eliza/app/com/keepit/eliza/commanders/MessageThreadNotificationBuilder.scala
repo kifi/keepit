@@ -10,7 +10,7 @@ import com.keepit.common.time._
 import com.keepit.discussion.Message
 import com.keepit.eliza.model.SystemMessageData.AddLibraries
 import com.keepit.eliza.model._
-import com.keepit.model.{ DeepLocator, Keep, NotificationCategory, User }
+import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.{ BasicUser, BasicUserLikeEntity }
 import org.joda.time.DateTime
@@ -23,7 +23,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 // "notification" card that summarizes a message thread
 case class MessageThreadNotification(
   // Info about the most recent message
-  id: PublicId[Message],
+  id: Option[PublicId[Message]],
   time: DateTime,
   author: Option[BasicUserLikeEntity],
   text: String,
@@ -45,40 +45,8 @@ case class MessageThreadNotification(
   numUnreadMessages: Int, // used only for client bookkeeping
   forceOverwrite: Boolean) // this flag will tell the extension to overwrite any existing notifications with this keep id
 object MessageThreadNotification {
-  // TODO(ryan): pray for forgiveness for this travesty
-  def apply(message: ElizaMessage, thread: MessageThread, threadStarter: ExternalId[User], messageWithBasicUser: MessageWithBasicUser,
-    unread: Boolean, numUnseenAuthors: Int, numAuthors: Int,
-    numMessages: Int, numUnread: Int, muted: Boolean)(implicit publicIdConfig: PublicIdConfiguration, airbrake: AirbrakeNotifier): MessageThreadNotification = {
-    val orderedParticipants = messageWithBasicUser.participants.sortBy(x => x.fold(nu => (nu.firstName.getOrElse(""), nu.lastName.getOrElse("")), u => (u.firstName, u.lastName)))
-    val indexOfFirstAuthor = orderedParticipants.zipWithIndex.collectFirst {
-      case (Right(user), idx) if user.externalId == threadStarter => idx
-    }.getOrElse {
-      airbrake.notify(s"Thread starter is not one of the participants for keep ${thread.keepId}")
-      0
-    }
-    MessageThreadNotification(
-      id = message.pubId,
-      time = message.createdAt,
-      author = messageWithBasicUser.user,
-      text = message.messageText,
-      threadId = thread.pubKeepId,
-      locator = thread.deepLocator,
-      url = message.sentOnUrl.getOrElse(thread.url),
-      title = thread.pageTitle,
-      participants = orderedParticipants,
-      unread = unread,
-      muted = muted,
-      category = NotificationCategory.User.MESSAGE,
-      firstAuthor = indexOfFirstAuthor,
-      numAuthors = numAuthors,
-      numUnseenAuthors = numUnseenAuthors,
-      numMessages = numMessages,
-      numUnreadMessages = numUnread,
-      forceOverwrite = false
-    )
-  }
   implicit def writes: Writes[MessageThreadNotification] = (
-    (__ \ 'id).write[PublicId[Message]] and
+    (__ \ 'id).write[String].contramap[Option[PublicId[Message]]](_.map(_.id) getOrElse "msg_fake_4242") and
     (__ \ 'time).write[DateTime] and
     (__ \ 'author).writeNullable[BasicUserLikeEntity] and
     (__ \ 'text).write[String] and
@@ -194,33 +162,60 @@ class MessageThreadNotificationBuilderImpl @Inject() (
         val allUsers = threadsById.values.flatMap(_.allParticipants).toSet
         shoebox.getBasicUsers(allUsers.toSeq)
       }
-    } yield lastMsgById.collect {
-      case (keepId, Some(message)) =>
+    } yield lastMsgById.map {
+      case (keepId, messageOpt) =>
         val thread = threadsById(keepId)
         val threadStarter = basicUserByIdMap(thread.startedBy).externalId
         val threadActivity = threadActivityById(keepId)
         val MessageCount(numMessages, numUnread) = msgCountById(keepId)
         val muted = mutedById(keepId)
 
-        val messageWithBasicUser = messageFetchingCommander.getMessageWithBasicUser(message, thread, basicUserByIdMap)
+        val author = messageOpt.map(_.from).collect {
+          case MessageSender.User(id) => BasicUserLikeEntity(basicUserByIdMap(id))
+          case MessageSender.NonUser(nup) => BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nup))
+        }.getOrElse {
+          BasicUserLikeEntity(BasicUser(ExternalId[User]("42424242-4242-4242-4242-000000000001"), "Kifi", "", "0.jpg", Username("sssss")))
+        }
         val authorActivityInfos = threadActivity.filter(_.lastActive.isDefined)
 
         val lastSeenOpt: Option[DateTime] = threadActivity.find(_.userId == userId).flatMap(_.lastSeen)
-        val unseenAuthors: Int = lastSeenOpt match {
+        val numUnseenAuthors: Int = lastSeenOpt match {
           case Some(lastSeen) => authorActivityInfos.count(uta => uta.userId != userId && uta.lastActive.get.isAfter(lastSeen))
           case None => authorActivityInfos.count(_.userId != userId)
         }
-        keepId -> MessageThreadNotification(
-          message = message.withText(messageWithBasicUser.text),
-          thread = thread,
-          threadStarter = threadStarter,
-          messageWithBasicUser = messageWithBasicUser,
-          unread = !message.from.asUser.safely.contains(userId),
-          numUnseenAuthors = unseenAuthors,
-          numAuthors = authorActivityInfos.length,
-          numMessages = numMessages,
-          numUnread = numUnread,
-          muted = muted)
+        keepId -> {
+          val allParticipants = thread.allParticipants.toSeq.map(u => BasicUserLikeEntity(basicUserByIdMap(u))) ++
+            thread.participants.nonUserParticipants.keySet.map(nup => BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nup)))
+          val orderedParticipants = allParticipants.sortBy(x => x.fold(nu => (nu.firstName.getOrElse(""), nu.lastName.getOrElse("")), u => (u.firstName, u.lastName)))
+          val indexOfFirstAuthor = orderedParticipants.zipWithIndex.collectFirst {
+            case (Right(user), idx) if user.externalId == threadStarter => idx
+          }.getOrElse {
+            airbrake.notify(s"Thread starter is not one of the participants for keep ${thread.keepId}")
+            0
+          }
+          MessageThreadNotification(
+            id = messageOpt.map(_.pubId),
+            time = messageOpt.map(_.createdAt).getOrElse(thread.createdAt),
+            author = Some(author),
+            text = messageOpt.map { message =>
+              message.auxData.map(SystemMessageData.generateMessageText(_, basicUserByIdMap)).getOrElse(message.messageText)
+            }.getOrElse(thread.url),
+            threadId = thread.pubKeepId,
+            locator = thread.deepLocator,
+            url = messageOpt.flatMap(_.sentOnUrl).getOrElse(thread.url),
+            title = thread.pageTitle,
+            participants = orderedParticipants,
+            unread = !messageOpt.exists(_.from.asUser.safely.contains(userId)),
+            muted = muted,
+            category = NotificationCategory.User.MESSAGE,
+            firstAuthor = indexOfFirstAuthor,
+            numAuthors = authorActivityInfos.length,
+            numUnseenAuthors = numUnseenAuthors,
+            numMessages = numMessages,
+            numUnreadMessages = numUnread,
+            forceOverwrite = false
+          )
+        }
     }
   }
 
