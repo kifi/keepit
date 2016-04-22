@@ -3,6 +3,7 @@ package com.keepit.commanders.gen
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.core.regexExtensionOps
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.util.DescriptionElements._
 import com.keepit.common.util._
@@ -42,7 +43,7 @@ object KeepActivityGen {
         case Some(KifiAttribution(keptBy, _, users, emails, libraries, _)) =>
           val nonKeeperRecipients = users.filter(_.externalId != keptBy.externalId)
           val recipientsElement = DescriptionElements.unwordsPretty(Seq(nonKeeperRecipients.map(fromBasicUser).toSeq, emails.map(e => fromText(e.address)).toSeq, libraries.map(fromBasicLibrary).toSeq).flatten)
-          val actionElement = if (recipientsElement.flatten.nonEmpty) DescriptionElements("sent this to", recipientsElement) else DescriptionElements("sent this page")
+          val actionElement = if (recipientsElement.flatten.nonEmpty) DescriptionElements("sent this to", recipientsElement) else DescriptionElements("sent this")
 
           DescriptionElements(authorElement, actionElement)
         case _ =>
@@ -53,9 +54,13 @@ object KeepActivityGen {
           )
       }
 
+      val slackLinkRegex = s"""<?${keep.url}(\|[^>]*)?>?""".r
       val noteBody = sourceAttrOpt.flatMap {
         case (ka: KifiAttribution, _) => keep.note.filter(_.nonEmpty)
-        case (SlackAttribution(msg, _), _) => Some(msg.text).filter(_ != keep.url)
+        case (SlackAttribution(msg, _), _) => Some(msg.text).filter { str =>
+          val textIsLiterallyJustTheUrl = slackLinkRegex.findMatchesAndInterstitials(str.trim).forall(_.isRight)
+          !textIsLiterallyJustTheUrl
+        }
         case (TwitterAttribution(tweet), _) => Some(tweet.text).filter(_ != keep.url)
       }
 
@@ -94,11 +99,11 @@ object KeepActivityGen {
     val latestEvent = {
       val lastEvent = basicEvents.headOption.getOrElse(initialEvents.head)
       val newHeader = lastEvent.kind match {
-        case KeepEventKind.Initial => DescriptionElements(lastEvent.author, "sent this page")
-        case KeepEventKind.Note => DescriptionElements(lastEvent.author, "commented on this page") // NB(ryan): we are pretending that notes are comments
-        case KeepEventKind.Comment => DescriptionElements(lastEvent.author, "commented on this page")
+        case KeepEventKind.Initial => DescriptionElements(lastEvent.author, "sent this")
+        case KeepEventKind.Note => DescriptionElements(lastEvent.author, "commented on this") // NB(ryan): we are pretending that notes are comments
+        case KeepEventKind.Comment => DescriptionElements(lastEvent.author, "commented on this")
         case KeepEventKind.EditTitle => DescriptionElements(lastEvent.author, "edited the title")
-        case KeepEventKind.ModifyRecipients => DescriptionElements(lastEvent.author, "added recipients to this discussion")
+        case KeepEventKind.ModifyRecipients => DescriptionElements(lastEvent.author, "sent this")
       }
       lastEvent.withHeader(newHeader)
     }
@@ -158,7 +163,7 @@ object KeepActivityGen {
       fromLib <- info.libById.get(libraries.removed.head)
       toLib <- info.libById.get(libraries.added.head)
     } yield {
-      DescriptionElements("moved this discussion from", fromLib, "to", toLib)
+      DescriptionElements("moved this from", fromLib, "to", toLib)
     }
     else None
   }
