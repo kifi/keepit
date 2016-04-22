@@ -189,26 +189,6 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
       }.bind(this));
     },
 
-    // socket.send(["add_participants_to_thread","e45841fb-b7de-498f-97af-9f1ab17ef9a9",["df7ba036-700c-4f5d-84d1-313b5bf312b6"]])
-
-    /**
-     * A listener for adding
-     *
-     * participants: [{
-     *   firstName: "Jenny"
-     *   id: "6f21b520-87e7-4053-9676-85762e96970a"
-     *   lastName: "Batres"
-     *   pictureName: "0.jpg"
-     * }]
-     */
-    setParticipants: function (participants) {
-      var parent = this.parent;
-      if (parent && parent.initialized) {
-        parent.participants = participants;
-        this.updateView();
-      }
-    },
-
     /**
      * Renders a UI component given the component name.
      *
