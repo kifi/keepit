@@ -24,6 +24,7 @@ case class SlackPushForKeep(
   timestamp: SlackTimestamp,
   text: String,
   lastKnownEditability: SlackMessageEditability,
+  sentViaUser: Option[SlackUserId],
   messageRequest: Option[SlackMessageRequest])
     extends Model[SlackPushForKeep] with ModelWithState[SlackPushForKeep] {
   def withId(id: Id[SlackPushForKeep]) = this.copy(id = Some(id))
@@ -37,7 +38,7 @@ case class SlackPushForKeep(
 }
 object SlackPushForKeepStates extends States[SlackPushForKeep]
 object SlackPushForKeep {
-  def fromMessage(integration: LibraryToSlackChannel, keepId: Id[Keep], request: SlackMessageRequest, response: SlackMessageResponse): SlackPushForKeep = {
+  def fromMessage(integration: LibraryToSlackChannel, keepId: Id[Keep], sender: SlackUserId, request: SlackMessageRequest, response: SlackMessageResponse): SlackPushForKeep = {
     SlackPushForKeep(
       slackTeamId = integration.slackTeamId,
       slackChannelId = integration.slackChannelId,
@@ -46,6 +47,7 @@ object SlackPushForKeep {
       timestamp = response.timestamp,
       text = response.text,
       lastKnownEditability = if (!response.sentByAnonymousBot) SlackMessageEditability.EDITABLE else SlackMessageEditability.UNEDITABLE,
+      sentViaUser = Some(sender),
       messageRequest = Some(request)
     )
   }
@@ -69,6 +71,7 @@ class SlackPushForKeepRepoImpl @Inject() (
   implicit val slackTeamIdColumnType = SlackDbColumnTypes.teamId(db)
   implicit val slackChannelIdColumnType = SlackDbColumnTypes.channelId(db)
   implicit val slackTimestampColumnType = SlackDbColumnTypes.timestamp(db)
+  implicit val slackUserIdColumnType = SlackDbColumnTypes.userId(db)
   implicit val editabilityMapper = MappedColumnType.base[SlackMessageEditability, String](_.value, str => SlackMessageEditability.fromStr(str).get)
   implicit val messageRequestMapper = jsonMapper[SlackMessageRequest]
 
@@ -81,9 +84,10 @@ class SlackPushForKeepRepoImpl @Inject() (
     def timestamp = column[SlackTimestamp]("slack_timestamp", O.NotNull)
     def text = column[String]("text", O.NotNull)
     def lastKnownEditability = column[SlackMessageEditability]("last_known_editability", O.NotNull)
+    def sentViaUser = column[Option[SlackUserId]]("sent_via_user", O.Nullable)
     def messageRequest = column[Option[SlackMessageRequest]]("message_request", O.Nullable)
 
-    def * = (id.?, createdAt, updatedAt, state, slackTeamId, slackChannelId, integrationId, keepId, timestamp, text, lastKnownEditability, messageRequest) <> ((SlackPushForKeep.apply _).tupled, SlackPushForKeep.unapply)
+    def * = (id.?, createdAt, updatedAt, state, slackTeamId, slackChannelId, integrationId, keepId, timestamp, text, lastKnownEditability, sentViaUser, messageRequest) <> ((SlackPushForKeep.apply _).tupled, SlackPushForKeep.unapply)
   }
 
   private def activeRows = rows.filter(_.state === SlackPushForKeepStates.ACTIVE)

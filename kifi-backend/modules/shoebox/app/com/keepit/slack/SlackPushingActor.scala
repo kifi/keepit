@@ -236,14 +236,13 @@ class SlackPushingActor @Inject() (
                 pushItems.newKeeps.map(_.ktl.id.get).maxOpt.foreach { ktlId => integrationRepo.updateLastProcessedKeep(integration.id.get, ktlId) }
                 pushItems.newMsgs.map(_.msg.id).maxOpt.foreach { msgId => integrationRepo.updateLastProcessedMsg(integration.id.get, msgId) }
               case PushItem.KeepToPush(k, ktl) =>
-                log.info(s"[SLACK-PUSH-ACTOR] for integration ${integration.id.get}, keep ${k.id.get} had message ${pushedMessageOpt.map(_.timestamp)}")
-                pushedMessageOpt.foreach { response =>
-                  slackPushForKeepRepo.intern(SlackPushForKeep.fromMessage(integration, k.id.get, itemMsg.asBot, response))
+                pushedMessageOpt.foreach {
+                  case (sender, response) => slackPushForKeepRepo.intern(SlackPushForKeep.fromMessage(integration, k.id.get, sender, itemMsg.asBot, response))
                 }
                 integrationRepo.updateLastProcessedKeep(integration.id.get, ktl.id.get)
               case PushItem.MessageToPush(k, kifiMsg) =>
-                pushedMessageOpt.foreach { response =>
-                  slackPushForMessageRepo.intern(SlackPushForMessage.fromMessage(integration, kifiMsg.id, itemMsg.asBot, response))
+                pushedMessageOpt.foreach {
+                  case (sender, response) => slackPushForMessageRepo.intern(SlackPushForMessage.fromMessage(integration, kifiMsg.id, sender, itemMsg.asBot, response))
                 }
                 integrationRepo.updateLastProcessedMsg(integration.id.get, kifiMsg.id)
             }
