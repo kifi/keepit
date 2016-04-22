@@ -518,15 +518,16 @@ class MessagingCommanderImpl @Inject() (
         } else {
           // this block might be unnecessary since ElizaDiscussionCommander.addParticipantsToThread is the only caller of this method and already does all this interning.
           val thread = threadRepo.save(oldThread.withParticipants(clock.now, actuallyNewUsers.toSet, actuallyNewNonUsers.toSet))
-          val message = messageRepo.save(ElizaMessage(
+          val messageTemplate = ElizaMessage(
             keepId = thread.keepId,
             from = MessageSender.System,
             messageText = "",
             source = source.flatMap(KeepEventSource.toMessageSource),
-            auxData = Some(AddParticipants(adderUserId, actuallyNewUsers, actuallyNewNonUsers)),
+            auxData = if (actuallyNewNonUsers.nonEmpty || actuallyNewUsers.nonEmpty) Some(AddParticipants(adderUserId, actuallyNewUsers, actuallyNewNonUsers)) else None,
             sentOnUrl = None,
             sentOnUriId = None
-          ))
+          )
+          val message = if (actuallyNewUsers.nonEmpty || actuallyNewNonUsers.nonEmpty) messageRepo.save(messageTemplate) else messageTemplate
 
           actuallyNewUsers.foreach(pUserId => userThreadRepo.intern(UserThread.forMessageThread(thread)(user = pUserId)))
           actuallyNewNonUsers.foreach { nup =>
