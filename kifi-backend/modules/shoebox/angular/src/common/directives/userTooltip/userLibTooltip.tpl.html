@@ -13,6 +13,7 @@
         <svg kf-symbol-sprite
               ng-if="library|libPrivacyIcon"
               icon="{{::library|libPrivacyIcon}}"></svg>
+        <img ng-if="library && library.slack" src="/img/slack-hash-white.png"/>
         <span ng-bind="library.name"></span>
       </div>
       <div class="user-lib-tooltip-authors">
