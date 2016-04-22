@@ -31,14 +31,6 @@ class ElizaDiscussionController @Inject() (
   heimdalContextBuilder: HeimdalContextBuilderFactory)
     extends ElizaServiceController with Logging {
 
-  def getDiscussionsForKeeps = Action.async(parse.tolerantJson) { request =>
-    import GetDiscussionsForKeeps._
-    val input = request.body.as[Request]
-    discussionCommander.getDiscussionsForKeeps(input.keepIds, input.fromTime, input.maxMessagesShown).map { discussions =>
-      val output = Response(discussions)
-      Ok(Json.toJson(output))
-    }
-  }
   def getCrossServiceDiscussionsForKeeps = Action(parse.tolerantJson) { request =>
     import GetCrossServiceDiscussionsForKeeps._
     val input = request.body.as[Request]
