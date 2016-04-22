@@ -165,8 +165,7 @@ class KeepByIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPlugi
 
 object KeepStates extends States[Keep]
 
-abstract class KeepSource(init: String) {
-  def value = init
+abstract class KeepSource(val value: String) {
   override def toString = value
 }
 object KeepSource extends Enumerator[KeepSource] {
