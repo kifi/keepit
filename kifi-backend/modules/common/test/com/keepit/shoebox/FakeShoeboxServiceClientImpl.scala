@@ -390,7 +390,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
     Future.successful(basicUsers)
   }
 
-  def getRecipientsOnKeep(keepId: Id[Keep]): Future[(Map[Id[User], BasicUser], Map[Id[Library], BasicLibrary], Set[EmailAddress])] = ???
+  def getRecipientsOnKeep(keepId: Id[Keep]): Future[(Map[Id[User], BasicUser], Map[Id[Library], BasicLibrary], Set[EmailAddress])] = Future.successful((Map.empty, Map.empty, Set.empty))
 
   def getEmailAddressesForUsers(userIds: Set[Id[User]]): Future[Map[Id[User], Seq[EmailAddress]]] = {
     val m = userIds.map { id => id -> allUserEmails.getOrElse(id, Set.empty).toSeq }.toMap
