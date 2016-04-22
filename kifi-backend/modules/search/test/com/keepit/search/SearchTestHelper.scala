@@ -142,7 +142,7 @@ trait SearchTestHelper { self: SearchTestInjector =>
     inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveBookmarksByUser(edgesByUser, uniqueTitle, isPrivate, source)
   }
 
-  val source = KeepSource("test")
+  val source = KeepSource.Fake
   val defaultConfig = new SearchConfig(SearchConfig.defaultParams)
   val noBoostConfig = defaultConfig.overrideWith(
     "myKeepBoost" -> "1",
