@@ -172,7 +172,7 @@ trait IndexModule extends ScalaModule with Logging {
   }
 
   @Provides @Singleton
-  def shardedKeepIndexer(activeShards: ActiveShards, backup: IndexStore, shoeboxClient: ShoeboxServiceClient, airbrake: AirbrakeNotifier, conf: Configuration, serviceDisovery: ServiceDiscovery): ShardedKeepIndexer = {
+  def shardedKeepIndexer(activeShards: ActiveShards, backup: IndexStore, shoeboxClient: ShoeboxServiceClient, elizaClient: ElizaServiceClient, airbrake: AirbrakeNotifier, conf: Configuration, serviceDisovery: ServiceDiscovery): ShardedKeepIndexer = {
     val version = IndexerVersionProviders.Keep.getVersionByStatus(serviceDisovery)
     def keepIndexer(shard: Shard[NormalizedURI]) = {
       val dir = getIndexDirectory("index.keep.directory", shard, version, backup, conf, IndexerVersionProviders.Keep.getVersionsForCleanup())
@@ -181,7 +181,7 @@ trait IndexModule extends ScalaModule with Logging {
     }
 
     val indexShards = activeShards.local.map { shard => (shard, keepIndexer(shard)) }
-    new ShardedKeepIndexer(indexShards.toMap, shoeboxClient, airbrake)
+    new ShardedKeepIndexer(indexShards.toMap, shoeboxClient, elizaClient, airbrake)
   }
 
   @Provides @Singleton

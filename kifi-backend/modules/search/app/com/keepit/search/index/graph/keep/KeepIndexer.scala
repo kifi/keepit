@@ -1,6 +1,7 @@
 package com.keepit.search.index.graph.keep
 
 import com.keepit.common.akka.SafeFuture
+import com.keepit.eliza.ElizaServiceClient
 import com.keepit.search.index._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -31,6 +32,7 @@ class KeepIndexer(indexDirectory: IndexDirectory, shard: Shard[NormalizedURI], v
 class ShardedKeepIndexer(
     val indexShards: Map[Shard[NormalizedURI], KeepIndexer],
     shoebox: ShoeboxServiceClient,
+    eliza: ElizaServiceClient,
     val airbrake: AirbrakeNotifier) extends ShardedIndexer[NormalizedURI, Keep, KeepIndexer] {
 
   import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -48,9 +50,12 @@ class ShardedKeepIndexer(
   }
 
   private def fetchIndexables(seq: SequenceNumber[Keep], fetchSize: Int): Future[Option[(Seq[KeepIndexable], SequenceNumber[Keep], Boolean)]] = {
-    shoebox.getCrossServiceKeepsAndTagsChanged(seq, fetchSize).map { changedKeepsAndTags =>
+    for {
+      changedKeepsAndTags <- shoebox.getCrossServiceKeepsAndTagsChanged(seq, fetchSize)
+      messagesByKeepId <- eliza.getChangedMessagesFromKeeps(changedKeepsAndTags.map(_.keep.id).toSet, SequenceNumber.ZERO).imap(_.groupBy(_.keep))
+    } yield {
       if (changedKeepsAndTags.nonEmpty) {
-        val indexables = changedKeepsAndTags.map { case CrossServiceKeepAndTags(keep, source, tags) => new KeepIndexable(keep, source, tags) }
+        val indexables = changedKeepsAndTags.map { case CrossServiceKeepAndTags(keep, source, tags) => new KeepIndexable(keep, source, messagesByKeepId.getOrElse(keep.id, Seq.empty), tags) }
         val exhausted = changedKeepsAndTags.isEmpty
         val maxSeq = changedKeepsAndTags.map(_.keep.seq).max
         Some((indexables, maxSeq, exhausted))

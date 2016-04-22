@@ -1,12 +1,13 @@
 package com.keepit.eliza.util
 
-import com.keepit.common.logging.Logging
-
-import scala.util.{ Try, Failure, Success }
-import scala.util.matching.Regex.Match
 import java.net.URLDecoder
 
-abstract class MessageSegment(val kind: String, val txt: String) //for use in templates since you can't match on type (it seems)
+import com.keepit.common.logging.Logging
+
+import scala.util.matching.Regex.Match
+import scala.util.{ Failure, Success, Try }
+
+sealed abstract class MessageSegment(val kind: String, val txt: String) //for use in templates since you can't match on type (it seems)
 case class TextLookHereSegment(override val txt: String, pageText: String) extends MessageSegment("tlh", txt)
 case class ImageLookHereSegment(override val txt: String, imgUrl: String) extends MessageSegment("ilh", txt)
 case class TextSegment(override val txt: String) extends MessageSegment("txt", txt)

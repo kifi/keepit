@@ -9,6 +9,8 @@ import com.keepit.search.util.MultiStringReader
 import com.keepit.slack.models.{ SlackTeamId, SlackChannelId }
 import com.keepit.social.twitter.TwitterHandle
 import org.apache.lucene.index.Term
+import com.keepit.discussion.CrossServiceMessage
+import com.keepit.eliza.util._
 
 object KeepFields {
   val titleField = "t"
@@ -64,6 +66,19 @@ object KeepFields {
   }
 
   val decoders: Map[String, FieldDecoder] = Map.empty
+
+  private val defaultMessagePattern = """(?i)^(?:check this out|).?$""".r
+  private val defaultHighlightPattern = """(?i)^(?:look[\s\xA0]+here|)$""".r // non-breaking space \xA0 is not included in Java's \s
+  def parseIndexableMessageText(message: String): Seq[String] = {
+    MessageFormatter.parseMessageSegments(message).flatMap {
+      case TextSegment(defaultMessagePattern()) => Seq()
+      case TextSegment(text) => Seq(text)
+      case TextLookHereSegment(defaultHighlightPattern(), pageText) => Seq(pageText)
+      case TextLookHereSegment(text, pageText) => Seq(text, pageText)
+      case ImageLookHereSegment(defaultHighlightPattern(), imageUrl) => Indexable.urlToIndexableString(imageUrl)
+      case ImageLookHereSegment(text, imageUrl) => Seq(text) ++ Indexable.urlToIndexableString(imageUrl)
+    }
+  }
 }
 
 object KeepIndexable {
@@ -71,7 +86,7 @@ object KeepIndexable {
   def isDiscoverable(keepSearcher: Searcher, uriId: Long) = keepSearcher.has(new Term(KeepFields.uriDiscoverableField, uriId.toString))
 }
 
-case class KeepIndexable(keep: CrossServiceKeep, sourceAttribution: Option[SourceAttribution], tags: Set[Hashtag]) extends Indexable[Keep, Keep] {
+case class KeepIndexable(keep: CrossServiceKeep, sourceOpt: Option[SourceAttribution], messages: Seq[CrossServiceMessage], tags: Set[Hashtag]) extends Indexable[Keep, Keep] {
   val id = keep.id
   val sequenceNumber = keep.seq
   val isDeleted = !keep.isActive
@@ -81,7 +96,7 @@ case class KeepIndexable(keep: CrossServiceKeep, sourceAttribution: Option[Sourc
     val doc = super.buildDocument
 
     val titleLang = keep.title.collect { case title if title.nonEmpty => LangDetector.detect(title) } getOrElse DefaultAnalyzer.defaultLang
-    val titleAndUrl = Array(keep.title.getOrElse(""), "\n\n", urlToIndexableString(keep.url).getOrElse("")) // piggybacking uri text on title
+    val titleAndUrl = Array(keep.title.getOrElse(""), "\n\n", Indexable.urlToIndexableString(keep.url).getOrElse("")) // piggybacking uri text on title
     val titleAnalyzer = DefaultAnalyzer.getAnalyzer(titleLang)
     val titleAnalyzerWithStemmer = DefaultAnalyzer.getAnalyzerWithStemmer(titleLang)
 
@@ -90,15 +105,26 @@ case class KeepIndexable(keep: CrossServiceKeep, sourceAttribution: Option[Sourc
     doc.add(buildPrefixField(titlePrefixField, keep.title.getOrElse(""), maxPrefixLength))
     doc.add(buildStringDocValuesField(titleValueField, keep.title.getOrElse("")))
 
-    val contentLang = keep.note.collect { case note if note.nonEmpty => LangDetector.detect(note) } getOrElse DefaultAnalyzer.defaultLang
+    val content: Array[String] = if (isDeleted) Array.empty[String] else {
+      val sourceContent = sourceOpt.toSeq flatMap {
+        case slack: SlackAttribution => Seq(slack.message.text, slack.message.username.value) ++ slack.message.channel.name.map(_.value)
+        case twitter: TwitterAttribution => Seq(twitter.tweet.text, twitter.tweet.user.screenName.value, twitter.tweet.user.name)
+        case kifi: KifiAttribution => Seq.empty
+      }
+      val messagesContent = (keep.note ++ messages.collect { case message if !message.isDeleted => message.text }).map { rawText =>
+        parseIndexableMessageText(rawText).mkString(" ")
+      }
+      (sourceContent ++ messagesContent).flatMap(Seq(_, "\n\n")).toArray
+    }
+
+    val contentLang = Some(content.mkString(" ").trim).collect { case text if text.nonEmpty => LangDetector.detect(text) } getOrElse DefaultAnalyzer.defaultLang
     val contentAnalyzer = DefaultAnalyzer.getAnalyzer(contentLang)
     val contentAnalyzerWithStemmer = DefaultAnalyzer.getAnalyzerWithStemmer(contentLang)
 
-    val content = keep.note.getOrElse("")
-    doc.add(buildTextField(contentField, content, contentAnalyzer))
-    doc.add(buildTextField(contentStemmedField, content, contentAnalyzerWithStemmer))
+    doc.add(buildTextField(contentField, new MultiStringReader(content), contentAnalyzer))
+    doc.add(buildTextField(contentStemmedField, new MultiStringReader(content), contentAnalyzerWithStemmer))
 
-    sourceAttribution.foreach { source =>
+    sourceOpt.foreach { source =>
       doc.add(buildKeywordField(sourceField, Source(source)))
     }
 
