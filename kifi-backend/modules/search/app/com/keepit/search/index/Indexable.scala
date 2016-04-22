@@ -94,6 +94,19 @@ object Indexable {
       }
     }
   }
+
+  def urlToIndexableString(url: String): Option[String] = {
+    URI.parse(url).toOption.map { u =>
+      val host = u.host match {
+        case Some(Host(domain @ _*)) => domain.mkString(" ")
+        case _ => ""
+      }
+      val path = u.path.map { p =>
+        URIParserUtil.pathReservedChars.foldLeft(URIParserUtil.decodePercentEncode(p)) { (s, c) => s.replace(c.toString, " ") }
+      }
+      host + " " + path
+    }
+  }
 }
 
 trait Indexable[T, S] extends Logging {
@@ -202,19 +215,6 @@ trait Indexable[T, S] extends Logging {
 
         Seq(domainName, homePage).flatten
     } getOrElse Seq.empty
-  }
-
-  def urlToIndexableString(url: String): Option[String] = {
-    URI.parse(url).toOption.map { u =>
-      val host = u.host match {
-        case Some(Host(domain @ _*)) => domain.mkString(" ")
-        case _ => ""
-      }
-      val path = u.path.map { p =>
-        URIParserUtil.pathReservedChars.foldLeft(URIParserUtil.decodePercentEncode(p)) { (s, c) => s.replace(c.toString, " ") }
-      }
-      host + " " + path
-    }
   }
 }
 

@@ -60,7 +60,7 @@ case class ArticleIndexable(uri: IndexableUri, articles: Set[Article]) extends I
     val titleAnalyzer = DefaultAnalyzer.getAnalyzer(titleLang)
     val titleAnalyzerWithStemmer = DefaultAnalyzer.getAnalyzerWithStemmer(titleLang)
 
-    val titleAndUrl = Array(articleContent.title.getOrElse(""), "\n\n", urlToIndexableString(uri.url).getOrElse(""))
+    val titleAndUrl = Array(articleContent.title.getOrElse(""), "\n\n", Indexable.urlToIndexableString(uri.url).getOrElse(""))
 
     doc.add(buildKeywordField(titleLangField, titleLang.lang))
     doc.add(buildTextField(titleField, new MultiStringReader(titleAndUrl), titleAnalyzer))

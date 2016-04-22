@@ -81,7 +81,7 @@ case class KeepIndexable(keep: CrossServiceKeep, sourceAttribution: Option[Sourc
     val doc = super.buildDocument
 
     val titleLang = keep.title.collect { case title if title.nonEmpty => LangDetector.detect(title) } getOrElse DefaultAnalyzer.defaultLang
-    val titleAndUrl = Array(keep.title.getOrElse(""), "\n\n", urlToIndexableString(keep.url).getOrElse("")) // piggybacking uri text on title
+    val titleAndUrl = Array(keep.title.getOrElse(""), "\n\n", Indexable.urlToIndexableString(keep.url).getOrElse("")) // piggybacking uri text on title
     val titleAnalyzer = DefaultAnalyzer.getAnalyzer(titleLang)
     val titleAnalyzerWithStemmer = DefaultAnalyzer.getAnalyzerWithStemmer(titleLang)
 
