@@ -23,7 +23,6 @@ import scala.concurrent.{ ExecutionContext, Future }
 @ImplementedBy(classOf[ElizaDiscussionCommanderImpl])
 trait ElizaDiscussionCommander {
   def getMessagesOnKeep(keepId: Id[Keep], fromIdOpt: Option[Id[ElizaMessage]], limit: Int): Future[Seq[Message]]
-  def getDiscussionsForKeeps(keepIds: Set[Id[Keep]], fromTime: Option[DateTime], maxMessagesShown: Int): Future[Map[Id[Keep], Discussion]]
   def getCrossServiceDiscussionsForKeeps(keepIds: Set[Id[Keep]], fromTime: Option[DateTime], maxMessagesShown: Int): Map[Id[Keep], CrossServiceDiscussion]
   def syncAddParticipants(keepId: Id[Keep], event: KeepEventData.ModifyRecipients, source: Option[KeepEventSource]): Future[Unit]
   def getEmailParticipantsForKeeps(keepIds: Set[Id[Keep]]): Map[Id[Keep], Map[EmailAddress, (Id[User], DateTime)]]
@@ -91,36 +90,6 @@ class ElizaDiscussionCommanderImpl @Inject() (
     }
   }
 
-  def getDiscussionsForKeeps(keepIds: Set[Id[Keep]], fromTime: Option[DateTime], maxMessagesShown: Int): Future[Map[Id[Keep], Discussion]] = {
-    val recentsByKeep = db.readOnlyReplica { implicit s =>
-      keepIds.map { keepId =>
-        keepId -> messageRepo.getByKeepBefore(keepId, fromOpt = fromTime, limit = maxMessagesShown)
-      }.toMap
-    }
-
-    val extMessageMapFut = externalizeMessages(recentsByKeep.values.toSeq.flatten)
-
-    val infoF = db.readOnlyReplicaAsync { implicit s =>
-      val threadsByKeep = messageThreadRepo.getByKeepIds(keepIds)
-      val countsByKeep = messageRepo.getAllMessageCounts(keepIds)
-      (threadsByKeep, countsByKeep)
-    }
-
-    for {
-      (threadsByKeep, countsByKeep) <- infoF
-      extMessageMap <- extMessageMapFut
-    } yield {
-      threadsByKeep.map {
-        case (keepId, thread) =>
-          keepId -> Discussion(
-            startedAt = thread.createdAt,
-            numMessages = countsByKeep.getOrElse(keepId, 0),
-            locator = thread.deepLocator,
-            messages = recentsByKeep(keepId).flatMap(em => extMessageMap.get(em.id.get))
-          )
-      }
-    }
-  }
   def getCrossServiceDiscussionsForKeeps(keepIds: Set[Id[Keep]], fromTime: Option[DateTime], maxMessagesShown: Int): Map[Id[Keep], CrossServiceDiscussion] = {
     val recentsByKeep = db.readOnlyReplica { implicit s =>
       keepIds.map { keepId =>

@@ -439,12 +439,6 @@ object ElizaServiceClient {
     implicit val requestFormat: Format[Request] = Json.format[Request]
     implicit val responseFormat: Format[Response] = Json.format[Response]
   }
-  object GetDiscussionsForKeeps {
-    case class Request(keepIds: Set[Id[Keep]], fromTime: Option[DateTime], maxMessagesShown: Int)
-    case class Response(discussions: Map[Id[Keep], Discussion])
-    implicit val requestFormat: Format[Request] = Json.format[Request]
-    implicit val responseFormat: Format[Response] = Json.format[Response]
-  }
   object GetCrossServiceDiscussionsForKeeps {
     case class Request(keepIds: Set[Id[Keep]], fromTime: Option[DateTime], maxMessagesShown: Int)
     case class Response(discussions: Map[Id[Keep], CrossServiceDiscussion])
