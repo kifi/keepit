@@ -3,6 +3,7 @@ package com.keepit.commanders.gen
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.core.regexExtensionOps
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.util.DescriptionElements._
 import com.keepit.common.util._
@@ -53,9 +54,13 @@ object KeepActivityGen {
           )
       }
 
+      val slackLinkRegex = s"""<?${keep.url}(\|[^>]*)?>?""".r
       val noteBody = sourceAttrOpt.flatMap {
         case (ka: KifiAttribution, _) => keep.note.filter(_.nonEmpty)
-        case (SlackAttribution(msg, _), _) => Some(msg.text).filter(_ != keep.url)
+        case (SlackAttribution(msg, _), _) => Some(msg.text).filter { str =>
+          val textIsLiterallyJustTheUrl = slackLinkRegex.findMatchesAndInterstitials(str.trim).forall(_.isRight)
+          !textIsLiterallyJustTheUrl
+        }
         case (TwitterAttribution(tweet), _) => Some(tweet.text).filter(_ != keep.url)
       }
 
