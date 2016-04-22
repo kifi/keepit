@@ -5,6 +5,7 @@
 <img class="kf-klw-library-org-pic" ng-src="{{ library.org | pic }}" ng-if="library.org"/>
 <svg ng-if="library.kind === 'system_main'" kf-symbol-sprite icon="star" class="kf-klw-star-icon"></svg>
 <svg ng-if="library.visibility === 'secret'" kf-symbol-sprite icon="lock" class="kf-klw-lock-icon"></svg>
-<svg ng-if="library.org && library.visibility === 'published'" kf-symbol-sprite icon="globe" class="kf-klw-lock-icon"></svg>
+<svg ng-if="library.org && library.visibility === 'published'" kf-symbol-sprite icon="globe" class="kf-klw-globe-icon"></svg>
+<svg ng-if="library && library.slack"  class="svg-slack kf-klw-slack-icon"></svg>
 {{library.name}}
 <button class="kf-btn keep-to-library-unkeep-button">Unkeep</button>
