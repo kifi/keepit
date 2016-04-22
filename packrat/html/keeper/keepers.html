@@ -43,7 +43,7 @@
     {{/sources}}
     </div>
   {{/sources.length}}
-  {{^sources.length}}{{#libs.length}}
+  {{#libs.length}}
     <div class="kifi-keepers-h">Kept In {{#oneLib}}This Library{{/oneLib}}{{^oneLib}}These Libraries{{/oneLib}}</div>
     <div class="kifi-keepers-libs">
     {{#libs}}
@@ -69,6 +69,6 @@
       <span class="kifi-keepers-more">{{numMore}}</span>
     {{/numMore}}
     </div>
-  {{/keepers.length}}{{/sources.length}}
+  {{/keepers.length}}
   <div class="kifi-keepers-tri"></div>
 </kifi>
