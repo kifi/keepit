@@ -54,12 +54,11 @@ object KeepActivityGen {
           )
       }
 
-      val slackLinkRegex = s"""<?${keep.url}(\|[^>]*)?>?""".r
       val noteBody = sourceAttrOpt.flatMap {
         case (ka: KifiAttribution, _) => keep.note.filter(_.nonEmpty)
-        case (SlackAttribution(msg, _), _) => Some(msg.text).filter { str =>
-          val textIsLiterallyJustTheUrl = slackLinkRegex.findMatchesAndInterstitials(str.trim).forall(_.isRight)
-          !textIsLiterallyJustTheUrl
+        case (SlackAttribution(msg, _), _) => Some(msg.text.trim).filterNot { str =>
+          val textIsLiterallyJustTheUrl = str == s"<${keep.url}>"
+          textIsLiterallyJustTheUrl
         }
         case (TwitterAttribution(tweet), _) => Some(tweet.text).filter(_ != keep.url)
       }
