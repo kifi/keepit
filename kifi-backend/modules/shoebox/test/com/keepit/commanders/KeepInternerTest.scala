@@ -44,7 +44,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
         val (bookmarks, _) = bookmarkInterner.internRawBookmarks(inject[RawBookmarkFactory].toRawBookmarks(Json.obj(
           "url" -> "http://42go.com",
           "isPrivate" -> true
-        )), user.id.get, secret, KeepSource.email)
+        )), user.id.get, secret, KeepSource.Email)
         db.readWrite { implicit session =>
           userRepo.get(user.id.get) === user
           bookmarks.size === 1
@@ -64,7 +64,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
         }
         inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
         val bookmarkInterner = inject[RawKeepInterner]
-        bookmarkInterner.persistRawKeeps(inject[RawKeepFactory].toRawKeep(user.id.get, KeepSource.bookmarkImport, Json.obj(
+        bookmarkInterner.persistRawKeeps(inject[RawKeepFactory].toRawKeep(user.id.get, KeepSource.BookmarkImport, Json.obj(
           "url" -> "http://42go.com",
           "isPrivate" -> true
         ), libraryId = None))
@@ -85,7 +85,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
         }
         inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
         val bookmarkInterner = inject[RawKeepInterner]
-        bookmarkInterner.persistRawKeeps(inject[RawKeepFactory].toRawKeep(user.id.get, KeepSource.bookmarkImport, Json.obj(
+        bookmarkInterner.persistRawKeeps(inject[RawKeepFactory].toRawKeep(user.id.get, KeepSource.BookmarkImport, Json.obj(
           "url" -> "http://42go.com",
           "isPrivate" -> true
         ), libraryId = lib.id))
@@ -110,7 +110,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
           "url" -> "http://42go.com",
           "isPrivate" -> true
         ), keepKifi))
-        val (bookmarks, _) = bookmarkInterner.internRawBookmarks(raw, user.id.get, library, KeepSource.email)
+        val (bookmarks, _) = bookmarkInterner.internRawBookmarks(raw, user.id.get, library, KeepSource.Email)
 
         db.readWrite { implicit session =>
           userRepo.get(user.id.get) === user
@@ -140,7 +140,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
           "isPrivate" -> true
         )))
 
-        val (bookmarks, _) = bookmarkInterner.internRawBookmarks(raw, user.id.get, library, KeepSource.email)
+        val (bookmarks, _) = bookmarkInterner.internRawBookmarks(raw, user.id.get, library, KeepSource.Email)
         fakeAirbrake.errorCount() === 2
         bookmarks.size === 2
         db.readWrite { implicit session =>
@@ -161,13 +161,13 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
         val (initialBookmarks, _) = bookmarkInterner.internRawBookmarks(inject[RawBookmarkFactory].toRawBookmarks(Json.arr(Json.obj(
           "url" -> "http://42go.com/",
           "isPrivate" -> true
-        ))), user.id.get, library, KeepSource.keeper)
+        ))), user.id.get, library, KeepSource.Keeper)
         initialBookmarks.size === 1
 
         val (bookmarks, _) = bookmarkInterner.internRawBookmarks(inject[RawBookmarkFactory].toRawBookmarks(Json.arr(Json.obj(
           "url" -> "http://42go.com/",
           "isPrivate" -> true
-        ))), user.id.get, library, KeepSource.keeper)
+        ))), user.id.get, library, KeepSource.Keeper)
         db.readOnlyMaster { implicit s =>
           bookmarks.size === 1
           keepRepo.all.size === 1

@@ -169,63 +169,64 @@ abstract class KeepSource(val value: String) {
 }
 object KeepSource extends Enumerator[KeepSource] {
 
-  case object chrome extends KeepSource("Chrome")
-  case object firefox extends KeepSource("Firefox")
-  case object safari extends KeepSource("Safari")
-  case object iPhone extends KeepSource("iPhone")
-  case object android extends KeepSource("Android")
-  case object slack extends KeepSource("Slack")
+  case object Chrome extends KeepSource("Chrome")
+  case object Firefox extends KeepSource("Firefox")
+  case object Safari extends KeepSource("Safari")
+  case object IPhone extends KeepSource("iPhone")
+  case object Android extends KeepSource("Android")
+  case object Slack extends KeepSource("Slack")
 
   // deprecated, use a more specific source such as the ext's browser name or mobile platform
-  case object keeper extends KeepSource("keeper")
-  case object mobile extends KeepSource("mobile")
-  case object discussion extends KeepSource("discussion")
+  case object Keeper extends KeepSource("keeper")
+  case object Mobile extends KeepSource("mobile")
+  case object Discussion extends KeepSource("discussion")
 
-  case object bookmarkImport extends KeepSource("bookmarkImport")
-  case object bookmarkFileImport extends KeepSource("bookmarkFileImport")
-  case object site extends KeepSource("site")
-  case object email extends KeepSource("email")
-  case object default extends KeepSource("default")
-  case object unknown extends KeepSource("unknown")
-  case object kippt extends KeepSource("Kippt")
-  case object pocket extends KeepSource("Pocket")
-  case object instapaper extends KeepSource("Instapaper")
-  case object evernote extends KeepSource("Evernote")
-  case object diigo extends KeepSource("Diigo")
-  case object tagImport extends KeepSource("tagImport")
-  case object emailReco extends KeepSource("emailReco")
-  case object userCopied extends KeepSource("userCopied")
-  case object systemCopied extends KeepSource("systemCopied")
-  case object twitterFileImport extends KeepSource("twitterFileImport")
-  case object twitterSync extends KeepSource("twitterSync")
-  case object fake extends KeepSource("fake")
+  case object BookmarkImport extends KeepSource("bookmarkImport")
+  case object BookmarkFileImport extends KeepSource("bookmarkFileImport")
+  case object Site extends KeepSource("site")
+  case object Email extends KeepSource("email")
+  case object Default extends KeepSource("default")
+  case object Unknown extends KeepSource("unknown")
+  case object Kippt extends KeepSource("Kippt")
+  case object Pocket extends KeepSource("Pocket")
+  case object Instapaper extends KeepSource("Instapaper")
+  case object Evernote extends KeepSource("Evernote")
+  case object Diigo extends KeepSource("Diigo")
+  case object TagImport extends KeepSource("tagImport")
+  case object EmailReco extends KeepSource("emailReco")
+  case object UserCopied extends KeepSource("userCopied")
+  case object SystemCopied extends KeepSource("systemCopied")
+  case object TwitterFileImport extends KeepSource("twitterFileImport")
+  case object TwitterSync extends KeepSource("twitterSync")
+  case object Fake extends KeepSource("fake")
 
   val all = _all
   def fromStr(str: String) = all.find(_.value.toLowerCase == str.toLowerCase)
   def apply(str: String) = fromStr(str).get
 
+  // will parse Kifi.com and browser ext UserAgents as "Chrome", so use KeepSource.site for more accuracy
   def fromUserAgent(agent: UserAgent): Option[KeepSource] = {
-    if (agent.isKifiAndroidApp) Some(android)
-    else if (agent.isKifiIphoneApp) Some(iPhone)
+    if (agent.isKifiAndroidApp) Some(Android)
+    else if (agent.isKifiIphoneApp) Some(IPhone)
     else fromStr(agent.name)
   }
 
   def fromMessageSource(msgSrc: MessageSource): Option[KeepSource] = msgSrc match {
-    case MessageSource.SITE => Some(site)
-    case MessageSource.IPHONE => Some(iPhone)
+    case MessageSource.SITE => Some(Site)
+    case MessageSource.IPHONE => Some(IPhone)
     case source => fromStr(source.value)
   }
 
-  val imports: Set[KeepSource] = Set(bookmarkImport, kippt, pocket, instapaper, evernote, diigo, bookmarkFileImport, twitterFileImport, slack)
+  val imports: Set[KeepSource] = Set(BookmarkImport, Kippt, Pocket, Instapaper, Evernote, Diigo, BookmarkFileImport, TwitterFileImport, Slack)
 
   // Sources that are from users uploading files, bulk actions, inputting URLs, etc.
   // These may be old links
-  val bulk: Set[KeepSource] = imports ++ Set(userCopied, unknown, discussion)
+  val bulk: Set[KeepSource] = imports ++ Set(UserCopied, Unknown, Discussion)
 
   // One-at-a-time keeps
-  val discrete: Set[KeepSource] = Set(keeper, site, mobile, email, twitterSync)
+  val discrete: Set[KeepSource] = Set(Keeper, Site, Mobile, Email, TwitterSync)
 
-  val manual: Set[KeepSource] = Set(keeper, site, mobile, email)
+  val manual: Set[KeepSource] = Set(Keeper, Site, Mobile, Email)
 
   implicit val format: Format[KeepSource] = Format(
     Reads { j => j.validate[String].map(KeepSource(_)) },

@@ -28,7 +28,7 @@ class ExtKeepController @Inject() (
 
   def createKeep() = UserAction(parse.tolerantJson) { implicit request =>
     import com.keepit.common.http._
-    val source = request.userAgentOpt.flatMap(KeepSource.fromUserAgent).getOrElse(KeepSource.keeper)
+    val source = request.userAgentOpt.flatMap(KeepSource.fromUserAgent).getOrElse(KeepSource.Keeper)
     implicit val context = contextBuilder.withRequestInfoAndSource(request, source).build
     val rawBookmark = request.body.as[RawBookmarkRepresentation]
     val libIds = (request.body \ "libraries").as[Set[PublicId[Library]]]
@@ -66,7 +66,10 @@ class ExtKeepController @Inject() (
     import com.keepit.common.http._
     (for {
       keepId <- Keep.decodePublicId(pubId).map(Future.successful).getOrElse(Future.failed(DiscussionFail.INVALID_KEEP_ID))
-      input <- request.body.validate[ExternalKeepRecipientsDiff].map(Future.successful).getOrElse(Future.failed(DiscussionFail.COULD_NOT_PARSE))
+      input <- request.body.validate[ExternalKeepRecipientsDiff].map { diff =>
+        diff.source.map(src => log.info(s"[sourceTrack] request by user ${request.userId} HAS source ${src.value}")).getOrElse(log.info(s"[sourceTrack] request by user ${request.userId} DOESNT HAVE source"))
+        Future.successful(diff)
+      }.getOrElse(Future.failed(DiscussionFail.COULD_NOT_PARSE))
       diff <- db.readOnlyReplicaAsync { implicit s =>
         val userIdMap = userRepo.convertExternalIds(input.users.all)
         val libraryIdMap = input.libraries.all.map(libPubId => libPubId -> Library.decodePublicId(libPubId).get).toMap

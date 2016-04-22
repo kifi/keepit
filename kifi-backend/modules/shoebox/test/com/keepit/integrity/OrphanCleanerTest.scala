@@ -45,7 +45,7 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
           (user, lib1)
         }
 
-        val hover = KeepSource.keeper
+        val hover = KeepSource.Keeper
 
         val uris = db.readWrite { implicit session =>
           val nuri0 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")).withContentRequest(true))
@@ -121,7 +121,7 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
           (user, other, lib1)
         }
 
-        val hover = KeepSource.keeper
+        val hover = KeepSource.Keeper
 
         val uris = db.readWrite { implicit session =>
           val nuri0 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")).withContentRequest(true))
@@ -281,7 +281,7 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
           (user, lib1)
         }
 
-        val hover = KeepSource.keeper
+        val hover = KeepSource.Keeper
 
         val uris = db.readWrite { implicit session =>
           val nuri0 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")).withContentRequest(true))

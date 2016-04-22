@@ -230,7 +230,7 @@ class LibraryAnalytics @Inject() (
     val keptAt = currentDateTime
 
     keeps.collect {
-      case bookmark if bookmark.source != KeepSource.default =>
+      case bookmark if bookmark.source != KeepSource.Default =>
         val contextBuilder = new HeimdalContextBuilder
         contextBuilder.data ++= existingContext.data
         contextBuilder += ("action", "keptPage")
@@ -326,7 +326,7 @@ class LibraryAnalytics @Inject() (
   }
 
   def taggedPage(tag: Collection, keep: Keep, context: HeimdalContext, taggedAt: DateTime = currentDateTime): Unit = {
-    val isDefaultTag = context.get[String]("source").contains(KeepSource.default.value)
+    val isDefaultTag = context.get[String]("source").contains(KeepSource.Default.value)
     if (!isDefaultTag) changedTag(tag, keep, "taggedPage", context, taggedAt)
   }
 

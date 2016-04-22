@@ -251,7 +251,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
     }
   }
 
-  def saveBookmarksByEdges(edges: Seq[(NormalizedURI, User, Option[String])], isPrivate: Boolean = false, source: KeepSource = KeepSource.fake): Seq[Keep] = {
+  def saveBookmarksByEdges(edges: Seq[(NormalizedURI, User, Option[String])], isPrivate: Boolean = false, source: KeepSource = KeepSource.Fake): Seq[Keep] = {
     val bookmarks = edges.map {
       case (uri, user, optionalTitle) =>
         val library = internLibrary(user.id.get, isPrivate)
@@ -269,12 +269,12 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
     saveBookmarks(bookmarks: _*)
   }
 
-  def saveBookmarksByURI(edgesByURI: Seq[(NormalizedURI, Seq[User])], uniqueTitle: Option[String] = None, isPrivate: Boolean = false, source: KeepSource = KeepSource.fake): Seq[Keep] = {
+  def saveBookmarksByURI(edgesByURI: Seq[(NormalizedURI, Seq[User])], uniqueTitle: Option[String] = None, isPrivate: Boolean = false, source: KeepSource = KeepSource.Fake): Seq[Keep] = {
     val edges = for ((uri, users) <- edgesByURI; user <- users) yield (uri, user, uniqueTitle)
     saveBookmarksByEdges(edges, isPrivate, source)
   }
 
-  def saveBookmarksByUser(edgesByUser: Seq[(User, Seq[NormalizedURI])], uniqueTitle: Option[String] = None, isPrivate: Boolean = false, source: KeepSource = KeepSource.fake): Seq[Keep] = {
+  def saveBookmarksByUser(edgesByUser: Seq[(User, Seq[NormalizedURI])], uniqueTitle: Option[String] = None, isPrivate: Boolean = false, source: KeepSource = KeepSource.Fake): Seq[Keep] = {
     val edges = for ((user, uris) <- edgesByUser; uri <- uris) yield (uri, user, uniqueTitle)
     saveBookmarksByEdges(edges, isPrivate, source)
   }

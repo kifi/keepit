@@ -75,7 +75,7 @@ object KeepEventSource extends Enumerator[KeepEventSource] {
   case object iOS extends KeepEventSource("iOS")
 
   val all = _all
-  def fromStr(str: String) = all.find(_.value == str)
+  def fromStr(str: String) = all.find(_.value.toLowerCase == str.toLowerCase)
   def apply(str: String) = fromStr(str).get
 
   implicit val format: Format[KeepEventSource] = EnumFormat.format(fromStr, _.value)
@@ -85,18 +85,18 @@ object KeepEventSource extends Enumerator[KeepEventSource] {
   def toMessageSource(eventSrc: KeepEventSource): Option[MessageSource] = MessageSource.fromStr(eventSrc.value)
 
   def fromKeepSource(keepSrc: KeepSource): Option[KeepEventSource] = keepSrc match {
-    case KeepSource.keeper => Some(KeepEventSource.Extension)
-    case KeepSource.site => Some(KeepEventSource.Site)
-    case KeepSource.email => Some(KeepEventSource.Email)
-    case KeepSource.slack => Some(KeepEventSource.Slack)
-    case KeepSource.twitterFileImport | KeepSource.twitterSync => Some(KeepEventSource.Twitter)
+    case KeepSource.Keeper => Some(KeepEventSource.Extension)
+    case KeepSource.Site => Some(KeepEventSource.Site)
+    case KeepSource.Email => Some(KeepEventSource.Email)
+    case KeepSource.Slack => Some(KeepEventSource.Slack)
+    case KeepSource.TwitterFileImport | KeepSource.TwitterSync => Some(KeepEventSource.Twitter)
     case src => KeepEventSource.fromStr(src.value)
   }
 
   def toKeepSource(eventSrc: KeepEventSource): Option[KeepSource] = eventSrc match {
-    case KeepEventSource.Site => Some(KeepSource.site)
-    case KeepEventSource.Twitter => Some(KeepSource.twitterSync) // many to one from KeepSource -> KeepEventSource, so this is the lossy choice
-    case KeepEventSource.Extension => Some(KeepSource.keeper)
+    case KeepEventSource.Site => Some(KeepSource.Site)
+    case KeepEventSource.Twitter => Some(KeepSource.TwitterSync) // many to one from KeepSource -> KeepEventSource, so this is the lossy choice
+    case KeepEventSource.Extension => Some(KeepSource.Keeper)
     case source => KeepSource.fromStr(source.value)
   }
 

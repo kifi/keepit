@@ -84,28 +84,28 @@ class ShoeboxTestFactory @Inject() (
 
       Seq(
         KeepFactory.keep().withTitle("Reddit").withUser(userCaptain).withUri(uri1)
-          .withSource(KeepSource.keeper).withCreatedAt(t1.plusMinutes(20)).withKeptAt(t1.plusMinutes(20))
+          .withSource(KeepSource.Keeper).withCreatedAt(t1.plusMinutes(20)).withKeptAt(t1.plusMinutes(20))
           .withLibrary(libShield).saved,
         KeepFactory.keep().withTitle("Freedom").withUser(userCaptain).withUri(uri2)
-          .withSource(KeepSource.keeper).withCreatedAt(t1.plusMinutes(100)).withKeptAt(t1.plusMinutes(100))
+          .withSource(KeepSource.Keeper).withCreatedAt(t1.plusMinutes(100)).withKeptAt(t1.plusMinutes(100))
           .withLibrary(libShield).saved,
         KeepFactory.keep().withTitle("McDonalds").withUser(userIron).withUri(uri3)
-          .withSource(KeepSource.keeper).withCreatedAt(t1.plusMinutes(15)).withKeptAt(t1.plusMinutes(15))
+          .withSource(KeepSource.Keeper).withCreatedAt(t1.plusMinutes(15)).withKeptAt(t1.plusMinutes(15))
           .withLibrary(libMurica).saved,
         KeepFactory.keep().withTitle("McDonalds1").withUser(userIron).withUri(uri4)
-          .withSource(KeepSource.keeper).withCreatedAt(t1.plusMinutes(25)).withKeptAt(t1.plusMinutes(25))
+          .withSource(KeepSource.Keeper).withCreatedAt(t1.plusMinutes(25)).withKeptAt(t1.plusMinutes(25))
           .withLibrary(libMurica).saved,
         KeepFactory.keep().withTitle("McDonalds2").withUser(userIron).withUri(uri5)
-          .withSource(KeepSource.keeper).withCreatedAt(t1.plusMinutes(35)).withKeptAt(t1.plusMinutes(35))
+          .withSource(KeepSource.Keeper).withCreatedAt(t1.plusMinutes(35)).withKeptAt(t1.plusMinutes(35))
           .withLibrary(libMurica).saved,
         KeepFactory.keep().withTitle("McDonalds3").withUser(userIron).withUri(uri6)
-          .withSource(KeepSource.keeper).withCreatedAt(t1.plusMinutes(45)).withKeptAt(t1.plusMinutes(45))
+          .withSource(KeepSource.Keeper).withCreatedAt(t1.plusMinutes(45)).withKeptAt(t1.plusMinutes(45))
           .withLibrary(libMurica).saved,
         KeepFactory.keep().withTitle("McDonalds4").withUser(userIron).withUri(uri7)
-          .withSource(KeepSource.keeper).withCreatedAt(t1.plusMinutes(55)).withKeptAt(t1.plusMinutes(55))
+          .withSource(KeepSource.Keeper).withCreatedAt(t1.plusMinutes(55)).withKeptAt(t1.plusMinutes(55))
           .withLibrary(libMurica).saved,
         KeepFactory.keep().withTitle("McDonalds5").withUser(userIron).withUri(uri8)
-          .withSource(KeepSource.keeper).withCreatedAt(t1.plusMinutes(65)).withKeptAt(t1.plusMinutes(65))
+          .withSource(KeepSource.Keeper).withCreatedAt(t1.plusMinutes(65)).withKeptAt(t1.plusMinutes(65))
           .withLibrary(libMurica).saved
       )
     }

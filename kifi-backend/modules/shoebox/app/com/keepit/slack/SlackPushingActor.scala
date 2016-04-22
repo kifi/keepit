@@ -356,7 +356,7 @@ class SlackPushingActor @Inject() (
       case (attributionByKeepId, lastPushedKtl) =>
         def shouldKeepBePushed(keep: Keep, ktl: KeepToLibrary): Boolean = {
           // TODO(ryan): temporarily making this more aggressive, something bad is happening in prod
-          keep.source != KeepSource.slack && ktl.addedAt.isAfter(lts.changedStatusAt)
+          keep.source != KeepSource.Slack && ktl.addedAt.isAfter(lts.changedStatusAt)
         }
 
         def hasAlreadyBeenPushed(ktl: KeepToLibrary) = lastPushedKtl.exists { last =>

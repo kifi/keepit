@@ -94,7 +94,7 @@ class MobileLibraryController @Inject() (
           )
         }
 
-        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.Mobile).build
         libraryCommander.createLibrary(libCreateRequest, request.userId) match {
           case Left(fail) =>
             Status(fail.status)(Json.obj("error" -> fail.message))
@@ -115,7 +115,7 @@ class MobileLibraryController @Inject() (
     val newListed = (json \ "newListed").asOpt[Boolean]
     val newWhoCanInvite = (json \ "newWhoCanInvite").asOpt[LibraryInvitePermissions]
 
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.Mobile).build
     val modifyRequest = LibraryModifications(newName, newSlug, newVisibility, newDescription, newColor, newListed, newWhoCanInvite)
     val res = libraryCommander.modifyLibrary(libId, request.userId, modifyRequest)
     res match {
@@ -152,7 +152,7 @@ class MobileLibraryController @Inject() (
           )
         }
 
-        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.Mobile).build
         libraryCommander.modifyLibrary(id, request.userId, libModifyRequest) match {
           case Left(fail) =>
             Status(fail.status)(Json.obj("error" -> fail.message))
@@ -164,7 +164,7 @@ class MobileLibraryController @Inject() (
 
   def deleteLibrary(pubId: PublicId[Library]) = (UserAction andThen LibraryWriteAction(pubId)) { request =>
     val libId = Library.decodePublicId(pubId).get
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.Mobile).build
     libraryCommander.deleteLibrary(libId, request.userId) match {
       case Some(fail) => sendFailResponse(fail)
       case _ => NoContent
@@ -410,7 +410,7 @@ class MobileLibraryController @Inject() (
             (id, access, message)
           }
         }
-        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.Mobile).build
         libraryInviteCommander.inviteToLibrary(id, request.userId, validInviteList).map {
           case Left(fail) => sendFailResponse(fail)
           case Right(inviteesWithAccess) =>
@@ -431,7 +431,7 @@ class MobileLibraryController @Inject() (
         val msgOpt = (request.body \ "message").asOpt[String]
         val messageOpt = msgOpt.filter(_.nonEmpty)
 
-        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.Mobile).build
         libraryInviteCommander.inviteAnonymousToLibrary(id, request.userId, access, messageOpt) match {
           case Left(fail) => sendFailResponse(fail)
           case Right((invite, library)) =>
@@ -473,7 +473,7 @@ class MobileLibraryController @Inject() (
       case Failure(ex) =>
         BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(libId) =>
-        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.Mobile).build
         val res = libraryMembershipCommander.joinLibrary(request.userId, libId)
         res match {
           case Left(fail) => sendFailResponse(fail)
@@ -490,7 +490,7 @@ class MobileLibraryController @Inject() (
       Library.decodePublicId(pubId) match {
         case Failure(ex) => (pubId, Left(LibraryFail(BAD_REQUEST, "invalid_public_id")))
         case Success(libId) =>
-          implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
+          implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.Site).build
           libraryMembershipCommander.joinLibrary(request.userId, libId, authToken = None, subscribed = None) match {
             case Left(libFail) => (pubId, Left(libFail))
             case Right((lib, mem)) =>
@@ -522,7 +522,7 @@ class MobileLibraryController @Inject() (
       case Failure(ex) =>
         BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(id) =>
-        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.Mobile).build
         libraryMembershipCommander.leaveLibrary(id, request.userId) match {
           case Left(fail) => sendFailResponse(fail)
           case Right(_) => Ok(JsString("success"))
@@ -569,7 +569,7 @@ class MobileLibraryController @Inject() (
     val imageUrlOpt = (jsonBody \ "imageUrl").asOpt[String]
     val note = (jsonBody \ "note").asOpt[String]
     val rawKeep = RawBookmarkRepresentation(title, url, None, keptAt = Some(clock.now), note = note)
-    val source = request.userAgentOpt.flatMap(KeepSource.fromUserAgent).getOrElse(KeepSource.mobile)
+    val source = request.userAgentOpt.flatMap(KeepSource.fromUserAgent).getOrElse(KeepSource.Mobile)
 
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
     val (keep, _) = keepsCommander.keepOne(rawKeep, request.userId, libraryId, source, SocialShare(jsonBody))
@@ -584,7 +584,7 @@ class MobileLibraryController @Inject() (
   def unkeepFromLibrary(pubId: PublicId[Library], kId: ExternalId[Keep]) = (UserAction andThen LibraryWriteAction(pubId)) { request =>
     val libraryId = Library.decodePublicId(pubId).get
 
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.Mobile).build
     keepsCommander.unkeepOneFromLibrary(kId, libraryId, request.userId) match {
       case Left(failMsg) =>
         BadRequest(Json.obj("error" -> failMsg))

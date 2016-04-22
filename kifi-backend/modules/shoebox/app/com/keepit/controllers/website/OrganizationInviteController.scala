@@ -49,7 +49,7 @@ class OrganizationInviteController @Inject() (
           case Right(email) => Right(email)
         }.toSet
 
-        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.Site).build
 
         val inviteeUserIds = invitees.collect { case Left(userId) => userId }
         val inviteeEmailAddresses = invitees.collect { case Right(emailAddress) => emailAddress }
@@ -98,7 +98,7 @@ class OrganizationInviteController @Inject() (
   }
 
   def createAnonymousInviteToOrganization(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.INVITE_MEMBERS)(parse.tolerantJson) { request =>
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.Site).build
     orgInviteCommander.createGenericInvite(request.orgId, request.request.userId) match {
       case Right(invite) =>
         Ok(Json.obj("link" -> (fortyTwoConfig.applicationBaseUrl + routes.OrganizationInviteController.acceptInvitation(Organization.publicId(invite.organizationId), Some(invite.authToken)).url)))
@@ -107,7 +107,7 @@ class OrganizationInviteController @Inject() (
   }
 
   def acceptInvitation(pubId: PublicId[Organization], authTokenOpt: Option[String]) = UserAction { request =>
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.Site).build
     Organization.decodePublicId(pubId) match {
       case Success(orgId) =>
         orgInviteCommander.acceptInvitation(orgId, request.userId, authTokenOpt) match {
