@@ -38,7 +38,7 @@ object KeepInfoAssemblerConfig {
   final case class KeepViewAssemblyOptions(
     idealImageSize: ImageSize,
     numEventsPerKeep: Int,
-    showPublishedLibraries: Boolean,
+    hideOtherPublishedLibraries: Boolean,
     numContextualKeeps: Int,
     numContextualKeepers: Int,
     numContextualLibraries: Int,
@@ -48,7 +48,7 @@ object KeepInfoAssemblerConfig {
   val default = KeepViewAssemblyOptions(
     idealImageSize = ProcessedImageSize.Large.idealSize,
     numEventsPerKeep = 5,
-    showPublishedLibraries = true,
+    hideOtherPublishedLibraries = false,
     numContextualKeeps = 1,
     numContextualKeepers = 1,
     numContextualLibraries = 1,
@@ -224,7 +224,7 @@ class KeepInfoAssemblerImpl @Inject() (
     val (augmentationFut, summaryFut) = {
       val augmentation = search.augment(
         viewer,
-        config.showPublishedLibraries,
+        config.hideOtherPublishedLibraries,
         config.numContextualKeeps,
         config.numContextualKeepers,
         config.numContextualLibraries,
