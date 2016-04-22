@@ -250,7 +250,13 @@ class SlackPushingActor @Inject() (
           }
         } tap { msgFut =>
           msgFut.onComplete {
-            case Failure(_) =>
+            case Failure(fail) =>
+              airbrake.notify(fail)
+              slackLog.error("Could not push", item match {
+                case _: PushItem.Digest => "a digest"
+                case PushItem.KeepToPush(k, ktl) => s"keep ${k.id.get.id}"
+                case PushItem.MessageToPush(k, msg) => s"msg ${msg.id.id}"
+              }, "because", fail.getMessage)
             case Success(_) =>
               implicit val contextBuilder = heimdalContextBuilder()
               val category = item match {
@@ -350,7 +356,7 @@ class SlackPushingActor @Inject() (
       case (attributionByKeepId, lastPushedKtl) =>
         def shouldKeepBePushed(keep: Keep, ktl: KeepToLibrary): Boolean = {
           // TODO(ryan): temporarily making this more aggressive, something bad is happening in prod
-          keep.source != KeepSource.slack && ktl.addedAt.isAfter(lts.changedStatusAt)
+          keep.source != KeepSource.Slack && ktl.addedAt.isAfter(lts.changedStatusAt)
         }
 
         def hasAlreadyBeenPushed(ktl: KeepToLibrary) = lastPushedKtl.exists { last =>

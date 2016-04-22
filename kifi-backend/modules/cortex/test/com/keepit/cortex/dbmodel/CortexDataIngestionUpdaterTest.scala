@@ -51,16 +51,16 @@ class CortexDataIngestionUpdaterTest extends Specification with CortexTestInject
         changed.state.value === "inactive"
 
         shoebox.saveBookmarks(
-          KeepFactory.keep().withURIId(Id[NormalizedURI](1)).withUrl("url1").withSource(KeepSource.keeper)
+          KeepFactory.keep().withURIId(Id[NormalizedURI](1)).withUrl("url1").withSource(KeepSource.Keeper)
             .withUser(Id[User](1)).withLibraryId((Id[Library](1), LibraryVisibility.DISCOVERABLE, None)).get,
-          KeepFactory.keep().withURIId(Id[NormalizedURI](2)).withUrl("url1").withSource(KeepSource.bookmarkImport)
+          KeepFactory.keep().withURIId(Id[NormalizedURI](2)).withUrl("url1").withSource(KeepSource.BookmarkImport)
             .withUser(Id[User](2)).withLibraryId((Id[Library](1), LibraryVisibility.DISCOVERABLE, None)).get
         )
 
         Await.result(updater.updateKeepRepo(100), FiniteDuration(5, SECONDS)) === 2
 
         db.readOnlyMaster { implicit s =>
-          cortexKeepRepo.all.map { _.source } === List(KeepSource.keeper, KeepSource.bookmarkImport)
+          cortexKeepRepo.all.map { _.source } === List(KeepSource.Keeper, KeepSource.BookmarkImport)
         }
 
         val library = Library(name = "foo", ownerId = Id[User](1), visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("foo"), memberCount = 1)

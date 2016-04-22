@@ -179,7 +179,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
     val userIds = userRepo.getAllActiveIds().toSet
 
     // TODO remove this filter when we have quality library recos for users w/o keeps
-    keepRepo.getCountByUsersAndSource(userIds, Set(KeepSource.keeper, KeepSource.mobile)).collect {
+    keepRepo.getCountByUsersAndSource(userIds, Set(KeepSource.Keeper, KeepSource.Mobile)).collect {
       case (id, count) if count >= 20 => id
     }.toSet
   }

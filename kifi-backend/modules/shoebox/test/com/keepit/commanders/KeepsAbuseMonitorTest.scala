@@ -37,7 +37,7 @@ class KeepsAbuseMonitorTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val t2 = new DateTime(2013, 3, 22, 14, 30, 0, 0, DEFAULT_DATE_TIME_ZONE)
-        val keeper = KeepSource.keeper
+        val keeper = KeepSource.Keeper
         val db = inject[Database]
         val keepRepo = inject[KeepRepo]
         val experiments = inject[UserExperimentRepo]
@@ -65,7 +65,7 @@ class KeepsAbuseMonitorTest extends Specification with ShoeboxTestInjector {
     "check for global abuse warn triggered" in {
       withDb() { implicit injector =>
         val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
-        val keeper = KeepSource.keeper
+        val keeper = KeepSource.Keeper
         val db = inject[Database]
         val keepRepo = inject[KeepRepo]
         val experiments = inject[UserExperimentRepo]

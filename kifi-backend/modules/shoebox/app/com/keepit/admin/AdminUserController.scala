@@ -431,7 +431,7 @@ class AdminUserController @Inject() (
       case (Some(name), Some(visibility)) =>
         val libraryAddRequest = LibraryInitialValues(name, visibility, slugOpt)
 
-        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.Site).build
         val result: Either[LibraryFail, Library] = libraryCommander.createLibrary(libraryAddRequest, userId)
         result match {
           case Left(fail) => BadRequest(fail.message)

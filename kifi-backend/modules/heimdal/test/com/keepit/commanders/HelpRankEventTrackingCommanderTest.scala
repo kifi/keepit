@@ -24,7 +24,7 @@ class HelpRankEventTrackingCommanderTest extends Specification with HeimdalTestI
   val keepIdCounter = new AtomicInteger(0)
   def mkKeep(userId: Id[User], ts: DateTime = currentDateTime, idOpt: Option[Id[Keep]] = None)(uri: NormalizedURI): Keep = {
     val id = idOpt getOrElse Id[Keep](keepIdCounter.incrementAndGet)
-    KeepFactory.keep().withId(id).withCreatedAt(ts).withUri(uri).withLibraryId((Id(1), LibraryVisibility.PUBLISHED, None)).withUser(userId).withSource(KeepSource.keeper).get
+    KeepFactory.keep().withId(id).withCreatedAt(ts).withUri(uri).withLibraryId((Id(1), LibraryVisibility.PUBLISHED, None)).withUser(userId).withSource(KeepSource.Keeper).get
   }
 
   val uriIdCounter = new AtomicInteger(0)

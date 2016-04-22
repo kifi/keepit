@@ -29,12 +29,12 @@ class ChecklistCommander @Inject() (
           val sources = keepRepo.getKeepSourcesByUser(userId).toSet
           lazy val installations = kifiInstallationRepo.all(userId)
 
-          val hasExt = sources.contains(KeepSource.keeper) || installations.exists(_.platform == KifiInstallationPlatform.Extension)
-          val hasMobile = sources.contains(KeepSource.mobile) || installations.exists(p => mobilePlatforms.contains(p.platform))
+          val hasExt = sources.contains(KeepSource.Keeper) || installations.exists(_.platform == KifiInstallationPlatform.Extension)
+          val hasMobile = sources.contains(KeepSource.Mobile) || installations.exists(p => mobilePlatforms.contains(p.platform))
           val keptSeveralPages = sources.size > 2 || keepRepo.getCountByUser(userId) >= 5
-          val importedBrowserBookmarks = sources.contains(KeepSource.bookmarkImport) || sources.contains(KeepSource.bookmarkFileImport)
+          val importedBrowserBookmarks = sources.contains(KeepSource.BookmarkImport) || sources.contains(KeepSource.BookmarkFileImport)
           val importedThirdParty = KeepSource.imports.exists(sources.contains)
-          val hasTwitterSync = sources.contains(KeepSource.twitterSync) || sources.contains(KeepSource.twitterFileImport) || twitterWaitlistRepo.getByUser(userId).nonEmpty
+          val hasTwitterSync = sources.contains(KeepSource.TwitterSync) || sources.contains(KeepSource.TwitterFileImport) || twitterWaitlistRepo.getByUser(userId).nonEmpty
           val hasInvitedFriends = invitationRepo.countByUser(userId) + libraryInviteRepo.getByUser(userId, Set(LibraryInviteStates.INACTIVE)).length >= 3
 
           val all = Seq(
