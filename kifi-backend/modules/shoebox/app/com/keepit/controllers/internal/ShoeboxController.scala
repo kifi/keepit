@@ -239,7 +239,7 @@ class ShoeboxController @Inject() (
     Ok(result)
   }
 
-  def getRecipientsOnKeep(keepId: Id[Keep]) = Action(parse.tolerantJson) { request =>
+  def getRecipientsOnKeep(keepId: Id[Keep]) = Action { request =>
     import GetRecipientsOnKeep._
     val response = db.readOnlyMaster { implicit s =>
       val keep = keepRepo.get(keepId)
