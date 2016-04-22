@@ -2,22 +2,21 @@ package com.keepit.slack
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.concurrent.FutureHelpers
+import com.keepit.common.core._
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
+import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.Database
-import com.keepit.model.User
-import com.keepit.slack.SlackPushingActor.ContextSensitiveSlackPush
-import com.keepit.slack.models.SlackErrorCode._
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.logging.{ SlackLog, Logging }
+import com.keepit.common.logging.{ Logging, SlackLog }
 import com.keepit.common.time.{ Clock, DEFAULT_DATE_TIME_ZONE }
 import com.keepit.common.util.{ Debouncing, Ord }
+import com.keepit.model.User
+import com.keepit.slack.models.SlackErrorCode._
 import com.keepit.slack.models._
-import com.keepit.common.core._
 
-import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Success, Try, Failure }
 import scala.concurrent.duration._
+import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.{ Failure, Success, Try }
 
 @ImplementedBy(classOf[SlackClientWrapperImpl])
 trait SlackClientWrapper {
