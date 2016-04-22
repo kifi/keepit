@@ -173,11 +173,13 @@ class KeepInfoAssemblerImpl @Inject() (
       permissionsByKeep <- permissionsFut
       activityByKeep <- activityFut
     } yield {
+      stopwatch.logTimeWith("gathering_basics")
       val (usersById, libsById) = db.readOnlyMaster { implicit s =>
         val userSet = ktusByKeep.values.flatMap(_.map(_.userId)).toSet ++ keepsById.values.flatMap(_.userId).toSet
         val libSet = ktlsByKeep.values.flatMap(_.map(_.libraryId)).toSet
         (basicUserRepo.loadAllActive(userSet), basicLibGen.getBasicLibraries(libSet))
       }
+      stopwatch.logTimeWith("assembling_infos")
       keepSet.toSeq.augmentWith { keepId =>
         for {
           keep <- keepsById.get(keepId).withLeft(KeepFail.KEEP_NOT_FOUND: KeepFail)
