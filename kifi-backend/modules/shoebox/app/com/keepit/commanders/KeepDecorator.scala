@@ -17,7 +17,7 @@ import com.keepit.common.net.URISanitizer
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ ImageSize, S3ImageConfig, S3ImageStore }
 import com.keepit.common.util.Ord.dateTimeOrdering
-import com.keepit.discussion.{ CrossServiceKeepActivity, Discussion }
+import com.keepit.discussion.{ Discussion }
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 import com.keepit.rover.RoverServiceClient

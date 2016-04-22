@@ -310,10 +310,13 @@ class ElizaServiceClientImpl @Inject() (
   }
 
   def getDiscussionsForKeeps(keepIds: Set[Id[Keep]], fromTime: Option[DateTime], maxMessagesShown: Int): Future[Map[Id[Keep], Discussion]] = {
-    import GetDiscussionsForKeeps._
-    val request = Request(keepIds, fromTime, maxMessagesShown)
-    call(Eliza.internal.getDiscussionsForKeeps, body = Json.toJson(request)).map { response =>
-      response.json.as[Response].discussions
+    if (keepIds.isEmpty) Future.successful(Map.empty[Id[Keep], Discussion])
+    else {
+      import GetDiscussionsForKeeps._
+      val request = Request(keepIds, fromTime, maxMessagesShown)
+      call(Eliza.internal.getDiscussionsForKeeps, body = Json.toJson(request)).map { response =>
+        response.json.as[Response].discussions
+      }
     }
   }
 

@@ -70,16 +70,6 @@ object CrossServiceMessage {
   )(CrossServiceMessage.apply, unlift(CrossServiceMessage.unapply))
 }
 
-case class CrossServiceKeepActivity(
-  numComments: Int,
-  messages: Seq[CrossServiceMessage])
-object CrossServiceKeepActivity {
-  implicit val format: Format[CrossServiceKeepActivity] = (
-    (__ \ 'numBasicMessages).format[Int] and
-    (__ \ 'messages).format[Seq[CrossServiceMessage]]
-  )(CrossServiceKeepActivity.apply, unlift(CrossServiceKeepActivity.unapply))
-}
-
 case class Discussion(
   startedAt: DateTime,
   numMessages: Int,
