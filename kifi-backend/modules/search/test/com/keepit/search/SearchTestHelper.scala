@@ -6,6 +6,7 @@ import com.keepit.common.db._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
+import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 import com.keepit.model.NormalizedURI
 import com.keepit.model.User
@@ -73,7 +74,7 @@ trait SearchTestHelper { self: SearchTestInjector =>
       val keepIndexer = new KeepIndexer(new VolatileIndexDirectory, shard, inject[AirbrakeNotifier])
       (shard -> keepIndexer)
     }
-    val shardedKeepIndexer = new ShardedKeepIndexer(keepIndexers.toMap, inject[ShoeboxServiceClient], inject[AirbrakeNotifier])
+    val shardedKeepIndexer = new ShardedKeepIndexer(keepIndexers.toMap, inject[ShoeboxServiceClient], inject[ElizaServiceClient], inject[AirbrakeNotifier])
 
     val userIndexer = new UserIndexer(new VolatileIndexDirectory, inject[ShoeboxServiceClient], inject[AirbrakeNotifier])
     val userGraphIndexer = new UserGraphIndexer(new VolatileIndexDirectory, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
