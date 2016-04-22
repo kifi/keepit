@@ -49,6 +49,9 @@
 .kifi-message-sent.kifi-message-sent.kifi-message-sent:hover .kifi-message-sent-stamp {
   display: block;
 }
+.kifi-message-sent:last-child {
+  margin-bottom: 8px;
+}
 .kifi-message-sent-stamp {
   position: absolute;
   right: 0;
@@ -98,6 +101,9 @@
   padding: 13px;
   border-top: 1px solid #b8c5d0;
   border-bottom: 1px solid #b8c5d0;
+}
+.kifi-message-sent-display-greyed_out:last-child {
+  margin-bottom: 16px;
 }
 .kifi-message-sent-display-greyed_out .kifi-message-p {
   color: inherit;
