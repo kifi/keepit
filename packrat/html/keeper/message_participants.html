@@ -11,7 +11,10 @@
           {{#email}}{{>message_avatar_email}}{{/email}}
           {{#library}}{{>message_avatar_library}}{{/library}}
         {{/avatars}}
-        <li><a class="kifi-message-participants-avatars-actions kifi-message-participants-avatars-add" href="javascript:"></a></li>
+        <li class="kifi-message-participants-avatars-actions">
+          <a class="kifi-message-participants-avatars-action kifi-message-participants-avatars-more" href="javascript:" data-elided="{{elidedCount}}"></a>
+          <a class="kifi-message-participants-avatars-action kifi-message-participants-avatars-add" href="javascript:"></a>
+        </li>
       </ul>
     </div>
   </div>
