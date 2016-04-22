@@ -58,7 +58,7 @@ angular.module('kifi')
 
           $scope.activity = $scope.keep.activity.events.slice().sort(eventComparator); // don't mutate the original array, in case we need it later
 
-          $scope.visibleCount = Math.min($scope.maxInitialComments || 3, $scope.activity.length);
+          $scope.visibleCount = Math.min($scope.maxInitialComments || 4, $scope.activity.length);
           $scope.hasMoreToFetch = $scope.activity[0].kind !== 'initial';
           $scope.showViewPreviousComments = $scope.hasMoreToFetch || $scope.visibleCount < $scope.activity.length;
 
