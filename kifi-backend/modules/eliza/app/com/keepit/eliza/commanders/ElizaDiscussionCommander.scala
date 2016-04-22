@@ -109,7 +109,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
           startedAt = thread.createdAt,
           numMessages = countsByKeep.getOrElse(keepId, 0),
           locator = thread.deepLocator,
-          messages = recentsByKeep(keepId).map(ElizaMessage.toCrossServiceMessage)
+          messages = recentsByKeep(keepId).filterNot(_.from.isSystem).map(ElizaMessage.toCrossServiceMessage)
         )
     }
   }
