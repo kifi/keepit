@@ -143,7 +143,7 @@ class LibraryInfoCommanderImpl @Inject() (
       val memOpt = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, viewerUserId)
       val following = if (mine) None else Some(memOpt.isDefined)
       val subscribedToUpdates = memOpt.exists(_.subscribedToUpdates)
-      if (library.visibility == LibraryVisibility.PUBLISHED || mine || following.get) {
+      if (permissionCommander.getLibraryPermissions(libraryId, Some(viewerUserId)).contains(LibraryPermission.VIEW_LIBRARY)) {
         val owner = basicUserRepo.load(library.ownerId)
         val followerCount = if (LibraryMembershipCommander.defaultLibraries.contains(library.id.get)) 0 else libraryMembershipRepo.countWithLibraryIdByAccess(library.id.get).readOnly
         Right((library, owner, followerCount, following, subscribedToUpdates))
