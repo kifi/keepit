@@ -49,6 +49,7 @@ class PageCommander @Inject() (
     libraryQualityHelper: LibraryQualityHelper,
     userCommander: UserCommander,
     inferredKeeperPositionCache: InferredKeeperPositionCache,
+    pathCommander: PathCommander,
     airbrake: AirbrakeNotifier,
     implicit val executionContext: ExecutionContext,
     implicit val config: PublicIdConfiguration) extends Logging {
@@ -202,7 +203,7 @@ class PageCommander @Inject() (
     augmentFuture map {
       case Seq(info) =>
         val userIdSet = info.keepers.map(_._1).toSet
-        val (basicUserMap, libraries, sources) = db.readOnlyMaster { implicit session =>
+        val (basicUserMap, libraries, sources, followerCounts, paths) = db.readOnlyMaster { implicit session =>
           /*          val notMyLibs = filterLibrariesUserDoesNotOwnOrFollow(info.libraries, userId)
             val libraries = firstQualityFilterAndSort(notMyLibs)
             val qualityLibraries = secondQualityFilter(libraries) */
@@ -216,24 +217,26 @@ class PageCommander @Inject() (
             val twitterSources = allSources.collect { case t: TwitterAttribution => t }.distinctBy(_.tweet.id)
             (slackSources ++ twitterSources).take(5).toSeq
           }
-          (basicUserMap, relevantLibraries, sources)
+
+          val followerCounts = libraryMembershipRepo.countWithAccessByLibraryId(relevantLibraries.map(_._1.id.get).toSet, LibraryAccess.READ_ONLY)
+          val paths = relevantLibraries.map(l => l._1.id.get -> pathCommander.libraryPage(l._1)).toMap
+          (basicUserMap, relevantLibraries, sources, followerCounts, paths)
         }
 
         val keeperIdsToExclude = Set(userId) ++ libraries.map(_._2)
         val keepers = info.keepers.collect { case (keeperId, _) if !keeperIdsToExclude.contains(keeperId) => basicUserMap(keeperId) } // preserving ordering
         val otherKeepersTotal = info.keepersTotal - (if (userIdSet.contains(userId)) 1 else 0)
-        val followerCounts = db.readOnlyReplica { implicit session =>
-          libraryMembershipRepo.countWithAccessByLibraryId(libraries.map(_._1.id.get).toSet, LibraryAccess.READ_ONLY)
-        }
+
         val libraryObjs = libraries.map {
           case (lib, addedBy, _) =>
             Json.obj(
               "name" -> lib.name,
+              "path" -> paths.get(lib.id.get).map(_.relativeWithLeadingSlash),
               "slug" -> lib.slug,
               "color" -> lib.color,
-              "owner" -> basicUserMap(lib.ownerId), // todo(Léo or Andrew) can we show addedBy instead of the library owner?
+              "owner" -> Json.toJson(basicUserMap.getOrElse(addedBy, basicUserMap(lib.ownerId))),
               "keeps" -> lib.keepCount,
-              "followers" -> followerCounts(lib.id.get))
+              "followers" -> followerCounts.getOrElse(lib.id.get, 0))
         }
         KeeperPagePartialInfo(keepers, otherKeepersTotal, libraryObjs, sources, keepDatas)
     }
