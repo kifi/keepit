@@ -27,7 +27,7 @@ trait ActivityEmailLibraryHelpers extends ActivityEmailHelpers {
 
   protected def createFullLibraryInfos(toUserId: Id[User], libraries: Seq[Library]) = {
     libraryInfoCommander.createFullLibraryInfos(viewerUserIdOpt = Some(toUserId),
-      showPublishedLibraries = true, maxKeepsShown = 10,
+      hidePublishedLibraries = false, maxKeepsShown = 10,
       maxMembersShown = 0, maxMessagesShown = 0, idealKeepImageSize = ProcessedImageSize.Large.idealSize,
       idealLibraryImageSize = ProcessedImageSize.Large.idealSize,
       libraries = libraries, sanitizeUrls = true)

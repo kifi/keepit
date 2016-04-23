@@ -157,7 +157,7 @@ class RecommendationsCommander @Inject() (
   private def noopLibRecoExplainer(lib: Id[Library]): Option[String] = None
 
   private def createFullLibraryInfos(userId: Id[User], libraries: Seq[Library], explainer: Id[Library] => Option[String] = noopLibRecoExplainer): Future[Seq[(Id[Library], FullLibRecoInfo)]] = {
-    libraryInfoCommander.createFullLibraryInfos(Some(userId), showPublishedLibraries = false, maxMembersShown = 10,
+    libraryInfoCommander.createFullLibraryInfos(Some(userId), hidePublishedLibraries = true, maxMembersShown = 10,
       maxKeepsShown = 0, maxMessagesShown = 8, ProcessedImageSize.Large.idealSize, libraries,
       ProcessedImageSize.Large.idealSize, sanitizeUrls = false).map { fullLibraryInfos =>
         fullLibraryInfos.map {

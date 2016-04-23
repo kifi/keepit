@@ -184,7 +184,7 @@ class MobileLibraryController @Inject() (
   private def getLibraryById(userIdOpt: Option[Id[User]], pubId: PublicId[Library], imageSize: Option[String] = None, v1: Boolean, viewerId: Option[Id[User]])(implicit context: HeimdalContext) = {
     val libraryId = Library.decodePublicId(pubId).get
     val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(MobileLibraryController.defaultLibraryImageSize)
-    libraryInfoCommander.getLibraryById(userIdOpt, false, libraryId, idealSize, viewerId, sanitizeUrls = true) map { libInfo =>
+    libraryInfoCommander.getLibraryById(userIdOpt, true, libraryId, idealSize, viewerId, sanitizeUrls = true) map { libInfo =>
       val editedLibInfo = libInfo.copy(keeps = libInfo.keeps.map { k =>
         k.copy(note = Hashtags.formatMobileNote(k.note, v1))
       })
@@ -207,7 +207,7 @@ class MobileLibraryController @Inject() (
         LibraryViewAction(Library.publicId(library.id.get)).invokeBlock(request, { _: MaybeUserRequest[_] =>
           request.userIdOpt.foreach { userId => libraryCommander.updateLastView(userId, library.id.get) }
           val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(MobileLibraryController.defaultLibraryImageSize)
-          libraryInfoCommander.createFullLibraryInfo(request.userIdOpt, false, library, idealSize, None, sanitizeUrls = true).map { libInfo =>
+          libraryInfoCommander.createFullLibraryInfo(request.userIdOpt, true, library, idealSize, None, sanitizeUrls = true).map { libInfo =>
             val editedLibInfo = libInfo.copy(keeps = libInfo.keeps.map { k =>
               k.copy(note = Hashtags.formatMobileNote(k.note, v1))
             })
@@ -550,7 +550,7 @@ class MobileLibraryController @Inject() (
           } yield ImageSize(w, h)
         } getOrElse ProcessedImageSize.Large.idealSize
         val keeps = libraryInfoCommander.getKeeps(libraryId, offset, limit)
-        keepDecorator.decorateKeepsIntoKeepInfos(userIdOpt, false, keeps, idealImageSize, maxMessagesShown, sanitizeUrls = true).map { keepInfos =>
+        keepDecorator.decorateKeepsIntoKeepInfos(userIdOpt, true, keeps, idealImageSize, maxMessagesShown, sanitizeUrls = true).map { keepInfos =>
           val editedKeepInfos = keepInfos.map { kInfo =>
             kInfo.copy(note = Hashtags.formatMobileNote(kInfo.note, v1))
           }

@@ -462,7 +462,7 @@ class ShoeboxController @Inject() (
     val keepsSeq = keepIds.toList.flatMap(keepById.get)
     val keepInfosFut = keepDecorator.decorateKeepsIntoKeepInfos(
       Some(viewerId),
-      showPublishedLibraries = true,
+      hidePublishedLibraries = false,
       keepsSeq = keepsSeq,
       idealImageSize = ProcessedImageSize.Medium.idealSize,
       maxMessagesShown = 0,

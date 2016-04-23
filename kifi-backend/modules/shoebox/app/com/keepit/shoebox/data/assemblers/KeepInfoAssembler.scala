@@ -37,14 +37,14 @@ trait KeepInfoAssembler {
 
 object KeepInfoAssemblerConfig {
   final case class KeepViewAssemblyOptions(
-    idealImageSize: ImageSize,
-    numEventsPerKeep: Int,
-    hideOtherPublishedLibraries: Boolean,
-    numContextualKeeps: Int,
-    numContextualKeepers: Int,
-    numContextualLibraries: Int,
-    numContextualTags: Int,
-    sanitizeUrls: Boolean) {
+      idealImageSize: ImageSize,
+      numEventsPerKeep: Int,
+      hideOtherPublishedLibraries: Boolean,
+      numContextualKeeps: Int,
+      numContextualKeepers: Int,
+      numContextualLibraries: Int,
+      numContextualTags: Int,
+      sanitizeUrls: Boolean) {
     def withQueryString(qs: Map[String, Seq[String]]): KeepViewAssemblyOptions = {
       val qsNumEventsPerKeep = qs.get("numEventsPerKeep").flatMap(_.headOption.flatMap(str => Try(str.toInt).toOption))
 
