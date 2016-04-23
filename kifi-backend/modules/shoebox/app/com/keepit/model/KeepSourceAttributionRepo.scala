@@ -95,8 +95,8 @@ class KeepSourceAttributionRepoImpl @Inject() (
   }
 
   def intern(keepId: Id[Keep], attribution: RawSourceAttribution, state: State[KeepSourceAttribution])(implicit session: RWSession): KeepSourceAttribution = {
-    val keepAttributionOpt = rows.filter(_.keepId === keepId).firstOption
-    save(KeepSourceAttribution(id = keepAttributionOpt.map(_.id.get), state = state, keepId = keepId, author = Author.fromSource(attribution), attribution = attribution))
+    val idOpt = rows.filter(_.keepId === keepId).map(_.id).firstOption
+    save(KeepSourceAttribution(id = idOpt, state = state, keepId = keepId, author = Author.fromSource(attribution), attribution = attribution))
   }
 
   def deactivate(model: KeepSourceAttribution)(implicit session: RWSession): Unit = save(model.withState(KeepSourceAttributionStates.INACTIVE))
