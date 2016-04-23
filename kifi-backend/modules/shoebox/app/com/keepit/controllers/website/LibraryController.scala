@@ -167,7 +167,7 @@ class LibraryController @Inject() (
     val libraryId = Library.decodePublicId(pubId).get
     val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(LibraryController.defaultLibraryImageSize)
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-    libraryInfoCommander.getLibraryById(request.userIdOpt, showPublishedLibraries, libraryId, idealSize, request.userIdOpt, sanitizeUrls = false) map { libInfo =>
+    libraryInfoCommander.getLibraryById(request.userIdOpt, !showPublishedLibraries, libraryId, idealSize, request.userIdOpt, sanitizeUrls = false) map { libInfo =>
       val suggestedSearches = getSuggestedSearchesAsJson(libraryId)
       Ok(Json.obj("library" -> libInfo, "suggestedSearches" -> suggestedSearches))
     }
@@ -198,7 +198,7 @@ class LibraryController @Inject() (
         LibraryViewAction(Library.publicId(library.id.get)).invokeBlock(request, { _: MaybeUserRequest[_] =>
           val idealSize = LibraryController.defaultLibraryImageSize
           request.userIdOpt foreach { userId => libraryCommander.updateLastView(userId, library.id.get) }
-          libraryInfoCommander.createFullLibraryInfo(request.userIdOpt, showPublishedLibraries = true, library, idealSize, authTokenOpt, sanitizeUrls = false).map { libInfo =>
+          libraryInfoCommander.createFullLibraryInfo(request.userIdOpt, hidePublishedLibraries = false, library, idealSize, authTokenOpt, sanitizeUrls = false).map { libInfo =>
             val suggestedSearches = getSuggestedSearchesAsJson(library.id.get)
 
             libraryCommander.trackLibraryView(request.userIdOpt, library)
@@ -375,7 +375,7 @@ class LibraryController @Inject() (
         val numKeepsF = libraryInfoCommander.getKeepsCount(libraryId)
         val keeps = libraryInfoCommander.getKeeps(libraryId, offset, limit)
         for {
-          keepInfos <- keepDecorator.decorateKeepsIntoKeepInfos(request.userIdOpt, showPublishedLibraries, keeps, ProcessedImageSize.Large.idealSize, maxMessagesShown, sanitizeUrls = false)
+          keepInfos <- keepDecorator.decorateKeepsIntoKeepInfos(request.userIdOpt, !showPublishedLibraries, keeps, ProcessedImageSize.Large.idealSize, maxMessagesShown, sanitizeUrls = false)
           numKeeps <- numKeepsF
         } yield {
           Ok(Json.obj("keeps" -> Json.toJson(keepInfos), "numKeeps" -> numKeeps))

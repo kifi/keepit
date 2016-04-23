@@ -181,7 +181,7 @@ class KeepCommanderImpl @Inject() (
     }
 
     keepFut.flatMap { keep =>
-      keepDecorator.decorateKeepsIntoKeepInfos(userIdOpt, showPublishedLibraries = false, Seq(keep), ProcessedImageSize.Large.idealSize, maxMessagesShown = maxMessagesShown, sanitizeUrls = false)
+      keepDecorator.decorateKeepsIntoKeepInfos(userIdOpt, hidePublishedLibraries = true, Seq(keep), ProcessedImageSize.Large.idealSize, maxMessagesShown = maxMessagesShown, sanitizeUrls = false)
         .imap { case Seq(keepInfo) => keepInfo }
     }
   }
@@ -244,7 +244,7 @@ class KeepCommanderImpl @Inject() (
     keepsF.flatMap {
       case keepsWithHelpRankCounts =>
         val (keeps, clickCounts, rkCounts) = keepsWithHelpRankCounts.unzip3
-        keepDecorator.decorateKeepsIntoKeepInfos(Some(userId), showPublishedLibraries = false, keeps, ProcessedImageSize.Large.idealSize, maxMessagesShown = 8, sanitizeUrls = false)
+        keepDecorator.decorateKeepsIntoKeepInfos(Some(userId), hidePublishedLibraries = true, keeps, ProcessedImageSize.Large.idealSize, maxMessagesShown = 8, sanitizeUrls = false)
     }
   }
 
@@ -471,7 +471,7 @@ class KeepCommanderImpl @Inject() (
 
       keepDecorator.decorateKeepsIntoKeepInfos(
         Some(userId),
-        showPublishedLibraries = false,
+        hidePublishedLibraries = true,
         keeps,
         ProcessedImageSize.Large.idealSize,
         sanitizeUrls = sanitizeUrls,

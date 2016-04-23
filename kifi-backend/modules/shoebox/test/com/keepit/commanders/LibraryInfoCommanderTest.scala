@@ -71,8 +71,8 @@ class LibraryInfoCommanderTest extends TestKitSupport with SpecificationLike wit
             val orgGeneralLibrary = libraryRepo.getBySpaceAndKind(org.id.get, LibraryKind.SYSTEM_ORG_GENERAL).head
             (org, owner, member, orgGeneralLibrary)
           }
-          val fullInfosForOwner = inject[LibraryInfoCommander].createFullLibraryInfo(Some(owner.id.get), showPublishedLibraries = true, orgGeneralLibrary, ProcessedImageSize.Large.idealSize, None, sanitizeUrls = false)
-          val fullInfosForMember = inject[LibraryInfoCommander].createFullLibraryInfo(Some(member.id.get), showPublishedLibraries = true, orgGeneralLibrary, ProcessedImageSize.Large.idealSize, None, sanitizeUrls = false)
+          val fullInfosForOwner = inject[LibraryInfoCommander].createFullLibraryInfo(Some(owner.id.get), hidePublishedLibraries = true, orgGeneralLibrary, ProcessedImageSize.Large.idealSize, None, sanitizeUrls = false)
+          val fullInfosForMember = inject[LibraryInfoCommander].createFullLibraryInfo(Some(member.id.get), hidePublishedLibraries = true, orgGeneralLibrary, ProcessedImageSize.Large.idealSize, None, sanitizeUrls = false)
           Await.result(fullInfosForOwner, Duration.Inf)
           Await.result(fullInfosForMember, Duration.Inf)
 
