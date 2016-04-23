@@ -11,7 +11,10 @@
           {{#email}}{{>message_avatar_email}}{{/email}}
           {{#library}}{{>message_avatar_library}}{{/library}}
         {{/avatars}}
-        <li><a class="kifi-message-participants-avatars-actions kifi-message-participants-avatars-add" href="javascript:"></a></li>
+        <li class="kifi-message-participants-avatars-actions">
+          <a class="kifi-message-participants-avatars-action kifi-message-participants-avatars-more" href="javascript:" data-elided="{{elidedCount}}"></a>
+          <a class="kifi-message-participants-avatars-action kifi-message-participants-avatars-add" href="javascript:"></a>
+        </li>
       </ul>
     </div>
   </div>
@@ -31,8 +34,8 @@
   </div>
   <div class="kifi-message-participant-1-add"><a href="javascript:" class="kifi-message-participant-1-add-link">Add participants</a></div>
   <div class="kifi-message-participant-dialog">
-    <div class="kifi-message-participant-dialog-title">Add people to this conversation</div>
-    <input class="kifi-message-participant-dialog-input" type="text" placeholder="Type a name..."/>
+    <div class="kifi-message-participant-dialog-title">Add libraries and people</div>
+    <input class="kifi-message-participant-dialog-input" type="text" placeholder="Type a library, name, or an email"/>
     <a class="kifi-message-participant-dialog-button" href="javascript:">Done</a>
   </div>
 </div>

@@ -70,8 +70,8 @@ var initFriendSearch = (function () {
     return '.' + d + acc;
   }
 
-  return function ($in, source, participants, includeSelf, options, searchFor) {
-    $in.tokenInput(search.bind(null, participants.map(getIdOrEmail), includeSelf, searchFor), $.extend({
+  return function ($in, source, getParticipants, includeSelf, options, searchFor) {
+    $in.tokenInput(search.bind(null, getParticipants, includeSelf, searchFor), $.extend({
       preventDuplicates: true,
       tokenValue: 'id',
       classPrefix: 'kifi-ti-',
@@ -85,10 +85,10 @@ var initFriendSearch = (function () {
     $in.prev().find('.kifi-ti-token-for-input').repairInputs();
   };
 
-  function search(excludeIds, includeSelf, searchFor, ids, query, withResults) {
+  function search(getExcludeIds, includeSelf, searchFor, ids, query, withResults) {
     searchFor = searchFor || { user: true, email: true, library: false };
     var n = Math.max(3, Math.min(8, Math.floor((window.innerHeight - 365) / 55)));  // quick rule of thumb
-    api.port.emit('search_recipients', {q: query, n: n, exclude: excludeIds.concat(ids), searchFor: searchFor }, function (recipients) {
+    api.port.emit('search_recipients', {q: query, n: n, exclude: getExcludeIds().map(getIdOrEmail).concat(ids), searchFor: searchFor }, function (recipients) {
       recipients = recipients || [];
       var contacts = recipients.filter(function (r) { return r.id[0] !== 'l'; });
       var libraries = recipients.filter(function (r) { return r.id && r.id[0] === 'l' && r.id.indexOf('@') === -1; });

@@ -16,7 +16,7 @@ import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.store.S3UserPictureConfig
 import com.keepit.common.util.MapHelpers
 import com.keepit.common.zookeeper.ServiceCluster
-import com.keepit.discussion.{ MessageSource, CrossServiceMessage, Discussion, Message}
+import com.keepit.discussion._
 import com.keepit.eliza.ElizaServiceClient._
 import com.keepit.eliza.model._
 import com.keepit.model._
@@ -127,7 +127,7 @@ trait ElizaServiceClient extends ServiceClient {
 
   // Discussion cross-service methods
   def getCrossServiceMessages(msgIds: Set[Id[Message]]): Future[Map[Id[Message], CrossServiceMessage]]
-  def getDiscussionsForKeeps(keepIds: Set[Id[Keep]], fromTime: Option[DateTime], maxMessagesShown: Int): Future[Map[Id[Keep], Discussion]]
+  def getCrossServiceDiscussionsForKeeps(keepIds: Set[Id[Keep]], fromTime: Option[DateTime], maxMessagesShown: Int): Future[Map[Id[Keep], CrossServiceDiscussion]]
   def getEmailParticipantsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Map[EmailAddress, (Id[User], DateTime)]]]
   def markKeepsAsReadForUser(userId: Id[User], lastSeenByKeep: Map[Id[Keep], Id[Message]]): Future[Map[Id[Keep], Int]]
   def sendMessageOnKeep(userId: Id[User], text: String, keepId: Id[Keep], source: Option[MessageSource]): Future[Message]
@@ -309,14 +309,11 @@ class ElizaServiceClientImpl @Inject() (
     }
   }
 
-  def getDiscussionsForKeeps(keepIds: Set[Id[Keep]], fromTime: Option[DateTime], maxMessagesShown: Int): Future[Map[Id[Keep], Discussion]] = {
-    if (keepIds.isEmpty) Future.successful(Map.empty[Id[Keep], Discussion])
-    else {
-      import GetDiscussionsForKeeps._
-      val request = Request(keepIds, fromTime, maxMessagesShown)
-      call(Eliza.internal.getDiscussionsForKeeps, body = Json.toJson(request)).map { response =>
-        response.json.as[Response].discussions
-      }
+  def getCrossServiceDiscussionsForKeeps(keepIds: Set[Id[Keep]], fromTime: Option[DateTime], maxMessagesShown: Int): Future[Map[Id[Keep], CrossServiceDiscussion]] = {
+    import GetCrossServiceDiscussionsForKeeps._
+    val request = Request(keepIds, fromTime, maxMessagesShown)
+    call(Eliza.internal.getCrossServiceDiscussionsForKeeps, body = Json.toJson(request)).map { response =>
+      response.json.as[Response].discussions
     }
   }
 
@@ -442,9 +439,9 @@ object ElizaServiceClient {
     implicit val requestFormat: Format[Request] = Json.format[Request]
     implicit val responseFormat: Format[Response] = Json.format[Response]
   }
-  object GetDiscussionsForKeeps {
+  object GetCrossServiceDiscussionsForKeeps {
     case class Request(keepIds: Set[Id[Keep]], fromTime: Option[DateTime], maxMessagesShown: Int)
-    case class Response(discussions: Map[Id[Keep], Discussion])
+    case class Response(discussions: Map[Id[Keep], CrossServiceDiscussion])
     implicit val requestFormat: Format[Request] = Json.format[Request]
     implicit val responseFormat: Format[Response] = Json.format[Response]
   }

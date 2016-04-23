@@ -46,7 +46,7 @@ class KeepSourceAttributionRepoImpl @Inject() (
   }
 
   def fromDbRow(id: Option[Id[KeepSourceAttribution]], createdAt: DateTime, updatedAt: DateTime, keepId: Id[Keep], author: Author, attrType: KeepAttributionType, attrJson: JsValue, state: State[KeepSourceAttribution]) = {
-    val attr = RawSourceAttribution.fromJson(attrType, attrJson).get
+    val attr = RawSourceAttribution.fromJson(attrType, attrJson).getOrElse(throw new Exception(s"[sourceAttr] can't parse attrType=$attrType, attrJson=$attrJson, for keepId=$keepId"))
     KeepSourceAttribution(id, createdAt, updatedAt, keepId, author, attr, state)
   }
 

@@ -31,13 +31,12 @@ class ElizaDiscussionController @Inject() (
   heimdalContextBuilder: HeimdalContextBuilderFactory)
     extends ElizaServiceController with Logging {
 
-  def getDiscussionsForKeeps = Action.async(parse.tolerantJson) { request =>
-    import GetDiscussionsForKeeps._
+  def getCrossServiceDiscussionsForKeeps = Action(parse.tolerantJson) { request =>
+    import GetCrossServiceDiscussionsForKeeps._
     val input = request.body.as[Request]
-    discussionCommander.getDiscussionsForKeeps(input.keepIds, input.fromTime, input.maxMessagesShown).map { discussions =>
-      val output = Response(discussions)
-      Ok(Json.toJson(output))
-    }
+    val discussions = discussionCommander.getCrossServiceDiscussionsForKeeps(input.keepIds, input.fromTime, input.maxMessagesShown)
+    val output = Response(discussions)
+    Ok(Json.toJson(output))
   }
 
   def getCrossServiceMessages = Action(parse.tolerantJson) { request =>
@@ -125,8 +124,8 @@ class ElizaDiscussionController @Inject() (
     import EditParticipantsOnKeep._
     implicit val context = heimdalContextBuilder().build
     val input = request.body.as[Request]
-    val KeepRecipientsDiff(users, _, emails) = input.diff
-    discussionCommander.editParticipantsOnKeep(input.keepId, input.editor, users.added.toSeq, emails.added.map(BasicContact(_)).toSeq, orgs = Seq.empty, input.source, updateShoebox = false).map { success =>
+    val KeepRecipientsDiff(users, libraries, emails) = input.diff
+    discussionCommander.editParticipantsOnKeep(input.keepId, input.editor, users.added.toSeq, emails.added.map(BasicContact(_)).toSeq, libraries.added.toSeq, orgs = Seq.empty, input.source, updateShoebox = false).map { success =>
       val output = Response(success)
       Ok(Json.toJson(output))
     }

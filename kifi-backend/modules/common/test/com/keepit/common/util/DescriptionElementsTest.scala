@@ -46,7 +46,7 @@ class DescriptionElementsTest extends Specification {
     "format rich elements" in {
       import DescriptionElements._
       val author = BasicAuthor.KifiUser("1234567", "Hank Paulson", picture = "0.jpg", url = "/paulson")
-      val library = BasicLibrary(PublicId[Library]("1234567"), "Soap Makers Inc.", "/paulson/soap", LibraryVisibility.DISCOVERABLE, color = None)
+      val library = BasicLibrary(PublicId[Library]("1234567"), "Soap Makers Inc.", "/paulson/soap", LibraryVisibility.DISCOVERABLE, color = None, slack = None)
 
       val header = DescriptionElements(author, "kept in", library)
       val body = DescriptionElements("Here is a note with [#hashtags] all over") // maybe todo(Cam): create a HashtagElement

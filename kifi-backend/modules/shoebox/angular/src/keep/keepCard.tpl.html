@@ -155,6 +155,10 @@
           <svg kf-symbol-sprite
                ng-if="library && library|libPrivacyIcon"
                icon="{{::library|libPrivacyIcon}}"></svg>
+          <img
+            class="kf-keep-card-library-chip-slack"
+            ng-if="library && library.slack"
+            src="/img/slack-hash-white.png"/>
           <span ng-bind="library.name"></span>
         </a>
         <a class="kf-feed-tooltip-target kf-keep-card-participant-pic"

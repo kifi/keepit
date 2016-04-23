@@ -9,7 +9,7 @@ import com.keepit.common.util.DescriptionElements._
 import com.keepit.common.util._
 import com.keepit.model.BasicKeepEvent.BasicKeepEventId
 import com.keepit.model.{ BasicKeepEventSource, CommonKeepEvent, KifiAttribution, KeepEvent, KeepRecipientsDiff, BasicKeepEvent, KeepEventKind, KeepActivity, TwitterAttribution, SlackAttribution, BasicOrganization, BasicLibrary, Library, User, KeepToUser, KeepToLibrary, SourceAttribution, Keep }
-import com.keepit.discussion.Discussion
+import com.keepit.discussion.{ Message, CrossServiceDiscussion, Discussion }
 import com.keepit.model.KeepEventData.{ ModifyRecipients, EditTitle }
 import com.keepit.social.{ BasicUser, BasicAuthor }
 
@@ -23,7 +23,7 @@ object KeepActivityGen {
     keep: Keep,
     sourceAttrOpt: Option[(SourceAttribution, Option[BasicUser])],
     events: Seq[KeepEvent],
-    discussionOpt: Option[Discussion],
+    discussionOpt: Option[CrossServiceDiscussion],
     ktls: Seq[KeepToLibrary],
     ktus: Seq[KeepToUser],
     maxEvents: Int)(implicit info: SerializationInfo, airbrake: AirbrakeNotifier, imageConfig: S3ImageConfig, pubIdConfig: PublicIdConfiguration): KeepActivity = {
@@ -88,7 +88,18 @@ object KeepActivityGen {
     }
 
     val keepEvents = events.map(event => generateKeepEvent(keep.id.get, event))
-    val comments = discussionOpt.map(_.messages.map(BasicKeepEvent.fromMessage)).getOrElse(Seq.empty)
+    val comments = discussionOpt.map(_.messages.flatMap { msg =>
+      for {
+        sender <- msg.sentBy
+        myauthor <- sender.fold(u => info.userById.get(u).map(BasicAuthor.fromUser), nu => Some(BasicAuthor.fromNonUser(nu)))
+      } yield BasicKeepEvent.generateCommentEvent(
+        id = Message.publicId(msg.id),
+        author = myauthor,
+        text = msg.text,
+        sentAt = msg.sentAt,
+        source = msg.source
+      )
+    }).getOrElse(Seq.empty)
 
     val basicEvents = {
       val subsequentEvents = (keepEvents ++ comments).sortBy(_.timestamp.getMillis)(Ord.descending).take(maxEvents)

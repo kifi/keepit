@@ -31,7 +31,8 @@
 k.messageParticipants = k.messageParticipants || (function ($, win) {
   'use strict';
 
-  var OVERFLOW_LENGTH = 8;
+  var OVERFLOW_LENGTH = 8; // maximum number of avatars (including libs) to show at once
+  var LIB_OVERFLOW_LENGTH = 2; // maximum number of libraries to show
 
   var partials = {
     'message_avatar_user': 'message_avatar_user',
@@ -43,11 +44,12 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
   };
 
   var portHandlers = {
-    participants: function (participants) {
-      k.messageParticipants.setParticipants(participants);
-    },
-    add_participants: function (users) {
-      k.messageParticipants.addParticipant.apply(k.messageParticipants, users);
+    recipients: function (recipients) {
+      var keep = k.messageParticipants.getKeep();
+      var users = keep.recipients.users = recipients.users;
+      var emails = keep.recipients.emails = recipients.emails;
+      var libraries = keep.recipients.libraries = recipients.libraries;
+      k.messageParticipants.addParticipant.apply(k.messageParticipants, users.concat(emails).concat(libraries));
     }
   };
 
@@ -147,7 +149,7 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
         });
 
         this.getParent$()
-        .on('click', '.kifi-message-show-participant', this.toggleParticipants.bind(this));
+        .on('click', '.kifi-message-show-participant,.kifi-message-participants-avatars-more', this.toggleParticipants.bind(this));
 
         win.setTimeout(addDocListeners.bind(this));
       };
@@ -167,14 +169,14 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
      */
     initAndAsyncFocusInput: function () {
       var $input = this.$input;
-      var keep = this.parent.keep;
+      var keep = this.getKeep();
       var permissions = keep && keep.viewer && keep.viewer.permissions || [];
-      var canChangeLibrary = permissions.indexOf('add_libraries') > -1 && permissions.indexOf('remove_libraries') > -1;
+      var canAddLibrary = permissions.indexOf('add_libraries') > -1;
 
       if (!$input) {
         $input = this.$input = this.get$('.kifi-message-participant-dialog-input');
-        initFriendSearch($input, 'threadPane', this.getParticipants(), api.noop, {
-          placeholder: 'Type a name...',
+        initFriendSearch($input, 'threadPane', this.getParticipants.bind(this), api.noop, {
+          placeholder: 'Type a library, name, or an email',
           onAdd: function () {
             this.getAddDialog().addClass('kifi-non-empty');
           }.bind(this),
@@ -183,32 +185,12 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
               this.getAddDialog().removeClass('kifi-non-empty');
             }
           }.bind(this)
-        }, { user: true, email: true, library: canChangeLibrary });
+        }, { user: true, email: true, library: canAddLibrary });
       }
 
       setTimeout(function () {
         this.get$TokenInput().focus();
       }.bind(this));
-    },
-
-    // socket.send(["add_participants_to_thread","e45841fb-b7de-498f-97af-9f1ab17ef9a9",["df7ba036-700c-4f5d-84d1-313b5bf312b6"]])
-
-    /**
-     * A listener for adding
-     *
-     * participants: [{
-     *   firstName: "Jenny"
-     *   id: "6f21b520-87e7-4053-9676-85762e96970a"
-     *   lastName: "Batres"
-     *   pictureName: "0.jpg"
-     * }]
-     */
-    setParticipants: function (participants) {
-      var parent = this.parent;
-      if (parent && parent.initialized) {
-        parent.participants = participants;
-        this.updateView();
-      }
     },
 
     /**
@@ -264,8 +246,10 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
      */
     getView: function () {
       var participants = this.getParticipants();
-      var keep = this.parent.keep;
+      var avatars = this.renderAvatars();
+      var keep = this.getKeep();
       var keepLibraries = (keep && keep.recipients && keep.recipients.libraries) || [];
+      var elidedCount = Math.max(0, participants.length - avatars.length);
 
       // This count is no longer an accurate "number" of participants.
       var participantCount = participants.filter(function (user) {
@@ -286,8 +270,9 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
         participantName: attr ? this.getFullName(attr) : '',
         isOverflowed: this.isOverflowed(),
         participantCount: participantCount,
+        elidedCount: elidedCount,
         keptInLibrary: keptInLibrary,
-        avatars: this.renderAvatars(),
+        avatars: avatars,
         participants: this.renderParticipants()
       };
     },
@@ -315,7 +300,15 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
      * @return {string} html for a list of avatars
      */
     renderAvatars: function () {
-      return this.getParticipants().map(this.renderAvatar).sort(orderLibrariesFirst).slice(0, OVERFLOW_LENGTH);
+      var keep = this.getKeep();
+      var libCount = (keep && keep.recipients && keep.recipients.libraries && keep.recipients.libraries.length) || 0;
+      var libsToShow = Math.min(LIB_OVERFLOW_LENGTH, libCount);
+      var usersToShow = OVERFLOW_LENGTH - libsToShow;
+      var untruncatedAvatars = this.getParticipants().map(this.renderAvatar).sort(orderLibrariesFirst);
+
+      // Since the participants are sorted, we can slice through to limit both libraries and users separately
+      var avatars = untruncatedAvatars.slice(0, libsToShow).concat(untruncatedAvatars.slice(libCount, libCount + usersToShow));
+      return avatars;
     },
 
     /**
@@ -474,33 +467,14 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
       if (participants.length > 0) {
         this.sendModifyKeep(users, emails, libraries)
         .then(function () {
-          this.addParticipant.apply(this, participants);
-        }.bind(this));
-      }
-
-      $input.tokenInput('clear');
-      this.toggleAddDialog();
-    },
-
-    sendModifyKeep: function (users, emails, libraries) {
-      var deferred = Q.defer();
-
-      var keep = this.parent.keep;
-      api.port.emit('update_keepscussion_recipients', {
-        keepId: keep.id,
-        newUsers: users || [],
-        newEmails: emails || [],
-        newLibrary: libraries[0],
-        oldLibraries: keep.recipients.libraries
-      }, function success(d) {
-        var keep = d.response;
-        if (d.success) {
-          this.parent.keep = keep;
+          var keep = this.getKeep();
+          keep.recipients.users = keep.recipients.users.concat(users);
+          keep.recipients.emails = keep.recipients.emails.concat(emails);
+          keep.recipients.libraries = keep.recipients.libraries.concat(libraries);
           this.parent.refresh();
-          this.updateView();
-          deferred.resolve(keep);
-        } else {
-          // TODO(carlos): Add a progress bar to seem snappier
+          this.addParticipant.apply(this, participants);
+        }.bind(this))
+        .catch(function () {
           var $toShake = this.get$();
           $toShake
           .on('animationend', function onEnd() {
@@ -509,7 +483,33 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
             this.parent.refresh();
           }.bind(this))
           .addClass('kifi-shake');
+        }.bind(this));
+      }
 
+      $input.tokenInput('clear');
+      this.toggleAddDialog();
+    },
+
+    getKeep: function () {
+      return this.parent.keep;
+    },
+
+    sendModifyKeep: function (users, emails, libraries) {
+      var deferred = Q.defer();
+      users = users || [];
+      emails = emails || [];
+      libraries = libraries || [];
+
+      var keep = this.getKeep();
+      api.port.emit('update_keepscussion_recipients', {
+        keepId: keep.id,
+        newUsers: users,
+        newEmails: emails,
+        newLibraries: libraries,
+      }, function (success) {
+        if (success) {
+          deferred.resolve();
+        } else {
           deferred.reject();
         }
       }.bind(this));
@@ -549,11 +549,8 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
       for (var i = 0, len = arguments.length, participant, participantId; i < len; i++) {
         participant = args[i];
         participantId = participant && participant.id;
-
         if (participantId && !participants.some(idIs(participantId))) {
-          if (isLibrary(participant)) { // TODO(carlos): remove for multiple libraries on keep
-            removeFromList(participants, participants.find(isLibrary));
-          }
+          participant.highlight = true;
           participants.unshift(participant);
           count++;
         }
@@ -561,8 +558,12 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
 
       if (count) {
         this.updateView();
-        this.highlightParticipantsWithIds(args.map(mapId));
+        this.highlightParticipantsWithIds(args.filter(function (a) { return a.highlight; }).map(mapId));
       }
+
+      args.forEach(function (a) {
+        delete a.highlight;
+      });
     },
 
     highlightParticipantsWithIds: function (ids) {
@@ -580,6 +581,7 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
       $el.toggleClass('kifi-overflow', view.isOverflowed);
       $el.find('.kifi-message-participant-name').text(view.participantName);
       $el.find('.kifi-participant-count').text(view.participantCount);
+      $el.find('[data-elided]').attr('data-elided', view.elidedCount);
       var renderedAvatars = view.avatars.map(function (a) {
         a = a.email || a.user || a.library;
         var template = (a.isEmail ? 'html/keeper/message_avatar_email' : a.isUser ? 'html/keeper/message_avatar_user' : 'html/keeper/message_avatar_library');
@@ -591,7 +593,7 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
         return $(k.render(template, p));
       });
       var avatarList = $el.find('.kifi-message-participants-avatars');
-      avatarList.find('> :not(:last)').remove();
+      avatarList.find('> :not(:last)').remove(); // don't remove the add icon
       avatarList.prepend(renderedAvatars);
       $el.find('.kifi-message-participant-list-inner').empty().append(renderedParticipants);
       this.updateParticipantsHeight();
@@ -652,18 +654,7 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
     return function (o) { return o.id === id; };
   }
 
-  function isLibrary(o) {
-    return o && (o.isLibrary === true || o.kind === 'library');
-  }
-
   function mapId(o) {
     return o.id;
-  }
-
-  function removeFromList(list, item) {
-    var index = list.indexOf(item);
-    if (index > -1) {
-      list.splice(list.indexOf(item), 1);
-    }
   }
 })(jQuery, this);

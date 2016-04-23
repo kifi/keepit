@@ -92,7 +92,8 @@ class UserProfileCommander @Inject() (
           path = info.path,
           org = info.org,
           orgMemberAccess = info.orgMemberAccess,
-          whoCanComment = info.whoCanComment
+          whoCanComment = info.whoCanComment,
+          slack = info.slack
         )
     }
   }

@@ -26,6 +26,7 @@ import com.keepit.social.BasicAuthor
 import org.apache.commons.lang3.RandomStringUtils
 
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.Try
 
 @ImplementedBy(classOf[KeepInfoAssemblerImpl])
 trait KeepInfoAssembler {
@@ -43,7 +44,13 @@ object KeepInfoAssemblerConfig {
     numContextualKeepers: Int,
     numContextualLibraries: Int,
     numContextualTags: Int,
-    sanitizeUrls: Boolean)
+    sanitizeUrls: Boolean) {
+    def withQueryString(qs: Map[String, Seq[String]]): KeepViewAssemblyOptions = {
+      val qsNumEventsPerKeep = qs.get("numEventsPerKeep").flatMap(_.headOption.flatMap(str => Try(str.toInt).toOption))
+
+      qsNumEventsPerKeep.fold(this)(n => this.copy(numEventsPerKeep = n))
+    }
+  }
 
   val default = KeepViewAssemblyOptions(
     idealImageSize = ProcessedImageSize.Large.idealSize,
@@ -139,7 +146,7 @@ class KeepInfoAssemblerImpl @Inject() (
 
     val sourceInfoFut = db.readOnlyReplicaAsync { implicit s =>
       keepSourceCommander.getSourceAttributionForKeeps(keepSet)
-    } tap { _.onComplete(_ => stopwatch.logTimeWith("complete_source")) }
+    } andThen { case _ => stopwatch.logTimeWith("complete_source") }
     stopwatch.logTimeWith("launched_source")
     val imageInfoFut = keepImageCommander.getBestImagesForKeepsPatiently(keepSet, ScaleImageRequest(config.idealImageSize)).map { keepImageByKeep =>
       keepImageByKeep.collect {
@@ -148,12 +155,12 @@ class KeepInfoAssemblerImpl @Inject() (
           dimensions = keepImage.dimensions
         )
       }
-    } tap { _.onComplete(_ => stopwatch.logTimeWith("complete_image")) }
+    } andThen { case _ => stopwatch.logTimeWith("complete_image") }
     stopwatch.logTimeWith("launched_image")
 
     val permissionsFut = db.readOnlyReplicaAsync { implicit s =>
       permissionCommander.getKeepsPermissions(keepSet, viewer)
-    } tap { _.onComplete(_ => stopwatch.logTimeWith("complete_permission")) }
+    } andThen { case _ => stopwatch.logTimeWith("complete_permission") }
     stopwatch.logTimeWith("launched_permission")
 
     val activityFut = {
@@ -164,7 +171,7 @@ class KeepInfoAssemblerImpl @Inject() (
       }
       if (!viewerHasActivityLogExperiment || config.numEventsPerKeep <= 0) Future.successful(Map.empty[Id[Keep], KeepActivity])
       else activityAssembler.getActivityForKeeps(keepSet, fromTime = None, numEventsPerKeep = config.numEventsPerKeep)
-    } tap { _.onComplete(_ => stopwatch.logTimeWith("complete_activity")) }
+    } andThen { case _ => stopwatch.logTimeWith("complete_activity") }
     stopwatch.logTimeWith("launched_activity")
 
     for {
@@ -173,11 +180,13 @@ class KeepInfoAssemblerImpl @Inject() (
       permissionsByKeep <- permissionsFut
       activityByKeep <- activityFut
     } yield {
+      stopwatch.logTimeWith("gathering_basics")
       val (usersById, libsById) = db.readOnlyMaster { implicit s =>
         val userSet = ktusByKeep.values.flatMap(_.map(_.userId)).toSet ++ keepsById.values.flatMap(_.userId).toSet
         val libSet = ktlsByKeep.values.flatMap(_.map(_.libraryId)).toSet
         (basicUserRepo.loadAllActive(userSet), basicLibGen.getBasicLibraries(libSet))
       }
+      stopwatch.logTimeWith("assembling_infos")
       keepSet.toSeq.augmentWith { keepId =>
         for {
           keep <- keepsById.get(keepId).withLeft(KeepFail.KEEP_NOT_FOUND: KeepFail)
