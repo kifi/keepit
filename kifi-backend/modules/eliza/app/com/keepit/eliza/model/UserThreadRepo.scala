@@ -109,7 +109,9 @@ class UserThreadRepoImpl @Inject() (
   def intern(model: UserThread)(implicit session: RWSession): UserThread = {
     // There is a unique index on (userId, keepId), so snake the id from any dead model that collides
     rows.filter(row => row.user === model.user && row.keepId === model.keepId).firstOption match {
-      case Some(existingModel) if existingModel.isActive => existingModel
+      case Some(existingModel) if existingModel.isActive =>
+        val updatedModel = existingModel.withUriId(model.uriId)
+        if (updatedModel == existingModel) existingModel else save(updatedModel)
       case deadModelOpt => save(model.copy(id = deadModelOpt.map(_.id.get)))
     }
   }

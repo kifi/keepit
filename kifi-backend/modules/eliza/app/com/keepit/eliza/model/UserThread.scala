@@ -39,6 +39,8 @@ case class UserThread(
   def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt = updateTime)
   def sanitizeForDelete = this.copy(state = UserThreadStates.INACTIVE)
 
+  def withUriId(uriId: Option[Id[NormalizedURI]]) = this.copy(uriId = uriId)
+
   lazy val summary = s"UserThread[id = $id, created = $createdAt, update = $updatedAt, user = $user, keep = $keepId, " +
     s"uriId = $uriId, lastSeen = $lastSeen, unread = $unread, notificationUpdatedAt = $notificationUpdatedAt, " +
     s"notificationEmailed = $notificationEmailed]"

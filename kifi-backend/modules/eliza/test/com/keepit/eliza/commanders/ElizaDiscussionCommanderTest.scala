@@ -167,7 +167,7 @@ class ElizaDiscussionCommanderTest extends TestKitSupport with SpecificationLike
             uts.foreach { ut => userThreadRepo.get(ut.id.get).state === UserThreadStates.ACTIVE }
             msgs.foreach { msg => messageRepo.get(msg.id.get).state === ElizaMessageStates.ACTIVE }
           }
-          discussionCommander.deleteThreadsForKeeps(keeps)
+          db.readWrite { implicit s => discussionCommander.deleteThreadsForKeeps(keeps) }
           db.readOnlyMaster { implicit s =>
             mts.foreach { mt => messageThreadRepo.get(mt.id.get).state === MessageThreadStates.INACTIVE }
             uts.foreach { ut => userThreadRepo.get(ut.id.get).state === UserThreadStates.INACTIVE }

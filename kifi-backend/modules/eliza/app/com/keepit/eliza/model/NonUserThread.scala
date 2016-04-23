@@ -22,9 +22,13 @@ case class NonUserThread(
     muted: Boolean = false,
     state: State[NonUserThread] = NonUserThreadStates.ACTIVE,
     accessToken: ThreadAccessToken = ThreadAccessToken()) extends ModelWithState[NonUserThread] with ParticipantThread {
+  def isActive = state == UserThreadStates.ACTIVE
+
   def withId(id: Id[NonUserThread]): NonUserThread = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt = updateTime)
   def withState(state: State[NonUserThread]) = copy(state = state)
+
+  def withUriId(uriId: Option[Id[NormalizedURI]]) = this.copy(uriId = uriId)
 
   def sanitizeForDelete = this.copy(state = NonUserThreadStates.INACTIVE)
 }

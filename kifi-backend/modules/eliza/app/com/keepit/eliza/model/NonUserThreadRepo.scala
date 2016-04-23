@@ -80,10 +80,14 @@ class NonUserThreadRepoImpl @Inject() (
   override def invalidateCache(model: NonUserThread)(implicit session: RSession): Unit = {}
 
   def intern(model: NonUserThread)(implicit session: RWSession): NonUserThread = {
-    val existingModel = model.participant match {
-      case NonUserEmailParticipant(email) => activeRows.filter(r => r.kind === NonUserKinds.email && r.emailAddress === email).firstOption
+    model.participant match {
+      case NonUserEmailParticipant(email) => activeRows.filter(r => r.kind === NonUserKinds.email && r.emailAddress === email).firstOption match {
+        case Some(existingModel) if existingModel.isActive =>
+          val updatedModel = existingModel.withUriId(model.uriId)
+          if (updatedModel == existingModel) existingModel else save(updatedModel)
+        case deadModelOpt => save(model.copy(id = deadModelOpt.map(_.id.get)))
+      }
     }
-    existingModel getOrElse save(model)
   }
 
   def getKeepsByEmail(emailAddress: EmailAddress)(implicit session: RSession): Seq[Id[Keep]] =

@@ -5,6 +5,7 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.common.core.{ anyExtensionOps, futureExtensionOps }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
+import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
@@ -34,7 +35,7 @@ trait ElizaDiscussionCommander {
   def editMessage(messageId: Id[ElizaMessage], newText: String): Future[Message]
   def deleteMessage(messageId: Id[ElizaMessage]): Unit
   def keepHasAccessToken(keepId: Id[Keep], accessToken: ThreadAccessToken): Boolean
-  def deleteThreadsForKeeps(keepIds: Set[Id[Keep]]): Unit
+  def deleteThreadsForKeeps(keepIds: Set[Id[Keep]])(implicit session: RWSession): Unit
 }
 
 @Singleton
@@ -244,12 +245,12 @@ class ElizaDiscussionCommanderImpl @Inject() (
       success <- messagingCommander.addParticipantsToThread(editor, keepId, newUsers, newNonUsers, newLibraries, orgs.toSeq, source, updateShoebox)
     } yield success
   }
-  def deleteThreadsForKeeps(keepIds: Set[Id[Keep]]): Unit = db.readWrite { implicit s =>
+  def deleteThreadsForKeeps(keepIds: Set[Id[Keep]])(implicit session: RWSession): Unit = {
     keepIds.foreach { keepId =>
       val uts = userThreadRepo.getByKeep(keepId)
       val nuts = nonUserThreadRepo.getByKeepId(keepId)
       val (nUrlOpt, lastMsgOpt) = (messageThreadRepo.getByKeepId(keepId).map(_.nUrl), messageRepo.getLatest(keepId))
-      s.onTransactionSuccess {
+      session.onTransactionSuccess {
         uts.foreach { ut =>
           for { nUrl <- nUrlOpt; lastMsg <- lastMsgOpt } notifDeliveryCommander.notifyRead(ut.user, ut.keepId, lastMsg.id.get, nUrl, lastMsg.createdAt)
           notifDeliveryCommander.notifyRemoveThread(ut.user, ut.keepId)
