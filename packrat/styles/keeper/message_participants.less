@@ -202,11 +202,22 @@
     animation-duration: 10s;
   }
 }
-
+.kifi-message-participant-avatar-lib-source-slack {
+  display: inline-block;
+  width: 20px;
+  height: 14px;
+  margin: 0 -3px -3px;
+  background-image: url(@url);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 115%;
+  @url: %(@kifi-symbol-slack-monochrome, #fff, #fff, #fff);
+}
 .kifi-message-participant-avatar-lib-visiblity {
   width: 9px;
   height: 14px;
-  margin: 0 3px -3px;
+  margin-bottom: -3px;
+  margin-left: 3px;
   background-position: center;
   background-repeat: no-repeat;
   display: none;

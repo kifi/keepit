@@ -4,8 +4,9 @@
   data-id="{{id}}"
   data-visibility="{{visibility}}"
 >
-  <a href="https://www.kifi.com{{path}}" target="_blank">
+  <a href="https://www.kifi.com{{path}}" target="_blank" class="kifi-message-participant-avatar-lib-link">
     <span class="kifi-message-participant-avatar-lib-visiblity"></span>
-    {{name}}
+    {{#slack.toSlackChannels.0}}<span class="kifi-message-participant-avatar-lib-source-slack"></span>{{/slack.toSlackChannels.0}}
+    <span class="kifi-message-participant-avatar-lib-name">{{name}}</span>
   </a>
 </li>

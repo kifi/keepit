@@ -4,7 +4,7 @@
 >
   {{#email}}<span class="kifi-ti-email-token-icon"></span>{{email}}{{/email}}
   {{^email}}
-    {{#libKind}}<span class="kifi-ti-lib-token-icon" data-visibility={{visibility}}></span>{{/libKind}}
+    {{#libKind}}<span class="kifi-ti-lib-token-visibility-icon" data-visibility={{visibility}}></span>{{#slack.toSlackChannels.0}}<span class="kifi-ti-lib-token-slack-icon"></span>{{/slack.toSlackChannels.0}}{{/libKind}}
     {{#orgKind}}<span class="kifi-ti-org-token-icon" style="background-image:url({{cdnBase}}/{{avatarPath}})"></span>{{/orgKind}}
     {{#userKind}}<span class="kifi-ti-user-token-icon" style="background-image:url({{cdnBase}}/users/{{id}}/pics/100/{{pictureName}})"></span>{{/userKind}}
     {{name}}
