@@ -171,6 +171,7 @@ class KeepMutatorImpl @Inject() (
     val newKeep = oldKeep.withLastActivityAtIfLater(time)
 
     if (newKeep.lastActivityAt != oldKeep.lastActivityAt) {
+      session.onTransactionSuccess { searchClient.updateKeepIndex() }
       ktuRepo.getAllByKeepId(keepId).foreach(ktu => ktuRepo.save(ktu.withLastActivityAt(time)))
       ktlRepo.getAllByKeepId(keepId).foreach(ktl => ktlRepo.save(ktl.withLastActivityAt(time)))
       keepRepo.save(newKeep)
