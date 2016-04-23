@@ -183,11 +183,13 @@ class SlackPushGenerator @Inject() (
           attachments = Seq(SlackAttachment.simple(DescriptionElements(SlackEmoji.newspaper, keepElement)))
         ))
         case (None, None) => ContextSensitiveSlackPush.generate(asUser => SlackMessageRequest.fromKifi(
-          text = DescriptionElements.formatForSlack(DescriptionElements(Some(DescriptionElements(s"*$userStr*", "sent")).filterNot(_ => asUser), keepElement))
+          text = DescriptionElements.formatForSlack(Some(DescriptionElements(s"*$userStr*", "sent this")).filterNot(_ => asUser)),
+          attachments = Seq(SlackAttachment.simple(DescriptionElements(SlackEmoji.newspaper, keepElement)))
         ))
         case (None, Some(attr)) => attr match {
           case ka: KifiAttribution => ContextSensitiveSlackPush.generate(asUser => SlackMessageRequest.fromKifi(
-            text = DescriptionElements.formatForSlack(DescriptionElements(Some(DescriptionElements(s"*${ka.keptBy.firstName}*", "sent")).filterNot(_ => asUser), keepElement))
+            text = DescriptionElements.formatForSlack(Some(DescriptionElements(s"*$userStr*", "sent this")).filterNot(_ => asUser)),
+            attachments = Seq(SlackAttachment.simple(DescriptionElements(SlackEmoji.newspaper, keepElement)))
           ))
           case TwitterAttribution(tweet) => ContextSensitiveSlackPush.insensitive(SlackMessageRequest.fromKifi(
             text = DescriptionElements.formatForSlack(DescriptionElements(s"*${tweet.user.name}:*", Hashtags.format(tweet.text))),
