@@ -1,4 +1,7 @@
-<div class="kf-keep-activity-event-container">
+<div class="kf-keep-activity-event-container"
+     ng-class="{
+       'kf-secondary-event': activityEvent.displayStyle === 'greyed_out'
+     }">
   <a ng-href="{{::activityEvent.author.url|pathFromUrl}}"
      ng-style="{ 'background-image' : 'url(' + (activityEvent.author.picture) + ')' }"
      class="kf-keep-activity-event-img"></a>
@@ -6,8 +9,7 @@
   <div class="kf-keep-activity-event-content">
     <div class="kf-keep-activity-event-header-container">
       <div class="kf-keep-activity-event-header">
-        <span kf-structured-text segments="activity">
-        </span>
+        <span kf-structured-text segments="activity"></span>
         <span class="kf-keep-activity-event-time" ng-if="::activityEvent.timestamp || activityEvent.source">·</span>
         <a class="kf-keep-activity-event-page-link" ng-if="::showKeepPageLink && activityEvent.timestamp" ng-href="{{::keep.path}}">
           <time class="kf-keep-activity-event-time"
