@@ -47,7 +47,7 @@
     <div class="kifi-keepers-h">Kept In {{#oneLib}}This Library{{/oneLib}}{{^oneLib}}These Libraries{{/oneLib}}</div>
     <div class="kifi-keepers-libs">
     {{#libs}}
-      <a class="kifi-keepers-lib" href="{{origin}}/{{owner.username}}/{{slug}}" target="_blank" tabindex="-1">
+      <a class="kifi-keepers-lib" href="{{origin}}{{path}}" target="_blank" tabindex="-1">
         <div class="kifi-keepers-lib-icon"{{#color}} style="background-color:{{color}}"{{/color}}></div>
         <img class="kifi-keepers-lib-owner-pic" src="{{cdnBase}}/users/{{owner.id}}/pics/100/{{owner.pictureName}}"/>
         <div class="kifi-keepers-lib-name">{{name}}</div>
