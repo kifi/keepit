@@ -226,12 +226,12 @@ class PageCommander @Inject() (
           libraryMembershipRepo.countWithAccessByLibraryId(libraries.map(_._1.id.get).toSet, LibraryAccess.READ_ONLY)
         }
         val libraryObjs = libraries.map {
-          case (lib, keeperId, _) =>
+          case (lib, addedBy, _) =>
             Json.obj(
               "name" -> lib.name,
               "slug" -> lib.slug,
               "color" -> lib.color,
-              "owner" -> basicUserMap(lib.ownerId), // todo(Léo or Andrew) can we show the keeper instead of the library owner?
+              "owner" -> basicUserMap(lib.ownerId), // todo(Léo or Andrew) can we show addedBy instead of the library owner?
               "keeps" -> lib.keepCount,
               "followers" -> followerCounts(lib.id.get))
         }
