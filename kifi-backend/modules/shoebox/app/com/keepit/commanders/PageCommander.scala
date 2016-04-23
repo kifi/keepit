@@ -229,6 +229,7 @@ class PageCommander @Inject() (
 
         val libraryObjs = libraries.map {
           case (lib, addedBy, _) =>
+            val followerCount: Int = followerCounts.getOrElse(lib.id.get, 0)
             Json.obj(
               "name" -> lib.name,
               "path" -> paths.get(lib.id.get).map(_.relativeWithLeadingSlash),
@@ -236,7 +237,7 @@ class PageCommander @Inject() (
               "color" -> lib.color,
               "owner" -> Json.toJson(basicUserMap.getOrElse(addedBy, basicUserMap(lib.ownerId))),
               "keeps" -> lib.keepCount,
-              "followers" -> followerCounts.getOrElse(lib.id.get, 0))
+              "followers" -> followerCount)
         }
         KeeperPagePartialInfo(keepers, otherKeepersTotal, libraryObjs, sources, keepDatas)
     }
