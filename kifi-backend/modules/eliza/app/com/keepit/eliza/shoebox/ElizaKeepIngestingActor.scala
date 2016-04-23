@@ -43,30 +43,26 @@ class ElizaKeepIngestingActor @Inject() (
   }
 
   protected def processBatch(keeps: Seq[CrossServiceKeep]): Future[Unit] = SafeFuture {
-    if (keeps.nonEmpty) {
+    if (keeps.nonEmpty) db.readWrite { implicit session =>
       val (liveKeeps, deadKeeps) = keeps.partition(_.isActive)
       discussionCommander.deleteThreadsForKeeps(deadKeeps.map(_.id).toSet)
 
-      val threadsThatNeedFixedRecipients = db.readOnlyMaster { implicit s =>
+      val threadsThatNeedFixing = {
         val threadsByKeep = threadRepo.getByKeepIds(liveKeeps.map(_.id).toSet)
         liveKeeps.flatAugmentWith(k => threadsByKeep.get(k.id)).filter {
-          case (keep, thread) => keep.users != thread.participants.allUsers || keep.emails != thread.participants.allEmails
+          case (keep, thread) => keep.users != thread.participants.allUsers || keep.emails != thread.participants.allEmails || keep.uriId != thread.uriId
         }
       }
-      threadsThatNeedFixedRecipients.foreach {
-        case (keep, thread) => db.readWrite { implicit s =>
+      threadsThatNeedFixing.foreach {
+        case (keep, thread) =>
           val newUsers = keep.users -- thread.participants.allUsers
           val newEmails = keep.emails -- thread.participants.allEmails
-          val newThread = threadRepo.save(thread.withParticipants(clock.now, newUsers, newEmails.map(NonUserEmailParticipant)))
+          val newThread = threadRepo.save(thread.withParticipants(clock.now, newUsers, newEmails.map(NonUserEmailParticipant)).withUriId(keep.uriId))
           newUsers.map(u => userThreadRepo.intern(UserThread.forMessageThread(newThread)(u)))
           newEmails.map(e => nuThreadRepo.intern(NonUserThread.forMessageThread(newThread)(NonUserEmailParticipant(e))))
-        }
       }
-
-      log.info(s"Ingested ${keeps.length} keeps from Shoebox, fixed recipients for ${threadsThatNeedFixedRecipients.length} of them")
-      db.readWrite { implicit s =>
-        systemValueRepo.setSequenceNumber(elizaKeepSeq, keeps.map(_.seq).max)
-      }
+      systemValueRepo.setSequenceNumber(elizaKeepSeq, keeps.map(_.seq).max)
+      log.info(s"Ingested ${keeps.length} keeps from Shoebox, fixed uri / recipients for ${threadsThatNeedFixing.length} of them")
     }
   }
 }

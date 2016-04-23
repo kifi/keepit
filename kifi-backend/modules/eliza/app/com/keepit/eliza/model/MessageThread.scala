@@ -41,6 +41,7 @@ case class MessageThread(
     this.withParticipants(currentDateTime, Set(owner)).copy(startedBy = owner)
   }
   def withKeepId(newKeepId: Id[Keep]): MessageThread = this.copy(keepId = newKeepId)
+  def withUriId(uriId: Id[NormalizedURI]): MessageThread = this.copy(uriId = uriId)
 
   def withParticipants(participants: MessageThreadParticipants) = this.copy(participants = participants)
   def withParticipants(when: DateTime, userIds: Set[Id[User]], nonUsers: Set[NonUserParticipant] = Set.empty) = {
