@@ -76,7 +76,7 @@ object AugmentationScores {
   val empty = AugmentationScores(Map.empty, Map.empty, Map.empty)
 }
 
-case class ItemAugmentationRequest(items: Set[AugmentableItem], context: AugmentationContext, showOtherPublishedKeeps: Option[Boolean] = None)
+case class ItemAugmentationRequest(items: Set[AugmentableItem], context: AugmentationContext, hideOtherPublishedKeeps: Option[Boolean] = None)
 
 object ItemAugmentationRequest {
   implicit val writes = Json.format[ItemAugmentationRequest]

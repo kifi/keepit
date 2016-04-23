@@ -91,7 +91,7 @@ class AugmentationCommanderImpl @Inject() (
   def distAugmentation(shards: Set[Shard[NormalizedURI]], itemAugmentationRequest: ItemAugmentationRequest): Future[ItemAugmentationResponse] = {
     if (shards.isEmpty) Future.successful(ItemAugmentationResponse.empty)
     else {
-      val ItemAugmentationRequest(items, context, showOtherPublishedKeeps) = itemAugmentationRequest
+      val ItemAugmentationRequest(items, context, hideOtherPublishedKeeps) = itemAugmentationRequest
 
       // todo(Léo): clean up these sets to avoid back and forth conversions between typed Ids and Long
 
@@ -106,7 +106,7 @@ class AugmentationCommanderImpl @Inject() (
         restrictedUsers <- futureRestrictedUsers
         libraries <- futureLibraries
         organizations <- futureOrganizations
-        allAugmentationInfos <- getAugmentationInfos(shards, userId, friends, restrictedUsers, libraries, organizations, items ++ context.corpus.keySet, showOtherPublishedKeeps.exists(identity))
+        allAugmentationInfos <- getAugmentationInfos(shards, userId, friends, restrictedUsers, libraries, organizations, items ++ context.corpus.keySet, hideOtherPublishedKeeps.exists(identity))
       } yield {
         val contextualAugmentationInfos = context.corpus.collect { case (item, weight) if allAugmentationInfos.contains(item) => (allAugmentationInfos(item) -> weight) }
         val contextualScores = computeAugmentationScores(contextualAugmentationInfos)
@@ -116,7 +116,7 @@ class AugmentationCommanderImpl @Inject() (
     }
   }
 
-  private def getAugmentationInfos(shards: Set[Shard[NormalizedURI]], userId: Id[User], friends: Set[Id[User]], restrictedUsers: Set[Id[User]], libraries: Set[Id[Library]], organizations: Set[Id[Organization]], items: Set[AugmentableItem], showOtherPublishedKeeps: Boolean): Future[Map[AugmentableItem, FullAugmentationInfo]] = {
+  private def getAugmentationInfos(shards: Set[Shard[NormalizedURI]], userId: Id[User], friends: Set[Id[User]], restrictedUsers: Set[Id[User]], libraries: Set[Id[Library]], organizations: Set[Id[Organization]], items: Set[AugmentableItem], hideOtherPublishedKeeps: Boolean): Future[Map[AugmentableItem, FullAugmentationInfo]] = {
     val friendsArray = LongArraySet.fromSet(friends.map(_.id))
     val restrictedUsersArray = LongArraySet.fromSet(restrictedUsers.map(_.id))
     val librariesArray = LongArraySet.fromSet(libraries.map(_.id))
@@ -135,7 +135,7 @@ class AugmentationCommanderImpl @Inject() (
         SafeFuture {
           val keepSearcher = shardedKeepIndexer.getIndexer(shard).getSearcher
           val librarySearcher = libraryIndexer.getSearcher
-          itemsInShard.map { item => item -> getAugmentationInfo(keepSearcher, librarySearcher, getKeepVisibilityEvaluator, showOtherPublishedKeeps)(item) }.toMap
+          itemsInShard.map { item => item -> getAugmentationInfo(keepSearcher, librarySearcher, getKeepVisibilityEvaluator, hideOtherPublishedKeeps)(item) }.toMap
         }
     }.toSeq
     Future.sequence(futureAugmentationInfosByShard).map(_.foldLeft(Map.empty[AugmentableItem, FullAugmentationInfo])(_ ++ _))
@@ -149,11 +149,11 @@ class AugmentationCommanderImpl @Inject() (
   }
 
   // todo(Léo): consider exists vs forall as keeps get in multiple libraries, a good published keep could be added to a bad library
-  private def isPoorPublishedKeep(librarySearcher: Searcher, keepVisibility: Int, keepLibraries: Set[Id[Library]]): Boolean = {
-    (keepVisibility == Visibility.OTHERS) && keepLibraries.forall(libraryId => showThisPublishedLibrary(librarySearcher, libraryId))
+  private def isIgnoredPublishedKeep(librarySearcher: Searcher, keepVisibility: Int, keepLibraries: Set[Id[Library]], hideOtherPublishedKeeps: Boolean): Boolean = {
+    (keepVisibility == Visibility.OTHERS) && (hideOtherPublishedKeeps || keepLibraries.forall(libraryId => showThisPublishedLibrary(librarySearcher, libraryId)))
   }
 
-  private def getAugmentationInfo(keepSearcher: Searcher, librarySearcher: Searcher, getKeepVisibilityEvaluator: WrappedSubReader => KeepVisibilityEvaluator, showOtherPublishedKeeps: Boolean)(item: AugmentableItem): FullAugmentationInfo = {
+  private def getAugmentationInfo(keepSearcher: Searcher, librarySearcher: Searcher, getKeepVisibilityEvaluator: WrappedSubReader => KeepVisibilityEvaluator, hideOtherPublishedKeeps: Boolean)(item: AugmentableItem): FullAugmentationInfo = {
     val uriTerm = new Term(KeepFields.uriField, item.uri.id.toString)
     val keeps = new ListBuffer[KeepDocument]()
     var otherPublishedKeeps = 0
@@ -206,7 +206,7 @@ class AugmentationCommanderImpl @Inject() (
 
           if (visibility != Visibility.RESTRICTED || isCanonicalKeep) {
             val libraries = getAndCountLibraryIds(libraryIdsDocValues, docId)
-            if (isPoorPublishedKeep(librarySearcher, visibility, libraries) && !isCanonicalKeep) { otherPublishedKeeps += 1 }
+            if (isIgnoredPublishedKeep(librarySearcher, visibility, libraries, hideOtherPublishedKeeps) && !isCanonicalKeep) { otherPublishedKeeps += 1 }
             else {
               val owner = getAndCountOwnerId(ownerIdDocValues.get(docId))
               val users = getIds[User](userIdsDocValues, docId)
