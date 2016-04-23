@@ -1,5 +1,6 @@
 package com.keepit.commanders
 
+import com.keepit.common.CollectionHelpers
 import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.concurrent.PimpMyFuture._
 import com.google.inject.Inject
@@ -19,16 +20,15 @@ import com.keepit.model._
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.search.SearchServiceClient
 import com.keepit.slack.SlackInfoCommander
-import com.keepit.slack.models.SlackTeamRepo
 import com.keepit.social.BasicUser
 import com.keepit.common.logging.{ AccessLog, Logging }
 import org.joda.time.DateTime
 import com.keepit.common.core._
 
 import play.api.libs.json._
-import scala.concurrent.{ ExecutionContext, Await, Future }
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.duration._
-import scala.util.{ Try, Failure, Success }
+import scala.util.{ Failure, Success }
 import com.keepit.search.augmentation.AugmentableItem
 
 class PageCommander @Inject() (
@@ -152,6 +152,16 @@ class PageCommander @Inject() (
     }
   }
 
+  private def getRelevantLibraries(viewerId: Id[User], libraries: Seq[(Id[Library], Id[User], DateTime)])(implicit session: RSession): Seq[(Library, Id[User], DateTime)] = {
+    val libraryById = libraryRepo.getActiveByIds(libraries.map(_._1).toSet)
+    val allowedLibraryKinds: Set[LibraryKind] = Set(LibraryKind.USER_CREATED, LibraryKind.SLACK_CHANNEL, LibraryKind.SYSTEM_ORG_GENERAL)
+    val relevantLibraries = for {
+      (libraryId, keeperId, keptAt) <- libraries if keeperId != viewerId
+      library <- libraryById.get(libraryId) if allowedLibraryKinds.contains(library.kind)
+    } yield (library, keeperId, keptAt)
+    CollectionHelpers.dedupBy(relevantLibraries)(_._1.id.get)
+  }
+
   private def filterLibrariesUserDoesNotOwnOrFollow(libraries: Seq[(Id[Library], Id[User], DateTime)], userId: Id[User])(implicit session: RSession): Seq[Library] = {
     val otherLibraryIds = libraries.filterNot(_._2 == userId).map(_._1)
     val memberLibraryIds = libraryMembershipRepo.getWithLibraryIdsAndUserId(otherLibraryIds.toSet, userId).keys
@@ -193,16 +203,12 @@ class PageCommander @Inject() (
       case Seq(info) =>
         val userIdSet = info.keepers.map(_._1).toSet
         val (basicUserMap, libraries, sources) = db.readOnlyMaster { implicit session =>
-          val notMyLibs = filterLibrariesUserDoesNotOwnOrFollow(info.libraries, userId)
-          val libraries = firstQualityFilterAndSort(notMyLibs)
-          val qualityLibraries = secondQualityFilter(libraries)
-          val basicUserMap = basicUserRepo.loadAll(userIdSet ++ qualityLibraries.map(_.ownerId) - userId)
-          val topLibs = if (qualityLibraries.isEmpty) {
-            qualityLibraries
-          } else {
-            val fakeUsers = userCommander.getAllFakeUsers()
-            qualityLibraries.takeWhile(lib => !fakeUsers.contains(lib.ownerId)).take(2)
-          }
+          /*          val notMyLibs = filterLibrariesUserDoesNotOwnOrFollow(info.libraries, userId)
+            val libraries = firstQualityFilterAndSort(notMyLibs)
+            val qualityLibraries = secondQualityFilter(libraries) */
+          val relevantLibraries = getRelevantLibraries(userId, info.libraries)
+          val basicUserMap = basicUserRepo.loadAll(userIdSet ++ relevantLibraries.map(_._1.ownerId) ++ relevantLibraries.map(_._2))
+
           val sources = {
             val slackTeamIds = slackInfoCommander.getOrganizationSlackTeamsForUser(userId)
             val allSources = keepSourceCommander.getSourceAttributionForKeeps(info.keeps.map(_.id).toSet).values.map(_._1)
@@ -210,23 +216,24 @@ class PageCommander @Inject() (
             val twitterSources = allSources.collect { case t: TwitterAttribution => t }.distinctBy(_.tweet.id)
             (slackSources ++ twitterSources).take(5).toSeq
           }
-          (basicUserMap, topLibs, sources)
+          (basicUserMap, relevantLibraries, sources)
         }
 
-        val keeperIdsToExclude = Set(userId) ++ libraries.map(_.ownerId)
+        val keeperIdsToExclude = Set(userId) ++ libraries.map(_._2)
         val keepers = info.keepers.collect { case (keeperId, _) if !keeperIdsToExclude.contains(keeperId) => basicUserMap(keeperId) } // preserving ordering
         val otherKeepersTotal = info.keepersTotal - (if (userIdSet.contains(userId)) 1 else 0)
         val followerCounts = db.readOnlyReplica { implicit session =>
-          libraryMembershipRepo.countWithAccessByLibraryId(libraries.map(_.id.get).toSet, LibraryAccess.READ_ONLY)
+          libraryMembershipRepo.countWithAccessByLibraryId(libraries.map(_._1.id.get).toSet, LibraryAccess.READ_ONLY)
         }
-        val libraryObjs = libraries.map { lib =>
-          Json.obj(
-            "name" -> lib.name,
-            "slug" -> lib.slug,
-            "color" -> lib.color,
-            "owner" -> basicUserMap(lib.ownerId),
-            "keeps" -> lib.keepCount,
-            "followers" -> followerCounts(lib.id.get))
+        val libraryObjs = libraries.map {
+          case (lib, keeperId, _) =>
+            Json.obj(
+              "name" -> lib.name,
+              "slug" -> lib.slug,
+              "color" -> lib.color,
+              "owner" -> basicUserMap(lib.ownerId), // todo(Léo or Andrew) can we show the keeper instead of the library owner?
+              "keeps" -> lib.keepCount,
+              "followers" -> followerCounts(lib.id.get))
         }
         KeeperPagePartialInfo(keepers, otherKeepersTotal, libraryObjs, sources, keepDatas)
     }
