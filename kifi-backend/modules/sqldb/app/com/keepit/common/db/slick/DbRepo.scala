@@ -212,6 +212,7 @@ trait SeqNumberFunction[M <: ModelWithSeqNumber[M]] { self: Repo[M] =>
   def getBySequenceNumber(lowerBound: SequenceNumber[M], upperBound: SequenceNumber[M])(implicit session: RSession): Seq[M]
   def assignSequenceNumbers(limit: Int)(implicit session: RWSession): Int
   def minDeferredSequenceNumber()(implicit session: RSession): Option[Long]
+  def maxSequenceNumber()(implicit session: RSession): Option[SequenceNumber[M]]
 }
 
 trait SeqNumberDbFunction[M <: ModelWithSeqNumber[M]] extends SeqNumberFunction[M] { self: DbRepo[M] =>
@@ -274,6 +275,11 @@ trait SeqNumberDbFunction[M <: ModelWithSeqNumber[M]] extends SeqNumberFunction[
   def minDeferredSequenceNumber()(implicit session: RSession): Option[Long] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     sql"""select min(seq) from #${_taggedTable.tableName} where seq < 0""".as[Option[Long]].first
+  }
+
+  def maxSequenceNumber()(implicit session: RSession): Option[SequenceNumber[M]] = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    sql"""select max(seq) from #${_taggedTable.tableName} where seq >= 0""".as[Option[SequenceNumber[M]]].first
   }
 }
 

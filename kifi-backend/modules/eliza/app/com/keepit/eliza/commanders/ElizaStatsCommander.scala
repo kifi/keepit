@@ -9,7 +9,6 @@ import com.keepit.model.{ ChangedURI, User }
 
 class ElizaStatsCommander @Inject() (
     userThreadRepo: UserThreadRepo,
-    renormalizationRepo: UriRenormalizationTrackingRepo,
     messageRepo: MessageRepo,
     messageThreadRepo: MessageThreadRepo,
     db: Database) extends Logging {
@@ -19,8 +18,6 @@ class ElizaStatsCommander @Inject() (
       userThreadRepo.getUserStats(userId)
     }
   }
-
-  def getCurrentRenormalizationSequenceNumber(): SequenceNumber[ChangedURI] = db.readOnlyReplica { implicit session => renormalizationRepo.getCurrentSequenceNumber() }
 
   def getSharedThreadsForGroupByWeek(users: Seq[Id[User]]): Seq[GroupThreadStats] = {
     db.readOnlyReplica { implicit s =>

@@ -19,10 +19,3 @@ case object FixDuplicateKeepsSeqNumKey extends SequenceNumberCentralConfigKey[Ke
     def key: String = name
   }
 }
-
-// keep track of checked renormalization
-case object RenormalizationCheckKey extends LongCentralConfigKey {
-  val name: String = "renorm_check_lastUrlId"
-  val namespace = "changed_uri"
-  def key: String = name
-}

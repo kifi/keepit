@@ -68,11 +68,11 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def getUserThreadStats(userId: Id[User]): Future[UserThreadStats] = Promise.successful(UserThreadStats(0, 0, 0)).future
 
-  def getRenormalizationSequenceNumber(): Future[SequenceNumber[ChangedURI]] = Future.successful(SequenceNumber.ZERO)
-
   def keepAttribution(userId: Id[User], uriId: Id[NormalizedURI]): Future[Seq[Id[User]]] = {
     Future.successful(attributionInfo.get(uriId).getOrElse(Seq.empty).filter(_ != userId))
   }
+
+  def getKeepIngestionSequenceNumber(): Future[SequenceNumber[Keep]] = Future.successful(SequenceNumber.ZERO)
 
   def getUnreadNotifications(userId: Id[User], howMany: Int): Future[Seq[UserThreadView]] = {
     Future.successful(Seq.empty)

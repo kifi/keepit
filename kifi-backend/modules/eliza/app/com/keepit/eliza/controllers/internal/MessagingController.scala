@@ -39,7 +39,6 @@ class MessagingController @Inject() (
   userThreadRepo: UserThreadRepo,
   nonUserThreadRepo: NonUserThreadRepo,
   db: Database,
-  uriNormalizationUpdater: UriNormalizationUpdater,
   messagingCommander: MessagingCommander,
   messagingIndexCommander: MessagingIndexCommander,
   notificationCommander: NotificationDeliveryCommander,
