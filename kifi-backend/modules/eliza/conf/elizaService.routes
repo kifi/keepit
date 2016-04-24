@@ -64,7 +64,7 @@ POST  /internal/eliza/sendToUser                @com.keepit.eliza.controllers.in
 POST  /internal/eliza/sendToAllUsers            @com.keepit.eliza.controllers.internal.ElizaController.sendToAllUsers
 GET   /internal/eliza/connectedClientCount      @com.keepit.eliza.controllers.internal.ElizaController.connectedClientCount
 GET   /internal/eliza/getUserThreadStats        @com.keepit.eliza.controllers.internal.ElizaController.getUserThreadStats(userId: Id[User])
-GET   /internal/eliza/sequenceNumber/renormalization @com.keepit.eliza.controllers.internal.ElizaController.getRenormalizationSequenceNumber()
+GET   /internal/eliza/getKeepIngestionSequenceNumber @com.keepit.eliza.controllers.internal.ElizaController.getKeepIngestionSequenceNumber()
 
 POST    /internal/eliza/getCrossServiceMessages     @com.keepit.eliza.controllers.internal.ElizaDiscussionController.getCrossServiceMessages
 POST    /internal/eliza/getCrossServiceDiscussionsForKeeps      @com.keepit.eliza.controllers.internal.ElizaDiscussionController.getCrossServiceDiscussionsForKeeps

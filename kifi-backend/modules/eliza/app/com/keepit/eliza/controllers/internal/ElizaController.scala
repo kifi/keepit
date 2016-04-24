@@ -8,8 +8,9 @@ import com.keepit.eliza._
 import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.common.controller.ElizaServiceController
 import com.keepit.common.logging.Logging
-import com.keepit.model.{ Keep, Username, Library, User }
-import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.eliza.shoebox.ElizaKeepIngestingActor
+import com.keepit.model._
+import com.keepit.common.db.{ SequenceNumber, ExternalId, Id }
 import com.keepit.realtime._
 import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
 
@@ -29,6 +30,7 @@ class ElizaController @Inject() (
     notificationRouter: WebSocketRouter,
     notificationDeliveryCommander: NotificationDeliveryCommander,
     deviceRepo: DeviceRepo,
+    systemValueRepo: SystemValueRepo,
     messageThreadRepo: MessageThreadRepo,
     db: Database,
     discussionCommander: ElizaDiscussionCommander,
@@ -133,9 +135,11 @@ class ElizaController @Inject() (
     Ok(notificationRouter.connectedSockets.toString)
   }
 
-  def getRenormalizationSequenceNumber() = Action { _ =>
-    val seqNumber = elizaStatsCommander.getCurrentRenormalizationSequenceNumber
-    Ok(Json.toJson(seqNumber))
+  def getKeepIngestionSequenceNumber() = Action { request =>
+    val seq = db.readOnlyMaster { implicit session =>
+      systemValueRepo.getSequenceNumber[Keep](ElizaKeepIngestingActor.elizaKeepSeq) getOrElse SequenceNumber.ZERO[Keep]
+    }
+    Ok(Json.toJson(seq))
   }
 
   def getSharedThreadsForGroupByWeek = Action(parse.tolerantJson) { request =>

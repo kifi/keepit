@@ -2,7 +2,7 @@ package com.keepit.integrity
 
 import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
-import com.keepit.model.ChangedURIRepo
+import com.keepit.model.{ KeepRepo, ChangedURIRepo }
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.common.healthcheck.{ AirbrakeError, AirbrakeNotifier }
 import com.keepit.common.service.ServiceType
@@ -18,7 +18,7 @@ class SequenceNumberOffException(message: String) extends Exception(message)
 
 class ElizaSequenceNumberChecker @Inject() (
     db: Database,
-    changedUriRepo: ChangedURIRepo,
+    keepRepo: KeepRepo,
     elizaServiceClient: ElizaServiceClient,
     airbrake: AirbrakeNotifier) extends SequenceNumberChecker with Logging {
 
@@ -30,12 +30,12 @@ class ElizaSequenceNumberChecker @Inject() (
   }
 
   protected def checkRenormalizationSequenceNumber(): Unit = {
-    val elizaRenormalizationSequenceNumber = elizaServiceClient.getRenormalizationSequenceNumber()
-    val shoeboxRenormalizationSequenceNumber = db.readOnlyMaster { implicit session => changedUriRepo.getHighestSeqNum().get }
-    elizaRenormalizationSequenceNumber.foreach { elizaSeq =>
-      log.info(s"[Renormalization] Sequence Numbers of Shoebox: $shoeboxRenormalizationSequenceNumber vs Eliza: $elizaSeq")
-      if (shoeboxRenormalizationSequenceNumber - elizaSeq > threshold) {
-        airbrake.notify(AirbrakeError(new SequenceNumberOffException(s"[Renormalization] Eliza is falling behind, at sequence number $elizaSeq while Shoebox is at $shoeboxRenormalizationSequenceNumber")))
+    db.readOnlyMaster { implicit session => keepRepo.maxSequenceNumber() }.foreach { shoeboxKeepSeq =>
+      elizaServiceClient.getKeepIngestionSequenceNumber().map { elizaKeepSeq =>
+        log.info(s"[ElizaSequenceNumberChecker] Keep Sequence Number: Shoebox $shoeboxKeepSeq vs Eliza: $elizaKeepSeq")
+        if (shoeboxKeepSeq - elizaKeepSeq > threshold) {
+          airbrake.notify(AirbrakeError(new SequenceNumberOffException(s"[ElizaSequenceNumberChecker] Eliza Keep Ingestion is falling behind: Shoebox $shoeboxKeepSeq vs Eliza: $elizaKeepSeq")))
+        }
       }
     }
   }

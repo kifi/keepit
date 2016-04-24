@@ -117,7 +117,7 @@ trait ElizaServiceClient extends ServiceClient {
   def checkUrisDiscussed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]]
   def areUsersOnline(users: Seq[Id[User]]): Future[Map[Id[User], Boolean]]
 
-  def getRenormalizationSequenceNumber(): Future[SequenceNumber[ChangedURI]]
+  def getKeepIngestionSequenceNumber(): Future[SequenceNumber[Keep]]
   def getUnreadNotifications(userId: Id[User], howMany: Int): Future[Seq[UserThreadView]]
   def getSharedThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[GroupThreadStats]]
   def getAllThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[GroupThreadStats]]
@@ -268,7 +268,11 @@ class ElizaServiceClientImpl @Inject() (
     }
   }
 
-  def getRenormalizationSequenceNumber(): Future[SequenceNumber[ChangedURI]] = call(Eliza.internal.getRenormalizationSequenceNumber).map(_.json.as(SequenceNumber.format[ChangedURI]))
+  def getKeepIngestionSequenceNumber(): Future[SequenceNumber[Keep]] = {
+    call(Eliza.internal.getKeepIngestionSequenceNumber).map { response =>
+      Json.parse(response.body).as[SequenceNumber[Keep]]
+    }
+  }
 
   def keepAttribution(userId: Id[User], uriId: Id[NormalizedURI]): Future[Seq[Id[User]]] = {
     call(Eliza.internal.keepAttribution(userId, uriId)).map { response =>
