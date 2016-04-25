@@ -398,9 +398,13 @@ k.keepNote = k.keepNote || (function () {
             selectionchange.start();
             $(document).on('selectionchange', data, onDocSelectionChange);
           }
+          var suggestionNodes = k.formatting.parseStringToElement(results.map(formatTagSuggestion).join(''));
+          if (results.length > 1) {
+            suggestionNodes = suggestionNodes.childNodes;
+          }
           data.$suggestions
             .empty()
-            .append(k.formatting.parseStringToElement(results.map(formatTagSuggestion).join('')).childNodes)
+            .append(suggestionNodes)
             .position(data.$suggestions.data('position'));
           selectSuggestion(data, data.$suggestions[0].firstChild);
         } else if (data.$suggestions) {
