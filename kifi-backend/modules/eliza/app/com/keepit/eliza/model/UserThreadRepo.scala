@@ -20,7 +20,6 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
   // Simple lookup queries
   def getByKeep(keepId: Id[Keep])(implicit session: RSession): Seq[UserThread]
   def getUserThread(userId: Id[User], keepId: Id[Keep])(implicit session: RSession): Option[UserThread]
-  def getByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[UserThread]
   def getByAccessToken(token: ThreadAccessToken)(implicit session: RSession): Option[UserThread]
 
   // Complex lookup queries
@@ -263,10 +262,6 @@ class UserThreadRepoImpl @Inject() (
       .filter(row => row.keepId === msg.keepId)
       .map(row => (row.updatedAt, row.latestMessageId, row.notificationUpdatedAt))
       .update((now, Some(msg.id.get), msg.createdAt))
-  }
-
-  def getByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[UserThread] = {
-    activeRows.filter(row => row.uriId === uriId).list
   }
 
   def isMuted(userId: Id[User], keepId: Id[Keep])(implicit session: RSession): Boolean = {
