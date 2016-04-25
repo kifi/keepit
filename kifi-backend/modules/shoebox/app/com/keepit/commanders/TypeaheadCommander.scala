@@ -413,7 +413,6 @@ class TypeaheadCommander @Inject() (
         res
       }
 
-
       val combined: Seq[TypeaheadSearchResult] = (userRes ++ emailRes ++ libRes).filter {
         case (_, _, u: UserContactResult) if requested.contains(TypeaheadRequest.User) => true
         case (_, _, e: EmailContactResult) if requested.contains(TypeaheadRequest.Email) => true
