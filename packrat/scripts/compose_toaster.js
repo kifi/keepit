@@ -153,7 +153,7 @@ k.toaster = k.toaster || (function () {
   function send($t, text, recipients, guided) {
     $t.data('sending', true);
     var users = recipients.filter(kindIsUser).map(getId);
-    var emails = recipients.filter(kindIsEmail).map(getId);
+    var emails = recipients.filter(isEmail).map(getId);
     var libraries = recipients.filter(kindIsLibrary).map(getId);
     api.port.emit(
       'send_keepscussion',
