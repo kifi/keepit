@@ -14,21 +14,20 @@ import com.kifi.juggle.BatchProcessingActor
 
 import scala.concurrent.{ ExecutionContext, Future }
 
-private[this] object ElizaMessageThreadByMessageIntegrityConfig {
-  val watermark = Name[SequenceNumber[ElizaMessage]]("integrity_message_thread_by_message")
+private[this] object ElizaMessageByMessageIntegrityConfig {
+  val watermark = Name[SequenceNumber[ElizaMessage]]("integrity_message_by_message")
   val fetchSize: Int = 25
 }
 
-class ElizaMessageThreadByMessageIntegrityActor @Inject() (
+class ElizaMessageByMessageIntegrityActor @Inject() (
   db: Database,
   clock: Clock,
   systemValueRepo: SystemValueRepo,
-  threadRepo: MessageThreadRepo,
   messageRepo: MessageRepo,
   airbrake: AirbrakeNotifier,
   implicit val executionContext: ExecutionContext)
     extends FortyTwoActor(airbrake) with BatchProcessingActor[ElizaMessage] {
-  import ElizaMessageThreadByMessageIntegrityConfig._
+  import ElizaMessageByMessageIntegrityConfig._
 
   protected def nextBatch: Future[Seq[ElizaMessage]] = SafeFuture {
     db.readOnlyMaster { implicit session =>
@@ -39,14 +38,10 @@ class ElizaMessageThreadByMessageIntegrityActor @Inject() (
 
   protected def processBatch(msgs: Seq[ElizaMessage]): Future[Unit] = SafeFuture {
     if (msgs.nonEmpty) {
-      val keepIds = msgs.map(_.keepId).toSet
       db.readWrite { implicit s =>
-        val numMsgsByKeep = messageRepo.countByKeeps(keepIds)
-        val threadsByKeep = threadRepo.getByKeepIds(keepIds)
-        threadsByKeep.foreach {
-          case (kId, thread) => numMsgsByKeep.get(kId).foreach { numMsgs =>
-            if (thread.numMessages != numMsgs) threadRepo.save(thread.withNumMessages(numMsgs))
-          }
+        msgs.foreach { msg =>
+          val commentIdx = messageRepo.getCommentIndex(msg)
+          if (msg.commentIndexOnKeep != commentIdx) messageRepo.save(msg.withCommentIndex(commentIdx))
         }
       }
 

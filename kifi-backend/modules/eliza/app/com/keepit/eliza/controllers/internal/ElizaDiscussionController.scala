@@ -71,7 +71,7 @@ class ElizaDiscussionController @Inject() (
   def getMessageCountsForKeeps = Action(parse.tolerantJson) { request =>
     import GetMessageCountsForKeeps._
     val input = request.body.as[Request]
-    val countByKeepId = db.readOnlyMaster(implicit s => messageRepo.getAllMessageCounts(input.keepIds))
+    val countByKeepId = db.readOnlyMaster(implicit s => messageRepo.getNumCommentsByKeep(input.keepIds))
     Ok(Json.toJson(Response(countByKeepId)))
   }
   def getChangedMessagesFromKeeps = Action(parse.tolerantJson) { request =>

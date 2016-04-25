@@ -42,6 +42,7 @@ case class CrossServiceMessage(
   isDeleted: Boolean,
   seq: SequenceNumber[Message],
   keep: Id[Keep],
+  commentIndexOnKeep: Option[Int],
   sentAt: DateTime,
   sentBy: Option[Either[Id[User], BasicNonUser]],
   text: String,
@@ -62,6 +63,7 @@ object CrossServiceMessage {
     (__ \ 'isDeleted).format[Boolean] and
     (__ \ 'seq).format[SequenceNumber[Message]] and
     (__ \ 'keep).format[Id[Keep]] and
+    (__ \ 'commentIndexOnKeep).formatNullable[Int] and
     (__ \ 'sentAt).format[DateTime] and
     (__ \ 'sentBy).formatNullable[Either[Id[User], BasicNonUser]] and
     (__ \ 'text).format[String] and

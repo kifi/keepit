@@ -14,6 +14,7 @@ object MessageFactory {
   def message(): PartialElizaMessage = {
     PartialElizaMessage(ElizaMessage(
       keepId = Id(idx.incrementAndGet()),
+      commentIndexOnKeep = Some(0),
       from = MessageSender.User(Id(idx.incrementAndGet())),
       messageText = RandomStringUtils.randomAlphabetic(50),
       source = None,
@@ -28,6 +29,7 @@ object MessageFactory {
     def withThread(thread: MessageThread) = this.copy(em = em.copy(keepId = thread.keepId))
     def withUserThread(ut: UserThread) = this.copy(em = em.copy(keepId = ut.keepId, from = MessageSender.User(ut.user)))
     def from(sender: MessageSender) = this.copy(em = em.copy(from = sender))
+    def withText(text: String) = this.copy(em = em.copy(messageText = text))
     def withCreatedAt(time: DateTime) = this.copy(em = em.copy(createdAt = time))
     def saved(implicit injector: Injector, session: RWSession): ElizaMessage = {
       injector.getInstance(classOf[MessageRepo]).save(em)

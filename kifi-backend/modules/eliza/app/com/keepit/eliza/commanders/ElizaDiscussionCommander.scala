@@ -100,7 +100,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
 
     val (threadsByKeep, countsByKeep) = db.readOnlyReplica { implicit s =>
       val threadsByKeep = messageThreadRepo.getByKeepIds(keepIds)
-      val countsByKeep = messageRepo.getAllMessageCounts(keepIds)
+      val countsByKeep = messageRepo.getNumCommentsByKeep(keepIds)
       (threadsByKeep, countsByKeep)
     }
 
@@ -120,6 +120,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
       db.readWrite { implicit s =>
         messageRepo.save(ElizaMessage(
           keepId = thread.keepId,
+          commentIndexOnKeep = None,
           from = MessageSender.System,
           messageText = "",
           source = source.flatMap(KeepEventSource.toMessageSource),
