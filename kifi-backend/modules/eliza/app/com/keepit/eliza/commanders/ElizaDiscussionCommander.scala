@@ -144,12 +144,12 @@ class ElizaDiscussionCommanderImpl @Inject() (
   private def getOrCreateMessageThreadWithUser(keepId: Id[Keep], userId: Id[User]): Future[MessageThread] = {
     val threadFut = db.readOnlyMaster { implicit s =>
       messageThreadRepo.getByKeepId(keepId)
-    }.map(Future.successful).getOrElse {
+    }.map(mt => Future.successful((mt, false))).getOrElse {
       shoebox.getCrossServiceKeepsByIds(Set(keepId)).imap { csKeeps =>
         val csKeep = csKeeps.getOrElse(keepId, throw DiscussionFail.INVALID_KEEP_ID)
         val users = csKeep.users ++ csKeep.owner + userId
         val emails = csKeep.emails
-        db.readWrite { implicit s =>
+        val mt = db.readWrite { implicit s =>
           // If someone created the message thread while we were messing around in Shoebox,
           // sigh, shrug, and use that message thread. Sad waste of effort, but cést la vie
           messageThreadRepo.getByKeepId(keepId).getOrElse {
@@ -168,25 +168,34 @@ class ElizaDiscussionCommanderImpl @Inject() (
             mt
           }
         }
+
+        (mt, true)
       }
     }
-    threadFut.map { thread =>
-      if (!thread.containsUser(userId)) {
-        val newThread = db.readWrite { implicit s =>
-          messageThreadRepo.save(thread.withParticipants(clock.now, Set(userId))) tap { updatedThread =>
-            val ut = userThreadRepo.intern(UserThread.forMessageThread(updatedThread)(userId))
+    threadFut.map {
+      case (oldThread, isNew) =>
+        val newThread = {
+          if (!oldThread.containsUser(userId)) {
+            val newThread = db.readWrite { implicit s =>
+              messageThreadRepo.save(oldThread.withParticipants(clock.now, Set(userId))) tap { updatedThread =>
+                val ut = userThreadRepo.intern(UserThread.forMessageThread(updatedThread)(userId))
+              }
+            }
+
+            newThread
+          } else {
+            oldThread
           }
         }
 
-        shoebox.getRecipientsOnKeep(keepId).map {
-          case (basicUsers, basicLibraries, emails) =>
-            notifDeliveryCommander.sendKeepRecipients(newThread.participants.allUsers, thread.pubKeepId, basicUsers.values.toSet, basicLibraries.values.toSet, emails)
+        if (!oldThread.containsUser(userId) || isNew) {
+          shoebox.getRecipientsOnKeep(keepId).map {
+            case (basicUsers, basicLibraries, emails) =>
+              notifDeliveryCommander.sendKeepRecipients(newThread.participants.allUsers, oldThread.pubKeepId, basicUsers.values.toSet, basicLibraries.values.toSet, emails)
+          }
         }
 
         newThread
-      } else {
-        thread
-      }
     }
   }
 
