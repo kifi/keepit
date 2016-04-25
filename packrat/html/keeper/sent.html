@@ -10,11 +10,14 @@
   }}{{#emails}}{{!
     }}<span class="kifi-sent-li kifi-sent-email">{{.}}</span>{{!
   }}{{/emails}}{{!
+  }}{{#library}}{{!
+    }}<span class="kifi-sent-li kifi-sent-library">{{.}}</span>{{!
+  }}{{/library}}{{!
   }}{{#numOthers}}{{!
     }}<span class="kifi-sent-li kifi-sent-others" data-kifi-others="{{numOthers}}">
-        {{numOthers}} other{{!
+      {{numOthers}} other{{!
     }}</span>
-    {{/numOthers}}
+  {{/numOthers}}
   </div>
   <div class="kifi-sent-open" href="javascript:">View {{#toSelf}}notes{{/toSelf}}{{^toSelf}}conversation{{/toSelf}}</div>
   <div class="kifi-sent-tri"></div>
