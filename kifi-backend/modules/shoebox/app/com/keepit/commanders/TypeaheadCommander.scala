@@ -339,9 +339,9 @@ class TypeaheadCommander @Inject() (
   }
 
   private val maxSearchHistory = 40 // Users can paginate through maxHistory suggestions. For more, they'll need to search.
-  private val maxSuggestHistory = 200 // Users can paginate through maxHistory suggestions. For more, they'll need to search.
+  private val maxSuggestHistory = 100 // Users can paginate through maxHistory suggestions. For more, they'll need to search.
 
-  private[this] val suggestKeepRecipientsConsolidator = new RequestConsolidator[(Id[User], Option[Int], Option[Int], Set[TypeaheadRequest]), Seq[TypeaheadSearchResult]](20.seconds)
+  private[this] val suggestKeepRecipientsConsolidator = new RequestConsolidator[(Id[User], Option[Int], Option[Int], Set[TypeaheadRequest]), Seq[TypeaheadSearchResult]](30.seconds)
   private[this] val searchKeepRecipientsConsolidator = new RequestConsolidator[(Id[User], String, Option[Int], Option[Int], Set[TypeaheadRequest]), Seq[TypeaheadSearchResult]](5.seconds)
   def searchAndSuggestKeepRecipients(userId: Id[User], query: String, limitOpt: Option[Int], dropOpt: Option[Int], requested: Set[TypeaheadRequest]): Future[Seq[TypeaheadSearchResult]] = {
     // Users, emails, and libraries
@@ -474,7 +474,7 @@ class TypeaheadCommander @Inject() (
   }
 
   private def libToResult(userId: Id[User], libIds: Seq[Id[Library]]): Map[Id[Library], LibraryResult] = {
-    val results = libraryResultCache.direct.bulkGetOrElse(libIds.toSet.map(l => LibraryResultKey(userId, l))) { missingKeys =>
+    val results = libraryResultCache.direct.bulkGetOrElse(libIds.map(l => LibraryResultKey(userId, l)).toSet) { missingKeys =>
       val idSet = missingKeys.map(_.libraryId)
       val (libs, collaborators, memberships, permissions, basicUserById, orgAvatarsById, slackInfoById) = db.readOnlyReplica { implicit session =>
         val libs = libraryRepo.getActiveByIds(idSet).values.toVector
@@ -519,24 +519,6 @@ class TypeaheadCommander @Inject() (
   }
 }
 
-class RelevantSuggestedLibrariesCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[RelevantSuggestedLibrariesKey, Seq[Id[Library]]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
-
-case class RelevantSuggestedLibrariesKey(userId: Id[User]) extends Key[Seq[Id[Library]]] {
-  val namespace = "relevant_libraries"
-  override val version = 1
-  def toKey(): String = userId.id.toString
-}
-
-class LibraryResultCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[LibraryResultKey, LibraryResult](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
-
-case class LibraryResultKey(userId: Id[User], libraryId: Id[Library]) extends Key[LibraryResult] {
-  val namespace = "library_result"
-  override val version = 1
-  def toKey(): String = userId.id.toString + ":" + libraryId.id.toString
-}
-
 @json case class ConnectionWithInviteStatus(label: String, score: Int, networkType: String, image: Option[String], value: String, status: String, email: Option[String] = None, inviteLastSentAt: Option[DateTime] = None)
 
 sealed trait TypeaheadSearchResult
@@ -573,4 +555,22 @@ object ContactType {
   def getAll(): Set[ContactType] = {
     Set(SOCIAL, EMAIL, KIFI_FRIEND, KIFI_NON_FRIEND)
   }
+}
+
+class RelevantSuggestedLibrariesCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[RelevantSuggestedLibrariesKey, Seq[Id[Library]]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
+case class RelevantSuggestedLibrariesKey(userId: Id[User]) extends Key[Seq[Id[Library]]] {
+  val namespace = "relevant_libraries"
+  override val version = 1
+  def toKey(): String = userId.id.toString
+}
+
+class LibraryResultCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[LibraryResultKey, LibraryResult](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
+case class LibraryResultKey(userId: Id[User], libraryId: Id[Library]) extends Key[LibraryResult] {
+  val namespace = "library_result"
+  override val version = 1
+  def toKey(): String = userId.id.toString + ":" + libraryId.id.toString
 }
