@@ -2,6 +2,7 @@
 // @require scripts/lib/mustache.js
 // @require scripts/lib/q.min.js
 // @require scripts/render.js
+// @require scripts/formatting.js
 // @require scripts/html/keeper/name_parts.js
 // @require scripts/html/keeper/keep_box_lib.js
 // @require styles/keeper/keep_box.css
@@ -92,6 +93,8 @@ var initFriendSearch = (function () {
       recipients = recipients || [];
       var contacts = recipients.filter(function (r) { return r.id[0] !== 'l'; });
       var libraries = recipients.filter(function (r) { return r.id && r.id[0] === 'l' && r.id.indexOf('@') === -1; });
+      libraries.forEach(k.formatting.formatLibraryResult);
+
       var percentContacts = contacts.length / (libraries.length + contacts.length); // keep it a good mix of users + libs
       var contactsCount = Math.floor(n * percentContacts);
       contacts = contacts.slice(0, contactsCount);
