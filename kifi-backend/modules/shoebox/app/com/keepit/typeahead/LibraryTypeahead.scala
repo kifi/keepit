@@ -46,12 +46,14 @@ class LibraryTypeahead @Inject() (
     libResCache: LibraryResultTypeaheadCache,
     libraryInfoCommander: Provider[LibraryInfoCommander],
     libraryMembershipRepo: LibraryMembershipRepo,
+    libraryInviteRepo: LibraryInviteRepo,
+    organizationMembershipRepo: OrganizationMembershipRepo,
     libraryRepo: LibraryRepo,
     clock: Clock,
     implicit val ec: ExecutionContext,
     implicit val config: PublicIdConfiguration) extends Typeahead[User, Library, LibraryTypeaheadResult, UserLibraryTypeahead] with Logging {
 
-  protected val refreshRequestConsolidationWindow = 20 seconds
+  protected val refreshRequestConsolidationWindow = 10 seconds
 
   protected val fetchRequestConsolidationWindow = 30 seconds
 
@@ -72,12 +74,15 @@ class LibraryTypeahead @Inject() (
   def refreshForAllCollaborators(libraryId: Id[Library]): Future[Unit] = {
     Future {
       db.readOnlyReplicaAsync { implicit s =>
-        // people invited, org members
-        libraryMembershipRepo.getCollaboratorsByLibrary(Set(libraryId)).values.headOption
-      }.flatMap {
-        case Some(userIds) =>
-          FutureHelpers.sequentialExec(userIds)(refresh)
-        case None => Future.successful(())
+        val collaborators = libraryMembershipRepo.getCollaboratorsByLibrary(Set(libraryId)).values.headOption.getOrElse(Set.empty).toSeq
+        val invited = libraryInviteRepo.getWithLibraryId(libraryId).flatMap(_.userId)
+        val lib = libraryRepo.get(libraryId)
+        val orgMembers = if (lib.organizationMemberAccess.exists(_ == LibraryAccess.READ_WRITE)) {
+          lib.organizationId.toSet.flatMap(oid => organizationMembershipRepo.getAllByOrgId(oid).map(_.userId)).toSeq
+        } else Seq.empty
+        (collaborators ++ invited ++ orgMembers).distinct
+      }.flatMap { userIds =>
+        FutureHelpers.sequentialExec(userIds)(refresh)
       }
     }.flatMap(f => f)
   }
@@ -96,14 +101,6 @@ class LibraryTypeahead @Inject() (
         }
       }.values.toSeq
     }
-  }
-
-  private def getAllInfos(id: Id[User]): Future[Seq[(Id[Library], LibraryTypeaheadResult)]] = SafeFuture {
-    val infos = getAllRelevantLibraries(id)
-    infos.foreach { l =>
-      libResCache(directCacheAccess).set(LibraryResultTypeaheadKey(id, l._2.id), l._2)
-    }
-    infos
   }
 
   def getAllRelevantLibraries(id: Id[User]): Seq[(Id[Library], LibraryTypeaheadResult)] = {
@@ -143,8 +140,13 @@ class LibraryTypeahead @Inject() (
   }
 
   protected def create(userId: Id[User]) = {
-    getAllInfos(userId).map { allInfos =>
+    SafeFuture(getAllRelevantLibraries(userId)).map { allInfos =>
+      allInfos.foreach { l =>
+        libResCache(directCacheAccess).set(LibraryResultTypeaheadKey(userId, l._2.id), l._2)
+      }
+
       val filter = buildFilter(userId, allInfos)
+
       val allMap = allInfos.toMap
       def getter(libs: Seq[Id[Library]]) = Future.successful {
         libs.flatMap(allMap.get)

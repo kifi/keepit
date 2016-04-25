@@ -285,7 +285,7 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Singleton
   @Provides
   def libraryResultTypeaheadCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new LibraryResultTypeaheadCache(stats, accessLog, (innerRepo, 1 minute), (outerRepo, 1 hour))
+    new LibraryResultTypeaheadCache(stats, accessLog, (innerRepo, 20 seconds), (outerRepo, 30 minutes))
 
   @Singleton
   @Provides
