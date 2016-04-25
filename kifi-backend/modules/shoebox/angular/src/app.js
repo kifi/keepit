@@ -42,6 +42,7 @@ angular.module('kifi', [
     origin: origin,
     navBase: navOrigin,
     xhrBase: navOrigin + '/site',
+    xhrBaseApi: navOrigin + '/api',
     xhrBaseSearch: navOrigin.replace('www', 'search') + '/site',
     xhrBaseEliza: navOrigin.replace('www', 'eliza') + '/eliza/site',
     picBase: (local ? '//d1scct5mnc9d9m' : '//djty7jcqog9qu') + '.cloudfront.net'

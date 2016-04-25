@@ -7,6 +7,7 @@ angular.module('kifi')
   function (env, $http, createExpiringCache) {
     var shoebox = env.xhrBase;
     var search = env.xhrBaseSearch;
+    var api = env.xhrBaseApi;
     var pathParamRe = /(:\w+)/;
 
     var post = angular.bind(null, http, 'POST');  // caller should pass any path params, optional post data (JSON), and an optional query params object
@@ -120,9 +121,8 @@ angular.module('kifi')
       createTeamFromSlack: post(shoebox, '/organizations/create/slack?slackTeamId=:optSlackTeamId&slackState=:optSlackState'),
       togglePersonalDigest: post(shoebox, '/organizations/slack/togglePersonalDigest?slackTeamId=:slackTeamId&slackUserId=:slackUserId&turnOn=:turnOn'),
 
-      addMessageToKeepDiscussion: post(shoebox, '/keeps/:id/messages'),
-      // ?limit={{number}}&fromId={{Option(String))}}
-      getMessagesForKeepDiscussion: get(shoebox, '/keeps/:id/messages?limit=:limit&fromId=:fromId'),
+      addMessageToKeepDiscussion: post(api, '/1/keeps/:id/messages'),
+      getMessagesForKeepDiscussion: get(shoebox, '/keeps/:id/messages?limit=:limit&fromId=:fromId'), // ?limit={{number}}&fromId={{Option(String))}}
       deleteMessageFromKeepDiscussion: post(shoebox, '/keeps/:id/messages/delete'),
       markDiscussionAsRead: post(shoebox, '/keeps/markAsRead')
     };
