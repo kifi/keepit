@@ -183,10 +183,11 @@
   border-radius: 5px;
 
   a {
+    box-sizing: border-box;
     display: inline-block;
     padding: 7px 8px 8px;
     line-height: 13px;
-    max-width: 150px;
+    max-width: 136px; // ~half the width of the participants pane
     overflow: hidden;
     text-overflow: ellipsis;
   }
@@ -202,11 +203,22 @@
     animation-duration: 10s;
   }
 }
-
+.kifi-message-participant-avatar-lib-source-slack {
+  display: inline-block;
+  width: 20px;
+  height: 14px;
+  margin: 0 -3px -3px;
+  background-image: url(@url);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 115%;
+  @url: %(@kifi-symbol-slack-monochrome, #fff, #fff, #fff);
+}
 .kifi-message-participant-avatar-lib-visiblity {
   width: 9px;
   height: 14px;
-  margin: 0 3px -3px;
+  margin-bottom: -3px;
+  margin-left: 3px;
   background-position: center;
   background-repeat: no-repeat;
   display: none;

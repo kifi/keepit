@@ -19,6 +19,7 @@
     {{#extraInfo}}
       <span class="kifi-keep-box-lib-1">
         <span class="kifi-keep-box-lib-icon"></span>{{! Mustache comments to prevent unwanted extra space
+        }}{{#slack.toSlackChannels.0}}<span class="kifi-keep-box-lib-slack-icon"></span>{{/slack.toSlackChannels.0}}{{!
         }}{{#nameParts}}{{>name_parts}}{{/nameParts}}{{!
         }}{{^nameParts}}{{name}}{{/nameParts}}{{!
     }}</span>
@@ -38,6 +39,7 @@
     {{/extraInfo}}
     {{^extraInfo}}
       <span class="kifi-keep-box-lib-icon"></span>{{! Mustache comments to prevent unwanted extra space
+    }}{{#slack.toSlackChannels.0}}<span class="kifi-keep-box-lib-slack-icon"></span>{{/slack.toSlackChannels.0}}{{!
     }}{{#nameParts}}{{>name_parts}}{{/nameParts}}{{!
     }}{{^nameParts}}{{name}}{{/nameParts}}
     {{/extraInfo}}

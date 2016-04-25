@@ -1,3 +1,4 @@
+@import (reference) 'symbol-sprite.less';
 @box-width: 302px;
 @view-swipe-duration: .21s;
 
@@ -348,6 +349,19 @@
 }
 .kifi-keep-box-with-lib-card {
   position: relative;
+}
+
+.kifi-keep-box-lib-slack-icon {
+  @url: %(@kifi-symbol-slack-monochrome, #333, #333, #333);
+  display: inline-block;
+  width: 20px;
+  height: 14px;
+  margin-left: -6px;
+  margin-bottom: -2px;
+  background-image: url(@url);
+  background-size: 115%;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .kifi-keep-box-lib-icon {
