@@ -60,8 +60,10 @@ object SlackAttachment {
   @json case class Field(title: String, value: JsValue, short: Option[Boolean])
 
   def simple(text: DescriptionElements): SlackAttachment = {
-    val str = DescriptionElements.formatForSlack(text)
-    SlackAttachment(text = Some(str)).withFullMarkdown
+    SlackAttachment(
+      text = Some(DescriptionElements.formatForSlack(text)),
+      fallback = Some(DescriptionElements.formatPlain(text))
+    ).withFullMarkdown
   }
 
   def applyFromSlack(
