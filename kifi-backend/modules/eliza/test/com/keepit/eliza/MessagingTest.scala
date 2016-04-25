@@ -8,7 +8,7 @@ import com.keepit.common.concurrent.{ FakeExecutionContextModule, WatchableExecu
 import com.keepit.common.crypto.{ PublicId, FakeCryptoModule }
 import com.keepit.common.db.Id
 import com.keepit.common.store.FakeElizaStoreModule
-import com.keepit.eliza.commanders.{ MessagingCommanderImpl, MessageFetchingCommander, MessagingCommander, NotificationDeliveryCommander }
+import com.keepit.eliza.commanders._
 import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.eliza.model._
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
@@ -78,8 +78,13 @@ class MessagingTest extends Specification with ElizaTestInjector with ElizaInjec
         inject[WatchableExecutionContext].drain()
         waitFor(notificationCommander.getLatestSendableNotifications(user1, 20, includeUriSummary = false)).length === 1
 
-        val messageIds: Seq[Option[Id[ElizaMessage]]] = messagingCommander.getThreads(user2).flatMap(messageFetchingCommanger.getThreadMessages).map(_.id)
-        val messageContents: Seq[String] = messagingCommander.getThreads(user2).flatMap(messageFetchingCommanger.getThreadMessages).map(_.messageText)
+        val (allUserThreads, allMessages) = db.readOnlyMaster { implicit session =>
+          val allUserThreads = userThreadRepo.getThreadsForUser(user2, UserThreadQuery(limit = 10))
+          val allMessages = allUserThreads.flatMap(ut => messageRepo.getAllByKeep(ut.keepId))
+          (allUserThreads, allMessages)
+        }
+        val messageIds: Seq[Option[Id[ElizaMessage]]] = allMessages.map(_.id)
+        val messageContents: Seq[String] = allMessages.map(_.messageText)
 
         messageIds.contains(msg1.id) === true
         messageIds.contains(msg2.id) === true

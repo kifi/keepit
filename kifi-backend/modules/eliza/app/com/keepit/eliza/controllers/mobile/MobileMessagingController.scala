@@ -314,12 +314,6 @@ class MobileMessagingController @Inject() (
     }
   }
 
-  def hasThreadsByUrl(url: String) = UserAction.async { request =>
-    messagingCommander.hasThreads(request.userId, url).map { yesorno =>
-      Ok(Json.toJson(yesorno))
-    }
-  }
-
   def searchMessages(query: String, page: Int, storeInHistory: Boolean) = UserAction.async { request =>
     messageSearchCommander.searchMessages(request.userId, query, page, storeInHistory).map { notifs =>
       val notifications = notifs.map(notif => sanitizeUrls(notif.obj))

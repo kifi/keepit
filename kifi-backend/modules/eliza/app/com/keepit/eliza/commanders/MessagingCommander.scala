@@ -55,7 +55,6 @@ trait MessagingCommander {
   // todo: For each method here, remove if no one's calling it externally, and set as private in the implementation
   def getThreadInfos(userId: Id[User], url: String): Future[(String, Seq[ElizaThreadInfo])]
   def keepAttribution(userId: Id[User], uriId: Id[NormalizedURI]): Seq[Id[User]]
-  def hasThreads(userId: Id[User], url: String): Future[Boolean]
   def checkUrisDiscussed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]]
   def sendMessageWithNonUserThread(nut: NonUserThread, messageText: String, source: Option[MessageSource], urlOpt: Option[URI])(implicit context: HeimdalContext): (MessageThread, ElizaMessage)
   def sendMessageWithUserThread(userThread: UserThread, messageText: String, source: Option[MessageSource], urlOpt: Option[URI])(implicit context: HeimdalContext): (MessageThread, ElizaMessage)
@@ -65,7 +64,6 @@ trait MessagingCommander {
   def getNonUserThreadOpt(id: Id[NonUserThread]): Option[NonUserThread]
   def getNonUserThreadOptByAccessToken(token: ThreadAccessToken): Option[NonUserThread]
   def getUserThreadOptByAccessToken(token: ThreadAccessToken): Option[UserThread]
-  def getThreads(user: Id[User], url: Option[String] = None): Seq[MessageThread]
 
   def setRead(userId: Id[User], messageId: Id[ElizaMessage])(implicit context: HeimdalContext): Unit
   def setUnread(userId: Id[User], messageId: Id[ElizaMessage]): Unit
@@ -116,7 +114,7 @@ class MessagingCommanderImpl @Inject() (
     val discussionKeepsByKeepIdF = shoebox.getDiscussionKeepsByIds(userId, threads.map(_.keepId).toSet)
     //get all messages
     val messagesByThread: Map[Id[MessageThread], Seq[ElizaMessage]] = threads.map { thread =>
-      (thread.id.get, basicMessageCommander.getThreadMessages(thread))
+      (thread.id.get, basicMessageCommander.getMessagesByKeepId(thread.keepId))
     }.toMap
     //get user_threads
     val userThreads: Map[Id[MessageThread], UserThread] = db.readOnlyMaster { implicit session =>
@@ -187,13 +185,6 @@ class MessagingCommanderImpl @Inject() (
     }
     log.info(s"[keepAttribution($userId,$uriId)] threads=${threads.map(_.id.get)} otherStarters=$otherStarters")
     otherStarters
-  }
-
-  def hasThreads(userId: Id[User], url: String): Future[Boolean] = {
-    shoebox.getNormalizedURIByURL(url).map {
-      case Some(nUri) => db.readOnlyReplica { implicit session => userThreadRepo.hasThreads(userId, nUri.id.get) }
-      case None => false
-    }
   }
 
   def checkUrisDiscussed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = {
@@ -471,14 +462,6 @@ class MessagingCommanderImpl @Inject() (
 
   def getUserThreadOptByAccessToken(token: ThreadAccessToken): Option[UserThread] =
     db.readOnlyReplica { implicit session => userThreadRepo.getByAccessToken(token) }
-
-  def getThreads(user: Id[User], url: Option[String] = None): Seq[MessageThread] = {
-    db.readOnlyReplica { implicit session =>
-      val keepIds = userThreadRepo.getKeepIds(user)
-      val threadsByKeepId = threadRepo.getByKeepIds(keepIds.toSet)
-      keepIds.map(threadsByKeepId(_))
-    }
-  }
 
   // todo(cam): make this `editParticipantsOnThread` with inactivation behavior
   def addParticipantsToThread(adderUserId: Id[User], keepId: Id[Keep],
