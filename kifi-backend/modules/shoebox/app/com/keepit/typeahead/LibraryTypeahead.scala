@@ -72,6 +72,7 @@ class LibraryTypeahead @Inject() (
   def refreshForAllCollaborators(libraryId: Id[Library]): Future[Unit] = {
     Future {
       db.readOnlyReplicaAsync { implicit s =>
+        // people invited, org members
         libraryMembershipRepo.getCollaboratorsByLibrary(Set(libraryId)).values.headOption
       }.flatMap {
         case Some(userIds) =>
@@ -107,13 +108,14 @@ class LibraryTypeahead @Inject() (
 
   def getAllRelevantLibraries(id: Id[User]): Seq[(Id[Library], LibraryTypeaheadResult)] = {
     val startTime = clock.now
-    db.readOnlyReplica { implicit session =>
+    val libs = db.readOnlyReplica { implicit session =>
       libraryInfoCommander.get.getLibrariesUserCanKeepTo(id, includeOrgLibraries = true)
     }.collect {
       case (l, mOpt, _) if l.isActive =>
-        log.info(s"[LibraryTypeahead#getAllRelevantLibraries] $id took ${clock.now.getMillis - startTime.getMillis}")
         l.id.get -> LibraryTypeaheadResult(l.id.get, l.name, calcImportance(l, mOpt))
     }
+    log.info(s"[LibraryTypeahead#getAllRelevantLibraries] $id took ${clock.now.getMillis - startTime.getMillis}")
+    libs
   }
 
   private def calcImportance(lib: Library, memOpt: Option[LibraryMembership]): Int = {
