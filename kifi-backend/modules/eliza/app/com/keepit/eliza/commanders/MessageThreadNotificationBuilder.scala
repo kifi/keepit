@@ -2,7 +2,7 @@ package com.keepit.eliza.commanders
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
-import com.keepit.common.core.optionExtensionOps
+import com.keepit.common.core.{ iterableExtensionOps, optionExtensionOps, mapExtensionOps }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -82,7 +82,7 @@ object MessageThreadNotificationBuilder {
   object PrecomputedInfo {
     case class BuildForKeeps(
       threadById: Option[Map[Id[Keep], MessageThread]] = None,
-      lastMsgById: Option[Map[Id[Keep], Option[ElizaMessage]]] = None,
+      lastMsgById: Option[Map[Id[Keep], ElizaMessage]] = None,
       mutedById: Option[Map[Id[Keep], Boolean]] = None,
       threadActivityById: Option[Map[Id[Keep], Seq[UserThreadActivity]]] = None,
       msgCountById: Option[Map[Id[Keep], MessageCount]] = None,
@@ -96,7 +96,7 @@ object MessageThreadNotificationBuilder {
         basicUserMap: Option[Map[Id[User], BasicUser]] = None) {
       def pluralize(keepId: Id[Keep]) = BuildForKeeps(
         thread.map(x => Map(keepId -> x)),
-        lastMsg.map(x => Map(keepId -> x)),
+        lastMsg.map(x => x.map(keepId -> _).toMap),
         muted.map(x => Map(keepId -> x)),
         threadActivity.map(x => Map(keepId -> x)),
         msgCount.map(x => Map(keepId -> x)),
@@ -132,11 +132,9 @@ class MessageThreadNotificationBuilderImpl @Inject() (
         messageThreadRepo.getByKeepIds(keepIds)
       }
       val lastMsgById = precomputed.flatMap(_.lastMsgById).getOrElse {
-        keepIds.map { keepId => keepId -> messageRepo.getLatest(keepId) }.toMap
-      }.map {
-        case (kid, msg) =>
-          if (msg.forall(_.auxData.forall(SystemMessageData.isFullySupported))) kid -> msg else kid -> None
-      }
+        keepIds.flatAugmentWith(messageRepo.getLatest).toMap
+      }.filterValues(_.auxData.forall(SystemMessageData.isFullySupported))
+
       val mutedById = precomputed.flatMap(_.mutedById).getOrElse {
         keepIds.map { keepId => keepId -> userThreadRepo.isMuted(userId, keepId) }.toMap
       }
@@ -162,9 +160,10 @@ class MessageThreadNotificationBuilderImpl @Inject() (
         val allUsers = threadsById.values.flatMap(_.allParticipants).toSet
         shoebox.getBasicUsers(allUsers.toSeq)
       }
-    } yield lastMsgById.map {
-      case (keepId, messageOpt) =>
+    } yield threadsById.map {
+      case (keepId, thread) =>
         val thread = threadsById(keepId)
+        val messageOpt = lastMsgById.get(keepId)
         val threadStarter = basicUserByIdMap(thread.startedBy).externalId
         val threadActivity = threadActivityById(keepId)
         val MessageCount(numMessages, numUnread) = msgCountById(keepId)
