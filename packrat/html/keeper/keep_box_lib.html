@@ -18,11 +18,17 @@
     {{/orgAvatar}}
     {{#extraInfo}}
       <span class="kifi-keep-box-lib-1">
-        <span class="kifi-keep-box-lib-icon"></span>{{! Mustache comments to prevent unwanted extra space
-        }}{{#slack.toSlackChannels.0}}<span class="kifi-keep-box-lib-slack-icon"></span>{{/slack.toSlackChannels.0}}{{!
-        }}{{#nameParts}}{{>name_parts}}{{/nameParts}}{{!
-        }}{{^nameParts}}{{name}}{{/nameParts}}{{!
-    }}</span>
+        <span class="kifi-keep-box-lib-name-wrap">
+          <span class="kifi-keep-box-lib-name">
+            {{#nameParts}}{{>name_parts}}{{/nameParts}}{{! Mustache comments to prevent unwanted extra space
+            }}{{^nameParts}}{{name}}{{/nameParts}}
+          </span>{{!
+          }}<span class="kifi-keep-box-lib-icons">
+            <span class="kifi-keep-box-lib-icon-visibility"></span>{{!
+            }}{{#slack.toSlackChannels.0}}<span class="kifi-keep-box-lib-slack-icon"></span>{{/slack.toSlackChannels.0}}
+          </span>
+        </span>
+      </span>
       <span class="kifi-keep-box-lib-2">
         {{^isOpenCollaborationCandidate}}
           {{#hasCollaborators}}
@@ -38,10 +44,16 @@
       </span>
     {{/extraInfo}}
     {{^extraInfo}}
-      <span class="kifi-keep-box-lib-icon"></span>{{! Mustache comments to prevent unwanted extra space
-    }}{{#slack.toSlackChannels.0}}<span class="kifi-keep-box-lib-slack-icon"></span>{{/slack.toSlackChannels.0}}{{!
-    }}{{#nameParts}}{{>name_parts}}{{/nameParts}}{{!
-    }}{{^nameParts}}{{name}}{{/nameParts}}
+      <span class="kifi-keep-box-lib-name-wrap">
+        <span class="kifi-keep-box-lib-name">
+          {{#nameParts}}{{>name_parts}}{{/nameParts}}{{! Mustache comments to prevent unwanted extra space
+          }}{{^nameParts}}{{name}}{{/nameParts}}
+        </span>{{!
+        }}<span class="kifi-keep-box-lib-icons">
+          <span class="kifi-keep-box-lib-icon-visibility"></span>{{!
+          }}{{#slack.toSlackChannels.0}}<span class="kifi-keep-box-lib-slack-icon"></span>{{/slack.toSlackChannels.0}}
+        </span>
+      </span>
     {{/extraInfo}}
   </a>
 {{#keep.removable}}
