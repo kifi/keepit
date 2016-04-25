@@ -3,6 +3,7 @@ package com.keepit.commanders
 import com.google.inject.{ Provider, Inject, Singleton }
 import com.keepit.abook.ABookServiceClient
 import com.keepit.abook.model.RichContact
+import com.keepit.commanders.gen.BasicOrganizationGen
 import com.keepit.common.cache.{ Key, JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics }
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.core._
@@ -51,6 +52,7 @@ class TypeaheadCommander @Inject() (
     interactionCommander: UserInteractionCommander,
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
+    basicOrgGen: BasicOrganizationGen,
     organizationAvatarCommander: Provider[OrganizationAvatarCommander],
     permissionCommander: Provider[PermissionCommander],
     pathCommander: PathCommander,
@@ -476,7 +478,7 @@ class TypeaheadCommander @Inject() (
   private def libToResult(userId: Id[User], libIds: Seq[Id[Library]]): Map[Id[Library], LibraryResult] = {
     val results = libraryResultCache.direct.bulkGetOrElse(libIds.map(l => LibraryResultKey(userId, l)).toSet) { missingKeys =>
       val idSet = missingKeys.map(_.libraryId)
-      val (libs, collaborators, memberships, permissions, basicUserById, orgAvatarsById, slackInfoById) = db.readOnlyReplica { implicit session =>
+      val (libs, collaborators, memberships, permissions, basicUserById, basicOrgById, orgAvatarsById, slackInfoById) = db.readOnlyReplica { implicit session =>
         val libs = libraryRepo.getActiveByIds(idSet).values.toVector
         val collaborators = libraryMembershipRepo.getCollaboratorsByLibrary(idSet)
         val memberships = libraryMembershipRepo.getWithLibraryIdsAndUserId(idSet, userId)
@@ -484,30 +486,37 @@ class TypeaheadCommander @Inject() (
           lib.id.get -> permissionCommander.get.getLibraryPermissions(lib.id.get, Some(userId))
         }.toMap
         val basicUserById = basicUserRepo.loadAll(collaborators.values.flatten.toSet)
+        val basicOrgById = basicOrgGen.getBasicOrganizations(libs.flatMap(_.organizationId).toSet)
+
         val orgAvatarsById = organizationAvatarCommander.get.getBestImagesByOrgIds(libs.flatMap(_.organizationId).toSet, ProcessedImageSize.Medium.idealSize)
         val slackInfoById = slackInfoCommander.getLiteSlackInfoForLibraries(idSet)
 
-        (libs, collaborators, memberships, permissions, basicUserById, orgAvatarsById, slackInfoById)
+        (libs, collaborators, memberships, permissions, basicUserById, basicOrgById, orgAvatarsById, slackInfoById)
       }
       libs.collect {
         case lib if lib.isActive =>
-          val collabs = (collaborators.getOrElse(lib.id.get, Set.empty) - userId).map(basicUserById(_)).toSeq
+          val libId = lib.id.get
+
+          val collabs = (collaborators.getOrElse(libId, Set.empty) - userId).map(basicUserById(_)).toSeq
           val orgAvatarPath = lib.organizationId.flatMap { orgId => orgAvatarsById.get(orgId).map(_.imagePath) }
-          val membershipInfo = memberships.get(lib.id.get).map { mem =>
-            LibraryMembershipInfo(mem.access, mem.listed, mem.subscribedToUpdates, permissions.getOrElse(lib.id.get, Set.empty))
+          val membershipInfo = memberships.get(libId).map { mem =>
+            LibraryMembershipInfo(mem.access, mem.listed, mem.subscribedToUpdates, permissions.getOrElse(libId, Set.empty))
           }
 
-          LibraryResultKey(userId, lib.id.get) -> LibraryResult(
-            id = Library.publicId(lib.id.get),
+          val spaceName = lib.organizationId.flatMap(basicOrgById.get(_).map(_.name)).getOrElse(basicUserById(lib.ownerId).fullName)
+
+          LibraryResultKey(userId, libId) -> LibraryResult(
+            id = Library.publicId(libId),
             name = lib.name,
             color = lib.color,
             visibility = lib.visibility,
             path = pathCommander.getPathForLibrary(lib),
+            spaceName = spaceName,
             hasCollaborators = collabs.nonEmpty,
             collaborators = collabs,
             orgAvatar = orgAvatarPath,
             membership = membershipInfo,
-            slack = slackInfoById.get(lib.id.get)
+            slack = slackInfoById.get(libId)
           )
       }.toMap
     }
@@ -525,7 +534,7 @@ sealed trait TypeaheadSearchResult
 @json case class UserContactResult(name: String, id: ExternalId[User], pictureName: Option[String], username: Username, firstName: String, lastName: String) extends TypeaheadSearchResult
 @json case class EmailContactResult(name: Option[String], email: EmailAddress) extends TypeaheadSearchResult
 @json case class LibraryResult(id: PublicId[Library], name: String, color: Option[LibraryColor], visibility: LibraryVisibility,
-  path: String, hasCollaborators: Boolean, collaborators: Seq[BasicUser], orgAvatar: Option[ImagePath],
+  path: String, spaceName: String, hasCollaborators: Boolean, collaborators: Seq[BasicUser], orgAvatar: Option[ImagePath],
   membership: Option[LibraryMembershipInfo], slack: Option[LiteLibrarySlackInfo]) extends TypeaheadSearchResult // Same as LibraryData. Duck typing would rock.
 
 sealed trait TypeaheadRequest
@@ -571,6 +580,6 @@ class LibraryResultCache(stats: CacheStatistics, accessLog: AccessLog, innermost
 
 case class LibraryResultKey(userId: Id[User], libraryId: Id[Library]) extends Key[LibraryResult] {
   val namespace = "library_result"
-  override val version = 1
+  override val version = 2
   def toKey(): String = userId.id.toString + ":" + libraryId.id.toString
 }
