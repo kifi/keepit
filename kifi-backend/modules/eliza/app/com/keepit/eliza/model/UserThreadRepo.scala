@@ -43,7 +43,6 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
   // Single-use queries that are actually slower than just doing the sane thing
   def getThreadActivity(keepId: Id[Keep])(implicit session: RSession): Seq[UserThreadActivity]
   def isMuted(userId: Id[User], keepId: Id[Keep])(implicit session: RSession): Boolean
-  def checkUrisDiscussed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]])(implicit session: RSession): Seq[Boolean]
 
   // Handling read/unread
   def setLastActive(userId: Id[User], keepId: Id[Keep], lastActive: DateTime)(implicit session: RWSession): Unit
@@ -274,11 +273,6 @@ class UserThreadRepoImpl @Inject() (
         started = activeRows.filter(row => row.user === userId && row.startedBy === userId).length.run
       )
     }
-  }
-
-  def checkUrisDiscussed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]])(implicit session: RSession): Seq[Boolean] = {
-    val uriSet = (for (row <- activeRows if row.user === userId && row.uriId.isDefined) yield row.uriId).list.toSet.flatten
-    uriIds.map(uriId => uriSet.contains(uriId))
   }
 
   def getByAccessToken(token: ThreadAccessToken)(implicit session: RSession): Option[UserThread] = {

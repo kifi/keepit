@@ -93,13 +93,6 @@ class MessagingController @Inject() (
     Ok(Json.toJson(messagingCommander.keepAttribution(userId, uriId)))
   }
 
-  def checkUrisDiscussed(userId: Id[User]) = Action.async(parse.json) { request =>
-    val uriIds = request.body.as[Seq[Id[NormalizedURI]]]
-    messagingCommander.checkUrisDiscussed(userId, uriIds).map { res =>
-      Ok(Json.toJson(res))
-    }
-  }
-
   def getUnreadNotifications(userId: Id[User], howMany: Int) = Action {
     val userThreadViews = notificationCommander.getUnreadUnmutedThreads(userId, howMany)
     Ok(Json.toJson(userThreadViews))

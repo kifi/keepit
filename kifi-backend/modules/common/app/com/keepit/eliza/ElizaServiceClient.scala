@@ -114,7 +114,6 @@ trait ElizaServiceClient extends ServiceClient {
   def getNonUserThreadMuteInfo(publicId: String): Future[Option[(String, Boolean)]]
   def setNonUserThreadMuteState(publicId: String, muted: Boolean): Future[Boolean]
   def keepAttribution(userId: Id[User], uriId: Id[NormalizedURI]): Future[Seq[Id[User]]]
-  def checkUrisDiscussed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]]
   def areUsersOnline(users: Seq[Id[User]]): Future[Map[Id[User], Boolean]]
 
   def getKeepIngestionSequenceNumber(): Future[SequenceNumber[Keep]]
@@ -251,12 +250,6 @@ class ElizaServiceClientImpl @Inject() (
   def setNonUserThreadMuteState(publicId: String, muted: Boolean): Future[Boolean] = {
     call(Eliza.internal.setNonUserThreadMuteState(publicId, muted), callTimeouts = longTimeout).map { response =>
       Json.parse(response.body).as[Boolean]
-    }
-  }
-
-  def checkUrisDiscussed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = {
-    call(Eliza.internal.checkUrisDiscussed(userId), body = Json.toJson(uriIds), attempts = 2, callTimeouts = longTimeout).map { r =>
-      r.json.as[Seq[Boolean]]
     }
   }
 
