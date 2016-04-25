@@ -1,8 +1,7 @@
 package com.keepit.commanders
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.commanders.gen.KeepActivityGen.SerializationInfo
-import com.keepit.commanders.gen.{ BasicOrganizationGen, KeepActivityGen }
+import com.keepit.commanders.gen.{ BasicULOBatchFetcher, BasicOrganizationGen, KeepActivityGen }
 import com.keepit.common.akka.TimeoutFuture
 import com.keepit.common.core._
 import com.keepit.common.crypto.PublicIdConfiguration
@@ -15,7 +14,7 @@ import com.keepit.common.net.URISanitizer
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ ImageSize, S3ImageConfig, S3ImageStore }
 import com.keepit.common.util.Ord.dateTimeOrdering
-import com.keepit.discussion.{ Message, CrossServiceDiscussion, Discussion }
+import com.keepit.discussion.{ CrossServiceDiscussion, Discussion, Message }
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 import com.keepit.rover.RoverServiceClient
@@ -24,9 +23,7 @@ import com.keepit.search.augmentation.{ AugmentableItem, LimitedAugmentationInfo
 import com.keepit.shoebox.data.keep.{ BasicLibraryWithKeptAt, KeepInfo }
 import com.keepit.slack.models.SlackTeamId
 import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient, SlackInfoCommander }
-import com.keepit.social.BasicAuthor
-import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient, SlackInfoCommander }
-import com.keepit.social.{ BasicUserLikeEntity, BasicAuthor }
+import com.keepit.social.{ BasicAuthor, BasicUserLikeEntity }
 import org.joda.time.DateTime
 
 import scala.concurrent.duration._
@@ -61,6 +58,7 @@ class KeepDecoratorImpl @Inject() (
   eliza: ElizaServiceClient,
   rover: RoverServiceClient,
   slackInfoCommander: SlackInfoCommander,
+  basicULOBatchFetcher: BasicULOBatchFetcher,
   implicit val airbrake: AirbrakeNotifier,
   implicit val imageConfig: S3ImageConfig,
   implicit val s3: S3ImageStore,
@@ -221,9 +219,8 @@ class KeepDecoratorImpl @Inject() (
             }
             val keepActivity = {
               if (viewerIdOpt.exists(uid => db.readOnlyMaster(implicit s => userExperimentRepo.hasExperiment(uid, UserExperimentType.ACTIVITY_LOG)))) {
-                implicit val info = SerializationInfo(idToBasicUser, idToBasicLibrary, idToBasicOrg)
-                Some(KeepActivityGen.generateKeepActivity(keep, sourceAttrs.get(keepId), eventsByKeep.getOrElse(keepId, Seq.empty), discussionsByKeep.get(keepId),
-                  ktlsByKeep.getOrElse(keepId, Seq.empty), ktusByKeep.getOrElse(keepId, Seq.empty), maxMessagesShown))
+                Some(basicULOBatchFetcher.run(KeepActivityGen.generateKeepActivity(keep, sourceAttrs.get(keepId), eventsByKeep.getOrElse(keepId, Seq.empty), discussionsByKeep.get(keepId),
+                  ktlsByKeep.getOrElse(keepId, Seq.empty), ktusByKeep.getOrElse(keepId, Seq.empty), maxMessagesShown)))
               } else None
             }
 

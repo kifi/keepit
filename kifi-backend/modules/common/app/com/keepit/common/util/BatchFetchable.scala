@@ -4,7 +4,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.util.BatchFetchable.{ Values, Keys }
 import com.keepit.model._
 import com.keepit.social.BasicUser
-import play.api.libs.functional.{ Functor, ~, FunctionalCanBuild }
+import play.api.libs.functional.{ FunctionalBuilder, Functor, ~, FunctionalCanBuild }
 
 final case class BatchFetchable[T](keys: Keys, f: Values => T) {
   def map[S](g: T => S) = this.copy(f = f andThen g)
@@ -25,11 +25,19 @@ object BatchFetchable {
   }
 
   val empty = BatchFetchable[Unit](Keys.empty, _ => ())
+  def trivial[T](t: T) = BatchFetchable.empty.map(_ => t)
   def user(id: Id[User]): BatchFetchable[Option[BasicUser]] = BatchFetchable(Keys(Set(id), Set.empty, Set.empty), _.users.get(id))
+  def userOpt(idOpt: Option[Id[User]]): BatchFetchable[Option[BasicUser]] = idOpt.map(user).getOrElse(trivial(None))
   def library(id: Id[Library]): BatchFetchable[Option[BasicLibrary]] = BatchFetchable(Keys(Set.empty, Set(id), Set.empty), _.libs.get(id))
+  def libraryOpt(idOpt: Option[Id[Library]]): BatchFetchable[Option[BasicLibrary]] = idOpt.map(library).getOrElse(trivial(None))
   def org(id: Id[Organization]): BatchFetchable[Option[BasicOrganization]] = BatchFetchable(Keys(Set.empty, Set.empty, Set(id)), _.orgs.get(id))
+  def orgOpt(idOpt: Option[Id[Organization]]): BatchFetchable[Option[BasicOrganization]] = idOpt.map(org).getOrElse(trivial(None))
+
   def seq[T](xs: Seq[BatchFetchable[T]]): BatchFetchable[Seq[T]] =
     BatchFetchable(Keys.unions(xs.map(_.keys)), vs => xs.map(_.f(vs)))
+
+  def flipMap[K, V](xs: Map[K, BatchFetchable[V]]): BatchFetchable[Map[K, V]] =
+    BatchFetchable(Keys.unions(xs.values.map(_.keys)), vs => xs.mapValues(_.f(vs)))
 
   implicit val bfFCB: FunctionalCanBuild[BatchFetchable] = new FunctionalCanBuild[BatchFetchable] {
     def apply[A, B](ma: BatchFetchable[A], mb: BatchFetchable[B]): BatchFetchable[~[A, B]] = {

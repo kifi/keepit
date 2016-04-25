@@ -1,24 +1,23 @@
 package com.keepit.commanders
 
 import com.google.inject.Injector
-import com.keepit.commanders.gen.KeepActivityGen
-import com.keepit.commanders.gen.KeepActivityGen.SerializationInfo
+import com.keepit.commanders.gen.{ BasicULOBatchFetcher, KeepActivityGen }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
-import com.keepit.common.healthcheck.{ FakeAirbrakeNotifier, AirbrakeNotifier }
+import com.keepit.common.healthcheck.{ AirbrakeNotifier, FakeAirbrakeNotifier }
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.time._
-import com.keepit.common.util.DescriptionElements
-import com.keepit.eliza.{ FakeElizaServiceClientImpl, ElizaServiceClient }
-import com.keepit.model.{ KeepEventRepo, KeepRecipientsDiff, KeepEventData, Library, User, BasicLibrary, LibraryFactory, KeepToUserRepo, UserFactory, KeepFactory }
+import com.keepit.common.util.{ EnglishProperNouns, RoughlyHumanNames, DescriptionElements }
+import com.keepit.eliza.{ ElizaServiceClient, FakeElizaServiceClientImpl }
 import com.keepit.model.KeepFactoryHelper._
-import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.LibraryFactoryHelper._
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.{ BasicLibrary, KeepEventData, KeepEventRepo, KeepFactory, KeepRecipientsDiff, KeepToUserRepo, Library, LibraryFactory, User, UserFactory }
 import com.keepit.social.{ BasicAuthor, BasicUser }
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.Hours
 import org.specs2.mutable.Specification
-import play.api.libs.json.{ Json, JsObject }
+import play.api.libs.json.{ JsObject, Json }
 
 class KeepActivityGenTest extends Specification with ShoeboxTestInjector {
 
@@ -35,10 +34,12 @@ class KeepActivityGenTest extends Specification with ShoeboxTestInjector {
       withDb(modules: _*) { implicit injector =>
         val keepEventCommander = inject[KeepEventCommander]
 
+        val userNames = (RoughlyHumanNames.firsts zip RoughlyHumanNames.lasts).toIterator
+        val libNames = EnglishProperNouns.planets.toIterator
         val (user, keep, usersToAdd, libsToAdd) = db.readWrite { implicit s =>
           val user = UserFactory.user().withName("Benjamin", "Button").saved
-          val usersToAdd = UserFactory.users(4).saved
-          val libsToAdd = LibraryFactory.libraries(8).saved
+          val usersToAdd = UserFactory.users(4).map(_.withFullName(userNames.next())).saved
+          val libsToAdd = LibraryFactory.libraries(8).map(_.withOwner(user).withName(libNames.next())).saved
           val keep = KeepFactory.keep().withUser(user.id.get).saved
           (user, keep, usersToAdd, libsToAdd)
         }
@@ -70,10 +71,8 @@ class KeepActivityGenTest extends Specification with ShoeboxTestInjector {
         }
 
         val events = db.readOnlyMaster { implicit s => inject[KeepEventRepo].pageForKeep(keep.id.get, fromTime = None, limit = 10) }
-
-        implicit val info = SerializationInfo(basicUserById, basicLibById, orgByLibraryId = Map.empty)
-        val activity = KeepActivityGen.generateKeepActivity(keep, sourceAttrOpt = None, events = events, discussionOpt = None, ktls = Seq.empty, ktus, maxEvents = 5)
-
+        val activityBF = KeepActivityGen.generateKeepActivity(keep, sourceAttrOpt = None, events = events, discussionOpt = None, ktls = Seq.empty, ktus, maxEvents = 5)
+        val activity = inject[BasicULOBatchFetcher].run(activityBF)
         activity.events.size === 5 // NB(ryan): There may be 6 events because of "event-splitting" with the note
         activity.events.map { event => DescriptionElements.formatPlain(event.header) } === (eventHeaders.reverse :+ "Benjamin Button sent this")
 
