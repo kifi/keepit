@@ -6,6 +6,7 @@ import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.core._
 import com.keepit.common.db.Id
+import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.SlackLog
@@ -138,11 +139,10 @@ class SlackPushingActor @Inject() (
 
   private def doPush(integration: LibraryToSlackChannel, channel: SlackChannel, settings: Option[OrganizationSettings]): Future[Unit] = {
     generator.getPushItems(integration).flatMap { implicit pushItems =>
-      val botTokenOpt = db.readOnlyMaster { implicit s => slackTeamRepo.getBySlackTeamId(integration.slackTeamId).flatMap(_.kifiBot.map(_.token)) }
       for {
         _ <- pushNewItems(integration, channel, pushItems.sortedNewItems, settings)
-        _ <- botTokenOpt.map(token => updatePushedKeeps(integration, pushItems.oldKeeps, token)).getOrElse(Future.successful(()))
-        _ <- botTokenOpt.map(token => updatePushedMessages(integration, pushItems.oldMsgs, token)).getOrElse(Future.successful(()))
+        _ <- updatePushedKeeps(integration, pushItems.oldKeeps)
+        _ <- updatePushedMessages(integration, pushItems.oldMsgs)
       } yield ()
     }
   }
@@ -154,11 +154,11 @@ class SlackPushingActor @Inject() (
           val userPush = for {
             user <- item.userAttribution
             userMsg <- itemMsg.asUser
-          } yield slackClient.sendToSlackAsUser(user, integration.slackTeamId, integration.slackChannelId, userMsg).map(Option(_))
+          } yield slackClient.sendToSlackAsUser(user, integration.slackTeamId, integration.slackChannelId, userMsg).map(resp => Option((resp, userMsg)))
 
           userPush.getOrElse(Future.failed(SlackFail.NoValidToken)).recoverWith {
             case SlackFail.NoValidToken | SlackErrorCode(_) =>
-              slackClient.sendToSlackHoweverPossible(integration.slackTeamId, integration.slackChannelId, itemMsg.asBot).recoverWith {
+              slackClient.sendToSlackHoweverPossible(integration.slackTeamId, integration.slackChannelId, itemMsg.asBot).map(_.map(resp => (resp, itemMsg.asBot))).recoverWith {
                 case SlackFail.NoValidPushMethod => Future.failed(BrokenSlackIntegration(integration, None, Some(SlackFail.NoValidPushMethod)))
               }
           }
@@ -170,14 +170,16 @@ class SlackPushingActor @Inject() (
                 pushItems.newKeeps.map(_.ktl.id.get).maxOpt.foreach { ktlId => integrationRepo.updateLastProcessedKeep(integration.id.get, ktlId) }
                 pushItems.newMsgs.map(_.msg.id).maxOpt.foreach { msgId => integrationRepo.updateLastProcessedMsg(integration.id.get, msgId) }
               case PushItem.KeepToPush(k, ktl) =>
-                log.info(s"[SLACK-PUSH-ACTOR] for integration ${integration.id.get}, keep ${k.id.get} had message ${pushedMessageOpt.map(_.timestamp)}")
-                pushedMessageOpt.foreach { response =>
-                  slackPushForKeepRepo.intern(SlackPushForKeep.fromMessage(integration, k.id.get, itemMsg.asBot, response))
+                log.info(s"[SLACK-PUSH-ACTOR] for integration ${integration.id.get}, keep ${k.id.get} had message ${pushedMessageOpt.map(_._1._2.timestamp)}")
+                pushedMessageOpt.foreach {
+                  case ((slackUserId, response), request) =>
+                    slackPushForKeepRepo.intern(SlackPushForKeep.fromMessage(integration, k.id.get, slackUserId = slackUserId, request, response))
                 }
                 integrationRepo.updateLastProcessedKeep(integration.id.get, ktl.id.get)
               case PushItem.MessageToPush(k, kifiMsg) =>
-                pushedMessageOpt.foreach { response =>
-                  slackPushForMessageRepo.intern(SlackPushForMessage.fromMessage(integration, kifiMsg.id, itemMsg.asBot, response))
+                pushedMessageOpt.foreach {
+                  case ((slackUserId, response), request) =>
+                    slackPushForMessageRepo.intern(SlackPushForMessage.fromMessage(integration, kifiMsg.id, slackUserId = slackUserId, request, response))
                 }
                 integrationRepo.updateLastProcessedMsg(integration.id.get, kifiMsg.id)
             }
@@ -216,16 +218,27 @@ class SlackPushingActor @Inject() (
     }
   }
 
-  private def updatePushedKeeps(integration: LibraryToSlackChannel, oldKeeps: Seq[PushItem.KeepToPush], botToken: SlackBotAccessToken)(implicit pushItems: PushItems): Future[Unit] = {
-    val slackPushesByKeep = db.readOnlyMaster { implicit s =>
-      slackPushForKeepRepo.getEditableByIntegrationAndKeepIds(integration.id.get, oldKeeps.map(_.k.id.get).toSet)
+  private def updatePushedKeeps(integration: LibraryToSlackChannel, oldKeeps: Seq[PushItem.KeepToPush])(implicit pushItems: PushItems): Future[Unit] = {
+    val (slackPushesByKeep, tokensBySlackUser, kifiBot) = db.readOnlyMaster { implicit s =>
+      val slackPushes = slackPushForKeepRepo.getEditableByIntegrationAndKeepIds(integration.id.get, oldKeeps.map(_.k.id.get).toSet)
+      val (tokensByUser, kifiBot) = getTokensThatCanPush(integration.slackTeamId, slackPushes.values.map(_.slackUserId).toSet)
+      (slackPushes, tokensByUser, kifiBot)
     }
     FutureHelpers.sequentialExec(oldKeeps.flatAugmentWith { case KeepToPush(k, _) => slackPushesByKeep.get(k.id.get) }) {
       case (KeepToPush(k, ktl), oldPush) =>
-        val updatedMessage = generator.keepAsSlackMessage(k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get)).asBot
-        if (oldPush.messageRequest.safely.contains(updatedMessage)) Future.successful(())
-        else {
-          slackClient.updateMessage(botToken, integration.slackChannelId, oldPush.timestamp, SlackMessageUpdateRequest.fromMessageRequest(updatedMessage)).map { response =>
+        val update = for {
+          (updatedMessage, pushToken) <- {
+            def updated = generator.keepAsSlackMessage(k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get))
+            kifiBot.collect {
+              case KifiSlackBot(botUserId, botToken) if oldPush.slackUserId == botUserId => (updated.asBot, botToken)
+            }.orElse(for {
+              token <- tokensBySlackUser.get(oldPush.slackUserId)
+              updatedPush <- updated.asUser
+            } yield (updatedPush, token))
+          }
+          _ <- Some(()) if !oldPush.messageRequest.safely.contains(updatedMessage)
+        } yield {
+          slackClient.updateMessage(pushToken, integration.slackChannelId, oldPush.timestamp, SlackMessageUpdateRequest.fromMessageRequest(updatedMessage)).map { response =>
             db.readWrite { implicit s =>
               slackPushForKeepRepo.save(oldPush.withMessageRequest(updatedMessage).withTimestamp(response.timestamp))
             }
@@ -240,19 +253,31 @@ class SlackPushingActor @Inject() (
               ()
           }
         }
+        update getOrElse Future.successful(())
     }
   }
 
-  private def updatePushedMessages(integration: LibraryToSlackChannel, oldMsgs: Seq[PushItem.MessageToPush], botToken: SlackBotAccessToken)(implicit pushItems: PushItems): Future[Unit] = {
-    val slackPushesByMsg = db.readOnlyMaster { implicit s =>
-      slackPushForMessageRepo.getEditableByIntegrationAndKeepIds(integration.id.get, oldMsgs.map(_.msg.id).toSet)
+  private def updatePushedMessages(integration: LibraryToSlackChannel, oldMsgs: Seq[PushItem.MessageToPush])(implicit pushItems: PushItems): Future[Unit] = {
+    val (slackPushesByMsg, tokensBySlackUser, kifiBot) = db.readOnlyMaster { implicit s =>
+      val slackPushes = slackPushForMessageRepo.getEditableByIntegrationAndKeepIds(integration.id.get, oldMsgs.map(_.msg.id).toSet)
+      val (tokensByUser, kifiBot) = getTokensThatCanPush(integration.slackTeamId, slackPushes.values.map(_.slackUserId).toSet)
+      (slackPushes, tokensByUser, kifiBot)
     }
     FutureHelpers.sequentialExec(oldMsgs.flatAugmentWith { case MessageToPush(_, msg) => slackPushesByMsg.get(msg.id) }) {
       case (MessageToPush(k, msg), oldPush) =>
-        val updatedMessage = generator.messageAsSlackMessage(msg, k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get)).asBot
-        if (oldPush.messageRequest.safely.contains(updatedMessage)) Future.successful(())
-        else {
-          slackClient.updateMessage(botToken, integration.slackChannelId, oldPush.timestamp, SlackMessageUpdateRequest.fromMessageRequest(updatedMessage)).map { response =>
+        val update = for {
+          (updatedMessage, pushToken) <- {
+            def updated = generator.messageAsSlackMessage(msg, k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get))
+            kifiBot.collect {
+              case KifiSlackBot(botUserId, botToken) if oldPush.slackUserId == botUserId => (updated.asBot, botToken)
+            }.orElse(for {
+              token <- tokensBySlackUser.get(oldPush.slackUserId)
+              updatedPush <- updated.asUser
+            } yield (updatedPush, token))
+          }
+          _ <- Some(()) if !oldPush.messageRequest.safely.contains(updatedMessage)
+        } yield {
+          slackClient.updateMessage(pushToken, integration.slackChannelId, oldPush.timestamp, SlackMessageUpdateRequest.fromMessageRequest(updatedMessage)).map { response =>
             db.readWrite { implicit s =>
               slackPushForMessageRepo.save(oldPush.withMessageRequest(updatedMessage).withTimestamp(response.timestamp))
             }
@@ -267,7 +292,19 @@ class SlackPushingActor @Inject() (
               ()
           }
         }
+        update getOrElse Future.successful(())
     }
+  }
+
+  private def getTokensThatCanPush(slackTeamId: SlackTeamId, slackUserIds: Set[SlackUserId])(implicit session: RSession): (Map[SlackUserId, SlackAccessToken], Option[KifiSlackBot]) = {
+    val kifiBot = slackTeamRepo.getBySlackTeamId(slackTeamId).flatMap(_.kifiBot)
+    val tokensByUser = {
+      val slackMemberships = slackTeamMembershipRepo.getBySlackIdentities(slackUserIds.map(slackTeamId -> _))
+      slackMemberships.flatMap {
+        case ((_, slackUserId), stm) => stm.getTokenIncludingScopes(Set(SlackAuthScope.ChatWriteUser)).map(token => slackUserId -> token)
+      }
+    }
+    (tokensByUser, kifiBot)
   }
 }
 
