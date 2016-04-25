@@ -50,7 +50,6 @@
       <div class="kf-keep-card-note" ng-show="::keep.displayNote"><!--
           --><span ng-if="!keep.noteAttribution" ng-bind-html="::keep.displayNote|noteHtml"></span><!--
           --><span ng-if="keep.noteAttribution" ng-bind-html="::keep.displayNote"></span>
-          <span ng-if="keep.noteAttribution" class="kf-keep-card-note-via" ng-bind-template="(via {{keep.noteAttribution}})"></span>
       </div>
       <button class="kf-keep-card-add-note" ng-click="editKeepNote($event, keep)"
               ng-if="editKeepNote && !keep.displayNote && keep.author.id === me.id">Add a note

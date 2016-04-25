@@ -11,7 +11,7 @@
            ng-src="{{segment.data.src}}"/>
     </div><!--
     --><span ng-if="segment.type === 'TEXT_PLAIN'"
-             ng-bind="segment.data.text"
+             ng-bind-html="segment.data.text|noteHtml"
              class="kf-keep-activity-event-inline"></span><!--
     --><div ng-if="segment.type === 'EMAIL'"
             class="kf-keep-activity-event-inline">
