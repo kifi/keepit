@@ -59,7 +59,6 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
   // Mutating threads in-place
   def setNotificationEmailed(id: Id[UserThread], relevantMessage: Option[Id[ElizaMessage]])(implicit session: RWSession): Unit
   def registerMessage(msg: ElizaMessage)(implicit session: RWSession): Unit
-  def updateUriIds(updates: Seq[(Id[NormalizedURI], Id[NormalizedURI])])(implicit session: RWSession): Unit
   def deactivate(model: UserThread)(implicit session: RWSession): Unit
 }
 
@@ -242,12 +241,6 @@ class UserThreadRepoImpl @Inject() (
     relevantMessageOpt match {
       case Some(relevantMessage) => activeRows.filter(row => row.id === id && row.latestMessageId === relevantMessage).map(_.notificationEmailed).update(true)
       case None => activeRows.filter(row => row.id === id).map(row => (row.notificationEmailed, row.updatedAt)).update((true, now))
-    }
-  }
-
-  def updateUriIds(updates: Seq[(Id[NormalizedURI], Id[NormalizedURI])])(implicit session: RWSession): Unit = {
-    updates.foreach {
-      case (oldId, newId) => rows.filter(row => row.uriId === oldId).map(_.uriId).update(Some(newId))
     }
   }
 
