@@ -157,25 +157,5 @@ class MessagingTest extends Specification with ElizaTestInjector with ElizaInjec
         waitFor(notificationDeliveryCommander.getLatestSendableNotifications(user3, 1, includeUriSummary = false)).length === 1
       }
     }
-
-    "process keepAttribution correctly" in {
-      withDb(modules: _*) { implicit injector =>
-        val (user1, user2, _, user2n3Seq, _) = setup()
-        val userThreadRepo = inject[UserThreadRepo]
-        val (thread1, msg1) = waitFor(messagingCommander.sendNewMessage(user1, user2n3Seq, Nil, "https://kifi.com", Some("title"), "Search!", None))
-
-        val user2Threads = db.readOnlyMaster { implicit ro => userThreadRepo.getUserThreads(user2, thread1.uriId) }
-        user2Threads.size === 1
-        messagingCommander.setLastSeen(user2, user2Threads.head.keepId)
-
-        val otherStarters1 = messagingCommander.keepAttribution(user1, thread1.uriId)
-        otherStarters1.isEmpty === true
-
-        val otherStarters2 = messagingCommander.keepAttribution(user2, thread1.uriId)
-        otherStarters2.isEmpty === false
-        otherStarters2.head === user1
-      }
-    }
   }
-
 }
