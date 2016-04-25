@@ -24,7 +24,7 @@ class LibraryQualityEvaluator @Inject() () {
     Math.exp(-Math.pow(Math.log(x) - mu, 2) / (2 * Math.pow(sigma, 2))) / (x * sigma * Math.sqrt(2 * Math.PI))
   } else 0
 
-  private val LowQualityLibraryNamesRe = "(?i)(test|delicious|bookmark|pocket|kippt|asdf|pinboard|import|instapaper)".r
+  private val LowQualityLibraryNamesRe = "(?i)(test|delicious|bookmark|pocket|kippt|asdf|pinboard|import|imported|instapaper)".r
   def isPoorlyNamed(name: String): Boolean = {
     LowQualityLibraryNamesRe.findFirstIn(name).isDefined || name.toLowerCase.split("\\s+").exists(Profanity.all.contains)
   }
