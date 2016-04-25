@@ -113,6 +113,7 @@ class LibraryCommanderImpl @Inject() (
         SafeFuture {
           libraryAnalytics.createLibrary(ownerId, library, context)
           searchClient.updateLibraryIndex()
+          libraryTypeahead.refreshForAllCollaborators(library.id.get)
         }
         Right(library)
     }
@@ -204,8 +205,6 @@ class LibraryCommanderImpl @Inject() (
       val newMembership = LibraryMembership(libraryId = libraryId, userId = ownerId, access = LibraryAccess.OWNER, subscribedToUpdates = true, listed = newListed)
       libraryMembershipRepo.save(newMembership.copy(id = existingMembershipOpt.flatMap(_.id)))
     }
-
-    libraryTypeahead.refreshForAllCollaborators(newLib.id.get)
 
     newLib
   }

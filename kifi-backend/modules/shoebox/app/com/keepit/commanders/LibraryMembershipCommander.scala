@@ -198,9 +198,7 @@ class LibraryMembershipCommanderImpl @Inject() (
     libraryAnalytics.acceptLibraryInvite(userId, library, eventContext)
     libraryAnalytics.followLibrary(userId, library, eventContext)
     searchClient.updateLibraryIndex()
-    if (LibraryAccess.collaborativePermissions.contains(membership.access)) {
-      refreshTypeaheads(userId, libraryId)
-    }
+    refreshTypeaheads(userId, libraryId)
   }
 
   def leaveLibrary(libraryId: Id[Library], userId: Id[User])(implicit eventContext: HeimdalContext): Either[LibraryFail, Unit] = {
@@ -219,9 +217,7 @@ class LibraryMembershipCommanderImpl @Inject() (
         SafeFuture {
           libraryAnalytics.unfollowLibrary(userId, lib, eventContext)
           searchClient.updateLibraryIndex()
-          if (LibraryAccess.collaborativePermissions.contains(mem.access)) {
-            refreshTypeaheads(userId, libraryId)
-          }
+          refreshTypeaheads(userId, libraryId)
         }
         Right((): Unit)
     }

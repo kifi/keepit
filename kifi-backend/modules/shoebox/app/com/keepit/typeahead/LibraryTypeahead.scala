@@ -59,7 +59,7 @@ class LibraryTypeahead @Inject() (
     val filterOpt = cache.getOrElseOpt(LibraryFilterTypeaheadKey(userId)) {
       store.getWithMetadata(userId).map {
         case (filter, meta) =>
-          if (meta.exists(m => m.lastModified.plusMinutes(15).isBefore(currentDateTime))) {
+          if (meta.exists(m => m.lastModified.plusMinutes(5).isBefore(currentDateTime))) {
             refresh(userId)
           }
           filter
@@ -70,13 +70,15 @@ class LibraryTypeahead @Inject() (
 
   // Useful on library creation, name changes, or when it's deleted
   def refreshForAllCollaborators(libraryId: Id[Library]): Future[Unit] = {
-    db.readOnlyReplicaAsync { implicit s =>
-      libraryMembershipRepo.getCollaboratorsByLibrary(Set(libraryId)).values.headOption
-    }.flatMap {
-      case Some(userIds) =>
-        FutureHelpers.sequentialExec(userIds)(refresh)
-      case None => Future.successful(())
-    }
+    Future {
+      db.readOnlyReplicaAsync { implicit s =>
+        libraryMembershipRepo.getCollaboratorsByLibrary(Set(libraryId)).values.headOption
+      }.flatMap {
+        case Some(userIds) =>
+          FutureHelpers.sequentialExec(userIds)(refresh)
+        case None => Future.successful(())
+      }
+    }.flatMap(f => f)
   }
 
   private def getInfos(userId: Id[User])(ids: Seq[Id[Library]]): Future[Seq[LibraryTypeaheadResult]] = {
@@ -104,10 +106,12 @@ class LibraryTypeahead @Inject() (
   }
 
   def getAllRelevantLibraries(id: Id[User]): Seq[(Id[Library], LibraryTypeaheadResult)] = {
+    val startTime = clock.now
     db.readOnlyReplica { implicit session =>
       libraryInfoCommander.get.getLibrariesUserCanKeepTo(id, includeOrgLibraries = true)
     }.collect {
       case (l, mOpt, _) if l.isActive =>
+        log.info(s"[LibraryTypeahead#getAllRelevantLibraries] $id took ${clock.now.getMillis - startTime.getMillis}")
         l.id.get -> LibraryTypeaheadResult(l.id.get, l.name, calcImportance(l, mOpt))
     }
   }

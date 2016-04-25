@@ -21,6 +21,7 @@ import com.keepit.notify.NotificationInfoModel
 import com.keepit.notify.model._
 import com.keepit.notify.model.event._
 import com.keepit.social.BasicUser
+import com.keepit.typeahead.LibraryTypeahead
 import play.api.http.Status._
 import play.api.libs.json.Json
 import scala.util.Try
@@ -59,6 +60,7 @@ class LibraryInviteCommanderImpl @Inject() (
     libPathCommander: PathCommander,
     libraryImageCommander: LibraryImageCommander,
     kifiInstallationCommander: KifiInstallationCommander,
+    libraryTypeahead: LibraryTypeahead,
     implicit val s3ImageConfig: S3ImageConfig,
     implicit val defaultContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) extends LibraryInviteCommander with Logging {
@@ -257,6 +259,8 @@ class LibraryInviteCommanderImpl @Inject() (
     }.toSeq
 
     val emailFutures = groupedInvitesWithExtras.flatMap((notifyInvitees _).tupled)
+
+    libraryTypeahead.refreshByIds(groupedInvitesWithExtras.flatMap(_._1.flatMap(_.userId)))
 
     val emailsF = Future.sequence(emailFutures)
     emailsF map (_.filter(_.isDefined).map(_.get))
