@@ -74,10 +74,16 @@ class UserInteractionCommander @Inject() (
       parseJson(obj).map(r => (r._1, calcInteractionScore(i, r._2)))
     }
 
-    scores.flatten.groupBy(e => e._1).map { b =>
+    val res = scores.flatten.groupBy(e => e._1).map { b =>
       val sum = b._2.foldLeft(0.0)((r, c) => r + c._2)
       InteractionScore(b._1, sum)
     }.toSeq.sorted.reverse
+
+    if (uid == Id[User](3)) {
+      log.info(s"[andrewinteract] $res")
+    }
+
+    res
   }
 
   def suggestFriendsAndContacts(userId: Id[User], limit: Option[Int]): (Seq[Id[User]], Seq[EmailAddress]) = {
