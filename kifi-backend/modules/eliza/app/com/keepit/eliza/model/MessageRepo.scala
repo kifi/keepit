@@ -221,9 +221,8 @@ class MessageRepoImpl @Inject() (
 
   def getCommentIndex(message: ElizaMessage)(implicit session: RSession): Option[Int] = {
     if (!message.isActive || message.from.isSystem) None
-    else Some(rows.filter(
-      m => m.keepId === message.keepId &&
-        (m.from.isDefined || m.nonUserSender.isDefined) &&
+    else Some(activeRows.filter(
+      m => m.keepId === message.keepId && m.fromHuman &&
         (m.createdAt < message.createdAt || m.createdAt === message.createdAt && m.id < message.id.get)
     ).length.run)
   }
