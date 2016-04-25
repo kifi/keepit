@@ -100,7 +100,7 @@ class KeepActivityAssemblerImpl @Inject() (
         val ktuUsers = ktus.map(_.userId).toSet
         val msgUsers = discussion.map(_.messages.flatMap(_.sentBy.flatMap(_.left.toOption))).getOrElse(Seq.empty).toSet
         val libOwners = libById.values.map(_.ownerId).toSet
-        basicUserRepo.loadAllActive(ktuUsers ++ libOwners ++ msgUsers ++ usersFromEvents)
+        basicUserRepo.loadAll(ktuUsers ++ libOwners ++ msgUsers ++ usersFromEvents)
       }
       val basicLibById = basicLibGen.getBasicLibraries(libById.keySet)
       (basicUserById, basicLibById, basicOrgByLibId)
