@@ -1,7 +1,7 @@
 package com.keepit.typeahead
 
 import com.amazonaws.services.s3.AmazonS3
-import com.google.inject.{ Provider, Inject }
+import com.google.inject.{ Provider, Inject, Singleton }
 import com.keepit.commanders._
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.core._
@@ -38,6 +38,7 @@ object LibraryTypeahead {
   //  • -1 user created
 }
 
+@Singleton
 class LibraryTypeahead @Inject() (
     db: Database,
     override val airbrake: AirbrakeNotifier,
@@ -78,8 +79,8 @@ class LibraryTypeahead @Inject() (
         val invited = libraryInviteRepo.getWithLibraryId(libraryId).flatMap(_.userId)
         val lib = libraryRepo.get(libraryId)
         val orgMembers = if (lib.organizationMemberAccess.exists(_ == LibraryAccess.READ_WRITE)) {
-          lib.organizationId.toSet.flatMap(oid => organizationMembershipRepo.getAllByOrgId(oid).map(_.userId)).toSeq
-        } else Seq.empty
+          lib.organizationId.map(oid => organizationMembershipRepo.getAllByOrgId(oid).map(_.userId)).getOrElse(Set.empty)
+        } else Set.empty[Id[User]]
         (collaborators ++ invited ++ orgMembers).distinct
       }.flatMap { userIds =>
         FutureHelpers.sequentialExec(userIds)(refresh)

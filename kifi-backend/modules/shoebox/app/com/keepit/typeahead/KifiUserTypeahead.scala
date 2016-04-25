@@ -1,6 +1,6 @@
 package com.keepit.typeahead
 
-import com.google.inject.Inject
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -12,7 +12,7 @@ import com.amazonaws.services.s3.AmazonS3
 import com.keepit.common.store.S3Bucket
 import com.keepit.common.cache.{ Key, BinaryCacheImpl, FortyTwoCachePlugin, CacheStatistics }
 import scala.concurrent.duration._
-import com.keepit.common.concurrent.ExecutionContext
+import com.keepit.common.concurrent.{ FutureHelpers, ExecutionContext }
 import com.keepit.common.time._
 import org.joda.time.Minutes
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
@@ -22,6 +22,7 @@ object KifiUserTypeahead {
   type UserUserTypeahead = PersonalTypeahead[User, User, User]
 }
 
+@Singleton
 class KifiUserTypeahead @Inject() (
     db: Database,
     override val airbrake: AirbrakeNotifier,
@@ -39,10 +40,16 @@ class KifiUserTypeahead @Inject() (
   protected val fetchRequestConsolidationWindow = 15 seconds
 
   def refreshAll(): Future[Unit] = {
-    val userIds = db.readOnlyReplica { implicit ro =>
-      userRepo.getAllActiveIds()
+    var i = 0
+    FutureHelpers.doUntil {
+      db.readOnlyReplica { implicit session =>
+        val userIds = userRepo.pageAscending(i, 50, Set(UserStates.INACTIVE)).map(_.id.get)
+        i += 1
+        refreshByIds(userIds).map { _ =>
+          userIds.nonEmpty
+        }
+      }
     }
-    refreshByIds(userIds)
   }
 
   protected def create(userId: Id[User]) = {
