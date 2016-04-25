@@ -35,7 +35,6 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
   def getUserThreadsForEmailing(lastNotifiedBefore: DateTime)(implicit session: RSession): Seq[UserThread]
   def getUnreadThreadCounts(userId: Id[User])(implicit session: RSession): UnreadThreadCounts
   def getThreadCountsForUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): UnreadThreadCounts
-  def getUserThreads(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Seq[UserThread]
   def getLatestUnreadUnmutedThreads(userId: Id[User], howMany: Int)(implicit session: RSession): Seq[UserThread]
   def getUnreadThreadNotifications(userId: Id[User])(implicit session: RSession): Seq[UserThreadNotification]
   def getThreadStream(userId: Id[User], limit: Int, beforeId: Option[Id[Keep]], filter: ElizaFeedFilter)(implicit session: RSession): Map[Id[Keep], DateTime]
@@ -113,10 +112,6 @@ class UserThreadRepoImpl @Inject() (
 
   def getByKeep(keepId: Id[Keep])(implicit session: RSession): Seq[UserThread] = {
     (for (row <- activeRows if row.keepId === keepId) yield row).list
-  }
-
-  def getUserThreads(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Seq[UserThread] = {
-    activeRows.filter(r => r.user === userId && r.uriId === uriId).list
   }
 
   def getLatestUnreadUnmutedThreads(userId: Id[User], howMany: Int)(implicit session: RSession): Seq[UserThread] = {
