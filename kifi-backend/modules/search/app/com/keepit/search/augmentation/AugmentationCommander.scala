@@ -9,6 +9,7 @@ import org.apache.lucene.index.{ BinaryDocValues, NumericDocValues, Term }
 import com.keepit.search.index.{ DocUtil, Searcher, WrappedSubReader }
 import scala.collection.JavaConversions._
 import com.keepit.search.util.LongArraySet
+import scala.collection.mutable
 import scala.collection.mutable.{ ListBuffer, Map => MutableMap, Set => MutableSet }
 import com.keepit.search.index.sharding.{ ActiveShards, Sharding, Shard }
 import scala.concurrent.Future
@@ -149,8 +150,12 @@ class AugmentationCommanderImpl @Inject() (
   }
 
   // todo(Léo): consider exists vs forall as keeps get in multiple libraries, a good published keep could be added to a bad library
-  private def isIgnoredPublishedKeep(librarySearcher: Searcher, keepVisibility: Int, keepLibraries: Set[Id[Library]], hideOtherPublishedKeeps: Boolean): Boolean = {
-    (keepVisibility == Visibility.OTHERS) && (hideOtherPublishedKeeps || keepLibraries.forall(libraryId => showThisPublishedLibrary(librarySearcher, libraryId)))
+  private def isIgnoredPublishedKeep(librarySearcher: Searcher, keepVisibility: Int, keepLibraries: Set[Id[Library]], keepRecord: KeepRecord, hideOtherPublishedKeeps: Boolean): Boolean = {
+    (keepVisibility == Visibility.OTHERS) && (
+      hideOtherPublishedKeeps ||
+      keepRecord.tags.exists(_.normalized.contains("imported")) ||
+      keepLibraries.exists(libraryId => !showThisPublishedLibrary(librarySearcher, libraryId))
+    )
   }
 
   private def getAugmentationInfo(keepSearcher: Searcher, librarySearcher: Searcher, getKeepVisibilityEvaluator: WrappedSubReader => KeepVisibilityEvaluator, hideOtherPublishedKeeps: Boolean)(item: AugmentableItem): FullAugmentationInfo = {
@@ -206,13 +211,13 @@ class AugmentationCommanderImpl @Inject() (
 
           if (visibility != Visibility.RESTRICTED || isCanonicalKeep) {
             val libraries = getAndCountLibraryIds(libraryIdsDocValues, docId)
-            if (isIgnoredPublishedKeep(librarySearcher, visibility, libraries, hideOtherPublishedKeeps) && !isCanonicalKeep) { otherPublishedKeeps += 1 }
+            val record = getKeepRecord(docId)
+            if (isIgnoredPublishedKeep(librarySearcher, visibility, libraries, record, hideOtherPublishedKeeps) && !isCanonicalKeep) { otherPublishedKeeps += 1 }
             else {
               val owner = getAndCountOwnerId(ownerIdDocValues.get(docId))
               val users = getIds[User](userIdsDocValues, docId)
               val organizations = getIds[Organization](orgIdsDocValues, docId)
               val keptAt = keptAtDocValues.get(docId).toDateTime
-              val record = getKeepRecord(docId)
               keeps += KeepDocument(Id[Keep](keepId), keptAt, owner, users, libraries, organizations, record.note, record.tags)
             }
           }
