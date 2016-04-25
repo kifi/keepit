@@ -82,6 +82,7 @@ class LibraryCommanderImpl @Inject() (
   ktlRepo: KeepToLibraryRepo,
   ktlCommander: KeepToLibraryCommander,
   countByLibraryCache: CountByLibraryCache,
+  relevantSuggestedLibrariesCache: RelevantSuggestedLibrariesCache,
   airbrake: AirbrakeNotifier,
   searchClient: SearchServiceClient,
   libraryAnalytics: LibraryAnalytics,
@@ -114,6 +115,7 @@ class LibraryCommanderImpl @Inject() (
           libraryAnalytics.createLibrary(ownerId, library, context)
           searchClient.updateLibraryIndex()
           libraryTypeahead.refreshForAllCollaborators(library.id.get)
+          relevantSuggestedLibrariesCache.direct.remove(RelevantSuggestedLibrariesKey(ownerId))
         }
         Right(library)
     }

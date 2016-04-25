@@ -93,7 +93,7 @@ class KeepInfoController @Inject() (
   @json case class RecipientSuggestion(query: Option[String], results: Seq[JsObject /* TypeaheadResult */ ], mayHaveMore: Boolean, limit: Option[Int], offset: Option[Int])
   def suggestRecipient(query: Option[String], limit: Option[Int], offset: Option[Int], requested: Option[String]) = UserAction.async { request =>
     val requestedSet = requested.map(_.split(',').map(_.trim).flatMap(TypeaheadRequest.applyOpt).toSet).filter(_.nonEmpty).getOrElse(TypeaheadRequest.all)
-    typeaheadCommander.searchForKeepRecipients(request.userId, query.getOrElse(""), limit, offset, requestedSet).map { suggestions =>
+    typeaheadCommander.searchAndSuggestKeepRecipients(request.userId, query.getOrElse(""), limit, offset, requestedSet).map { suggestions =>
       val body = suggestions.take(limit.getOrElse(20)).collect {
         case u: UserContactResult => Json.toJson(u).as[JsObject] ++ Json.obj("kind" -> "user")
         case e: EmailContactResult => Json.toJson(e).as[JsObject] ++ Json.obj("kind" -> "email")

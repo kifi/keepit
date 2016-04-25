@@ -14,6 +14,7 @@ import com.keepit.common.logging.Logging.LoggerWithPrefix
 import com.keepit.common.logging.{ AccessLog, LogPrefix, Logging }
 import com.keepit.common.mail.{ BasicContact, EmailAddress }
 import com.keepit.common.reflection.Enumerator
+import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.ImagePath
 import com.keepit.common.time.DateTimeJsonFormat
@@ -27,7 +28,7 @@ import org.joda.time.DateTime
 import com.keepit.common.CollectionHelpers.dedupBy
 
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
 
 @Singleton
@@ -45,6 +46,7 @@ class TypeaheadCommander @Inject() (
     kifiUserTypeahead: KifiUserTypeahead,
     libraryTypeahead: LibraryTypeahead,
     relevantSuggestedLibrariesCache: RelevantSuggestedLibrariesCache,
+    libraryResultCache: LibraryResultCache,
     searchClient: SearchServiceClient,
     interactionCommander: UserInteractionCommander,
     libraryRepo: LibraryRepo,
@@ -293,14 +295,6 @@ class TypeaheadCommander @Inject() (
     }
   }
 
-  private def suggestionsToResults(suggestions: (Seq[Id[User]], Seq[EmailAddress])): (Seq[(Id[User], BasicUser)], Seq[BasicContact]) = {
-    val usersById = db.readOnlyMaster { implicit session => basicUserRepo.loadAll(suggestions._1.toSet) }
-    val users = suggestions._1.map(id => id -> usersById(id))
-    val contacts = suggestions._2.map(BasicContact(_))
-
-    (users, contacts)
-  }
-
   // Users and emails
   def searchForContacts(userId: Id[User], query: String, limit: Option[Int], includeSelf: Boolean): Future[(Seq[(Id[User], BasicUser)], Seq[BasicContact])] = {
     query.trim match {
@@ -325,6 +319,14 @@ class TypeaheadCommander @Inject() (
     }
   }
 
+  private def suggestionsToResults(suggestions: (Seq[Id[User]], Seq[EmailAddress])): (Seq[(Id[User], BasicUser)], Seq[BasicContact]) = {
+    val usersById = db.readOnlyMaster { implicit session => basicUserRepo.loadAll(suggestions._1.toSet) }
+    val users = suggestions._1.map(id => id -> usersById(id))
+    val contacts = suggestions._2.map(BasicContact(_))
+
+    (users, contacts)
+  }
+
   def searchForContactResults(userId: Id[User], query: String, limit: Option[Int], includeSelf: Boolean): Future[Seq[TypeaheadSearchResult]] = {
     val friendsAndContactsF = searchForContacts(userId, query, limit, includeSelf = includeSelf)
     for {
@@ -339,67 +341,79 @@ class TypeaheadCommander @Inject() (
   private val maxSearchHistory = 40 // Users can paginate through maxHistory suggestions. For more, they'll need to search.
   private val maxSuggestHistory = 200 // Users can paginate through maxHistory suggestions. For more, they'll need to search.
 
-  def searchForKeepRecipients(userId: Id[User], query: String, limitOpt: Option[Int], dropOpt: Option[Int], requested: Set[TypeaheadRequest]): Future[Seq[TypeaheadSearchResult]] = {
+  private[this] val suggestKeepRecipientsConsolidator = new RequestConsolidator[(Id[User], Option[Int], Option[Int], Set[TypeaheadRequest]), Seq[TypeaheadSearchResult]](20.seconds)
+  private[this] val searchKeepRecipientsConsolidator = new RequestConsolidator[(Id[User], String, Option[Int], Option[Int], Set[TypeaheadRequest]), Seq[TypeaheadSearchResult]](5.seconds)
+  def searchAndSuggestKeepRecipients(userId: Id[User], query: String, limitOpt: Option[Int], dropOpt: Option[Int], requested: Set[TypeaheadRequest]): Future[Seq[TypeaheadSearchResult]] = {
     // Users, emails, and libraries
     query.trim match {
       case q if q.isEmpty && dropOpt.exists(_ >= maxSuggestHistory) => Future.successful(Seq.empty)
       case q if q.nonEmpty && dropOpt.exists(_ >= maxSearchHistory) => Future.successful(Seq.empty)
       case q if q.isEmpty =>
-        Future.successful(suggestResults(userId, limitOpt, dropOpt, requested))
+        suggestKeepRecipientsConsolidator(userId, limitOpt, dropOpt, requested) { _ =>
+          Future.successful(suggestResults(userId, limitOpt, dropOpt, requested))
+        }
       case q =>
-        val drop = dropOpt.map(Math.min(_, 40)).getOrElse(0)
-        val limit = limitOpt.map(Math.min(_, 20)).getOrElse(10) // Fetch too many, we'll drop later.
-        val ceil = drop + limit
-
-        val friendsF = if (requested.contains(TypeaheadRequest.User) || requested.contains(TypeaheadRequest.Email)) {
-          searchFriendsAndContacts(userId, q, includeSelf = true, Some(ceil))
-        } else Future.successful((Seq.empty, Seq.empty))
-        val librariesF = if (requested.contains(TypeaheadRequest.Library)) {
-          libraryTypeahead.topN(userId, q, Some(ceil))(TypeaheadHit.defaultOrdering[LibraryTypeaheadResult])
-        } else Future.successful(Seq.empty)
-
-        val (userScore, emailScore, libScore) = {
-          val interactions = interactionCommander.getRecentInteractions(userId).zipWithIndex
-          val userScore = interactions.collect {
-            case (InteractionScore(UserInteractionRecipient(u), score), idx) => u -> idx
-          }.toMap.withDefaultValue(UserInteraction.maximumInteractions)
-          val emailScore = interactions.collect {
-            case (InteractionScore(EmailInteractionRecipient(e), score), idx) => e -> idx
-          }.toMap.withDefaultValue(UserInteraction.maximumInteractions)
-          val libScore = interactions.collect {
-            case (InteractionScore(LibraryInteraction(l), score), idx) => l -> idx
-          }.toMap.withDefaultValue(UserInteraction.maximumInteractions)
-          (userScore, emailScore, libScore)
+        searchKeepRecipientsConsolidator(userId, q, limitOpt, dropOpt, requested) { _ =>
+          searchKeepRecipients(userId, q, limitOpt, dropOpt, requested)
         }
+    }
+  }
 
-        for {
-          (users, contacts) <- friendsF
-          libraryHits <- librariesF
-        } yield {
-          val libraries = libraryHits.map(_.info)
-          // (interactionIdx, typeaheadIdx, value). Lower scores are better for both.
-          val userRes = users.zipWithIndex.map {
-            case ((id, bu), idx) =>
-              (userScore(id), idx, UserContactResult(name = bu.fullName, id = bu.externalId, pictureName = Some(bu.pictureName), username = bu.username, firstName = bu.firstName, lastName = bu.lastName))
-          }
-          val emailRes = contacts.zipWithIndex.map {
-            case (contact, idx) =>
-              (emailScore(contact.email), idx + limit, EmailContactResult(email = contact.email, name = contact.name))
-          }
-          val libIdToImportance = libraries.map(r => r.id -> r.importance).toMap
-          val libRes = libToResult(userId, libraries.map(_.id)).zipWithIndex.map {
-            case ((id, lib), idx) =>
-              (libScore(id), idx + libIdToImportance(id), lib)
-          }
-          val combined: Seq[TypeaheadSearchResult] = (userRes ++ emailRes ++ libRes).filter {
-            case (_, _, u: UserContactResult) if requested.contains(TypeaheadRequest.User) => true
-            case (_, _, e: EmailContactResult) if requested.contains(TypeaheadRequest.Email) => true
-            case (_, _, l: LibraryResult) if requested.contains(TypeaheadRequest.Library) => true
-            case _ => false
-          }.sortBy(d => (d._1, d._2)).slice(drop, ceil).map { case (_, _, res) => res }
+  private def searchKeepRecipients(userId: Id[User], query: String, limitOpt: Option[Int], dropOpt: Option[Int], requested: Set[TypeaheadRequest]): Future[Seq[TypeaheadSearchResult]] = {
+    val drop = dropOpt.map(Math.min(_, 40)).getOrElse(0)
+    val limit = limitOpt.map(Math.min(_, 20)).getOrElse(10) // Fetch too many, we'll drop later.
+    val ceil = drop + limit
 
-          combined
-        }
+    val friendsF = if (requested.contains(TypeaheadRequest.User) || requested.contains(TypeaheadRequest.Email)) {
+      searchFriendsAndContacts(userId, query, includeSelf = true, Some(ceil))
+    } else Future.successful((Seq.empty, Seq.empty))
+    val librariesF = if (requested.contains(TypeaheadRequest.Library)) {
+      libraryTypeahead.topN(userId, query, Some(ceil))(TypeaheadHit.defaultOrdering[LibraryTypeaheadResult])
+    } else Future.successful(Seq.empty)
+
+    val (userScore, emailScore, libScore) = {
+      val interactions = interactionCommander.getRecentInteractions(userId).zipWithIndex
+      val userScore = interactions.collect {
+        case (InteractionScore(UserInteractionRecipient(u), score), idx) => u -> idx
+      }.toMap.withDefaultValue(UserInteraction.maximumInteractions)
+      val emailScore = interactions.collect {
+        case (InteractionScore(EmailInteractionRecipient(e), score), idx) => e -> idx
+      }.toMap.withDefaultValue(UserInteraction.maximumInteractions)
+      val libScore = interactions.collect {
+        case (InteractionScore(LibraryInteraction(l), score), idx) => l -> idx
+      }.toMap.withDefaultValue(UserInteraction.maximumInteractions)
+      (userScore, emailScore, libScore)
+    }
+
+    for {
+      (users, contacts) <- friendsF
+      libraryHits <- librariesF
+    } yield {
+      val libraries = libraryHits.map(_.info)
+      // (interactionIdx, typeaheadIdx, value). Lower scores are better for both.
+      val userRes = users.zipWithIndex.map {
+        case ((id, bu), idx) =>
+          (userScore(id), idx, UserContactResult(name = bu.fullName, id = bu.externalId, pictureName = Some(bu.pictureName), username = bu.username, firstName = bu.firstName, lastName = bu.lastName))
+      }
+      val emailRes = contacts.zipWithIndex.map {
+        case (contact, idx) =>
+          (emailScore(contact.email), idx + limit, EmailContactResult(email = contact.email, name = contact.name))
+      }
+      val libIdToImportance = libraries.map(r => r.id -> r.importance).toMap
+      val libsById = libToResult(userId, libraries.map(_.id))
+      val libRes = libraries.flatMap(l => libsById.get(l.id).map(r => l.id -> r)).zipWithIndex.map {
+        case ((id, lib), idx) =>
+          (libScore(id), idx + libIdToImportance(id), lib)
+      }
+
+      val combined: Seq[TypeaheadSearchResult] = (userRes ++ emailRes ++ libRes).filter {
+        case (_, _, u: UserContactResult) if requested.contains(TypeaheadRequest.User) => true
+        case (_, _, e: EmailContactResult) if requested.contains(TypeaheadRequest.Email) => true
+        case (_, _, l: LibraryResult) if requested.contains(TypeaheadRequest.Library) => true
+        case _ => false
+      }.sortBy(d => (d._1, d._2)).slice(drop, ceil).map { case (_, _, res) => res }
+
+      combined
     }
   }
 
@@ -459,42 +473,45 @@ class TypeaheadCommander @Inject() (
     }
   }
 
-  private def libToResult(userId: Id[User], libIds: Seq[Id[Library]]): Seq[(Id[Library], LibraryResult)] = {
-    val idSet = libIds.toSet
-    val (libs, collaborators, memberships, permissions, basicUserById, orgAvatarsById, slackInfoById) = db.readOnlyReplica { implicit session =>
-      val libs = libraryRepo.getActiveByIds(idSet).values.toVector
-      val collaborators = libraryMembershipRepo.getCollaboratorsByLibrary(idSet)
-      val memberships = libraryMembershipRepo.getWithLibraryIdsAndUserId(idSet, userId)
-      val permissions = libs.map { lib =>
-        lib.id.get -> permissionCommander.get.getLibraryPermissions(lib.id.get, Some(userId))
+  private def libToResult(userId: Id[User], libIds: Seq[Id[Library]]): Map[Id[Library], LibraryResult] = {
+    val results = libraryResultCache.direct.bulkGetOrElse(libIds.toSet.map(l => LibraryResultKey(userId, l))) { missingKeys =>
+      val idSet = missingKeys.map(_.libraryId)
+      val (libs, collaborators, memberships, permissions, basicUserById, orgAvatarsById, slackInfoById) = db.readOnlyReplica { implicit session =>
+        val libs = libraryRepo.getActiveByIds(idSet).values.toVector
+        val collaborators = libraryMembershipRepo.getCollaboratorsByLibrary(idSet)
+        val memberships = libraryMembershipRepo.getWithLibraryIdsAndUserId(idSet, userId)
+        val permissions = libs.map { lib =>
+          lib.id.get -> permissionCommander.get.getLibraryPermissions(lib.id.get, Some(userId))
+        }.toMap
+        val basicUserById = basicUserRepo.loadAll(collaborators.values.flatten.toSet)
+        val orgAvatarsById = organizationAvatarCommander.get.getBestImagesByOrgIds(libs.flatMap(_.organizationId).toSet, ProcessedImageSize.Medium.idealSize)
+        val slackInfoById = slackInfoCommander.getLiteSlackInfoForLibraries(idSet)
+
+        (libs, collaborators, memberships, permissions, basicUserById, orgAvatarsById, slackInfoById)
+      }
+      libs.collect {
+        case lib if lib.isActive =>
+          val collabs = (collaborators.getOrElse(lib.id.get, Set.empty) - userId).map(basicUserById(_)).toSeq
+          val orgAvatarPath = lib.organizationId.flatMap { orgId => orgAvatarsById.get(orgId).map(_.imagePath) }
+          val membershipInfo = memberships.get(lib.id.get).map { mem =>
+            LibraryMembershipInfo(mem.access, mem.listed, mem.subscribedToUpdates, permissions.getOrElse(lib.id.get, Set.empty))
+          }
+
+          LibraryResultKey(userId, lib.id.get) -> LibraryResult(
+            id = Library.publicId(lib.id.get),
+            name = lib.name,
+            color = lib.color,
+            visibility = lib.visibility,
+            path = pathCommander.getPathForLibrary(lib),
+            hasCollaborators = collabs.nonEmpty,
+            collaborators = collabs,
+            orgAvatar = orgAvatarPath,
+            membership = membershipInfo,
+            slack = slackInfoById.get(lib.id.get)
+          )
       }.toMap
-      val basicUserById = basicUserRepo.loadAll(collaborators.values.flatten.toSet)
-      val orgAvatarsById = organizationAvatarCommander.get.getBestImagesByOrgIds(libs.flatMap(_.organizationId).toSet, ProcessedImageSize.Medium.idealSize)
-      val slackInfoById = slackInfoCommander.getLiteSlackInfoForLibraries(idSet)
-
-      (libs, collaborators, memberships, permissions, basicUserById, orgAvatarsById, slackInfoById)
     }
-    libs.collect {
-      case lib if lib.isActive =>
-        val collabs = (collaborators.getOrElse(lib.id.get, Set.empty) - userId).map(basicUserById(_)).toSeq
-        val orgAvatarPath = lib.organizationId.flatMap { orgId => orgAvatarsById.get(orgId).map(_.imagePath) }
-        val membershipInfo = memberships.get(lib.id.get).map { mem =>
-          LibraryMembershipInfo(mem.access, mem.listed, mem.subscribedToUpdates, permissions.getOrElse(lib.id.get, Set.empty))
-        }
-
-        lib.id.get -> LibraryResult(
-          id = Library.publicId(lib.id.get),
-          name = lib.name,
-          color = lib.color,
-          visibility = lib.visibility,
-          path = pathCommander.getPathForLibrary(lib),
-          hasCollaborators = collabs.nonEmpty,
-          collaborators = collabs,
-          orgAvatar = orgAvatarPath,
-          membership = membershipInfo,
-          slack = slackInfoById.get(lib.id.get)
-        )
-    }
+    results.map(r => r._1.libraryId -> r._2)
   }
 
   def hideEmailFromUser(userId: Id[User], email: EmailAddress): Future[Boolean] = {
@@ -509,6 +526,15 @@ case class RelevantSuggestedLibrariesKey(userId: Id[User]) extends Key[Seq[Id[Li
   val namespace = "relevant_libraries"
   override val version = 1
   def toKey(): String = userId.id.toString
+}
+
+class LibraryResultCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[LibraryResultKey, LibraryResult](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
+case class LibraryResultKey(userId: Id[User], libraryId: Id[Library]) extends Key[LibraryResult] {
+  val namespace = "library_result"
+  override val version = 1
+  def toKey(): String = userId.id.toString + ":" + libraryId.id.toString
 }
 
 @json case class ConnectionWithInviteStatus(label: String, score: Int, networkType: String, image: Option[String], value: String, status: String, email: Option[String] = None, inviteLastSentAt: Option[DateTime] = None)
