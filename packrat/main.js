@@ -518,12 +518,14 @@ var socketHandlers = {
     });
 
     var keep = keepData[keepId];
-    keep.recipients.users = users;
-    keep.recipients.emails = emails;
-    keep.recipients.libraries = libraries;
-    forEachTabAtLocator('/messages/' + keepId, function (tab) {
-      api.tabs.emit(tab, 'recipients', { users: users, emails: emails, libraries: libraries });
-    });
+    if (keep) {
+      keep.recipients.users = users;
+      keep.recipients.emails = emails;
+      keep.recipients.libraries = libraries;
+      forEachTabAtLocator('/messages/' + keepId, function (tab) {
+        api.tabs.emit(tab, 'recipients', { users: users, emails: emails, libraries: libraries });
+      });
+    }
   },
   thread_participants: function(threadId, participants) {
     log('[socket:thread_participants]', threadId, participants);
