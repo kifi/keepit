@@ -42,6 +42,7 @@ class ExtAuthController @Inject() (
   facebook: FacebookSocialGraph,
   linkedIn: LinkedInSocialGraph,
   twitter: TwitterSocialGraph,
+  typeaheadCommander: TypeaheadCommander,
   implicit val publicIdConfig: PublicIdConfiguration)
     extends UserActions with ShoeboxServiceController {
 
@@ -120,6 +121,10 @@ class ExtAuthController @Inject() (
 
         val ip = IpAddress.fromRequest(request).ip
         val encryptedIp: String = crypt.crypt(ipkey, ip).trim
+
+        SafeFuture { // Prefetch typeaheads on extension load.
+          typeaheadCommander.searchAndSuggestKeepRecipients(userId, "", None, None, TypeaheadRequest.all)
+        }
 
         Ok(Json.obj(
           "user" -> BasicUser.fromUser(request.user),

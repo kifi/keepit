@@ -66,6 +66,7 @@ class LibraryMembershipCommanderImpl @Inject() (
     userInteractionCommander: UserInteractionCommander,
     kifiUserTypeahead: KifiUserTypeahead,
     libraryTypeahead: Provider[LibraryTypeahead],
+    relevantSuggestedLibrariesCache: RelevantSuggestedLibrariesCache,
     libraryAnalytics: LibraryAnalytics,
     elizaClient: ElizaServiceClient,
     searchClient: SearchServiceClient,
@@ -284,6 +285,7 @@ class LibraryMembershipCommanderImpl @Inject() (
 
   private def refreshTypeaheads(userId: Id[User], libraryId: Id[Library]): Future[Unit] = {
     libraryTypeahead.get.refresh(userId).map { _ =>
+      relevantSuggestedLibrariesCache.direct.remove(RelevantSuggestedLibrariesKey(userId))
       val collaboratorIds = db.readOnlyMaster { implicit session =>
         libraryMembershipRepo.getCollaboratorsByLibrary(Set(libraryId)).get(libraryId).toSet.flatten
       }
