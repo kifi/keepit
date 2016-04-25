@@ -228,7 +228,7 @@ class SlackPushGenerator @Inject() (
     ContextSensitiveSlackPush.generate(asUser => SlackMessageRequest.fromKifi(
       text = if (msg.isDeleted) "[comment has been deleted]"
       else DescriptionElements.formatForSlack(DescriptionElements(Some(s"*$userStr:*").filterNot(_ => asUser), textAndLookHeres.map {
-        case Left(str) => DescriptionElements(str)
+        case Left(str) => DescriptionElements(Hashtags.format(str))
         case Right(Success((pointer, ref))) => pointer --> msgLink("lookHere")
         case Right(Failure(fail)) => "look here" --> msgLink("lookHere")
       })),
