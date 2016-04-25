@@ -172,11 +172,18 @@ class ElizaDiscussionCommanderImpl @Inject() (
     }
     threadFut.map { thread =>
       if (!thread.containsUser(userId)) {
-        db.readWrite { implicit s =>
+        val newThread = db.readWrite { implicit s =>
           messageThreadRepo.save(thread.withParticipants(clock.now, Set(userId))) tap { updatedThread =>
             val ut = userThreadRepo.intern(UserThread.forMessageThread(updatedThread)(userId))
           }
         }
+
+        shoebox.getRecipientsOnKeep(keepId).map {
+          case (basicUsers, basicLibraries, emails) =>
+            notifDeliveryCommander.sendKeepRecipients(newThread.participants.allUsers, thread.pubKeepId, basicUsers.values.toSet, basicLibraries.values.toSet, emails)
+        }
+
+        newThread
       } else {
         thread
       }
