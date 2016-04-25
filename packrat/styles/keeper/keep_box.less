@@ -350,21 +350,32 @@
 .kifi-keep-box-with-lib-card {
   position: relative;
 }
-
+.kifi-keep-box-lib-name-wrap {
+  display: flex;
+}
+.kifi-keep-box-lib-name {
+  display: inline-block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kifi-keep-box-lib-icons {
+  display: inline-block;
+  vertical-align: top;
+}
 .kifi-keep-box-lib-slack-icon {
-  @url: %(@kifi-symbol-slack-monochrome, #333, #333, #333);
+  @url: %(@kifi-symbol-slack-monochrome, @lib-icon-color);
   display: inline-block;
   width: 20px;
   height: 14px;
-  margin-left: -6px;
   margin-bottom: -2px;
+  margin-left: -2px;
   background-image: url(@url);
   background-size: 115%;
   background-position: center;
   background-repeat: no-repeat;
 }
 
-.kifi-keep-box-lib-icon {
+.kifi-keep-box-lib-icon-visibility {
   display: none;
   vertical-align: middle;
   margin-top: -1px;
@@ -383,8 +394,10 @@
   background-color: #333434; // default
 }
 
-.kifi-discoverable .kifi-keep-box-lib-icon {
-  @url: %(@svgLibCardStarDataUrl, #000, 4);
+@lib-icon-color: #666;
+
+.kifi-discoverable .kifi-keep-box-lib-icon-visibility {
+  @url: %(@svgLibCardStarDataUrl, @lib-icon-color, 4);
   display: inline-block;
   background-image: url(@url);
   background-position: center;
@@ -393,9 +406,10 @@
   width: 11px;
   height: 11px;
   margin-top: -2px;
+  margin-left: 2px;
 }
-.kifi-secret .kifi-keep-box-lib-icon {
-  @url: %(@svgLibCardLockDataUrl, #000);
+.kifi-secret .kifi-keep-box-lib-icon-visibility {
+  @url: %(@svgLibCardLockDataUrl, @lib-icon-color);
   display: inline-block;
   background-image: url(@url);
   background-position: center;
@@ -403,9 +417,10 @@
   background-repeat: no-repeat;
   width: 8px;
   height: 12px;
+  margin-left: 3px;
 }
-.kifi-keep-box-lib-organization.kifi-published .kifi-keep-box-lib-icon {
-  @url: %(@svgLibCardGlobeDataUrl, #000);
+.kifi-published .kifi-keep-box-lib-icon-visibility {
+  @url: %(@svgLibCardGlobeDataUrl, @lib-icon-color);
   display: inline-block;
   background-image: url(@url);
   background-position: center;
@@ -413,15 +428,25 @@
   background-repeat: no-repeat;
   width: 12px;
   height: 12px;
-  margin-left: -2px;
-  margin-right: 2px;
+  margin-left: 2px;
+}
+.kifi-organization .kifi-keep-box-lib-icon-visibility {
+  @url: %(@kifi-symbol-org, @lib-icon-color);
+  display: inline-block;
+  background-image: url(@url);
+  background-position: center;
+  background-size: 14px 14px;
+  background-repeat: no-repeat;
+  width: 12px;
+  height: 12px;
+  margin-left: 3px;
 }
 
 .kifi-create .kifi-keep-box-lib-card {
   width: 20px;
   height: 28px;
 
-  .kifi-keep-box-lib-icon {
+  .kifi-keep-box-lib-icon-visibility {
     @url: %(@svgLibCardPlusDataUrl, #fff, #fff);
     display: block;
     background: url(@url) center/10px 10px no-repeat;
