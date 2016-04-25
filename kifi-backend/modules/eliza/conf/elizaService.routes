@@ -2,9 +2,6 @@
 # Site API
 ##########################################
 
-POST    /eliza/site/chatter               @com.keepit.controllers.site.ChatterController.getChatter
-GET     /eliza/site/notifications         @com.keepit.eliza.controllers.site.WebsiteMessagingController.getNotifications(n: Int, before: Option[String] ?= None)
-
 ##########################################
 # Extension API
 ##########################################
@@ -91,7 +88,6 @@ GET  /internal/eliza/keepAttribution            @com.keepit.eliza.controllers.in
 GET   /internal/eliza/getNonUserThreadMuteInfo  @com.keepit.eliza.controllers.internal.MessagingController.getNonUserThreadMuteInfo(publicId: String)
 POST  /internal/eliza/setNonUserThreadMuteState @com.keepit.eliza.controllers.internal.MessagingController.setNonUserThreadMuteState(publicId: String, muted: Boolean)
 POST  /internal/eliza/convertNonUserThreadToUserThread    @com.keepit.eliza.controllers.internal.MessagingController.convertNonUserThreadToUserThread(userId: Id[User], accessToken: String)
-POST  /internal/eliza/checkUrisDiscussed         @com.keepit.eliza.controllers.internal.MessagingController.checkUrisDiscussed(userId: Id[User])
 
 POST  /internal/eliza/sharedThreadsForGroupByWeek         @com.keepit.eliza.controllers.internal.ElizaController.getSharedThreadsForGroupByWeek
 POST  /internal/eliza/allThreadsForGroupByWeek         @com.keepit.eliza.controllers.internal.ElizaController.getAllThreadsForGroupByWeek

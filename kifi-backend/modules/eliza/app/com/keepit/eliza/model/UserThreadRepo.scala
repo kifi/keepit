@@ -35,16 +35,13 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
   def getUserThreadsForEmailing(lastNotifiedBefore: DateTime)(implicit session: RSession): Seq[UserThread]
   def getUnreadThreadCounts(userId: Id[User])(implicit session: RSession): UnreadThreadCounts
   def getThreadCountsForUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): UnreadThreadCounts
-  def getUserThreads(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Seq[UserThread]
   def getLatestUnreadUnmutedThreads(userId: Id[User], howMany: Int)(implicit session: RSession): Seq[UserThread]
   def getUnreadThreadNotifications(userId: Id[User])(implicit session: RSession): Seq[UserThreadNotification]
   def getThreadStream(userId: Id[User], limit: Int, beforeId: Option[Id[Keep]], filter: ElizaFeedFilter)(implicit session: RSession): Map[Id[Keep], DateTime]
 
   // Single-use queries that are actually slower than just doing the sane thing
   def getThreadActivity(keepId: Id[Keep])(implicit session: RSession): Seq[UserThreadActivity]
-  def getKeepIds(user: Id[User], uriId: Option[Id[NormalizedURI]] = None)(implicit session: RSession): Seq[Id[Keep]]
   def isMuted(userId: Id[User], keepId: Id[Keep])(implicit session: RSession): Boolean
-  def checkUrisDiscussed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]])(implicit session: RSession): Seq[Boolean]
 
   // Handling read/unread
   def setLastActive(userId: Id[User], keepId: Id[Keep], lastActive: DateTime)(implicit session: RWSession): Unit
@@ -117,10 +114,6 @@ class UserThreadRepoImpl @Inject() (
     (for (row <- activeRows if row.keepId === keepId) yield row).list
   }
 
-  def getUserThreads(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Seq[UserThread] = {
-    activeRows.filter(r => r.user === userId && r.uriId === uriId).list
-  }
-
   def getLatestUnreadUnmutedThreads(userId: Id[User], howMany: Int)(implicit session: RSession): Seq[UserThread] = {
     activeRows
       .filter(row => row.user === userId && row.unread && !row.muted)
@@ -148,12 +141,6 @@ class UserThreadRepoImpl @Inject() (
       .take(limit)
       .map(row => (row.keepId, row.notificationUpdatedAt))
       .list.toMap
-  }
-
-  def getKeepIds(userId: Id[User], uriIdOpt: Option[Id[NormalizedURI]] = None)(implicit session: RSession): Seq[Id[Keep]] = {
-    uriIdOpt.map { uriId => activeRows.filter(row => row.user === userId && row.uriId === uriId) }
-      .getOrElse { activeRows.filter(row => row.user === userId) }
-      .map(_.keepId).list
   }
 
   def markAllRead(user: Id[User])(implicit session: RWSession): Unit = {
@@ -281,11 +268,6 @@ class UserThreadRepoImpl @Inject() (
         started = activeRows.filter(row => row.user === userId && row.startedBy === userId).length.run
       )
     }
-  }
-
-  def checkUrisDiscussed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]])(implicit session: RSession): Seq[Boolean] = {
-    val uriSet = (for (row <- activeRows if row.user === userId && row.uriId.isDefined) yield row.uriId).list.toSet.flatten
-    uriIds.map(uriId => uriSet.contains(uriId))
   }
 
   def getByAccessToken(token: ThreadAccessToken)(implicit session: RSession): Option[UserThread] = {

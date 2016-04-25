@@ -96,23 +96,5 @@ class UserThreadRepoTest extends Specification with ElizaTestInjector {
         }
       }
     }
-
-    "check batch threads" in {
-      withDb(modules: _*) { implicit injector =>
-        val user = Id[User](42)
-        val rando = Id[User](43)
-        val uris = Seq(Id[NormalizedURI](1), Id[NormalizedURI](4), Id[NormalizedURI](3))
-        db.readWrite { implicit s =>
-          val Seq(mt1, mt2, mt3) = (1 to 3).toList.map { x => MessageThreadFactory.thread().withUri(Id(x)).saved }
-          userThreadRepo.save(UserThread.forMessageThread(mt1)(user))
-          userThreadRepo.save(UserThread.forMessageThread(mt2)(user))
-          userThreadRepo.save(UserThread.forMessageThread(mt3)(rando))
-          // uris {1,2} are both discussed by user. uri3 is discussed by rando. uri4 is never discussed
-
-          userThreadRepo.checkUrisDiscussed(user, uris) === Seq(true, false, false)
-        }
-      }
-    }
-
   }
 }

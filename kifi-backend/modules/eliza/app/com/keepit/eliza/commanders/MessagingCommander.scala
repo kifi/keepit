@@ -54,8 +54,7 @@ object MessagingCommander {
 trait MessagingCommander {
   // todo: For each method here, remove if no one's calling it externally, and set as private in the implementation
   def getThreadInfos(userId: Id[User], url: String): Future[(String, Seq[ElizaThreadInfo])]
-  def keepAttribution(userId: Id[User], uriId: Id[NormalizedURI]): Seq[Id[User]]
-  def checkUrisDiscussed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]]
+  def keepAttribution(userId: Id[User], uriId: Id[NormalizedURI]): Future[Set[Id[User]]]
   def sendMessageWithNonUserThread(nut: NonUserThread, messageText: String, source: Option[MessageSource], urlOpt: Option[URI])(implicit context: HeimdalContext): (MessageThread, ElizaMessage)
   def sendMessageWithUserThread(userThread: UserThread, messageText: String, source: Option[MessageSource], urlOpt: Option[URI])(implicit context: HeimdalContext): (MessageThread, ElizaMessage)
   def sendMessage(from: Id[User], thread: MessageThread, messageText: String, source: Option[MessageSource], urlOpt: Option[URI])(implicit context: HeimdalContext): (MessageThread, ElizaMessage)
@@ -77,7 +76,6 @@ trait MessagingCommander {
   def addParticipantsToThread(adderUserId: Id[User], keepId: Id[Keep], newUsers: Seq[Id[User]], emailContacts: Seq[BasicContact], newLibraries: Seq[Id[Library]],
     orgIds: Seq[Id[Organization]], source: Option[KeepEventSource], updateShoebox: Boolean)(implicit context: HeimdalContext): Future[Boolean]
 
-  def getChatter(userId: Id[User], urls: Seq[String]): Future[Map[String, Seq[Id[Keep]]]]
   def validateUsers(rawUsers: Seq[JsValue]): Seq[JsResult[ExternalId[User]]]
   def validateEmailContacts(rawNonUsers: Seq[JsValue]): Seq[JsResult[BasicContact]]
   def parseRecipients(rawRecipients: Seq[JsValue]): (Seq[ExternalId[User]], Seq[BasicContact], Seq[PublicId[Organization]])
@@ -162,33 +160,37 @@ class MessagingCommanderImpl @Inject() (
   def getThreadInfos(userId: Id[User], url: String): Future[(String, Seq[ElizaThreadInfo])] = {
     new SafeFuture(shoebox.getNormalizedUriByUrlOrPrenormalize(url).flatMap {
       case Left(nUri) =>
-        val threads = db.readOnlyReplica { implicit session =>
-          val keepIds = userThreadRepo.getKeepIds(userId, nUri.id)
-          val threadsByKeepId = threadRepo.getByKeepIds(keepIds.toSet)
-          keepIds.map(threadsByKeepId(_))
-        }
-        buildThreadInfos(userId, threads, url).map { unsortedInfos =>
-          val infos = unsortedInfos sortWith { (a, b) =>
-            a.lastCommentedAt.compareTo(b.lastCommentedAt) < 0
+        shoebox.getPersonalKeepRecipientsOnUris(userId, Set(nUri.id.get), excludeAccess = Some(LibraryAccess.READ_ONLY)).flatMap { keepsByUriId =>
+          val keepIds = keepsByUriId.get(nUri.id.get).getOrElse(Set.empty).map(_.id)
+          val threads = db.readOnlyReplica { implicit session =>
+            val threadsByKeepId = threadRepo.getByKeepIds(keepIds)
+            keepIds.flatMap(threadsByKeepId.get)
           }
-          (nUri.url, infos)
+          buildThreadInfos(userId, threads.toSeq, url).map { unsortedInfos =>
+            val infos = unsortedInfos sortWith { (a, b) =>
+              a.lastCommentedAt.compareTo(b.lastCommentedAt) < 0
+            }
+            (nUri.url, infos)
+          }
         }
       case Right(prenormalizedUrl) =>
         Future.successful((prenormalizedUrl, Seq[ElizaThreadInfo]()))
     })
   }
 
-  def keepAttribution(userId: Id[User], uriId: Id[NormalizedURI]): Seq[Id[User]] = db.readOnlyReplica { implicit session =>
-    val threads = userThreadRepo.getUserThreads(userId, uriId)
-    val otherStarters = threads.collect {
-      case ut if ut.lastSeen.exists(dt => dt.plusDays(3).isAfterNow) && ut.startedBy != userId => ut.startedBy
+  def keepAttribution(userId: Id[User], uriId: Id[NormalizedURI]): Future[Set[Id[User]]] = {
+    shoebox.getPersonalKeepRecipientsOnUris(userId, Set(uriId)).map { keepByUriId =>
+      val keepIds = keepByUriId.getOrElse(uriId, Set.empty).map(_.id)
+      val otherStarters = db.readOnlyReplica { implicit session =>
+        keepIds.flatMap { keepId =>
+          userThreadRepo.getUserThread(userId, keepId).collect {
+            case ut if ut.lastSeen.exists(dt => dt.plusDays(3).isAfterNow) && ut.startedBy != userId => ut.startedBy
+          }
+        }
+      }
+      log.info(s"[keepAttribution($userId,$uriId)] keeps=${keepIds} otherStarters=$otherStarters")
+      otherStarters
     }
-    log.info(s"[keepAttribution($userId,$uriId)] threads=${threads.map(_.id.get)} otherStarters=$otherStarters")
-    otherStarters
-  }
-
-  def checkUrisDiscussed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = {
-    db.readOnlyReplicaAsync { implicit session => userThreadRepo.checkUrisDiscussed(userId, uriIds) }
   }
 
   private def constructNonUserRecipients(userId: Id[User], nonUsers: Seq[BasicContact]): Future[Seq[NonUserParticipant]] = {
@@ -633,20 +635,6 @@ class MessagingCommanderImpl @Inject() (
           true
       }
     }.contains(true)
-  }
-
-  def getChatter(userId: Id[User], urls: Seq[String]): Future[Map[String, Seq[Id[Keep]]]] = {
-    implicit val timeout = Duration(3, "seconds")
-    TimeoutFuture(Future.sequence(urls.map(u => shoebox.getNormalizedURIByURL(u).map(n => u -> n)))).recover {
-      case ex: TimeoutException => Seq[(String, Option[NormalizedURI])]()
-    }.map { res =>
-      db.readOnlyReplica { implicit session =>
-        res.collect {
-          case (url, Some(nuri)) =>
-            url -> userThreadRepo.getKeepIds(userId, Some(nuri.id.get))
-        }
-      }.toMap
-    }
   }
 
   def sendMessageAction(
