@@ -5,7 +5,7 @@ import com.keepit.model.{ User, Hashtag }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.Id
 import scala.concurrent.{ ExecutionContext, Future }
-import com.google.inject.Inject
+import com.google.inject.{ Inject, Singleton }
 import play.api.libs.json.Json
 import org.joda.time.DateTime
 import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
@@ -26,6 +26,7 @@ object UserHashtagTypeahead {
   }
 }
 
+@Singleton
 class HashtagTypeahead @Inject() (
     val airbrake: AirbrakeNotifier,
     cache: UserHashtagTypeaheadCache,

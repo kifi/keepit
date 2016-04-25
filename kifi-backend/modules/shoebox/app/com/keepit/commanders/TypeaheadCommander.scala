@@ -1,6 +1,6 @@
 package com.keepit.commanders
 
-import com.google.inject.{ Provider, Inject }
+import com.google.inject.{ Provider, Inject, Singleton }
 import com.keepit.abook.ABookServiceClient
 import com.keepit.abook.model.RichContact
 import com.keepit.common.cache.{ Key, JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics }
@@ -30,6 +30,7 @@ import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ ExecutionContext, Future }
 
+@Singleton
 class TypeaheadCommander @Inject() (
     db: Database,
     airbrake: AirbrakeNotifier,
@@ -452,8 +453,8 @@ class TypeaheadCommander @Inject() (
 
   private def prefetchTypeaheads(userId: Id[User]): Unit = {
     Future {
-      libraryTypeahead.prefetch(userId).map { _ =>
-        kifiUserTypeahead.prefetch(userId)
+      libraryTypeahead.prefetch(userId, refreshAlways = true).map { _ =>
+        kifiUserTypeahead.prefetch(userId, refreshAlways = false)
       }
     }
   }
