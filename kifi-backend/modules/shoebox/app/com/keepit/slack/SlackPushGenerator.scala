@@ -219,7 +219,7 @@ class SlackPushGenerator @Inject() (
         "  ",
         "View" --> keepLink("viewArticle"),
         "|",
-        "Reply" --> keepLink("reply")
+        ("Reply" + msg.commentIndexOnKeep.filter(_ > 0).map(idx => " $idx").getOrElse("")) --> keepLink("reply")
       )
     }
 
