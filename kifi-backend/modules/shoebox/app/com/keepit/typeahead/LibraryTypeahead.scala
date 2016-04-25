@@ -54,7 +54,7 @@ class LibraryTypeahead @Inject() (
     implicit val ec: ExecutionContext,
     implicit val config: PublicIdConfiguration) extends Typeahead[User, Library, LibraryTypeaheadResult, UserLibraryTypeahead] with Logging {
 
-  protected val refreshRequestConsolidationWindow = 10 seconds
+  protected val refreshRequestConsolidationWindow = 20 seconds
 
   protected val fetchRequestConsolidationWindow = 30 seconds
 

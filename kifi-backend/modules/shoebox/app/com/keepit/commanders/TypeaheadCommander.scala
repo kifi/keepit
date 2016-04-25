@@ -453,8 +453,8 @@ class TypeaheadCommander @Inject() (
 
   private def prefetchTypeaheads(userId: Id[User]): Unit = {
     Future {
-      libraryTypeahead.prefetch(userId).map { _ =>
-        kifiUserTypeahead.prefetch(userId)
+      libraryTypeahead.prefetch(userId, refreshAlways = true).map { _ =>
+        kifiUserTypeahead.prefetch(userId, refreshAlways = false)
       }
     }
   }

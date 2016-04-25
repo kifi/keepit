@@ -35,7 +35,7 @@ class KifiUserTypeahead @Inject() (
     UserCache: UserIdCache) extends Typeahead[User, User, User, UserUserTypeahead] with Logging { // User as info might be too heavy
   implicit val fj = ExecutionContext.fj
 
-  protected val refreshRequestConsolidationWindow = 0 seconds
+  protected val refreshRequestConsolidationWindow = 5 seconds
 
   protected val fetchRequestConsolidationWindow = 15 seconds
 

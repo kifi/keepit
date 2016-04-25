@@ -78,8 +78,12 @@ trait Typeahead[T, E, I, P <: PersonalTypeahead[T, E, I]] extends Logging {
     }
   }
 
-  def prefetch(ownerId: Id[T]): Future[Unit] = {
-    getOrElseCreate(ownerId).map(_ => ())(ExecutionContext.immediate)
+  def prefetch(ownerId: Id[T], refreshAlways: Boolean): Future[Unit] = {
+    if (refreshAlways) {
+      refresh(ownerId)
+    } else {
+      getOrElseCreate(ownerId).map(_ => ())(ExecutionContext.immediate)
+    }
   }
 
   private[this] lazy val consolidateFetchReq = new RequestConsolidator[Id[T], P](fetchRequestConsolidationWindow)
