@@ -620,7 +620,7 @@ class ShoeboxController @Inject() (
   def getPersonalKeepRecipientsOnUris() = Action(parse.tolerantJson) { request =>
     import GetPersonalKeepRecipientsOnUris._
     val input = request.body.as[Request]
-    val keeps = keepCommander.getPersonalKeepsOnUris(input.userId, input.uriIds)
+    val keeps = keepCommander.getPersonalKeepsOnUris(input.userId, input.uriIds, input.excludeAccess)
     val keepRecipients = keeps.mapValues(_.map(CrossServiceKeepRecipients.fromKeep))
     Ok(Json.toJson(Response(keepRecipients)))
   }

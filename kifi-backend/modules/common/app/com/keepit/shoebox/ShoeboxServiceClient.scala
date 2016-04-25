@@ -135,7 +135,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): Future[SlackChannelIntegrations]
   def getSourceAttributionForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], SourceAttribution]]
   def getRelevantKeepsByUserAndUri(userId: Id[User], uriId: Id[NormalizedURI], before: Option[DateTime], limit: Int): Future[Seq[Id[Keep]]]
-  def getPersonalKeepRecipientsOnUris(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[CrossServiceKeepRecipients]]]
+  def getPersonalKeepRecipientsOnUris(userId: Id[User], uriIds: Set[Id[NormalizedURI]], excludeAccess: Option[LibraryAccess] = None): Future[Map[Id[NormalizedURI], Set[CrossServiceKeepRecipients]]]
   def getSlackTeamIds(orgIds: Set[Id[Organization]]): Future[Map[Id[Organization], SlackTeamId]]
   def getSlackTeamInfo(slackTeamId: SlackTeamId): Future[Option[InternalSlackTeamInfo]]
   // TODO(ryan): kill this once clients stop trying to create discussions through Eliza
@@ -875,11 +875,11 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getPersonalKeepRecipientsOnUris(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[CrossServiceKeepRecipients]]] = {
+  def getPersonalKeepRecipientsOnUris(userId: Id[User], uriIds: Set[Id[NormalizedURI]], excludeAccess: Option[LibraryAccess]): Future[Map[Id[NormalizedURI], Set[CrossServiceKeepRecipients]]] = {
     if (uriIds.isEmpty) Future.successful(Map.empty)
     else {
       import GetPersonalKeepRecipientsOnUris._
-      val request = Request(userId, uriIds)
+      val request = Request(userId, uriIds, excludeAccess)
       call(Shoebox.internal.getPersonalKeepRecipientsOnUris(), body = Json.toJson(request)).map(_.json.as[Response].keepRecipientsByUriId)
     }
   }
@@ -939,7 +939,7 @@ object ShoeboxServiceClient {
   }
 
   object GetPersonalKeepRecipientsOnUris {
-    case class Request(userId: Id[User], uriIds: Set[Id[NormalizedURI]])
+    case class Request(userId: Id[User], uriIds: Set[Id[NormalizedURI]], excludeAccess: Option[LibraryAccess])
     case class Response(keepRecipientsByUriId: Map[Id[NormalizedURI], Set[CrossServiceKeepRecipients]])
     implicit val requestFormat: Format[Request] = Json.format[Request]
     implicit val responseFormat: Format[Response] = Json.format[Response]
