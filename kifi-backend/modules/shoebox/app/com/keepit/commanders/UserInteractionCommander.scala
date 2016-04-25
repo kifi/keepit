@@ -78,11 +78,7 @@ class UserInteractionCommander @Inject() (
       val sum = b._2.foldLeft(0.0)((r, c) => r + c._2)
       InteractionScore(b._1, sum)
     }.toSeq.sorted.reverse
-
-    if (uid == Id[User](3)) {
-      log.info(s"[andrewinteract] $res")
-    }
-
+    
     res
   }
 
