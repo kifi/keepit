@@ -45,7 +45,6 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
   def getKeepIds(user: Id[User], uriId: Option[Id[NormalizedURI]] = None)(implicit session: RSession): Seq[Id[Keep]]
   def isMuted(userId: Id[User], keepId: Id[Keep])(implicit session: RSession): Boolean
   def checkUrisDiscussed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]])(implicit session: RSession): Seq[Boolean]
-  def hasThreads(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Boolean
 
   // Handling read/unread
   def setLastActive(userId: Id[User], keepId: Id[Keep], lastActive: DateTime)(implicit session: RWSession): Unit
@@ -282,10 +281,6 @@ class UserThreadRepoImpl @Inject() (
         started = activeRows.filter(row => row.user === userId && row.startedBy === userId).length.run
       )
     }
-  }
-
-  def hasThreads(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Boolean = {
-    (for (row <- activeRows if row.user === userId && row.uriId === uriId) yield row.id).firstOption.isDefined
   }
 
   def checkUrisDiscussed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]])(implicit session: RSession): Seq[Boolean] = {

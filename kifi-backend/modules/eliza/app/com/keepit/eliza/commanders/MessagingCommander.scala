@@ -189,13 +189,6 @@ class MessagingCommanderImpl @Inject() (
     otherStarters
   }
 
-  def hasThreads(userId: Id[User], url: String): Future[Boolean] = {
-    shoebox.getNormalizedURIByURL(url).map {
-      case Some(nUri) => db.readOnlyReplica { implicit session => userThreadRepo.hasThreads(userId, nUri.id.get) }
-      case None => false
-    }
-  }
-
   def checkUrisDiscussed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = {
     db.readOnlyReplicaAsync { implicit session => userThreadRepo.checkUrisDiscussed(userId, uriIds) }
   }
