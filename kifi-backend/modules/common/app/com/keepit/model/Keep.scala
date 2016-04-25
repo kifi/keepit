@@ -213,7 +213,6 @@ object KeepSource extends Enumerator[KeepSource] {
 
   def fromMessageSource(msgSrc: MessageSource): Option[KeepSource] = msgSrc match {
     case MessageSource.SITE => Some(Site)
-    case MessageSource.IPHONE => Some(IPhone)
     case source => fromStr(source.value)
   }
 

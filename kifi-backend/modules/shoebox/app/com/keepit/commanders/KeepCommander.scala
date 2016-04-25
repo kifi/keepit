@@ -261,7 +261,7 @@ class KeepCommanderImpl @Inject() (
       (keep, isNew) <- Future.fromTry(db.readWrite { implicit s => keepInterner.internKeepByRequest(internReq) })
       msgOpt <- Author.kifiUserId(internReq.author).fold(Future.successful(Option.empty[Message])) { user =>
         internReq.note.fold(Future.successful(Option.empty[Message])) { note =>
-          eliza.sendMessageOnKeep(user, note, keep.id.get, source = Some(MessageSource.SITE)).imap(Some(_))
+          eliza.sendMessageOnKeep(user, note, keep.id.get, source = MessageSource.fromKeepSource(internReq.source)).imap(Some(_))
         }
       }
     } yield (keep, isNew, msgOpt)
