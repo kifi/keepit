@@ -10,6 +10,7 @@ import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.logging.Logging
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
 import com.keepit.discussion.Message
 import com.keepit.eliza._
@@ -20,7 +21,7 @@ import com.keepit.model._
 import com.keepit.notify.model.Recipient
 import com.keepit.realtime._
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.social.BasicUserLikeEntity
+import com.keepit.social.{ BasicUser, BasicUserLikeEntity }
 import org.joda.time.DateTime
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
@@ -50,6 +51,7 @@ trait NotificationDeliveryCommander {
   def notifyRemoveThread(userId: Id[User], keepId: Id[Keep]): Unit
   def sendToUser(userId: Id[User], data: JsArray): Unit
   def sendKeepEvent(userId: Id[User], keepId: PublicId[Keep], event: BasicKeepEvent): Unit
+  def sendKeepRecipients(usersToSend: Set[Id[User]], keepId: PublicId[Keep], basicUsers: Set[BasicUser], basicLibraries: Set[BasicLibrary], emails: Set[EmailAddress]): Unit
   def sendUserPushNotification(userId: Id[User], message: String, recipientUserId: ExternalId[User], username: Username, pictureUrl: String, pushNotificationExperiment: PushNotificationExperiment, category: UserPushNotificationCategory): Future[Int]
   def sendLibraryPushNotification(userId: Id[User], message: String, libraryId: Id[Library], libraryUrl: String, pushNotificationExperiment: PushNotificationExperiment, category: LibraryPushNotificationCategory, force: Boolean): Future[Int]
   def sendGeneralPushNotification(userId: Id[User], message: String, pushNotificationExperiment: PushNotificationExperiment, category: SimplePushNotificationCategory, force: Boolean): Future[Int]
@@ -159,9 +161,7 @@ class NotificationDeliveryCommanderImpl @Inject() (
             emailCommander.notifyAddedEmailUsers(thread, newNonUserParticipants)
           }
         }
-        thread.participants.allUsers.par.foreach { userId =>
-          sendToUser(userId, Json.arr("thread_recipients", thread.pubKeepId, basicUsers.values, emails.toSeq, basicLibraries.values))
-        }
+        sendKeepRecipients(thread.participants.allUsers, thread.pubKeepId, basicUsers.values.toSet, basicLibraries.values.toSet, emails)
     })
   }
 
@@ -201,6 +201,12 @@ class NotificationDeliveryCommanderImpl @Inject() (
     notificationRouter.sendToUser(userId, data)
 
   def sendKeepEvent(userId: Id[User], keepId: PublicId[Keep], event: BasicKeepEvent): Unit = sendToUser(userId, Json.arr("event", keepId, event))
+
+  def sendKeepRecipients(usersToSend: Set[Id[User]], keepId: PublicId[Keep], basicUsers: Set[BasicUser], basicLibraries: Set[BasicLibrary], emails: Set[EmailAddress]): Unit = {
+    usersToSend.par.foreach { userId =>
+      sendToUser(userId, Json.arr("thread_recipients", keepId, basicUsers.toSeq.sortBy(_.firstName), emails.toSeq.sortBy(_.address), basicLibraries.toSeq.sortBy(_.name)))
+    }
+  }
 
   def sendUserPushNotification(userId: Id[User], message: String, recipientUserId: ExternalId[User], username: Username, pictureUrl: String, pushNotificationExperiment: PushNotificationExperiment, category: UserPushNotificationCategory): Future[Int] = {
     val notification = UserPushNotification(message = Some(message), userExtId = recipientUserId, username = username, pictureUrl = pictureUrl, unvisitedCount = getTotalUnreadUnmutedCount(userId), category = category, experiment = pushNotificationExperiment)
