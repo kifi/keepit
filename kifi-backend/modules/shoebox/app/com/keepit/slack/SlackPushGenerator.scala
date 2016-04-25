@@ -176,53 +176,30 @@ class SlackPushGenerator @Inject() (
     )
 
     // TODO(cam): once you backfill, `attribution` should be non-optional so you can simplify this match
-    if (slackTeamId == KifiSlackApp.BrewstercorpTeamId || slackTeamId == KifiSlackApp.KifiSlackTeamId) {
-      (keep.note, attribution) match {
-        case (Some(note), _) => ContextSensitiveSlackPush.generate(asUser => SlackMessageRequest.fromKifi(
-          text = DescriptionElements.formatForSlack(DescriptionElements(Some(s"*$userStr:*").filterNot(_ => asUser), Hashtags.format(note))),
-          attachments = Seq(SlackAttachment.simple(DescriptionElements(SlackEmoji.newspaper, keepElement)))
-        ))
-        case (None, None) => ContextSensitiveSlackPush.generate(asUser => SlackMessageRequest.fromKifi(
+    (keep.note, attribution) match {
+      case (Some(note), _) => ContextSensitiveSlackPush.generate(asUser => SlackMessageRequest.fromKifi(
+        text = DescriptionElements.formatForSlack(DescriptionElements(Some(s"*$userStr:*").filterNot(_ => asUser), Hashtags.format(note))),
+        attachments = Seq(SlackAttachment.simple(DescriptionElements(SlackEmoji.newspaper, keepElement)))
+      ))
+      case (None, None) => ContextSensitiveSlackPush.generate(asUser => SlackMessageRequest.fromKifi(
+        text = DescriptionElements.formatForSlack(Some(DescriptionElements(s"*$userStr*", "sent this")).filterNot(_ => asUser)),
+        attachments = Seq(SlackAttachment.simple(DescriptionElements(SlackEmoji.newspaper, keepElement)))
+      ))
+      case (None, Some(attr)) => attr match {
+        case ka: KifiAttribution => ContextSensitiveSlackPush.generate(asUser => SlackMessageRequest.fromKifi(
           text = DescriptionElements.formatForSlack(Some(DescriptionElements(s"*$userStr*", "sent this")).filterNot(_ => asUser)),
           attachments = Seq(SlackAttachment.simple(DescriptionElements(SlackEmoji.newspaper, keepElement)))
         ))
-        case (None, Some(attr)) => attr match {
-          case ka: KifiAttribution => ContextSensitiveSlackPush.generate(asUser => SlackMessageRequest.fromKifi(
-            text = DescriptionElements.formatForSlack(Some(DescriptionElements(s"*$userStr*", "sent this")).filterNot(_ => asUser)),
-            attachments = Seq(SlackAttachment.simple(DescriptionElements(SlackEmoji.newspaper, keepElement)))
-          ))
-          case TwitterAttribution(tweet) => ContextSensitiveSlackPush.insensitive(SlackMessageRequest.fromKifi(
-            text = DescriptionElements.formatForSlack(DescriptionElements(s"*${tweet.user.name}:*", Hashtags.format(tweet.text))),
-            attachments = Seq(SlackAttachment.simple(DescriptionElements(SlackEmoji.newspaper, keepElement)))
-          ))
-          case SlackAttribution(msg, team) => ContextSensitiveSlackPush.insensitive(SlackMessageRequest.fromKifi(
-            text = DescriptionElements.formatForSlack(DescriptionElements(s"*${msg.username.value}:*", msg.text)),
-            attachments = Seq(SlackAttachment.simple(DescriptionElements(SlackEmoji.newspaper, keepElement)))
-          ))
-        }
+        case TwitterAttribution(tweet) => ContextSensitiveSlackPush.insensitive(SlackMessageRequest.fromKifi(
+          text = DescriptionElements.formatForSlack(DescriptionElements(s"*${tweet.user.name}:*", Hashtags.format(tweet.text))),
+          attachments = Seq(SlackAttachment.simple(DescriptionElements(SlackEmoji.newspaper, keepElement)))
+        ))
+        case SlackAttribution(msg, team) => ContextSensitiveSlackPush.insensitive(SlackMessageRequest.fromKifi(
+          text = DescriptionElements.formatForSlack(DescriptionElements(s"*${msg.username.value}:*", msg.text)),
+          attachments = Seq(SlackAttachment.simple(DescriptionElements(SlackEmoji.newspaper, keepElement)))
+        ))
       }
-    } else ContextSensitiveSlackPush(asUser = None, asBot = (keep.note, attribution) match {
-      case (Some(note), _) => SlackMessageRequest.fromKifi(
-        text = DescriptionElements.formatForSlack(keepElement),
-        attachments = Seq(SlackAttachment.simple(DescriptionElements(s"*$userStr:*", Hashtags.format(note))).withColorMaybe(userColor.map(_.hex)).withFullMarkdown)
-      )
-      case (None, None) => SlackMessageRequest.fromKifi(
-        text = DescriptionElements.formatForSlack(DescriptionElements(s"*$userStr*", "sent", keepElement))
-      )
-      case (None, Some(attr)) => attr match {
-        case ka: KifiAttribution => SlackMessageRequest.fromKifi(
-          text = DescriptionElements.formatForSlack(DescriptionElements(s"*${ka.keptBy.firstName}*", "sent", keepElement))
-        )
-        case TwitterAttribution(tweet) => SlackMessageRequest.fromKifi(
-          text = DescriptionElements.formatForSlack(keepElement),
-          attachments = Seq(SlackAttachment.simple(DescriptionElements(s"*${tweet.user.name}:*", Hashtags.format(tweet.text))))
-        )
-        case SlackAttribution(msg, team) => SlackMessageRequest.fromKifi(
-          text = DescriptionElements.formatForSlack(keepElement),
-          attachments = Seq(SlackAttachment.simple(DescriptionElements(s"*${msg.username.value}:*", msg.text)))
-        )
-      }
-    })
+    }
   }
   def messageAsSlackMessage(msg: CrossServiceMessage, keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], user: Option[BasicUser])(implicit items: PushItems): ContextSensitiveSlackPush = {
     airbrake.verify(msg.keep == keep.id.get, s"Message $msg does not belong to keep $keep")
@@ -248,47 +225,25 @@ class SlackPushGenerator @Inject() (
 
     val textAndLookHeres = CrossServiceMessage.splitOutLookHeres(msg.text)
 
-    if (slackTeamId == KifiSlackApp.BrewstercorpTeamId || slackTeamId == KifiSlackApp.KifiSlackTeamId) {
-      ContextSensitiveSlackPush.generate(asUser => SlackMessageRequest.fromKifi(
-        text = if (msg.isDeleted) "[comment has been deleted]"
-        else DescriptionElements.formatForSlack(DescriptionElements(Some(s"*$userStr:*").filterNot(_ => asUser), textAndLookHeres.map {
-          case Left(str) => DescriptionElements(str)
-          case Right(Success((pointer, ref))) => pointer --> msgLink("lookHere")
-          case Right(Failure(fail)) => "look here" --> msgLink("lookHere")
-        })),
-        attachments = textAndLookHeres.collect {
-          case Right(Success((pointer, ref))) =>
-            imageUrlRegex.findFirstIn(ref) match {
-              case Some(url) =>
-                SlackAttachment.simple(DescriptionElements(SlackEmoji.magnifyingGlass, pointer --> msgLink("lookHereImage"))).withImageUrl(url)
-              case None =>
-                SlackAttachment.simple(DescriptionElements(
-                  SlackEmoji.magnifyingGlass, pointer --> msgLink("lookHere"), ": ",
-                  DescriptionElements.unlines(ref.lines.toSeq.map(ln => DescriptionElements(s"_${ln}_")))
-                )).withFullMarkdown
-            }
-        } :+ SlackAttachment.simple(DescriptionElements(SlackEmoji.newspaper, keepElement))
-      ))
-    } else ContextSensitiveSlackPush(asUser = None, asBot = SlackMessageRequest.fromKifi(
-      text = DescriptionElements.formatForSlack(keepElement),
-      attachments =
-        if (msg.isDeleted) Seq(SlackAttachment.simple("[comment has been deleted]"))
-        else SlackAttachment.simple(DescriptionElements(s"*$userStr:*", textAndLookHeres.map {
-          case Left(str) => DescriptionElements(str)
-          case Right(Success((pointer, ref))) => pointer --> msgLink("lookHere")
-          case Right(Failure(fail)) => "look here" --> msgLink("lookHere")
-        })).withFullMarkdown.withColorMaybe(userColor.map(_.hex)) +: textAndLookHeres.collect {
-          case Right(Success((pointer, ref))) =>
-            imageUrlRegex.findFirstIn(ref) match {
-              case Some(url) =>
-                SlackAttachment.simple(DescriptionElements(SlackEmoji.magnifyingGlass, pointer --> msgLink("lookHereImage"))).withImageUrl(url)
-              case None =>
-                SlackAttachment.simple(DescriptionElements(
-                  SlackEmoji.magnifyingGlass, pointer --> msgLink("lookHere"), ": ",
-                  DescriptionElements.unlines(ref.lines.toSeq.map(ln => DescriptionElements(s"_${ln}_")))
-                )).withFullMarkdown
-            }
-        }
+    ContextSensitiveSlackPush.generate(asUser => SlackMessageRequest.fromKifi(
+      text = if (msg.isDeleted) "[comment has been deleted]"
+      else DescriptionElements.formatForSlack(DescriptionElements(Some(s"*$userStr:*").filterNot(_ => asUser), textAndLookHeres.map {
+        case Left(str) => DescriptionElements(str)
+        case Right(Success((pointer, ref))) => pointer --> msgLink("lookHere")
+        case Right(Failure(fail)) => "look here" --> msgLink("lookHere")
+      })),
+      attachments = textAndLookHeres.collect {
+        case Right(Success((pointer, ref))) =>
+          imageUrlRegex.findFirstIn(ref) match {
+            case Some(url) =>
+              SlackAttachment.simple(DescriptionElements(SlackEmoji.magnifyingGlass, pointer --> msgLink("lookHereImage"))).withImageUrl(url)
+            case None =>
+              SlackAttachment.simple(DescriptionElements(
+                SlackEmoji.magnifyingGlass, pointer --> msgLink("lookHere"), ": ",
+                DescriptionElements.unlines(ref.lines.toSeq.map(ln => DescriptionElements(s"_${ln}_")))
+              )).withFullMarkdown
+          }
+      } :+ SlackAttachment.simple(DescriptionElements(SlackEmoji.newspaper, keepElement))
     ))
   }
 }

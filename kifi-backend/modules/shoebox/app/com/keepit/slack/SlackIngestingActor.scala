@@ -226,9 +226,6 @@ class SlackIngestingActor @Inject() (
           val (sender, isNew) = slackTeamMembershipRepo.internWithMessage(slackTeam, latestMsg)
           if (sender.lastPersonalDigestAt.isEmpty && latestMsg.timestamp.toDateTime.isAfter(integration.createdAt)) {
             slackTeamMembershipRepo.save(sender.scheduledForDigestAtLatest(now))
-            if (integration.slackTeamId == KifiSlackApp.BrewstercorpTeamId) {
-              slackLog.info("Ingested a message from", senderId.value, "with timestamp", latestMsg.timestamp.value, "=", latestMsg.timestamp.toDateTime.getMillis, "so we're scheduling a digest")
-            }
           }
       }
     }
