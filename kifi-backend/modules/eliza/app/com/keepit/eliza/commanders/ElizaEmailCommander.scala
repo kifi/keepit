@@ -109,7 +109,7 @@ class ElizaEmailCommander @Inject() (
 
     allUserImageUrls: Map[Id[User], String],
     fromTime: Option[DateTime]): Seq[ExtendedThreadItem] = {
-    val messages = messageFetchingCommander.getThreadMessages(thread)
+    val messages = messageFetchingCommander.getMessagesByKeepId(thread.keepId)
 
     val relevantMessages = messages.filter { m =>
       fromTime.map { dt => m.createdAt.isAfter(dt.minusMillis(100)) } getOrElse true

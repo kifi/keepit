@@ -53,16 +53,16 @@ class MessageFetchingCommander @Inject() (
   }
 
   //this is for internal use (not just this class, also several other commanders and tests). Do not use from a controller!
-  def getThreadMessages(thread: MessageThread): Seq[ElizaMessage] = db.readOnlyMaster { implicit session =>
-    log.info(s"[get_thread] trying to get thread messages for keepId ${thread.keepId}")
-    messageRepo.get(thread.keepId, 0)
+  def getMessagesByKeepId(keepId: Id[Keep]): Seq[ElizaMessage] = db.readOnlyMaster { implicit session =>
+    log.info(s"[get_thread] trying to get thread messages for keepId ${keepId}")
+    messageRepo.get(keepId, 0)
   }
 
   def getThreadMessagesWithBasicUser(thread: MessageThread): Future[Seq[MessageWithBasicUser]] = {
     val userParticipantSet = thread.participants.allUsers
     log.info(s"[get_thread] got participants for keepId ${thread.keepId}: $userParticipantSet")
     val messagesFut: Future[Seq[MessageWithBasicUser]] = new SafeFuture(shoebox.getBasicUsers(userParticipantSet.toSeq) map { id2BasicUser =>
-      val messages = getThreadMessages(thread).filter(_.auxData.forall(SystemMessageData.isFullySupported))
+      val messages = getMessagesByKeepId(thread.keepId).filter(_.auxData.forall(SystemMessageData.isFullySupported))
       log.info(s"[get_thread] got raw messages for keepId ${thread.keepId}: ${messages.length}")
       messages.map { message => getMessageWithBasicUser(message, thread, id2BasicUser) }
     })
