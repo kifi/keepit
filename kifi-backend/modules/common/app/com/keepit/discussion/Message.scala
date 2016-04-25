@@ -132,6 +132,11 @@ object MessageSource extends Enumerator[MessageSource] {
   def fromStr(str: String) = all.find(_.value == str)
   def apply(str: String) = fromStr(str).get
 
+  def fromKeepSource(keepSrc: KeepSource): Option[MessageSource] = keepSrc match {
+    case KeepSource.Site => Some(MessageSource.SITE)
+    case source => MessageSource.fromStr(source.value)
+  }
+
   implicit val messageSourceFormat: Format[MessageSource] = EnumFormat.format(fromStr, _.value)
   implicit val schemaReads: SchemaReads[MessageSource] = SchemaReads.trivial("message_source")
 }
