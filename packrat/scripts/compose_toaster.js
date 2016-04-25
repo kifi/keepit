@@ -150,11 +150,18 @@ k.toaster = k.toaster || (function () {
     }
   }
 
+  function kindIs(kind) {
+    return function (o) { return o.kind === kind; };
+  }
+
   function send($t, text, recipients, guided) {
     $t.data('sending', true);
+    var users = recipients.filter(kindIs('user')).map(getId);
+    var emails = recipients.filter(kindIs('email')).map(getId);
+    var libraries = recipients.filter(kindIs('library')).map(getId);
     api.port.emit(
-      'send_message',
-      withTitles(withUrls({text: text, recipients: recipients.map(getId), guided: guided})),
+      'send_keepscussion',
+      withTitles(withUrls({text: text, users: users, emails: emails, libraries: libraries, guided: guided})),
       function (o) {
         if (o && o.threadId) {
           progressDeferred.fulfill(o.threadId);
