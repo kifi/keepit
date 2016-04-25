@@ -162,16 +162,18 @@ class MessagingCommanderImpl @Inject() (
   def getThreadInfos(userId: Id[User], url: String): Future[(String, Seq[ElizaThreadInfo])] = {
     new SafeFuture(shoebox.getNormalizedUriByUrlOrPrenormalize(url).flatMap {
       case Left(nUri) =>
-        val threads = db.readOnlyReplica { implicit session =>
-          val keepIds = userThreadRepo.getKeepIds(userId, nUri.id)
-          val threadsByKeepId = threadRepo.getByKeepIds(keepIds.toSet)
-          keepIds.map(threadsByKeepId(_))
-        }
-        buildThreadInfos(userId, threads, url).map { unsortedInfos =>
-          val infos = unsortedInfos sortWith { (a, b) =>
-            a.lastCommentedAt.compareTo(b.lastCommentedAt) < 0
+        shoebox.getPersonalKeepRecipientsOnUris(userId, Set(nUri.id.get), excludeAccess = Some(LibraryAccess.READ_ONLY)).flatMap { keepsByUriId =>
+          val keepIds = keepsByUriId.get(nUri.id.get).getOrElse(Set.empty).map(_.id)
+          val threads = db.readOnlyReplica { implicit session =>
+            val threadsByKeepId = threadRepo.getByKeepIds(keepIds)
+            keepIds.flatMap(threadsByKeepId.get)
           }
-          (nUri.url, infos)
+          buildThreadInfos(userId, threads.toSeq, url).map { unsortedInfos =>
+            val infos = unsortedInfos sortWith { (a, b) =>
+              a.lastCommentedAt.compareTo(b.lastCommentedAt) < 0
+            }
+            (nUri.url, infos)
+          }
         }
       case Right(prenormalizedUrl) =>
         Future.successful((prenormalizedUrl, Seq[ElizaThreadInfo]()))
