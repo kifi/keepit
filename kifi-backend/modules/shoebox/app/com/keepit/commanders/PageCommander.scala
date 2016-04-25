@@ -38,7 +38,6 @@ class PageCommander @Inject() (
     keepRepo: KeepRepo,
     ktlRepo: KeepToLibraryRepo,
     keepSourceCommander: KeepSourceCommander,
-    keepDecorator: KeepDecorator,
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
     slackInfoCommander: SlackInfoCommander,
@@ -188,6 +187,22 @@ class PageCommander @Inject() (
     (count >= (5 - credit).min(2)) && (count < (30 + credit * 50))
   }
 
+  private def getWriteableKeepDatasForUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Seq[KeepData] = {
+    val keepIds = keepRepo.getPersonalKeepsOnUris(userId, Set(uriId), excludeAccess = Some(LibraryAccess.READ_ONLY)).getOrElse(uriId, Set.empty)
+    val keepsById = keepRepo.getActiveByIds(keepIds)
+    val ktlsByKeep = ktlRepo.getAllByKeepIds(keepIds)
+    keepsById.traverseByKey.map { k =>
+      val bestKtl = ktlsByKeep.getOrElse(k.id.get, Seq.empty).maxByOpt(_.visibility)
+      KeepData(
+        id = k.externalId,
+        mine = k.userId.safely.contains(userId),
+        removable = true,
+        secret = bestKtl.forall(_.visibility == LibraryVisibility.SECRET),
+        visibility = bestKtl.map(_.visibility).getOrElse(LibraryVisibility.SECRET),
+        libraryId = bestKtl.map(ktl => Library.publicId(ktl.libraryId))
+      )
+    }
+  }
   private def augmentUriInfo(normUri: NormalizedURI, userId: Id[User], useMultilibLogic: Boolean = false): Future[KeeperPagePartialInfo] = {
     val augmentFuture = searchClient.augment(
       userId = Some(userId),
@@ -198,17 +213,13 @@ class PageCommander @Inject() (
       maxTagsShown = 0,
       items = Seq(AugmentableItem(normUri.id.get)))
 
-    val keepDatas = keepDecorator.getPersonalKeeps(userId, Set(normUri.id.get)).getOrElse(normUri.id.get, Set.empty).toSeq.map(KeepData(_))
-
     augmentFuture map {
       case Seq(info) =>
         val userIdSet = info.keepers.map(_._1).toSet
-        val (basicUserMap, libraries, sources, followerCounts, paths) = db.readOnlyMaster { implicit session =>
-          /*          val notMyLibs = filterLibrariesUserDoesNotOwnOrFollow(info.libraries, userId)
-            val libraries = firstQualityFilterAndSort(notMyLibs)
-            val qualityLibraries = secondQualityFilter(libraries) */
+        val (basicUserMap, libraries, sources, followerCounts, paths, keepDatas) = db.readOnlyMaster { implicit session =>
           val relevantLibraries = getRelevantLibraries(userId, info.libraries)
           val basicUserMap = basicUserRepo.loadAll(userIdSet ++ relevantLibraries.map(_._1.ownerId) ++ relevantLibraries.map(_._2))
+          val keepDatas = getWriteableKeepDatasForUri(userId, normUri.id.get)
 
           val sources = {
             val slackTeamIds = slackInfoCommander.getOrganizationSlackTeamsForUser(userId)
@@ -220,7 +231,7 @@ class PageCommander @Inject() (
 
           val followerCounts = libraryMembershipRepo.countWithAccessByLibraryId(relevantLibraries.map(_._1.id.get).toSet, LibraryAccess.READ_ONLY)
           val paths = relevantLibraries.map(l => l._1.id.get -> pathCommander.libraryPage(l._1)).toMap
-          (basicUserMap, relevantLibraries, sources, followerCounts, paths)
+          (basicUserMap, relevantLibraries, sources, followerCounts, paths, keepDatas)
         }
 
         val keeperIdsToExclude = Set(userId) ++ libraries.map(_._2)
@@ -253,10 +264,10 @@ class PageCommander @Inject() (
             case Failure(ex) => (uri.raw.get, None)
           }
         }
-        val keepData = nUriOpt.map { normUri =>
-          keepDecorator.getPersonalKeeps(userId, Set(normUri.id.get))(normUri.id.get).toSeq.map(KeepData(_))
-        }.getOrElse(Seq.empty[KeepData])
-        Right(keepData)
+        val keepDatas = nUriOpt.fold(Seq.empty[KeepData]) { normUri =>
+          db.readOnlyMaster { implicit s => getWriteableKeepDatasForUri(userId, normUri.id.get) }
+        }
+        Right(keepDatas)
 
       case Failure(e) =>
         log.error(s"Error parsing url: $url", e)
