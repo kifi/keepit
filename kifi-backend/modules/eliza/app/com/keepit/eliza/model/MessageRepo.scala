@@ -29,7 +29,6 @@ trait MessageRepo extends Repo[ElizaMessage] with SeqNumberFunction[ElizaMessage
   def updateUriIds(updates: Seq[(Id[NormalizedURI], Id[NormalizedURI])])(implicit session: RWSession): Unit
   def getMaxId()(implicit session: RSession): Id[ElizaMessage]
   def getMessageCounts(keepId: Id[Keep], afterOpt: Option[DateTime])(implicit session: RSession): MessageCount
-  def getAllMessageCounts(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Int]
   def getLatest(keepId: Id[Keep])(implicit session: RSession): Option[ElizaMessage]
   def deactivate(message: ElizaMessage)(implicit session: RWSession): Unit
   def deactivate(messageId: Id[ElizaMessage])(implicit session: RWSession): Unit
@@ -37,10 +36,12 @@ trait MessageRepo extends Repo[ElizaMessage] with SeqNumberFunction[ElizaMessage
   // PSA: please just use this method going forward, it has the cleanest API
   def countByKeep(keepId: Id[Keep], fromId: Option[Id[ElizaMessage]], dir: SortDirection = SortDirection.DESCENDING)(implicit session: RSession): MessageCount
   def countByKeeps(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Int]
+  def getNumCommentsByKeep(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Int]
   def getByKeep(keepId: Id[Keep], fromId: Option[Id[ElizaMessage]], dir: SortDirection = SortDirection.DESCENDING, limit: Int)(implicit session: RSession): Seq[ElizaMessage]
   def getByKeepBefore(keepId: Id[Keep], fromOpt: Option[DateTime], dir: SortDirection = SortDirection.DESCENDING, limit: Int)(implicit session: RSession): Seq[ElizaMessage]
   def getAllByKeep(keepId: Id[Keep])(implicit session: RSession): Seq[ElizaMessage]
 
+  def getCommentIndex(message: ElizaMessage)(implicit session: RSession): Option[Int]
   def getForKeepsBySequenceNumber(keepIds: Set[Id[Keep]], seq: SequenceNumber[ElizaMessage])(implicit session: RSession): Seq[ElizaMessage]
   def getRecentByKeeps(keepIds: Set[Id[Keep]], limitPerKeep: Int)(implicit session: RSession): Map[Id[Keep], Seq[Id[ElizaMessage]]]
 
@@ -65,6 +66,7 @@ class MessageRepoImpl @Inject() (
   type RepoImpl = MessageTable
   class MessageTable(tag: Tag) extends RepoTable[ElizaMessage](db, tag, "message") with SeqNumberColumn[ElizaMessage] {
     def keepId = column[Id[Keep]]("keep_id", O.NotNull)
+    def commentIndexOnKeep = column[Option[Int]]("comment_index_on_keep", O.Nullable)
     def from = column[Option[Id[User]]]("sender_id", O.Nullable)
     def messageText = column[String]("message_text", O.NotNull)
     def source = column[Option[MessageSource]]("source", O.Nullable)
@@ -75,7 +77,7 @@ class MessageRepoImpl @Inject() (
 
     def fromHuman: Column[Boolean] = from.isDefined || nonUserSender.isDefined
 
-    def * = (id.?, createdAt, updatedAt, state, seq, keepId, from, messageText, source, auxData, sentOnUrl, sentOnUriId, nonUserSender) <> ((ElizaMessage.fromDbRow _).tupled, ElizaMessage.toDbRow)
+    def * = (id.?, createdAt, updatedAt, state, seq, keepId, commentIndexOnKeep, from, messageText, source, auxData, sentOnUrl, sentOnUriId, nonUserSender) <> ((ElizaMessage.fromDbRow _).tupled, ElizaMessage.toDbRow)
   }
   def table(tag: Tag) = new MessageTable(tag)
 
@@ -154,7 +156,7 @@ class MessageRepoImpl @Inject() (
     MessageCount(total, unread)
   }
 
-  def getAllMessageCounts(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Int] = {
+  def getNumCommentsByKeep(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Int] = {
     activeRows.filter(row => row.keepId.inSet(keepIds) && row.fromHuman).groupBy(_.keepId).map { case (keepId, messages) => (keepId, messages.length) }.list.toMap
   }
 
@@ -215,6 +217,15 @@ class MessageRepoImpl @Inject() (
 
   def getAllByKeep(keepId: Id[Keep])(implicit session: RSession): Seq[ElizaMessage] = {
     activeRows.filter(_.keepId === keepId).list
+  }
+
+  def getCommentIndex(message: ElizaMessage)(implicit session: RSession): Option[Int] = {
+    if (!message.isActive || message.from.isSystem) None
+    else Some(rows.filter(
+      m => m.keepId === message.keepId &&
+        (m.from.isDefined || m.nonUserSender.isDefined) &&
+        (m.createdAt < message.createdAt || m.createdAt === message.createdAt && m.id < message.id.get)
+    ).length.run)
   }
 
   def getForKeepsBySequenceNumber(keepIds: Set[Id[Keep]], seq: SequenceNumber[ElizaMessage])(implicit session: RSession): Seq[ElizaMessage] = {

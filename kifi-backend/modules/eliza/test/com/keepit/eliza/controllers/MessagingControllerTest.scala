@@ -17,7 +17,7 @@ import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.eliza.controllers.internal.MessagingController
 import com.keepit.eliza.model._
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
-import com.keepit.model.{ UserThreadFactory, MessageThreadFactory, NormalizedURI, User }
+import com.keepit.model._
 import com.keepit.realtime.{ FakeAppBoyModule }
 import com.keepit.rover.FakeRoverServiceClientModule
 import com.keepit.search.FakeSearchServiceClientModule
@@ -65,11 +65,7 @@ class MessagingControllerTest extends TestKitSupport with SpecificationLike with
   }
 
   def createMessage(thread: MessageThread, senderUserId: Id[User], text: String)(implicit rw: RWSession, injector: Injector) = {
-    val sender = MessageSender.User(senderUserId)
-    val createdAt = nextTime
-    inject[MessageRepo].save(ElizaMessage(keepId = thread.keepId, messageText = text,
-      from = sender, source = None, sentOnUrl = None, sentOnUriId = None,
-      createdAt = createdAt, updatedAt = createdAt))
+    MessageFactory.message().withThread(thread).from(MessageSender.User(senderUserId)).withText(text).withCreatedAt(nextTime).saved
   }
 
   "MessagingController" should {

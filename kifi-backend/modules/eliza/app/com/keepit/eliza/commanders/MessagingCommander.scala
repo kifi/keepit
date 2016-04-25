@@ -277,6 +277,7 @@ class MessagingCommanderImpl @Inject() (
         db.readWrite { implicit session =>
           messageRepo.save(ElizaMessage(
             keepId = thread.keepId,
+            commentIndexOnKeep = None,
             from = MessageSender.System,
             messageText = "",
             source = source,
@@ -320,6 +321,7 @@ class MessagingCommanderImpl @Inject() (
     val (message, thread) = db.readWrite { implicit session =>
       val msg = messageRepo.save(ElizaMessage(
         keepId = initialThread.keepId,
+        commentIndexOnKeep = Some(initialThread.numMessages),
         from = from,
         messageText = messageText,
         source = source,
@@ -503,6 +505,7 @@ class MessagingCommanderImpl @Inject() (
           val thread = threadRepo.save(oldThread.withParticipants(clock.now, actuallyNewUsers.toSet, actuallyNewNonUsers.toSet))
           val messageTemplate = ElizaMessage(
             keepId = thread.keepId,
+            commentIndexOnKeep = None,
             from = MessageSender.System,
             messageText = "",
             source = source.flatMap(KeepEventSource.toMessageSource),

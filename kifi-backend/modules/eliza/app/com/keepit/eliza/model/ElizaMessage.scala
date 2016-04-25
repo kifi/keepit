@@ -224,6 +224,7 @@ case class ElizaMessage(
   state: State[ElizaMessage] = ElizaMessageStates.ACTIVE,
   seq: SequenceNumber[ElizaMessage] = SequenceNumber.ZERO,
   keepId: Id[Keep],
+  commentIndexOnKeep: Option[Int],
   from: MessageSender,
   messageText: String,
   source: Option[MessageSource],
@@ -234,6 +235,7 @@ case class ElizaMessage(
   def withId(id: Id[ElizaMessage]): ElizaMessage = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt = updateTime)
   def withText(newText: String) = this.copy(messageText = newText)
+  def withCommentIndex(idx: Option[Int]) = this.copy(commentIndexOnKeep = idx)
   def sanitizeForDelete = this.copy(state = ElizaMessageStates.INACTIVE)
 
   def pubId(implicit publicIdConfig: PublicIdConfiguration): PublicId[Message] = Message.publicId(ElizaMessage.toCommonId(id.get))
@@ -251,6 +253,7 @@ object ElizaMessage extends CommonClassLinker[ElizaMessage, Message] {
     (__ \ 'state).format[State[ElizaMessage]] and
     (__ \ 'seq).format[SequenceNumber[ElizaMessage]] and
     (__ \ 'keepId).format[Id[Keep]] and
+    (__ \ 'commentIndexOnKeep).formatNullable[Int] and
     (__ \ 'from).format[MessageSender] and
     (__ \ 'messageText).format[String] and
     (__ \ 'source).formatNullable[MessageSource] and
@@ -266,6 +269,7 @@ object ElizaMessage extends CommonClassLinker[ElizaMessage, Message] {
     state: State[ElizaMessage],
     seq: SequenceNumber[ElizaMessage],
     keepId: Id[Keep],
+    commentIndexOnKeep: Option[Int],
     userSender: Option[Id[User]],
     messageText: String,
     source: Option[MessageSource],
@@ -280,6 +284,7 @@ object ElizaMessage extends CommonClassLinker[ElizaMessage, Message] {
       state,
       seq,
       keepId,
+      commentIndexOnKeep,
       userSender.map(MessageSender.User(_)).getOrElse(nonUserSender.map(json => MessageSender.NonUser(json.as[NonUserParticipant])).getOrElse(MessageSender.System)),
       messageText,
       source,
@@ -289,23 +294,22 @@ object ElizaMessage extends CommonClassLinker[ElizaMessage, Message] {
     )
   }
 
-  def toDbRow(message: ElizaMessage): Option[(Option[Id[ElizaMessage]], DateTime, DateTime, State[ElizaMessage], SequenceNumber[ElizaMessage], Id[Keep], Option[Id[User]], String, Option[MessageSource], Option[SystemMessageData], Option[String], Option[Id[NormalizedURI]], Option[JsValue])] = {
-    Some((
-      message.id,
-      message.createdAt,
-      message.updatedAt,
-      message.state,
-      message.seq,
-      message.keepId,
-      message.from.asUser,
-      message.messageText,
-      message.source,
-      message.auxData,
-      message.sentOnUrl,
-      message.sentOnUriId,
-      message.from.asNonUser.map(Json.toJson(_))
-    ))
-  }
+  def toDbRow(message: ElizaMessage) = Option((
+    message.id,
+    message.createdAt,
+    message.updatedAt,
+    message.state,
+    message.seq,
+    message.keepId,
+    message.commentIndexOnKeep,
+    message.from.asUser,
+    message.messageText,
+    message.source,
+    message.auxData,
+    message.sentOnUrl,
+    message.sentOnUriId,
+    message.from.asNonUser.map(Json.toJson(_))
+  ))
 
   def toMessageView(message: ElizaMessage): MessageView = {
     MessageView(
@@ -320,6 +324,7 @@ object ElizaMessage extends CommonClassLinker[ElizaMessage, Message] {
       isDeleted = !message.isActive,
       seq = ElizaMessage.toCommonSeq(message.seq),
       keep = message.keepId,
+      commentIndexOnKeep = message.commentIndexOnKeep,
       sentAt = message.createdAt,
       sentBy = message.from.fold(None, userId => Some(Left(userId)), nup => Some(Right(NonUserParticipant.toBasicNonUser(nup)))),
       text = message.messageText,
