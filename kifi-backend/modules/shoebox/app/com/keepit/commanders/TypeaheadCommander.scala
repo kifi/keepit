@@ -389,7 +389,6 @@ class TypeaheadCommander @Inject() (
       (users, contacts) <- friendsF
       libraryHits <- librariesF
     } yield {
-      val libraries = libraryHits.map(_.info)
       // (interactionIdx, typeaheadIdx, value). Lower scores are better for both.
       val userRes = users.zipWithIndex.map {
         case ((id, bu), idx) =>
@@ -399,12 +398,21 @@ class TypeaheadCommander @Inject() (
         case (contact, idx) =>
           (emailScore(contact.email), idx + limit, EmailContactResult(email = contact.email, name = contact.name))
       }
-      val libIdToImportance = libraries.map(r => r.id -> r.importance).toMap
-      val libsById = libToResult(userId, libraries.map(_.id))
-      val libRes = libraries.flatMap(l => libsById.get(l.id).map(r => l.id -> r)).zipWithIndex.map {
-        case ((id, lib), idx) =>
-          (libScore(id), idx + libIdToImportance(id), lib)
+      val libRes = {
+        val libraries = libraryHits.map(_.info)
+        val libIdToImportance = libraries.map(r => r.id -> r.importance).toMap
+        val libsById = libToResult(userId, libraries.map(_.id))
+        val res = libraries.flatMap(l => libsById.get(l.id).map(r => l.id -> r)).zipWithIndex.map {
+          case ((id, lib), idx) =>
+            (libScore(id), idx + libIdToImportance(id), lib)
+        }
+        if (userId == Id[User](3)) {
+          log.info(s"[andrewsearchkeeps] 1: $libraries")
+          log.info(s"[andrewsearchkeeps] 2: $res")
+        }
+        res
       }
+
 
       val combined: Seq[TypeaheadSearchResult] = (userRes ++ emailRes ++ libRes).filter {
         case (_, _, u: UserContactResult) if requested.contains(TypeaheadRequest.User) => true
