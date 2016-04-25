@@ -152,9 +152,12 @@ k.toaster = k.toaster || (function () {
 
   function send($t, text, recipients, guided) {
     $t.data('sending', true);
+    var users = recipients.filter(kindIsUser).map(getId);
+    var emails = recipients.filter(kindIsEmail).map(getId);
+    var libraries = recipients.filter(kindIsLibrary).map(getId);
     api.port.emit(
-      'send_message',
-      withTitles(withUrls({text: text, recipients: recipients.map(getId), guided: guided})),
+      'send_keepscussion',
+      withTitles(withUrls({text: text, users: users, emails: emails, libraries: libraries, guided: guided})),
       function (o) {
         if (o && o.threadId) {
           progressDeferred.fulfill(o.threadId);
@@ -217,8 +220,9 @@ k.toaster = k.toaster || (function () {
       recipients = recipients.slice(1);
     }
     var numOthers = 0;
-    var names = toSelf ? ['yourself'] : recipients.filter(isNotEmail).map(getFirstName);
+    var names = toSelf ? ['yourself'] : recipients.filter(isUser).map(getFirstName);
     var emails = recipients.filter(isEmail).map(getId);
+    var libraries = recipients.filter(kindIsLibrary).map(getName);
     switch (names.length) {
       case 0:
         if (emails.length !== 2) {
@@ -239,11 +243,13 @@ k.toaster = k.toaster || (function () {
         names.length = 3;
         emails.length = 0;
     }
+    numOthers += Math.max(0, libraries.length - 1)
     $sent = $(k.render('html/keeper/sent', {
       customMessage: text !== DEFAULT_MESSAGE_TEXT,
       toSelf: toSelf,
       names: names,
       emails: emails,
+      library: libraries[0],
       numOthers: numOthers,
       multiline: names.length > 2 || emails.length > 0
     }))
@@ -289,11 +295,27 @@ k.toaster = k.toaster || (function () {
     return o.name.match(/^\S*/)[0];
   }
 
+  function getName(o) {
+    return o.name;
+  }
+
   function isEmail(o) {
     return o.email;
   }
 
-  function isNotEmail(o) {
-    return !o.email;
+  function isUser(o) {
+    return !isEmail(o) && o.kind !== 'library';
+  }
+
+  function kindIsLibrary(o) {
+    return o.kind === 'library';
+  }
+
+  function kindIsUser(o) {
+    return o.kind === 'user';
+  }
+
+  function kindIsEmail(o) {
+    return o.kind === 'email';
   }
 }());

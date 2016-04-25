@@ -1128,11 +1128,12 @@ api.port.on({
       discardDraft(data.to ? [tab.nUri, tab.url] : [currentThreadId(tab)]);
     }
   },
-  send_message: function (data, respond, tab) {
+  send_keepscussion: function (data, respond, tab) {
     var sentAt = Date.now();
     var draft = discardDraft([tab.nUri, tab.url]);
+    var keepId;
 
-    ajax('eliza', 'POST', '/eliza/messages', {
+    sendKeep({
       url: data.url,
       canonical: !tab.usedHistoryApi && data.canonical || undefined,
       og: !tab.usedHistoryApi && data.og || undefined,
@@ -1140,30 +1141,28 @@ api.port.on({
       extVersion: api.version,
       source: api.browser.name,
       eip: eip,
-      text: data.text,
-      recipients: data.recipients.map(makeObjectsForEmailAddresses),
+      note: data.text,
+      users: data.users,
+      emails: data.emails,
+      libraries: data.libraries,
       guided: data.guided
-    }, onSendSuccess, onSendFailure);
+    })
+    .then(function (keepResponseData) {
+      log('[send_keepscussion] send keep resp:', keepResponseData);
+      keepId = keepResponseData.id;
+      keepData[keepId] = keepResponseData;
+      respond({ threadId: keepId });
 
-    function onSendSuccess(o) {
-      log('[send_message] resp:', o);
-      // thread (notification) JSON comes via socket
-      messageData[o.parentId] = o.messages;
-      if (o.threadInfo && o.threadInfo.keep) {
-        getKeepAndActivity(o.threadInfo.id)
-        .then(function (keepData) {
-          keepData[o.threadInfo.id] = keepData.keep;
-          activityData[o.threadInfo.id] = keepData.activity;
-        })
-        .catch(function (err) {
-          return log ('[send_message:getKeep] error: ', err);
-        });
-      }
-      respond({threadId: o.parentId});
-    }
-
-    function onSendFailure(req) {
-      log('#c00', '[send_message] resp:', req);
+      // Now that we've responded,
+      // get the activity in the background
+      return getKeepActivity(keepId);
+    })
+    .then(function (activityResponseData) {
+      log('[send_keepscussion] get activity resp:', activityResponseData);
+      activityData[keepId] = activityResponseData.events;
+    })
+    .catch(function (req) {
+      log('#c00', '[send_keepscussion] resp:', req);
       var response = {status: req.status};
       var elapsedMs = Date.now() - sentAt;
       if (elapsedMs < 500) {  // allow sending progress animation to show
@@ -1174,7 +1173,7 @@ api.port.on({
       if (draft) {
         saveDraft(tab.nUri || tab.url, draft);
       }
-    }
+    });
   },
   send_reply: function(data, respond) {
     var keepId = data.keepId;
@@ -2938,6 +2937,12 @@ function setKeepTitle(keepId, newTitle, source) {
 function sendKeepReply(keepId, data) {
   return new Promise(function (resolve, reject) {
     ajax('POST', '/api/1/keeps/' + keepId + '/messages', data, resolve, reject);
+  });
+}
+
+function sendKeep(data) {
+  return new Promise(function (resolve, reject) {
+    ajax('POST', '/api/1/keeps', data, resolve, reject)
   });
 }
 

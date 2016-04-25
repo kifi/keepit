@@ -250,7 +250,7 @@ k.compose = k.compose || (function() {
           }
           throttledSaveDraft();
         }
-      });
+      }, { user: true, email: true, library: true });
     }
 
     $form.keydown(function (e) {
