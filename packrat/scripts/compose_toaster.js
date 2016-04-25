@@ -223,7 +223,7 @@ k.toaster = k.toaster || (function () {
     var names = toSelf ? ['yourself'] : recipients.filter(isUser).map(getFirstName);
     var emails = recipients.filter(isEmail).map(getId);
     var libraries = recipients.filter(kindIsLibrary).map(getName);
-    switch (names.length) {
+    switch (names.length + libraries.length) {
       case 0:
         if (emails.length !== 2) {
           numOthers = emails.length - 1;
