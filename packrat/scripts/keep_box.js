@@ -49,7 +49,7 @@ k.keepBox = k.keepBox || (function () {
         if (keep) {
           lib.keep = keep;
         }
-        setExtraInfo(lib);
+        k.formatting.formatLibraryResult({ showShortcut: true}, lib);
       });
       show($parent, trigger, guided, data.libraries, data.organizations, data.me, data.experiments);
     },
@@ -100,19 +100,6 @@ k.keepBox = k.keepBox || (function () {
     organizations.sort(function byRecentLibCountDescending(a, b) {
       return b.recentLibCount - a.recentLibCount;
     });
-  }
-
-  function isOpenCollaborationCandidate(library) {
-    var isOrgLibrary = !!library.orgAvatar;
-
-    var isAlreadyJoined = (
-      library && library.membership && (
-        library.membership.access === 'owner' ||
-        library.membership.access === 'read_write'
-      )
-    );
-
-    return isOrgLibrary && !isAlreadyJoined;
   }
 
   function show($parent, trigger, guided, libraries, organizations, me, experiments) {
@@ -318,7 +305,7 @@ k.keepBox = k.keepBox || (function () {
         if (q) {
           api.port.emit('filter_libraries', q, function (libs) {
             if (data.q === q) {
-              libs.forEach(setExtraInfo);
+              libs.forEach(k.formatting.formatLibraryResult.bind(null, {showShortcut: true}));
               $box.data('filter_libraries', libs);
               (libs[0] || {}).highlighted = true;
               showLibs($(k.render('html/keeper/keep_box_libs_list', {query: q, libs: libs.map(annotateNameParts)}, {
@@ -1287,61 +1274,5 @@ k.keepBox = k.keepBox || (function () {
     $(this).remove();
   }
 
-  function setExtraInfo(lib) {
-    function smartlyListCollaboratorNames(collabs) {
-      var names = [ 'Me' ]; // max 15 characters
-      var charCount = 2;
 
-      while (charCount < 15 && collabs.length > 0) {
-        var collab = collabs.shift();
-        charCount += (collab.firstName.length + 2); // 2 for space and comma
-        names.push(collab.firstName);
-      }
-
-      if (collabs.length > 1) {
-        names.push(collabs.length + ' others');
-      } else if (collabs.length === 1) {
-        names.push(collabs[0].firstName);
-      }
-
-      return names.join(', ');
-    }
-
-    // Add a property that the keep_box_lib template can use later on
-    // to determine whether a lib is allowed in open collaboration
-    if (isOpenCollaborationCandidate(lib)) {
-      lib.isOpenCollaborationCandidate = true;
-    }
-
-    if (lib.system) {
-      lib.extraInfo = MOD_KEYS.c + '-Shift-' + (lib.visibility === 'secret' ? MOD_KEYS.alt + '-' : '') + 'K';
-    } else if (lib.hasCollaborators) {
-      lib.extraInfo = smartlyListCollaboratorNames(lib.collaborators);
-    }
-  }
-
-  function deleteKeepIfSystemLib(lib) {
-    if (lib.system && lib.keep) {
-      delete lib.keep;
-    }
-  }
-
-  function getSrc(img) {
-    return img.currentSrc || largestSrc(img.srcset) || img.src;
-  }
-
-  function largestSrc(srcset) { // until currentSrc is widely supported
-    if (srcset) {
-      var uri = srcset.split(/\s*,\s*/).map(function (s) {
-        return s.split(/\s+/);
-      }).sort(function (a, b) {
-        return (parseFloat(b[1]) || 0) - (parseFloat(a[1]) || 0);
-      })[0][0];
-      if (uri) {
-        try {
-          return new URL(uri, document.baseURI).toString();
-        } catch (e) {}
-      }
-    }
-  }
 }());
