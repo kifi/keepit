@@ -3,7 +3,7 @@ package com.keepit.eliza
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
-import com.keepit.eliza.integrity.ElizaMessageThreadByMessageIntegrityActor
+import com.keepit.eliza.integrity.{ ElizaMessageByMessageIntegrityActor, ElizaMessageThreadByMessageIntegrityActor }
 import com.keepit.eliza.shoebox.ElizaKeepIngestingActor
 import com.kifi.juggle.ConcurrentTaskProcessingActor.{ Close, IfYouCouldJustGoAhead }
 
@@ -12,13 +12,15 @@ import scala.concurrent.duration._
 @Singleton
 class ElizaTasksPlugin @Inject() (
   messageThreadByMessageIntegrityActor: ActorInstance[ElizaMessageThreadByMessageIntegrityActor],
+  messageByMessageIntegrityActor: ActorInstance[ElizaMessageByMessageIntegrityActor],
   keepIngestingActor: ActorInstance[ElizaKeepIngestingActor],
   val scheduling: SchedulingProperties)
     extends SchedulerPlugin {
 
   private def taskActors = Seq(
     keepIngestingActor -> 1.minute,
-    messageThreadByMessageIntegrityActor -> 3.minutes
+    messageThreadByMessageIntegrityActor -> 3.minutes,
+    messageByMessageIntegrityActor -> 1.minutes
   )
 
   override def onStart() {
