@@ -77,7 +77,6 @@ trait MessagingCommander {
   def addParticipantsToThread(adderUserId: Id[User], keepId: Id[Keep], newUsers: Seq[Id[User]], emailContacts: Seq[BasicContact], newLibraries: Seq[Id[Library]],
     orgIds: Seq[Id[Organization]], source: Option[KeepEventSource], updateShoebox: Boolean)(implicit context: HeimdalContext): Future[Boolean]
 
-  def getChatter(userId: Id[User], urls: Seq[String]): Future[Map[String, Seq[Id[Keep]]]]
   def validateUsers(rawUsers: Seq[JsValue]): Seq[JsResult[ExternalId[User]]]
   def validateEmailContacts(rawNonUsers: Seq[JsValue]): Seq[JsResult[BasicContact]]
   def parseRecipients(rawRecipients: Seq[JsValue]): (Seq[ExternalId[User]], Seq[BasicContact], Seq[PublicId[Organization]])
@@ -632,20 +631,6 @@ class MessagingCommanderImpl @Inject() (
           true
       }
     }.contains(true)
-  }
-
-  def getChatter(userId: Id[User], urls: Seq[String]): Future[Map[String, Seq[Id[Keep]]]] = {
-    implicit val timeout = Duration(3, "seconds")
-    TimeoutFuture(Future.sequence(urls.map(u => shoebox.getNormalizedURIByURL(u).map(n => u -> n)))).recover {
-      case ex: TimeoutException => Seq[(String, Option[NormalizedURI])]()
-    }.map { res =>
-      db.readOnlyReplica { implicit session =>
-        res.collect {
-          case (url, Some(nuri)) =>
-            url -> userThreadRepo.getKeepIds(userId, Some(nuri.id.get))
-        }
-      }.toMap
-    }
   }
 
   def sendMessageAction(
