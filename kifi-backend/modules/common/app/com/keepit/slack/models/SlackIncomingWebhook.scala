@@ -98,7 +98,10 @@ case class SlackMessageResponse(
     timestamp: SlackTimestamp,
     text: String,
     originalJson: JsValue) {
-  def sentByAnonymousBot = (originalJson \ "message" \ "bot_id").asOpt[String].exists(_.nonEmpty)
+  def sentByAnonymousBot = {
+    (originalJson \ "message" \ "user").asOpt[String].isEmpty &&
+      (originalJson \ "message" \ "bot_id").asOpt[String].exists(_.nonEmpty)
+  }
 }
 object SlackMessageResponse {
   implicit val reads: Reads[SlackMessageResponse] = (
