@@ -2,6 +2,7 @@ package com.keepit.commanders
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.db.Id
+import com.keepit.common.core.anyExtensionOps
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
@@ -123,13 +124,16 @@ class DiscussionCommanderImpl @Inject() (
         (diff.users.added.nonEmpty && !keepPermissions.contains(KeepPermission.ADD_PARTICIPANTS)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS,
         (diff.users.removed.nonEmpty && !keepPermissions.contains(KeepPermission.REMOVE_PARTICIPANTS)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS,
         (diff.libraries.added.nonEmpty && !keepPermissions.contains(KeepPermission.ADD_LIBRARIES)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS,
-        (diff.libraries.removed.nonEmpty && !keepPermissions.contains(KeepPermission.REMOVE_LIBRARIES)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS,
-        uriCollisionsByLib.nonEmpty -> DiscussionFail.URI_COLLISION
+        (diff.libraries.removed.nonEmpty && !keepPermissions.contains(KeepPermission.REMOVE_LIBRARIES)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS
       ).collect { case (true, fail) => fail }
 
       errs.headOption.map(fail => Future.failed(fail)).getOrElse {
         db.readWrite { implicit s =>
-          keepMutator.unsafeModifyKeepRecipients(keepId, diff, userAttribution = Some(userId))
+          keepMutator.unsafeModifyKeepRecipients(keepId, diff, userAttribution = Some(userId)).tap { mutatedKeep =>
+            if (!mutatedKeep.recipients.users.contains(userId) && !diff.users.removed.contains(userId)) {
+              keepMutator.unsafeModifyKeepRecipients(keepId, KeepRecipientsDiff.addUser(userId), userAttribution = None)
+            }
+          }
           eventCommander.persistKeepEventAndUpdateEliza(keepId, KeepEventData.ModifyRecipients(userId, diff), source, eventTime = None)
         }
         Future.successful(Unit)
