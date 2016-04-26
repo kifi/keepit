@@ -953,6 +953,25 @@ k.keepBox = k.keepBox || (function () {
     }
   }
 
+  function getSrc(img) {
+    return img.currentSrc || largestSrc(img.srcset) || img.src;
+  }
+
+  function largestSrc(srcset) { // until currentSrc is widely supported
+    if (srcset) {
+      var uri = srcset.split(/\s*,\s*/).map(function (s) {
+        return s.split(/\s+/);
+      }).sort(function (a, b) {
+        return (parseFloat(b[1]) || 0) - (parseFloat(a[1]) || 0);
+      })[0][0];
+      if (uri) {
+        try {
+          return new URL(uri, document.baseURI).toString();
+        } catch (e) {}
+      }
+    }
+  }
+
   function appendBgImagesInline(resolveUri, arr, el) {
     var uris = parseCssUris(el.style.backgroundImage).filter(bgUriLooksInteresting);
     if (uris.length) {
