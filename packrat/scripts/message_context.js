@@ -54,7 +54,7 @@ k.messageContext = k.messageContext || (function ($) {
 
       $view.data({
         saved: {
-          title: keep.title
+          title: keep.title || ''
         },
         saving: {}
       });
@@ -64,7 +64,7 @@ k.messageContext = k.messageContext || (function ($) {
      * Initializes event listeners.
      */
     initEvents: function () {
-      var debouncedSaveKeepTitleIfChanged = _.debounce(saveKeepTitleIfChanged, 1500);
+      var debouncedSaveKeepTitleIfChanged = _.debounce(this.saveKeepTitleIfChanged, 1500);
       var $view = this.get$();
       var self = this;
 
@@ -88,7 +88,7 @@ k.messageContext = k.messageContext || (function ($) {
       .on('blur', '.kifi-message-context-controls-title', function () {
         if (!this.value.trim()) {
           this.value = $view.data().saved.title;
-          saveKeepTitleIfChanged.call(this, $view);
+          self.saveKeepTitleIfChanged($view);
         }
       });
     },
@@ -197,6 +197,42 @@ k.messageContext = k.messageContext || (function ($) {
       this.get$().empty().append(this.renderContent());
     },
 
+    saveKeepTitleIfChanged: function ($view) {
+      var keep = this.getKeep();
+      var keepId = keep.id;
+
+      if (!$view) {
+        return;  // already removed, no data
+      }
+
+      var deferred = Q.defer();
+      var input = $view.find('.kifi-message-context-controls-title')[0];
+      var data = $view.data();
+      var val = input.value.trim();
+
+      if (val === '') {
+        return;
+      }
+
+      k.progress.emptyAndShow($view, deferred.promise);
+
+      if (val && val !== data['title' in data.saving ? 'saving' : 'saved'].title) {
+        data.saving.title = val;
+        api.port.emit('save_keepscussion_title', {keepId: keepId, newTitle: val}, function (success) {
+          if (data.saving.title === val) {
+            delete data.saving.title;
+          }
+
+          if (success) {
+            keep.title = data.saved.title = val;
+            deferred.resolve();
+          } else {
+            deferred.reject();
+          }
+        });
+      }
+    },
+
     /**
      * It removes all event listeners and caches to elements.
      */
@@ -214,36 +250,4 @@ k.messageContext = k.messageContext || (function ($) {
       this.$el = null;
     }
   };
-
-  function saveKeepTitleIfChanged($view) {
-    var keep = this.getKeep();
-    var keepId = keep.id;
-
-    if (!$view) {
-      return;  // already removed, no data
-    }
-
-    var deferred = Q.defer();
-    var input = $view.find('.kifi-message-context-controls-title')[0];
-    var data = $view.data();
-    var val = input.value.trim();
-
-    k.progress.emptyAndShow($view, deferred.promise);
-
-    if (val && val !== data['title' in data.saving ? 'saving' : 'saved'].title) {
-      data.saving.title = val;
-      api.port.emit('save_keepscussion_title', {keepId: keepId, newTitle: val}, function (success) {
-        if (data.saving.title === val) {
-          delete data.saving.title;
-        }
-
-        if (success) {
-          keep.title = data.saved.title = val;
-          deferred.resolve();
-        } else {
-          deferred.reject();
-        }
-      });
-    }
-  }
 })(jQuery, this);

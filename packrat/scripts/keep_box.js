@@ -375,7 +375,7 @@ k.keepBox = k.keepBox || (function () {
     var debouncedSaveKeepImageIfChanged = _.debounce(saveKeepImageIfChanged, 2400);
     var debouncedSaveKeepNoteIfChanged = _.debounce(saveKeepNoteIfChanged, 2400);
     $view
-    .on('input', '.kifi-keep-box-keep-title', $.proxy(debouncedSaveKeepTitleIfChanged, null, $view))
+    .on('input', '.kifi-keep-box-keep-title', $.proxy(debouncedSaveKeepTitleIfChanged, this, $view))
     .on('blur', '.kifi-keep-box-keep-title', function () {
       if (!this.value.trim()) {
         this.value = $view.data().saved.title;
