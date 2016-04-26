@@ -43,7 +43,7 @@ class BasicUserRepo @Inject() (
     basicUserCache.bulkGetOrElseOpt(userIds map BasicUserUserIdKey) { keys =>
       userRepo.getAllUsers(keys.map(_.userId).toSeq).collect {
         case (userId, user) => BasicUserUserIdKey(userId) -> (if (user.state == UserStates.ACTIVE) Some(BasicUser.fromUser(user)) else None)
-      }.toMap
+      }
     }.collect { case (k, Some(v)) => k.userId -> v }
   }
 
