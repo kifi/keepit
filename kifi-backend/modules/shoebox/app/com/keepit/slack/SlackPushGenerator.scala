@@ -217,7 +217,7 @@ class SlackPushGenerator @Inject() (
 
     val keepElement = {
       val numComments = msg.commentIndexOnKeep.map(n => n + 1 + (if (keep.note.exists(_.nonEmpty)) 1 else 0)).filter(_ > 1)
-      if (msg.sentBy.exists(_.left.exists(_ == Id(84792)))) log.info(s"[SPG-NUM-COMMENTS] msg ${msg.id} has idx ${msg.commentIndexOnKeep} so numComments = $numComments")
+      if (msg.sentBy.exists(_.left.exists(_ == Id(84792)))) log.info(s"[SPG-NUM-COMMENTS] msg ${msg.id} has idx ${msg.commentIndexOnKeep} and keep ${keep.id.get} has updatedAt ${keep.updatedAt} and note ${keep.note}, so numComments = $numComments")
       DescriptionElements(
         s"_${keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH)}_",
         "  ",
