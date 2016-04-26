@@ -34,16 +34,13 @@ class TwitterPublishingCommander @Inject() (
         case None =>
           log.info(s"user $userId is not connected to twitter!")
         case Some(sui) =>
-          val libOwner = db.readOnlyMaster { implicit session =>
-            userRepo.get(library.ownerId)
-          }
           val libraryUrl = s"""https://www.kifi.com${libPathCommander.getPathForLibrary(library)}"""
           val title = keep.title.getOrElse("interesting link")
           twitterMessages.keepMessage(title.trim, keep.url.trim, library.name.trim, libraryUrl.trim) map { msg =>
             log.info(s"twitting about user $userId keeping $title with msg = $msg of size ${msg.size}")
             val imageOpt: Option[Future[TemporaryFile]] = {
               val imagePath = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(1024, 512)).flatten.map(_.imagePath) orElse {
-                libraryImageCommander.getBestImageForLibrary(library.id.get, ImageSize(1024, 512)).map(_.imagePath)
+                db.readOnlyMaster(implicit s => libraryImageCommander.getBestImageForLibrary(library.id.get, ImageSize(1024, 512))).map(_.imagePath)
               }
               imagePath.map(imageStore.get)
             }
@@ -78,7 +75,7 @@ class TwitterPublishingCommander @Inject() (
           val libName = library.name.abbreviate(140 - 28 - 20 - libOwner.fullName.size) //140 - text overhead - url len - lib owner size
           val name = twitterHandle(libOwner.id.get).getOrElse(libOwner.fullName.trim)
           val message = s"following @kifi library ${libName.trim} $libraryUrl by $name"
-          val imageOpt: Option[Future[TemporaryFile]] = libraryImageCommander.getBestImageForLibrary(library.id.get, ImageSize(1024, 512)) map { libImage =>
+          val imageOpt: Option[Future[TemporaryFile]] = db.readOnlyMaster(implicit s => libraryImageCommander.getBestImageForLibrary(library.id.get, ImageSize(1024, 512))) map { libImage =>
             imageStore.get(libImage.imagePath)
           }
           imageOpt match {

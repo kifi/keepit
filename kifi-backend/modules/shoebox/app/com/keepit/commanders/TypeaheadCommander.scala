@@ -17,7 +17,7 @@ import com.keepit.common.mail.{ BasicContact, EmailAddress }
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.store.ImagePath
+import com.keepit.common.store.{ ImageSize, ImagePath }
 import com.keepit.common.time.DateTimeJsonFormat
 import com.keepit.model.{ SocialUserConnectionsKey, _ }
 import com.keepit.search.SearchServiceClient
@@ -53,6 +53,7 @@ class TypeaheadCommander @Inject() (
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
     basicOrgGen: BasicOrganizationGen,
+    libraryImageCommander: LibraryImageCommander,
     organizationAvatarCommander: Provider[OrganizationAvatarCommander],
     permissionCommander: Provider[PermissionCommander],
     pathCommander: PathCommander,
@@ -480,7 +481,7 @@ class TypeaheadCommander @Inject() (
   private def libToResult(userId: Id[User], libIds: Seq[Id[Library]]): Map[Id[Library], LibraryResult] = {
     val results = libraryResultCache.direct.bulkGetOrElse(libIds.map(l => LibraryResultKey(userId, l)).toSet) { missingKeys =>
       val idSet = missingKeys.map(_.libraryId)
-      val (libs, collaborators, memberships, permissions, basicUserById, basicOrgById, orgAvatarsById, slackInfoById) = db.readOnlyReplica { implicit session =>
+      val (libs, collaborators, memberships, permissions, basicUserById, basicOrgById, headerImageById, orgAvatarsById, slackInfoById) = db.readOnlyReplica { implicit session =>
         val libs = libraryRepo.getActiveByIds(idSet).values.toVector
         val collaborators = libraryMembershipRepo.getCollaboratorsByLibrary(idSet)
         val memberships = libraryMembershipRepo.getWithLibraryIdsAndUserId(idSet, userId)
@@ -490,10 +491,11 @@ class TypeaheadCommander @Inject() (
         val basicUserById = basicUserRepo.loadAll(collaborators.values.flatten.toSet)
         val basicOrgById = basicOrgGen.getBasicOrganizations(libs.flatMap(_.organizationId).toSet)
 
+        val headerImageById = libraryImageCommander.getBestImageForLibraries(libs.map(_.id.get).toSet, ScaledImageSize.Small.idealSize)
         val orgAvatarsById = organizationAvatarCommander.get.getBestImagesByOrgIds(libs.flatMap(_.organizationId).toSet, ProcessedImageSize.Medium.idealSize)
         val slackInfoById = slackInfoCommander.getLiteSlackInfoForLibraries(idSet)
 
-        (libs, collaborators, memberships, permissions, basicUserById, basicOrgById, orgAvatarsById, slackInfoById)
+        (libs, collaborators, memberships, permissions, basicUserById, basicOrgById, headerImageById, orgAvatarsById, slackInfoById)
       }
       libs.collect {
         case lib if lib.isActive =>
@@ -516,6 +518,7 @@ class TypeaheadCommander @Inject() (
             spaceName = spaceName,
             hasCollaborators = collabs.nonEmpty,
             collaborators = collabs,
+            headerImage = headerImageById.get(libId).map(_.imagePath),
             orgAvatar = orgAvatarPath,
             membership = membershipInfo,
             slack = slackInfoById.get(libId)
@@ -536,7 +539,7 @@ sealed trait TypeaheadSearchResult
 @json case class UserContactResult(name: String, id: ExternalId[User], pictureName: Option[String], username: Username, firstName: String, lastName: String) extends TypeaheadSearchResult
 @json case class EmailContactResult(name: Option[String], email: EmailAddress) extends TypeaheadSearchResult
 @json case class LibraryResult(id: PublicId[Library], name: String, color: Option[LibraryColor], visibility: LibraryVisibility,
-  path: String, spaceName: String, hasCollaborators: Boolean, collaborators: Seq[BasicUser], orgAvatar: Option[ImagePath],
+  path: String, spaceName: String, hasCollaborators: Boolean, collaborators: Seq[BasicUser], headerImage: Option[ImagePath], orgAvatar: Option[ImagePath],
   membership: Option[LibraryMembershipInfo], slack: Option[LiteLibrarySlackInfo]) extends TypeaheadSearchResult // Same as LibraryData. Duck typing would rock.
 
 sealed trait TypeaheadRequest
@@ -582,6 +585,6 @@ class LibraryResultCache(stats: CacheStatistics, accessLog: AccessLog, innermost
 
 case class LibraryResultKey(userId: Id[User], libraryId: Id[Library]) extends Key[LibraryResult] {
   val namespace = "library_result"
-  override val version = 2
+  override val version = 3
   def toKey(): String = userId.id.toString + ":" + libraryId.id.toString
 }

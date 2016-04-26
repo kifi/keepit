@@ -156,7 +156,7 @@ class ExtLibraryController @Inject() (
         case Left(fail) =>
           Status(fail.status)(Json.obj("error" -> fail.message))
         case Right((library, owner, followerCount, following, subscribedToUpdates)) =>
-          val imageOpt = libraryImageCommander.getBestImageForLibrary(libraryId, ExtLibraryController.defaultImageSize)
+          val imageOpt = db.readOnlyMaster(implicit s => libraryImageCommander.getBestImageForLibrary(libraryId, ExtLibraryController.defaultImageSize))
           Ok(Json.obj(
             "name" -> library.name,
             "slug" -> library.slug,

@@ -4,7 +4,7 @@ import java.io.{ File, InputStream, FileInputStream }
 import java.sql.SQLException
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
-import com.keepit.common.db.slick.DBSession.RWSession
+import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.{ State, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.heimdal.HeimdalContext
@@ -26,8 +26,8 @@ object LibraryImageSizes {
 trait LibraryImageCommander {
 
   def getUrl(libraryImage: LibraryImage): String
-  def getBestImageForLibrary(libraryId: Id[Library], idealSize: ImageSize): Option[LibraryImage]
-  def getBestImageForLibraries(libraryIds: Set[Id[Library]], idealSize: ImageSize): Map[Id[Library], LibraryImage]
+  def getBestImageForLibrary(libraryId: Id[Library], idealSize: ImageSize)(implicit session: RSession): Option[LibraryImage]
+  def getBestImageForLibraries(libraryIds: Set[Id[Library]], idealSize: ImageSize)(implicit session: RSession): Map[Id[Library], LibraryImage]
   def uploadLibraryImageFromFile(image: File, libraryId: Id[Library], position: LibraryImagePosition, source: ImageSource, userId: Id[User], requestId: Option[Id[LibraryImageRequest]] = None)(implicit content: HeimdalContext): Future[ImageProcessDone]
   def positionLibraryImage(libraryId: Id[Library], position: LibraryImagePosition): Seq[LibraryImage]
   def removeImageForLibrary(libraryId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Boolean // Returns true if images were removed, false otherwise
@@ -48,17 +48,13 @@ class LibraryImageCommanderImpl @Inject() (
 
   def getUrl(libraryImage: LibraryImage): String = libraryImage.imagePath.getUrl(s3ImageConfig)
 
-  def getBestImageForLibrary(libraryId: Id[Library], idealSize: ImageSize): Option[LibraryImage] = {
-    val targetLibraryImages = db.readOnlyMaster { implicit s =>
-      libraryImageRepo.getActiveForLibraryId(libraryId)
-    }
+  def getBestImageForLibrary(libraryId: Id[Library], idealSize: ImageSize)(implicit session: RSession): Option[LibraryImage] = {
+    val targetLibraryImages = libraryImageRepo.getActiveForLibraryId(libraryId)
     ProcessedImageSize.pickBestImage(idealSize, targetLibraryImages, strictAspectRatio = false)
   }
 
-  def getBestImageForLibraries(libraryIds: Set[Id[Library]], idealSize: ImageSize): Map[Id[Library], LibraryImage] = {
-    val availableLibraryImages = db.readOnlyMaster { implicit s =>
-      libraryImageRepo.getActiveForLibraryIds(libraryIds)
-    }
+  def getBestImageForLibraries(libraryIds: Set[Id[Library]], idealSize: ImageSize)(implicit session: RSession): Map[Id[Library], LibraryImage] = {
+    val availableLibraryImages = libraryImageRepo.getActiveForLibraryIds(libraryIds)
     availableLibraryImages.mapValues(ProcessedImageSize.pickBestImage(idealSize, _, strictAspectRatio = false)).collect {
       case (libraryId, Some(image)) => libraryId -> image
     }

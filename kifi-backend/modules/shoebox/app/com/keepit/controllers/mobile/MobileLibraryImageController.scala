@@ -47,7 +47,7 @@ class MobileLibraryImageController @Inject() (
         InternalServerError(Json.obj("error" -> fail.reason))
       case success: ImageProcessSuccess =>
         val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(MobileLibraryImageController.defaultImageSize)
-        libraryImageCommander.getBestImageForLibrary(libraryId, idealSize) match {
+        db.readOnlyMaster(implicit s => libraryImageCommander.getBestImageForLibrary(libraryId, idealSize)) match {
           case Some(img: LibraryImage) =>
             Ok(Json.toJson(img.asInfo))
           case None =>
@@ -94,7 +94,7 @@ class MobileLibraryImageController @Inject() (
         case (_, lib) => libraryAccessCommander.canViewLibrary(request.userIdOpt, lib)
       } keySet
       val size = idealSize.map(ImageSize(_)).getOrElse(ProcessedImageSize.Medium.idealSize)
-      val imagesByPublicId = libraryImageCommander.getBestImageForLibraries(accessibleLibIds, size) map {
+      val imagesByPublicId = db.readOnlyMaster(implicit s => libraryImageCommander.getBestImageForLibraries(accessibleLibIds, size)) map {
         case (id, img) => Library.publicId(id).id -> img.asInfo
       }
       Ok(Json.toJson(imagesByPublicId))
