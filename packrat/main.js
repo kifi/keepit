@@ -2226,6 +2226,7 @@ function kifify(tab) {
     }
     kififyWithPageData(tab, d);
   } else {
+    getDefaultLibraries(); // prime the cache
     ajax('POST', '/ext/page', {url: url}, gotPageDetailsFor.bind(null, url, tab), function fail(xhr) {
       if (xhr.status === 403) {
         clearSession();
@@ -2888,8 +2889,9 @@ function searchRecipients(query, limit, offset, searchFor) {
 
 var defaultLibraries;
 var defaultLibrariesTime;
+var EXPIRE_DEFAULT_LIBRARIES = 60000 * 2;
 function getDefaultLibraries() {
-  if (!defaultLibraries || +new Date() - defaultLibrariesTime > 60000 ) {
+  if (!defaultLibraries || +new Date() - defaultLibrariesTime > EXPIRE_DEFAULT_LIBRARIES) {
     defaultLibraries = searchRecipients('', 20, null, {library: true});
     defaultLibrariesTime = +new Date();
   }
