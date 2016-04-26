@@ -32,7 +32,7 @@ object SlackPushGenerator {
   sealed abstract class PushItem(val time: DateTime, val userAttribution: Option[Id[User]])
   object PushItem {
     case class Digest(since: DateTime) extends PushItem(since, None)
-    case class KeepToPush(k: Keep, ktl: KeepToLibrary) extends PushItem(ktl.addedAt, k.userId)
+    case class KeepToPush(k: Keep, ktl: KeepToLibrary) extends PushItem(ktl.addedAt, ktl.addedBy)
     case class MessageToPush(k: Keep, msg: CrossServiceMessage) extends PushItem(msg.sentAt, msg.sentBy.flatMap(_.left.toOption))
   }
   case class PushItems(
@@ -214,12 +214,13 @@ class SlackPushGenerator @Inject() (
     def msgLink(subaction: String) = LinkElement(pathCommander.keepPageOnMessageViaSlack(keep, slackTeamId, msg.id).withQuery(SlackAnalytics.generateTrackingParams(items.slackChannelId, category, Some(subaction))))
 
     val keepElement = {
+      val numComments = msg.commentIndexOnKeep.map(_ + 1 + (if (keep.note.exists(_.nonEmpty)) 1 else 0)).filter(_ > 1)
       DescriptionElements(
         s"_${keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH)}_",
         "  ",
         "View" --> keepLink("viewArticle"),
         "|",
-        ("Reply" + msg.commentIndexOnKeep.filter(_ > 0).map(idx => s" (${idx + 1})").getOrElse("")) --> keepLink("reply")
+        ("Reply" + numComments.map(n => s" ($n)").getOrElse("")) --> keepLink("reply")
       )
     }
 
