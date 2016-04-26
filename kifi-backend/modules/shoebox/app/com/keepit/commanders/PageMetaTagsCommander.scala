@@ -81,8 +81,8 @@ class PageMetaTagsCommander @Inject() (
     }
   }
 
-  private def libraryImages(library: Library, keeps: Seq[Keep]): Seq[String] = {
-    db.readOnlyMaster(implicit s => libraryImageCommander.getBestImageForLibrary(library.id.get, ProcessedImageSize.XLarge.idealSize)) match {
+  private def libraryImages(library: Library, keeps: Seq[Keep])(implicit session: RSession): Seq[String] = {
+    libraryImageCommander.getBestImageForLibrary(library.id.get, ProcessedImageSize.XLarge.idealSize) match {
       case Some(image) =>
         Seq(imageUrl(image))
       case None =>
@@ -141,22 +141,21 @@ class PageMetaTagsCommander @Inject() (
 
       val metaInfoF = db.readOnlyMasterAsync { implicit s =>
         val facebookId: Option[String] = socialUserInfoRepo.getByUser(library.ownerId).filter(i => i.networkType == SocialNetworks.FACEBOOK).map(_.socialId.id).headOption
+
+        val url = {
+          val fullUrl = s"${applicationConfig.applicationBaseUrl}$urlPathOnly"
+          if (fullUrl.startsWith("http") || fullUrl.startsWith("https:")) fullUrl else s"http:$fullUrl"
+        }
+
         val keeps = keepRepo.pageByLibrary(library.id.get, 0, 50)
-        (facebookId, keeps)
-      }.map {
-        case (facebookId, keeps) =>
-          val url = {
-            val fullUrl = s"${applicationConfig.applicationBaseUrl}$urlPathOnly"
-            if (fullUrl.startsWith("http") || fullUrl.startsWith("https:")) fullUrl else s"http:$fullUrl"
-          }
 
-          val imageUrls = libraryImages(library, keeps)
+        val imageUrls = libraryImages(library, keeps)
 
-          val lowQualityLibrary: Boolean = {
-            keeps.size <= 2 || ((library.description.isEmpty || library.description.get.length <= 10) && keeps.size <= 4)
-          }
+        val lowQualityLibrary: Boolean = {
+          keeps.size <= 2 || ((library.description.isEmpty || library.description.get.length <= 10) && keeps.size <= 4)
+        }
 
-          (owner, url, imageUrls, facebookId, lowQualityLibrary)
+        (owner, url, imageUrls, facebookId, lowQualityLibrary)
       }
 
       for {

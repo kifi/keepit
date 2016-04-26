@@ -235,10 +235,11 @@ class ExtLibraryController @Inject() (
               (Seq.empty, existingImageUri) // optimizing the common case
             }
           } else {
-            val tags = db.readOnlyReplica { implicit s =>
-              tagCommander.getTagsForKeep(keep.id.get)
+            val (tags, image) = db.readOnlyReplica { implicit s =>
+              val tags = tagCommander.getTagsForKeep(keep.id.get)
+              val image = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(ExtLibraryController.defaultImageSize)).flatten.map(keepImageCommander.getUrl)
+              (tags, image)
             }
-            val image = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(ExtLibraryController.defaultImageSize)).flatten.map(keepImageCommander.getUrl)
             Future.successful((tags, image))
           }
 
@@ -272,9 +273,10 @@ class ExtLibraryController @Inject() (
         case Left((status, code)) => Status(status)(Json.obj("error" -> code))
         case Right(keep) =>
           val idealSize = imgSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(ExtLibraryController.defaultImageSize)
-          val keepImageUrl = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(idealSize)).flatten.map(keepImageCommander.getUrl)
-          val tags = db.readOnlyReplica { implicit s =>
-            tagCommander.getTagsForKeep(keep.id.get)
+          val (tags, keepImageUrl) = db.readOnlyReplica { implicit s =>
+            val tags = tagCommander.getTagsForKeep(keep.id.get)
+            val keepImageUrl = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(idealSize)).flatten.map(keepImageCommander.getUrl)
+            (tags, keepImageUrl)
           }
           Ok(Json.toJson(MoarKeepData(keep.title, keepImageUrl, keep.note, tags.map(_.tag).toSeq)))
       }
