@@ -407,8 +407,8 @@ class TypeaheadCommander @Inject() (
             (libScore(id), idx + libIdToImportance(id), lib)
         }
         if (userId == Id[User](3)) {
-          log.info(s"[andrewsearchkeeps] 1: $libraries")
-          log.info(s"[andrewsearchkeeps] 2: $res")
+          log.info(s"[andrewsearchkeeps2] 1: ${libraries.toVector.mkString(", ")}")
+          log.info(s"[andrewsearchkeeps2] 2: ${res.toVector.map(r => (r._1, r._2, r._3.id, r._3.name)).mkString(", ")}")
         }
         res
       }
@@ -420,7 +420,7 @@ class TypeaheadCommander @Inject() (
         case _ => false
       }.sortBy(d => (d._1, d._2)).slice(drop, ceil).map { case (_, _, res) => res }
 
-      combined
+      combined.toVector
     }
   }
 
