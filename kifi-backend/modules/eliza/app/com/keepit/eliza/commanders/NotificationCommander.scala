@@ -1,6 +1,6 @@
 package com.keepit.eliza.commanders
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.{ImplementedBy, Inject, Singleton}
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.core.{anyExtensionOps, iterableExtensionOps}
@@ -17,14 +17,27 @@ import com.keepit.notify.model.{NotificationKind, GroupingNotificationKind, NKin
 
 import scala.concurrent.ExecutionContext
 
+
+@ImplementedBy(classOf[NotificationCommanderImpl])
+trait NotificationCommander {
+  def getItems(notification: Id[Notification]): Set[NotificationItem]
+  def setNotificationDisabledTo(notifId: Id[Notification], disabled: Boolean): Boolean
+  def setNotificationUnreadTo(notifId: Id[Notification], unread: Boolean): Boolean
+  def processNewEvent(event: NotificationEvent): NotificationWithItems
+  def processNewEvents(events: Seq[NotificationEvent]): Seq[NotificationWithItems]
+  def completeNotification(kind: NKind, groupIdentifier: String, recipient: Recipient): Boolean
+  def getUnreadNotificationsCount(recipient: Recipient): Int
+}
+
 @Singleton
-class NotificationCommander @Inject() (
-    db: Database,
-    notificationRepo: NotificationRepo,
-    notificationItemRepo: NotificationItemRepo,
-    wsNotificationDelivery: WsNotificationDelivery,
-    private implicit val publicIdConfiguration: PublicIdConfiguration,
-    implicit val executionContext: ExecutionContext) extends Logging {
+class NotificationCommanderImpl @Inject() (
+  db: Database,
+  notificationRepo: NotificationRepo,
+  notificationItemRepo: NotificationItemRepo,
+  wsNotificationDelivery: WsNotificationDelivery,
+  private implicit val publicIdConfiguration: PublicIdConfiguration,
+  implicit val executionContext: ExecutionContext)
+    extends NotificationCommander with Logging {
 
   def getItems(notification: Id[Notification]): Set[NotificationItem] = {
     db.readOnlyMaster { implicit session =>
