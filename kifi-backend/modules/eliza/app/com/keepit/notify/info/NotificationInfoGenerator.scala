@@ -2,21 +2,21 @@ package com.keepit.notify.info
 
 import com.google.inject.Inject
 import com.keepit.commanders.ProcessedImageSize
-import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.core._
-import com.keepit.common.db.Id
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.eliza.commanders.NotificationCommander
 import com.keepit.eliza.model.{ NotificationWithInfo, NotificationWithItems }
-import com.keepit.model.{ Keep, NormalizedURI }
 import com.keepit.notify.model.{ Recipient, UserRecipient }
 import com.keepit.rover.RoverServiceClient
 import com.keepit.shoebox.ShoeboxServiceClient
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Failure, Try }
+import scala.util.{ Success, Failure, Try }
 
 class NotificationInfoGenerator @Inject() (
+    notifCommander: NotificationCommander,
     shoeboxServiceClient: ShoeboxServiceClient,
     roverServiceClient: RoverServiceClient,
     notificationKindInfoRequests: NotificationKindInfoRequests,
@@ -113,12 +113,18 @@ class NotificationInfoGenerator @Inject() (
       notifs.flatMap {
         case NotificationWithItems(notif, items) =>
           val infoRequest = notifInfoRequests(notif)
-          val infoTry = Try(infoRequest.fn(batchedInfos)) // TODO(ryan): can you write code that handles missing info elegantly instead of catching the inevitable KeyNotFoundException?
-          infoTry match {
-            case Failure(fail) => log.error(fail.toString)
-            case _ =>
+          // TODO(ryan): can you write code that handles missing info elegantly instead of catching the inevitable KeyNotFoundException?
+          Try(infoRequest.fn(batchedInfos)) match {
+            case Failure(fail) =>
+              // TODO(ryan): if we throw an exception while serializing a notification, we mark it as unread
+              // this is to avoid situations where the "unread" count is non-zero but the user cannot see any unread notifs
+              // A better strategy is to actually maintain notification integrity by ingesting the appropriate models
+              // from Shoebox and deactivating notifications when they are no longer valid. Léo knows how to do this.
+              notifCommander.setNotificationUnreadTo(notif.id.get, unread = false)
+              log.error(fail.toString)
+              None
+            case Success(info) => Some(NotificationWithInfo(notif, items, info))
           }
-          infoTry.toOption.map { info => NotificationWithInfo(notif, items, info) }
       }
     }
   }
