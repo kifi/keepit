@@ -102,6 +102,55 @@ k.formatting = k.formatting || (function () {
       return parsedDocument.getElementsByTagNameNS(PARSER_ERROR_NS, 'parsererror').length > 0;
     }
   }
+
+  function formatLibraryResult(options, lib) {
+    lib = (lib && typeof lib !== 'object' ? options : lib);
+    options = options || {};
+
+    // Add a property that the keep_box_lib template can use later on
+    // to determine whether a lib is allowed in open collaboration
+    if (options.showHintText && isOpenCollaborationCandidate(lib)) {
+      lib.isOpenCollaborationCandidate = true;
+    }
+
+    if (options.showHintText && lib.system) {
+      lib.extraInfo = MOD_KEYS.c + '-Shift-' + (lib.visibility === 'secret' ? MOD_KEYS.alt + '-' : '') + 'K';
+    } else if (lib.hasCollaborators) {
+      lib.extraInfo = smartlyListCollaboratorNames(lib.collaborators);
+    }
+  }
+
+  function smartlyListCollaboratorNames(collabs) {
+    var names = [ 'Me' ]; // max 15 characters
+    var charCount = 2;
+
+    while (charCount < 15 && collabs.length > 0) {
+      var collab = collabs.shift();
+      charCount += (collab.firstName.length + 2); // 2 for space and comma
+      names.push(collab.firstName);
+    }
+
+    if (collabs.length > 1) {
+      names.push(collabs.length + ' others');
+    } else if (collabs.length === 1) {
+      names.push(collabs[0].firstName);
+    }
+
+    return names.join(', ');
+  }
+
+  function isOpenCollaborationCandidate(library) {
+    var isOrgLibrary = !!library.orgAvatar;
+
+    var isAlreadyJoined = (
+      library && library.membership && (
+        library.membership.access === 'owner' ||
+        library.membership.access === 'read_write'
+      )
+    );
+
+    return isOrgLibrary && !isAlreadyJoined;
+  }
 }());
 
 var formatMessage = (function () {
@@ -337,55 +386,6 @@ function formatLocalDate() {
     } catch (e) {
       return '';
     }
-  }
-}
-
-function formatLibraryResult(options, lib) {
-  lib = (lib && typeof lib !== 'object' ? options : lib);
-  options = options || {};
-
-  function smartlyListCollaboratorNames(collabs) {
-    var names = [ 'Me' ]; // max 15 characters
-    var charCount = 2;
-
-    while (charCount < 15 && collabs.length > 0) {
-      var collab = collabs.shift();
-      charCount += (collab.firstName.length + 2); // 2 for space and comma
-      names.push(collab.firstName);
-    }
-
-    if (collabs.length > 1) {
-      names.push(collabs.length + ' others');
-    } else if (collabs.length === 1) {
-      names.push(collabs[0].firstName);
-    }
-
-    return names.join(', ');
-  }
-
-  function isOpenCollaborationCandidate(library) {
-    var isOrgLibrary = !!library.orgAvatar;
-
-    var isAlreadyJoined = (
-      library && library.membership && (
-        library.membership.access === 'owner' ||
-        library.membership.access === 'read_write'
-      )
-    );
-
-    return isOrgLibrary && !isAlreadyJoined;
-  }
-
-  // Add a property that the keep_box_lib template can use later on
-  // to determine whether a lib is allowed in open collaboration
-  if (options.showHintText && isOpenCollaborationCandidate(lib)) {
-    lib.isOpenCollaborationCandidate = true;
-  }
-
-  if (options.showHintText && lib.system) {
-    lib.extraInfo = MOD_KEYS.c + '-Shift-' + (lib.visibility === 'secret' ? MOD_KEYS.alt + '-' : '') + 'K';
-  } else if (lib.hasCollaborators) {
-    lib.extraInfo = smartlyListCollaboratorNames(lib.collaborators);
   }
 }
 
