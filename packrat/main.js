@@ -842,7 +842,7 @@ api.port.on({
     searchRecipients(q, null, null, {library: true})
     .then(function (responseData) {
       var libraries = responseData.results;
-      var filterLibraries = sf.filter(q, libraries, getName).map(function (lib) {
+      var filterLibraries = libraries.map(function (lib) {
         lib = clone(lib);
         lib.nameParts = sf.splitOnMatches(q, lib.name);
         return lib;
