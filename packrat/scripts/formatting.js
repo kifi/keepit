@@ -378,11 +378,11 @@ function formatLibraryResult(options, lib) {
 
   // Add a property that the keep_box_lib template can use later on
   // to determine whether a lib is allowed in open collaboration
-  if (isOpenCollaborationCandidate(lib)) {
+  if (options.showHintText && isOpenCollaborationCandidate(lib)) {
     lib.isOpenCollaborationCandidate = true;
   }
 
-  if (options.showShortcut && lib.system) {
+  if (options.showHintText && lib.system) {
     lib.extraInfo = MOD_KEYS.c + '-Shift-' + (lib.visibility === 'secret' ? MOD_KEYS.alt + '-' : '') + 'K';
   } else if (lib.hasCollaborators) {
     lib.extraInfo = smartlyListCollaboratorNames(lib.collaborators);

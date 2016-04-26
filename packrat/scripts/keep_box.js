@@ -49,7 +49,7 @@ k.keepBox = k.keepBox || (function () {
         if (keep) {
           lib.keep = keep;
         }
-        k.formatting.formatLibraryResult({ showShortcut: true}, lib);
+        k.formatting.formatLibraryResult({ showHintText: true}, lib);
       });
       show($parent, trigger, guided, data.libraries, data.organizations, data.me, data.experiments);
     },
@@ -305,7 +305,7 @@ k.keepBox = k.keepBox || (function () {
         if (q) {
           api.port.emit('filter_libraries', q, function (libs) {
             if (data.q === q) {
-              libs.forEach(k.formatting.formatLibraryResult.bind(null, {showShortcut: true}));
+              libs.forEach(k.formatting.formatLibraryResult.bind(null, {showHintText: true}));
               $box.data('filter_libraries', libs);
               (libs[0] || {}).highlighted = true;
               showLibs($(k.render('html/keeper/keep_box_libs_list', {query: q, libs: libs.map(annotateNameParts)}, {
