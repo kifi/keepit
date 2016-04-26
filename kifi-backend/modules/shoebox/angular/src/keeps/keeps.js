@@ -163,8 +163,7 @@ angular.module('kifi')
         scope.deleteKeep = function (event, keep) {
           angular.element(event.target).closest('.kf-keep').find('.kf-knf').remove();
           var libraryId = keep.library.id;
-          var distinctKeep = keep.keeps.filter(function (k) { return k.libraryId === keep.library.id; })[0];
-          keepActionService.unkeepFromLibrary(libraryId, distinctKeep.id).then(function () {
+          keepActionService.unkeepFromLibrary(libraryId, keep.id).then(function () {
             keep.unkept = true;
             keep.keepersTotal--;
 
