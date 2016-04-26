@@ -37,7 +37,7 @@ case class RoverArticleInfo(
 
   def withId(id: Id[RoverArticleInfo]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
-  def isActive = (state == ArticleInfoStates.ACTIVE)
+  def isActive = state == ArticleInfoStates.ACTIVE
 
   def getFetchRequest(shouldThrottle: Boolean): ArticleFetchRequest[A] = ArticleFetchRequest(articleKind, url, getLatestKey, shouldThrottle)
 
