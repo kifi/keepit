@@ -63,9 +63,13 @@ class MobileLibraryController @Inject() (
     extends UserActions with LibraryAccessActions with ShoeboxServiceController {
 
   private def constructLibraryInfo(lib: Library, inviter: Option[BasicUser] = None) = {
-    val (owner, org) = db.readOnlyMaster { implicit s => (basicUserRepo.load(lib.ownerId), lib.organizationId.map { id => orgRepo.get(id) }) }
-    val libImage = libraryImageCommander.getBestImageForLibrary(lib.id.get, MobileLibraryController.defaultLibraryImageSize).map(_.asInfo)
-    LibraryInfo.fromLibraryAndOwner(lib, libImage, owner, org, inviter)
+    val (owner, org, image) = db.readOnlyMaster { implicit s =>
+      val user = basicUserRepo.load(lib.ownerId)
+      val org = lib.organizationId.map { id => orgRepo.get(id) }
+      val image = libraryImageCommander.getBestImageForLibrary(lib.id.get, MobileLibraryController.defaultLibraryImageSize).map(_.asInfo)
+      (user, org, image)
+    }
+    LibraryInfo.fromLibraryAndOwner(lib, image, owner, org, inviter)
   }
 
   def createLibrary() = UserAction(parse.tolerantJson) { request =>
@@ -349,8 +353,6 @@ class MobileLibraryController @Inject() (
       val highestInvite = invites.maxBy(_.access)
       (highestInvite, lib._1)
     }.toSeq
-
-    val libImages = libraryImageCommander.getBestImageForLibraries((librariesWithMemberships.map(_._2.id.get) ++ librariesWithInvites.map(_._2.id.get)).toSet, MobileLibraryController.defaultLibraryImageSize)
 
     val libsFollowing = for ((mem, library) <- librariesWithMemberships) yield {
       val info = constructLibraryInfo(library)

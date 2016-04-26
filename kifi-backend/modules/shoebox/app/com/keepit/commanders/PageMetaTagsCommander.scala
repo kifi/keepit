@@ -83,7 +83,7 @@ class PageMetaTagsCommander @Inject() (
   }
 
   private def libraryImages(library: Library, keeps: Seq[Keep]): Seq[String] = {
-    libraryImageCommander.getBestImageForLibrary(library.id.get, ProcessedImageSize.XLarge.idealSize) match {
+    db.readOnlyMaster(implicit s => libraryImageCommander.getBestImageForLibrary(library.id.get, ProcessedImageSize.XLarge.idealSize)) match {
       case Some(image) =>
         Seq(imageUrl(image))
       case None =>

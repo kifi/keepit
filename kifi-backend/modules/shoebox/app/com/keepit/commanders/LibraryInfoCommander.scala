@@ -229,7 +229,7 @@ class LibraryInfoCommanderImpl @Inject() (
 
     val imagesF = libraries.map { library =>
       library.id.get -> SafeFuture {
-        libraryImageCommander.getBestImageForLibrary(library.id.get, idealLibraryImageSize)
+        db.readOnlyMaster(implicit s => libraryImageCommander.getBestImageForLibrary(library.id.get, idealLibraryImageSize))
       } //not cached
     }.toMap
 
