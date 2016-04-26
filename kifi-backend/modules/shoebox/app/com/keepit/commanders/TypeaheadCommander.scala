@@ -404,15 +404,10 @@ class TypeaheadCommander @Inject() (
         val libraries = libraryHits.map(_.info)
         val libIdToImportance = libraries.map(r => r.id -> r.importance).toMap
         val libsById = libToResult(userId, libraries.map(_.id))
-        val res = libraries.flatMap(l => libsById.get(l.id).map(r => l.id -> r)).zipWithIndex.map {
+        libraries.flatMap(l => libsById.get(l.id).map(r => l.id -> r)).zipWithIndex.map {
           case ((id, lib), idx) =>
             (libScore(id), idx + libIdToImportance(id), lib)
         }
-        if (userId == Id[User](3)) {
-          log.info(s"[andrewsearchkeeps2] 1: ${libraries.toVector.mkString(", ")}")
-          log.info(s"[andrewsearchkeeps2] 2: ${res.toVector.map(r => (r._1, r._2, r._3.id, r._3.name)).mkString(", ")}")
-        }
-        res
       }
 
       val combined: Seq[TypeaheadSearchResult] = (userRes ++ emailRes ++ libRes).filter {
@@ -421,6 +416,11 @@ class TypeaheadCommander @Inject() (
         case (_, _, l: LibraryResult) if requested.contains(TypeaheadRequest.Library) => true
         case _ => false
       }.sortBy(d => (d._1, d._2)).slice(drop, ceil).map { case (_, _, res) => res }
+
+      if (userId == Id[User](3)) {
+        log.info(s"[andrewsearchkeeps3] 1: ${libRes.sortBy(d => (d._1, d._2)).map(r => (r._1, r._2, r._3.name, r._3.id)).toVector.mkString(", ")}")
+        log.info(s"[andrewsearchkeeps3] 2: ${combined.toVector.mkString(", ")}")
+      }
 
       combined.toVector
     }
