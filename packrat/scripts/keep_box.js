@@ -730,9 +730,6 @@ k.keepBox = k.keepBox || (function () {
 
     api.port.emit('keep', withTitles(withUrls(data)), function (keep) {
       if (keep) {
-        if (library.system) {
-          $box.data('libraries').forEach(deleteKeepIfSystemLib);
-        }
         library.keep = keep;
         deferred.resolve(keep);
       } else {
