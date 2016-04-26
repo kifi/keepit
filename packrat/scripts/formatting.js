@@ -104,7 +104,7 @@ k.formatting = k.formatting || (function () {
   }
 
   function formatLibraryResult(options, lib) {
-    lib = (lib && typeof lib !== 'object' ? options : lib);
+    lib = (typeof lib !== 'object' ? options : lib);
     options = options || {};
 
     // Add a property that the keep_box_lib template can use later on
@@ -115,14 +115,30 @@ k.formatting = k.formatting || (function () {
 
     if (options.showHintText && lib.system) {
       lib.extraInfo = MOD_KEYS.c + '-Shift-' + (lib.visibility === 'secret' ? MOD_KEYS.alt + '-' : '') + 'K';
-    } else if (lib.hasCollaborators) {
-      lib.extraInfo = smartlyListCollaboratorNames(lib.collaborators);
+    } else {
+      if (lib.membership && lib.membership.access === 'owner' && !lib.orgAvatar) {
+        lib.spaceName = '';
+        if (lib.hasCollaborators) {
+          lib.extraInfo = smartlyListCollaboratorNames(lib.spaceName, lib.collaborators || []);
+        }
+      } else {
+        lib.spaceName = (lib.orgAvatar ? lib.spaceName : getFirstName(lib.spaceName));
+        lib.extraInfo = smartlyListCollaboratorNames(lib.spaceName, lib.collaborators || []);
+      }
     }
   }
 
-  function smartlyListCollaboratorNames(collabs) {
-    var names = [ 'Me' ]; // max 15 characters
-    var charCount = 2;
+  function smartlyListCollaboratorNames(spaceName, collabs) {
+    var names;
+    var prefix;
+    if (spaceName) {
+      names = [ ];
+      prefix = spaceName + (collabs.length ? ' • ' : '');
+    } else {
+      names = [ 'Me' ];
+      prefix = '';
+    }
+    var charCount = ((names[0] && names[0].length) || 0) + prefix.length;
 
     while (charCount < 15 && collabs.length > 0) {
       var collab = collabs.shift();
@@ -136,7 +152,11 @@ k.formatting = k.formatting || (function () {
       names.push(collabs[0].firstName);
     }
 
-    return names.join(', ');
+    return prefix + names.join(', ');
+  }
+
+  function getFirstName(s) {
+    return (s || '').match(/^\S*/)[0];
   }
 
   function isOpenCollaborationCandidate(library) {

@@ -172,8 +172,9 @@
   bottom: 0;
   left: 13px;
   display: block;
-  width: 21px;
-  height: 21px;
+  width: 27px;
+  height: 28px;
+  box-shadow: 1px 1px 3px rgba(0, 0, 0, .4);
   margin: auto;
   background-size: cover;
   background-position: center;
@@ -303,6 +304,7 @@
     bottom: 0;
     left: 0;
     width: 4px;
+    background-color: #333434; // default
   }
 
   .kifi-keep-box-lib-kept>& {
@@ -338,8 +340,9 @@
   display: block;
   line-height: 12px;
   font-size: 11px;
+  color: #999;
+
   .kifi-system>& {
-    color: #999;
     font-size: 10px;
   }
 }
@@ -387,11 +390,12 @@
   position: absolute;
   top: 8px;
   left: 13px;
-  width: 20px;
+  width: 27px;
   height: 28px;
   border-radius: 4px;
   box-shadow: 1px 1px #fff, 2px 2px #d3d3d3;
-
+  background-size: cover;
+  background-position: center;
   background-color: #333434; // default
 }
 
@@ -444,16 +448,10 @@
 }
 
 .kifi-create .kifi-keep-box-lib-card {
-  width: 20px;
+  width: 27px;
   height: 28px;
-
-  .kifi-keep-box-lib-icon-visibility {
-    @url: %(@svgLibCardPlusDataUrl, #fff, #fff);
-    display: block;
-    background: url(@url) center/10px 10px no-repeat;
-    width: 20px;
-    height: 28px;
-  }
+  @url: %(@svgLibCardPlusDataUrl, #fff, #fff);
+  background: #333434 url(@url) center/10px 10px no-repeat;
 }
 
 .kifi-keep-box-button {
