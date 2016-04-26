@@ -417,11 +417,6 @@ class TypeaheadCommander @Inject() (
         case _ => false
       }.sortBy(d => (d._1, d._2)).slice(drop, ceil).map { case (_, _, res) => res }
 
-      if (userId == Id[User](3)) {
-        log.info(s"[andrewsearchkeeps3] 1: ${libRes.sortBy(d => (d._1, d._2)).map(r => (r._1, r._2, r._3.name, r._3.id)).toVector.mkString(", ")}")
-        log.info(s"[andrewsearchkeeps3] 2: ${combined.toVector.mkString(", ")}")
-      }
-
       combined.toVector
     }
   }
