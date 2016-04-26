@@ -79,13 +79,13 @@ class SlackClientWrapperImpl @Inject() (
   def sendToSlackHoweverPossible(slackTeamId: SlackTeamId, slackChannelId: SlackChannelId, msg: SlackMessageRequest): Future[Option[(SlackUserId, SlackMessageResponse)]] = {
     import SlackErrorCode._
     sendToSlackViaBot(slackTeamId, slackChannelId, msg).map(v => Some(v)).recoverWith {
-      case SlackFail.NoValidBotToken | SlackErrorCode(CHANNEL_NOT_FOUND) | SlackErrorCode(NOT_IN_CHANNEL) =>
+      case SlackFail.NoValidBotToken | SlackErrorCode(CHANNEL_NOT_FOUND) | SlackErrorCode(NOT_IN_CHANNEL) | SlackErrorCode(IS_ARCHIVED) =>
         val slackTeamMembers = db.readOnlyMaster { implicit s =>
           slackTeamMembershipRepo.getBySlackTeam(slackTeamId).map(_.slackUserId)
         }
         FutureHelpers.collectFirst(slackTeamMembers) { slackUserId =>
           pushToSlackUsingToken(slackUserId, slackTeamId, slackChannelId, msg).map(v => Some(slackUserId, v)).recover {
-            case SlackFail.NoValidToken | SlackErrorCode(NOT_IN_CHANNEL) | SlackErrorCode(CHANNEL_NOT_FOUND) | SlackErrorCode(RESTRICTED_ACTION) => None
+            case SlackFail.NoValidToken | SlackErrorCode(NOT_IN_CHANNEL) | SlackErrorCode(CHANNEL_NOT_FOUND) | SlackErrorCode(IS_ARCHIVED) | SlackErrorCode(RESTRICTED_ACTION) => None
           }
         }.flatMap {
           case Some(v) => Future.successful(Some(v))

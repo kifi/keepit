@@ -41,6 +41,7 @@ object SlackErrorCode {
   val CHANNEL_NOT_FOUND = "channel_not_found"
   val EDIT_WINDOW_CLOSED = "edit_window_closed"
   val INVALID_AUTH = "invalid_auth"
+  val IS_ARCHIVED = "is_archived"
   val MESSAGE_NOT_FOUND = "message_not_found"
   val NOT_IN_CHANNEL = "not_in_channel"
   val RESTRICTED_ACTION = "restricted_action"
