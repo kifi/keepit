@@ -116,7 +116,7 @@ k.formatting = k.formatting || (function () {
     if (options.showHintText && lib.system) {
       lib.extraInfo = MOD_KEYS.c + '-Shift-' + (lib.visibility === 'secret' ? MOD_KEYS.alt + '-' : '') + 'K';
     } else {
-      if ((lib.membership && lib.membership.access === 'owner' || !lib.membership) && !lib.orgAvatar) {
+      if (lib.membership && lib.membership.access === 'owner' && !lib.orgAvatar) {
         lib.spaceName = '';
         if (lib.hasCollaborators) {
           lib.extraInfo = smartlyListCollaboratorNames(lib.spaceName, lib.collaborators || []);
