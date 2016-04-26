@@ -6,6 +6,7 @@ import com.keepit.common.core._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id, SequenceNumber }
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.logging.Logging
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.strings._
 import com.keepit.common.time._
@@ -62,18 +63,19 @@ object SlackPushGenerator {
 }
 
 class SlackPushGenerator @Inject() (
-    db: Database,
-    libRepo: LibraryRepo,
-    clock: Clock,
-    ktlRepo: KeepToLibraryRepo,
-    keepRepo: KeepRepo,
-    keepSourceAttributionRepo: KeepSourceAttributionRepo,
-    basicUserRepo: BasicUserRepo,
-    pathCommander: PathCommander,
-    airbrake: AirbrakeNotifier,
-    eliza: ElizaServiceClient,
-    val heimdalContextBuilder: HeimdalContextBuilderFactory,
-    implicit val executionContext: ExecutionContext) {
+  db: Database,
+  libRepo: LibraryRepo,
+  clock: Clock,
+  ktlRepo: KeepToLibraryRepo,
+  keepRepo: KeepRepo,
+  keepSourceAttributionRepo: KeepSourceAttributionRepo,
+  basicUserRepo: BasicUserRepo,
+  pathCommander: PathCommander,
+  airbrake: AirbrakeNotifier,
+  eliza: ElizaServiceClient,
+  val heimdalContextBuilder: HeimdalContextBuilderFactory,
+  implicit val executionContext: ExecutionContext)
+    extends Logging {
 
   import SlackPushGenerator._
 
@@ -214,7 +216,8 @@ class SlackPushGenerator @Inject() (
     def msgLink(subaction: String) = LinkElement(pathCommander.keepPageOnMessageViaSlack(keep, slackTeamId, msg.id).withQuery(SlackAnalytics.generateTrackingParams(items.slackChannelId, category, Some(subaction))))
 
     val keepElement = {
-      val numComments = msg.commentIndexOnKeep.map(_ + 1 + (if (keep.note.exists(_.nonEmpty)) 1 else 0)).filter(_ > 1)
+      val numComments = msg.commentIndexOnKeep.map(n => n + 1 + (if (keep.note.exists(_.nonEmpty)) 1 else 0)).filter(_ > 1)
+      if (msg.sentBy.exists(_.left.exists(_ == Id(84792)))) log.info(s"[SPG-NUM-COMMENTS] msg ${msg.id} has idx ${msg.commentIndexOnKeep} so numComments = $numComments")
       DescriptionElements(
         s"_${keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH)}_",
         "  ",
