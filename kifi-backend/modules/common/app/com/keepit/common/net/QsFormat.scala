@@ -30,10 +30,7 @@ object QsFormat {
 
   def binder[T](implicit qsf: QsOFormat[T]): QueryStringBindable[T] = new QueryStringBindable[T] {
     override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, T]] = {
-      val qsv = params.toSeq.map {
-        case (seg, v +: _) => QsValue.bump(seg)(QsPrimitive(v))
-      }.foldLeft(QsValue.obj())(_ ++ _) \ key
-      Some(qsf.reads.reads(qsv).fold(err => Left(err.msg), t => Right(t)))
+      Some(qsf.reads.reads(QsValue.fromPlay(key, params)).fold(err => Left(err.msg), t => Right(t)))
     }
     override def unbind(key: String, value: T): String = {
       QsValue.stringify(QsValue.bump(key)(qsf.writes.writes(value)))
@@ -74,6 +71,7 @@ final case class QsPath(segments: Seq[String]) {
   )
 }
 object QsPath {
+  def fromString(str: String): QsPath = QsPath(str.split('.'))
   val q__ = QsPath(Seq.empty)
   implicit val qspOrd: Ordering[QsPath] = Ordering.by(_.canonical)
 }
@@ -118,9 +116,16 @@ object QsValue {
     }
     valuesByPath.map { xs =>
       xs.map {
-        case (k, v) => shift(QsPath(k.split('.')))(QsPrimitive(v))
+        case (k, v) => shift(QsPath.fromString(k))(QsPrimitive(v))
       }.fold(obj())(_ ++ _)
     }
+  }
+
+  def fromPlay(key: String, params: Map[String, Seq[String]]): QsValue = {
+    // Note: ignores all but the first entry for a given path
+    params.toSeq.map {
+      case (path, v +: _) => QsValue.shift(QsPath.fromString(path))(QsPrimitive(v))
+    }.foldLeft(QsValue.obj())(_ ++ _) \ key
   }
 
   private def stringifyHelper(qsv: QsValue): Seq[String] = qsv match {

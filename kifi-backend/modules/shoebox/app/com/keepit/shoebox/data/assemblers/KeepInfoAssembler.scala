@@ -10,6 +10,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.SlackLog
 import com.keepit.common.mail.{ BasicContact, EmailAddress }
+import com.keepit.common.net.QsFormat
 import com.keepit.common.performance.Stopwatch
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ ImageSize, S3ImageConfig }
@@ -24,6 +25,7 @@ import com.keepit.shoebox.data.keep._
 import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
 import com.keepit.social.BasicAuthor
 import org.apache.commons.lang3.RandomStringUtils
+import play.api.libs.functional.syntax._
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.Try
@@ -37,20 +39,14 @@ trait KeepInfoAssembler {
 
 object KeepInfoAssemblerConfig {
   final case class KeepViewAssemblyOptions(
-      idealImageSize: ImageSize,
-      numEventsPerKeep: Int,
-      hideOtherPublishedLibraries: Boolean,
-      numContextualKeeps: Int,
-      numContextualKeepers: Int,
-      numContextualLibraries: Int,
-      numContextualTags: Int,
-      sanitizeUrls: Boolean) {
-    def withQueryString(qs: Map[String, Seq[String]]): KeepViewAssemblyOptions = {
-      val qsNumEventsPerKeep = qs.get("numEventsPerKeep").flatMap(_.headOption.flatMap(str => Try(str.toInt).toOption))
-
-      qsNumEventsPerKeep.fold(this)(n => this.copy(numEventsPerKeep = n))
-    }
-  }
+    idealImageSize: ImageSize,
+    numEventsPerKeep: Int,
+    hideOtherPublishedLibraries: Boolean,
+    numContextualKeeps: Int,
+    numContextualKeepers: Int,
+    numContextualLibraries: Int,
+    numContextualTags: Int,
+    sanitizeUrls: Boolean)
 
   val default = KeepViewAssemblyOptions(
     idealImageSize = ProcessedImageSize.Large.idealSize,
@@ -62,6 +58,23 @@ object KeepInfoAssemblerConfig {
     numContextualTags = 1,
     sanitizeUrls = true
   )
+
+  import com.keepit.common.net.QsPath._
+  private implicit val qsfImageSize: QsFormat[ImageSize] = (
+    (q__ \ "width").qsf[Int] and
+    (q__ \ "height").qsf[Int]
+  )(ImageSize.apply, unlift(ImageSize.unapply))
+
+  val qsf: QsFormat[KeepViewAssemblyOptions] = (
+    (q__ \ "idealImageSize").qsfOpt[ImageSize].inmap[ImageSize](_ getOrElse default.idealImageSize, Some(_)) and
+    (q__ \ "numEventsPerKeep").qsfOpt[Int].inmap[Int](_ getOrElse default.numEventsPerKeep, Some(_)) and
+    (q__ \ "hideOtherPublishedLibraries").qsfOpt[Boolean].inmap[Boolean](_ getOrElse default.hideOtherPublishedLibraries, Some(_)) and
+    (q__ \ "numContextualKeeps").qsfOpt[Int].inmap[Int](_ getOrElse default.numContextualKeeps, Some(_)) and
+    (q__ \ "numContextualKeepers").qsfOpt[Int].inmap[Int](_ getOrElse default.numContextualKeepers, Some(_)) and
+    (q__ \ "numContextualLibraries").qsfOpt[Int].inmap[Int](_ getOrElse default.numContextualLibraries, Some(_)) and
+    (q__ \ "numContextualTags").qsfOpt[Int].inmap[Int](_ getOrElse default.numContextualTags, Some(_)) and
+    (q__ \ "sanitizeUrls").qsfOpt[Boolean].inmap[Boolean](_ getOrElse default.sanitizeUrls, Some(_))
+  )(KeepViewAssemblyOptions.apply, unlift(KeepViewAssemblyOptions.unapply))
 }
 
 class KeepInfoAssemblerImpl @Inject() (
