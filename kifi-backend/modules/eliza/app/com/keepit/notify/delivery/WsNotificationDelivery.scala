@@ -1,26 +1,26 @@
 package com.keepit.notify.delivery
 
-import com.google.inject.{ Provider, Singleton, Inject }
-import com.keepit.eliza.commanders.NotificationDeliveryCommander
+import com.google.inject.{ ImplementedBy, Provider, Singleton, Inject }
 import com.keepit.eliza.controllers.WebSocketRouter
-import com.keepit.eliza.model.{ NotificationWithInfo, NotificationWithItems, Notification, NotificationItem }
-import com.keepit.model.NotificationCategory
-import com.keepit.notify.LegacyNotificationCheck
-import com.keepit.notify.info.{ NotificationInfoGenerator, StandardNotificationInfo }
+import com.keepit.eliza.model.NotificationWithItems
+import com.keepit.notify.info.NotificationInfoGenerator
 import com.keepit.notify.model._
-import com.keepit.notify.model.event.NotificationEvent
-import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.json.Json
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.Try
+
+@ImplementedBy(classOf[WsNotificationDeliveryImpl])
+trait WsNotificationDelivery {
+  def delete(recipient: Recipient, notifId: String): Unit
+  def deliver(recipient: Recipient, notif: NotificationWithItems): Future[Unit]
+}
 
 @Singleton
-class WsNotificationDelivery @Inject() (
+class WsNotificationDeliveryImpl @Inject() (
     notificationRouter: WebSocketRouter,
     notificationInfoGenerator: NotificationInfoGenerator,
     notificationJsonFormat: Provider[NotificationJsonFormat],
-    implicit val executionContext: ExecutionContext) {
+    implicit val executionContext: ExecutionContext) extends WsNotificationDelivery {
 
   def delete(recipient: Recipient, notifId: String): Unit = {
     recipient match {
