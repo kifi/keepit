@@ -38,7 +38,7 @@
           <img class="kf-keep-comment-embedded-img" ng-src="{{part.data.src}}"/>
         </div>
 
-        <div ng-if="part.type === 'TEXT_PLAIN'" ng-bind="part.data.text" class="kf-keep-comment-inline"></div>
+        <div ng-if="part.type === 'TEXT_PLAIN'" ng-bind-html="part.data.text|noteHtml" class="kf-keep-comment-inline"></div>
 
         <div ng-if="part.type === 'EMAIL'" class="kf-keep-comment-inline">
           <a ng-href="mail-to:{{part.data.text}}" ng-bind="part.data.text" class="kf-link-blue kf-keep-comment-inline"></a>
