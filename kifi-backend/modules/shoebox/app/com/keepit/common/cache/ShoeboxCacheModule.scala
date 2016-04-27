@@ -3,6 +3,7 @@ package com.keepit.common.cache
 import com.google.inject.{ Provides, Singleton }
 import com.keepit.classify.DomainCache
 import com.keepit.commanders._
+import com.keepit.commanders.gen.BasicLibraryByIdCache
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.seo.SiteMapCache
 import com.keepit.common.usersegment.UserSegmentCache
@@ -485,4 +486,8 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides @Singleton
   def internalSlackTeamInfo(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new InternalSlackTeamInfoCache(stats, accessLog, (outerRepo, 7 days))
+
+  @Provides @Singleton
+  def basicLibraryByIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new BasicLibraryByIdCache(stats, accessLog, (outerRepo, 7 days))
 }

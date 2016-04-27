@@ -155,7 +155,9 @@ class UserRepoImpl @Inject() (
         basicUserCache.remove(BasicUserUserIdKey(id))
       }
     }
-    invalidateMixpanel(user.withState(UserStates.INACTIVE))
+    session.onTransactionSuccess {
+      invalidateMixpanel(user.withState(UserStates.INACTIVE))
+    }
   }
 
   override def invalidateCache(user: User)(implicit session: RSession) = {
