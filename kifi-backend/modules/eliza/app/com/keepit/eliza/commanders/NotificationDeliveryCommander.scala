@@ -25,6 +25,7 @@ import com.keepit.social.{ BasicUser, BasicUserLikeEntity }
 import org.joda.time.DateTime
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
+import com.keepit.common.core._
 
 import scala.concurrent.{ ExecutionContext, Future }
 
@@ -237,21 +238,19 @@ class NotificationDeliveryCommanderImpl @Inject() (
       // and the frontend will assume that if we return 7 objects when they requested 8, we must be out of objects
       userThreadRepo.getThreadsForUser(userId, utq.copy(limit = 2 * utq.limit))
     }
-    utq.onUri.collect {
-      case nUriId if uts.length < utq.limit =>
-        shoebox.getRelevantKeepsByUserAndUri(userId, nUriId, utq.beforeTime, utq.limit - uts.length)
-    }.getOrElse(Future.successful(Seq.empty)).flatMap { otherKeeps =>
-      val keeps = uts.map { ut =>
-        (ut.keepId, ut.unread, ut.uriId)
-      } ++ otherKeeps.collect {
-        case keepId if !uts.exists(_.keepId == keepId) => (keepId, false, utq.onUri)
-      }
-      val notifJsonsByThreadFut = threadNotifBuilder.buildForKeeps(userId, keeps.map(_._1).toSet)
 
-      notifJsonsByThreadFut.flatMap { notifJsonsByKeep =>
-        val inputs = keeps.flatMap { b => notifJsonsByKeep.get(b._1).map(notif => (Json.toJson(notif), b._2, b._3)) }
-        notificationJsonMaker.make(inputs, includeUriSummary).map(_.take(utq.limit)) // TODO(ryan): here is where we filter after-the-fact
-      }
+    val keepsWithThreads = uts.map { ut => (ut.keepId, ut.unread, ut.uriId) }
+    val moreKeeps = for {
+      uriId <- utq.onUri.toSeq if uts.length < utq.limit
+      keepIds <- utq.keepIds.toSeq
+      keepId <- keepIds if !uts.exists(_.keepId == keepId)
+    } yield (keepId, false, Some(uriId))
+
+    val keeps = keepsWithThreads ++ moreKeeps
+
+    threadNotifBuilder.buildForKeeps(userId, keeps.map(_._1).toSet).flatMap { notifJsonsByKeep =>
+      val inputs = keeps.flatMap { b => notifJsonsByKeep.get(b._1).map(notif => (Json.toJson(notif), b._2, b._3)) }
+      notificationJsonMaker.make(inputs, includeUriSummary).map(_.take(utq.limit)) // TODO(ryan): here is where we filter after-the-fact
     }
   }
 
@@ -402,28 +401,34 @@ class NotificationDeliveryCommanderImpl @Inject() (
     getNotificationsByUser(userId, UserThreadQuery(onlyStartedBy = Some(userId), beforeTime = Some(time), limit = howMany), includeUriSummary)
   }
 
-  def getLatestSendableNotificationsForPage(userId: Id[User], url: String, howMany: Int, includeUriSummary: Boolean): Future[(String, Seq[NotificationJson], Int, Int)] = {
+  private def getNotificationsForUriId(userId: Id[User], uriId: Id[NormalizedURI], howMany: Int, before: Option[DateTime], includeUriSummary: Boolean): Future[(Set[Id[Keep]], Seq[NotificationJson])] = {
+    shoebox.getPersonalKeepRecipientsOnUris(userId, Set(uriId), excludeAccess = Some(LibraryAccess.READ_ONLY)).flatMap { keepsByUriId =>
+      val keepIds = keepsByUriId.getOrElse(uriId, Set.empty).map(_.id)
+      getNotificationsByUser(userId, UserThreadQuery(keepIds = Some(keepIds), onUri = Some(uriId), limit = howMany, beforeTime = before), includeUriSummary).imap((keepIds, _))
+    }
+  }
+
+  def getLatestSendableNotificationsForPage(userId: Id[User], url: String, howMany: Int, includeUriSummary: Boolean): Future[(String, Seq[NotificationJson], Int, Int)] = new SafeFuture({
     shoebox.getNormalizedUriByUrlOrPrenormalize(url).flatMap {
       case Right(prenormalizedUrl) =>
         Future.successful(prenormalizedUrl, Seq.empty, 0, 0)
       case Left(nUri) =>
-        val noticesFuture = getNotificationsByUser(userId, UserThreadQuery(onUri = Some(nUri.id.get), limit = howMany), includeUriSummary)
-        noticesFuture.map { notices =>
-          val unreadCounts = db.readOnlyReplica { implicit session =>
-            userThreadRepo.getThreadCountsForUri(userId, nUri.id.get)
-          }
-          (nUri.url, notices, unreadCounts.total, unreadCounts.unmuted)
+        getNotificationsForUriId(userId, nUri.id.get, howMany, None, includeUriSummary).map {
+          case (keepIds, notices) =>
+            val unreadCounts = db.readOnlyReplica { implicit session =>
+              userThreadRepo.getThreadCountsForKeeps(userId, keepIds)
+            }
+            (nUri.url, notices, unreadCounts.total, unreadCounts.unmuted)
         }
     }
-  }
+  })
 
-  def getSendableNotificationsForPageBefore(userId: Id[User], url: String, time: DateTime, howMany: Int, includeUriSummary: Boolean): Future[Seq[NotificationJson]] = {
-    new SafeFuture(shoebox.getNormalizedURIByURL(url) flatMap {
-      case Some(nUri) =>
-        getNotificationsByUser(userId, UserThreadQuery(onUri = Some(nUri.id.get), beforeTime = Some(time), limit = howMany), includeUriSummary)
+  def getSendableNotificationsForPageBefore(userId: Id[User], url: String, time: DateTime, howMany: Int, includeUriSummary: Boolean): Future[Seq[NotificationJson]] = new SafeFuture({
+    shoebox.getNormalizedURIByURL(url) flatMap {
+      case Some(nUri) => getNotificationsForUriId(userId, nUri.id.get, howMany, Some(time), includeUriSummary).imap(_._2)
       case _ => Future.successful(Seq.empty)
-    })
-  }
+    }
+  })
 
   def connectedSockets: Int = notificationRouter.connectedSockets
 
