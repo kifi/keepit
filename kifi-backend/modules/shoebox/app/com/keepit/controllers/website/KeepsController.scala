@@ -123,8 +123,8 @@ class KeepsController @Inject() (
   def updateKeepTitle(pubId: PublicId[Keep]) = UserAction(parse.tolerantJson) { request =>
     import com.keepit.common.http._
     val edit = for {
-      keepId <- Keep.decodePublicId(pubId).toOption.withLeft(KeepFail.INVALID_KEEP_ID: KeepFail)
-      title <- (request.body \ "title").asOpt[String].withLeft(KeepFail.COULD_NOT_PARSE: KeepFail)
+      keepId <- Keep.decodePublicId(pubId).toOption.withLeft(KeepFail.INVALID_KEEP_ID)
+      title <- (request.body \ "title").asOpt[String].withLeft(KeepFail.COULD_NOT_PARSE)
       editedKeep <- keepsCommander.updateKeepTitle(keepId, request.userId, title, request.userAgentOpt.flatMap(KeepEventSource.fromUserAgent))
     } yield editedKeep
 
@@ -136,8 +136,8 @@ class KeepsController @Inject() (
 
   def editKeepNote(keepPubId: PublicId[Keep]) = UserAction(parse.tolerantJson) { request =>
     val resultIfEverythingWentWell = for {
-      keepId <- Keep.decodePublicId(keepPubId).toOption.withLeft(KeepFail.INVALID_KEEP_ID: KeepFail)
-      newNote <- (request.body \ "note").asOpt[String].withLeft(KeepFail.COULD_NOT_PARSE: KeepFail)
+      keepId <- Keep.decodePublicId(keepPubId).toOption.withLeft(KeepFail.INVALID_KEEP_ID)
+      newNote <- (request.body \ "note").asOpt[String].withLeft(KeepFail.COULD_NOT_PARSE)
       updatedKeep <- keepsCommander.updateKeepNote(keepId, request.userId, newNote)
     } yield updatedKeep
     resultIfEverythingWentWell.fold(

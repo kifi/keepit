@@ -177,7 +177,7 @@ class OrganizationChecker @Inject() (
         log.error(s"[ORG-SYSTEM-LIBS] Org $orgId does not have a general library! Adding one.")
         val orgGeneralLib = libraryCommander.unsafeCreateLibrary(LibraryInitialValues.forOrgGeneralLibrary(org), org.ownerId)
         val orgMemberIds = orgMembershipRepo.getAllByOrgId(org.id.get).map(_.userId) - org.ownerId
-        orgMemberIds.foreach { userId => // TODO(ryan): you should feel bad about writing this. put the correct `unsafeJoinLibrary` method in LibraryMembershipCommander and call that
+        orgMemberIds.foreach { userId =>
           libraryMembershipRepo.save(LibraryMembership(libraryId = orgGeneralLib.id.get, userId = userId, access = LibraryAccess.READ_WRITE))
         }
       } else if (orgGeneralLibrary.size > 1) {

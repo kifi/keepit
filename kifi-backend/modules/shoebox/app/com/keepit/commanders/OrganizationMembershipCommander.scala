@@ -226,8 +226,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
     session.onTransactionSuccess {
       refreshOrganizationMembersTypeahead(request.orgId)
       orgGeneralLibraryId.foreach { libId =>
-        implicit val context = HeimdalContext.empty // TODO(ryan): find someone to make this more helpful
-        libraryMembershipCommander.joinLibrary(request.targetId, libId)
+        libraryMembershipCommander.joinLibrary(request.targetId, libId)(HeimdalContext.empty)
       }
       elizaServiceClient.flush(request.targetId)
     }
@@ -262,8 +261,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
     orgDomainOwnershipCommander.hideOrganizationForUser(request.targetId, request.orgId)
     val orgGeneralLibrary = db.readOnlyReplica { implicit session => libraryRepo.getBySpaceAndKind(LibrarySpace.fromOrganizationId(request.orgId), LibraryKind.SYSTEM_ORG_GENERAL) }
     orgGeneralLibrary.foreach { lib =>
-      implicit val context = HeimdalContext.empty // TODO(ryan): find someone to make this more helpful
-      libraryMembershipCommander.leaveLibrary(lib.id.get, request.targetId)
+      libraryMembershipCommander.leaveLibrary(lib.id.get, request.targetId)(HeimdalContext.empty)
     }
     refreshOrganizationMembersTypeahead(request.orgId)
     OrganizationMembershipRemoveResponse(request)

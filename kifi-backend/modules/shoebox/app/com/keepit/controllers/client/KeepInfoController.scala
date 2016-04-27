@@ -60,7 +60,7 @@ class KeepInfoController @Inject() (
     val goodResult = for {
       _ <- RightBias.unit.filter(_ => limit < 100, KeepFail.LIMIT_TOO_LARGE: KeepFail)
       fromIdOpt <- fromPubIdOpt.filter(_.nonEmpty).fold[RightBias[KeepFail, Option[Id[Keep]]]](RightBias.right(None)) { pubId =>
-        Keep.decodePublicIdStr(pubId).airbrakingOption.withLeft(KeepFail.INVALID_KEEP_ID: KeepFail).map(Some(_))
+        Keep.decodePublicIdStr(pubId).airbrakingOption.withLeft(KeepFail.INVALID_KEEP_ID).map(Some(_))
       }
     } yield {
       stopwatch.logTimeWith("input_decoded")

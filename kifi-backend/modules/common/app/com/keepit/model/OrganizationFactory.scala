@@ -22,8 +22,7 @@ object OrganizationFactory {
       invitedUsers: Seq[User] = Seq.empty[User],
       invitedEmails: Seq[EmailAddress] = Seq.empty[EmailAddress],
       nonstandardSettings: Map[Feature, FeatureSetting] = Map.empty,
-      // TODO(ryan): this Long is literally my least favorite thing in the world right now
-      planOpt: Option[Long] = None,
+      planOpt: Option[Long] = None, // This is a Long instead of an Id[PaidPlan] because PaidPlan is in Shoebox and this factory is in Common
       domain: Option[NormalizedHostname] = None) {
 
     def withName(newName: String) = this.copy(org = org.withName(newName))

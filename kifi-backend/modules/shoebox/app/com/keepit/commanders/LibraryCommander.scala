@@ -278,8 +278,6 @@ class LibraryCommanderImpl @Inject() (
       libraryRepo.get(libraryId)
     }
 
-    // TODO(ryan): I hate that we have random stuff like LibraryMembership.listed being mutated in `modifyLibrary`
-    // If you can figure out a better way to separate this out, I'd be thrilled
     db.readWrite { implicit session =>
       val membershipOpt = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId)
       (membershipOpt, modifyReq.listed) match {
@@ -339,8 +337,6 @@ class LibraryCommanderImpl @Inject() (
 
     libraryTypeahead.refreshForAllCollaborators(library.id.get)
 
-    // Update visibility of keeps
-    // TODO(ryan): Change this method so that it operates exclusively on KTLs. Keeps should not have visibility anymore
     def updateKeepVisibility(changedVisibility: LibraryVisibility, iter: Int): Future[Unit] = Future {
       val (ktls, lib, curViz) = db.readOnlyMaster { implicit s =>
         val lib = libraryRepo.get(library.id.get)
@@ -411,8 +407,9 @@ class LibraryCommanderImpl @Inject() (
         keepRepo.pageByLibrary(oldLibrary.id.get, 0, Int.MaxValue)
       }
       val savedKeeps = db.readWriteBatch(keepsInLibrary) { (s, keep) =>
+        // TODO[keepscussions]: Keeps should only be detached from libraries, not deactivated
         // ktlCommander.removeKeepFromLibrary(keep.id.get, libraryId)(s)
-        keepMutator.deactivateKeep(keep)(s) // TODO(ryan): At some point, remove this code. Keeps should only be detached from libraries
+        keepMutator.deactivateKeep(keep)(s)
       }
       libraryAnalytics.deleteLibrary(userId, oldLibrary, context)
       libraryAnalytics.unkeptPages(userId, savedKeeps.keySet.toSeq, oldLibrary, context)

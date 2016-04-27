@@ -38,7 +38,7 @@ object NewPageSummary {
 case class NewPageContext(
   numVisibleKeeps: Int,
   numTotalKeeps: Int,
-  // sources: Seq[SourceAttribution], // TODO(ryan): figure out how to retrieve
+  // sources: Seq[SourceAttribution],
   // numVisibleSources: Int,
   // numTotalSources: Int,
   keepers: Seq[BasicUser],

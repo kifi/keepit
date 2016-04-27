@@ -13,7 +13,6 @@ import play.api.libs.json.{ JsObject, Json }
 class DescriptionElementsTest extends Specification {
   "DescriptionElements" should {
     "format time periods properly" in {
-      skipped("this library is super fragile and breaks on leap days???")
       import DescriptionElements._
       val now = new DateTime
       val tests = Seq[(Period, String)](
@@ -34,7 +33,7 @@ class DescriptionElementsTest extends Specification {
         Period.months(1) -> "in the last month",
         Period.months(10) -> "in the last 10 months",
         Period.months(100) -> "in the last 8 years",
-        Period.years(1) -> "in the last 12 months", // TODO(ryan): seems weird...
+        Period.years(1) -> "in the last year",
         Period.years(10) -> "in the last 10 years"
       )
 

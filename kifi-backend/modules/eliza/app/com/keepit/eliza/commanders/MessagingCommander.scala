@@ -96,7 +96,7 @@ class MessagingCommanderImpl @Inject() (
     basicMessageCommander: MessageFetchingCommander,
     notificationDeliveryCommander: NotificationDeliveryCommander,
     messageSearchHistoryRepo: MessageSearchHistoryRepo,
-    // TODO(ryan): these notif classes are only here because of hacky NewKeep notification id collisions
+    // these notif* classes are only needed to kill NewKeep notifications once a message thread exists for that keep
     notifRepo: NotificationRepo,
     notifItemRepo: NotificationItemRepo,
     notifCommander: NotificationCommander,
@@ -105,16 +105,12 @@ class MessagingCommanderImpl @Inject() (
     implicit val imageConfig: S3ImageConfig) extends MessagingCommander with Logging {
 
   private def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread], requestUrl: String): Future[Seq[ElizaThreadInfo]] = {
-    //get all involved users
     val allInvolvedUsers = threads.flatMap(_.participants.allUsers)
-    //get all basic users
     val userId2BasicUserF = shoebox.getBasicUsers(allInvolvedUsers.toSeq)
     val discussionKeepsByKeepIdF = shoebox.getDiscussionKeepsByIds(userId, threads.map(_.keepId).toSet)
-    //get all messages
     val messagesByThread: Map[Id[MessageThread], Seq[ElizaMessage]] = threads.map { thread =>
       (thread.id.get, basicMessageCommander.getMessagesByKeepId(thread.keepId))
     }.toMap
-    //get user_threads
     val userThreads: Map[Id[MessageThread], UserThread] = db.readOnlyMaster { implicit session =>
       threads.map { thread => thread.id.get -> userThreadRepo.getUserThread(userId, thread.keepId).get }
     }.toMap

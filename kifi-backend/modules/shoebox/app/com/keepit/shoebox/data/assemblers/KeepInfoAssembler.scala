@@ -95,7 +95,7 @@ class KeepInfoAssemblerImpl @Inject() (
   rover: RoverServiceClient,
   search: SearchServiceClient,
   userExperimentRepo: UserExperimentRepo,
-  userCommander: UserCommander, // TODO(ryan): used only to filter out fake users, can replace with user experiment repo?
+  userCommander: UserCommander,
   private implicit val airbrake: AirbrakeNotifier,
   private implicit val imageConfig: S3ImageConfig,
   private implicit val executionContext: ExecutionContext,
@@ -202,11 +202,11 @@ class KeepInfoAssemblerImpl @Inject() (
       stopwatch.logTimeWith("assembling_infos")
       keepSet.toSeq.augmentWith { keepId =>
         for {
-          keep <- keepsById.get(keepId).withLeft(KeepFail.KEEP_NOT_FOUND: KeepFail)
-          permissions <- RightBias.right(permissionsByKeep.getOrElse(keepId, Set.empty)).filter(_.contains(KeepPermission.VIEW_KEEP), KeepFail.INSUFFICIENT_PERMISSIONS: KeepFail)
+          keep <- keepsById.get(keepId).withLeft(KeepFail.KEEP_NOT_FOUND)
+          permissions <- RightBias.right(permissionsByKeep.getOrElse(keepId, Set.empty)).filter(_.contains(KeepPermission.VIEW_KEEP), KeepFail.INSUFFICIENT_PERMISSIONS)
           author <- sourceByKeep.get(keepId).map {
             case (attr, userOpt) => BasicAuthor(attr, userOpt)
-          }.orElse(keep.userId.flatMap(keeper => usersById.get(keeper).map(BasicAuthor.fromUser))).withLeft(KeepFail.INVALID_KEEP_ID: KeepFail)
+          }.orElse(keep.userId.flatMap(keeper => usersById.get(keeper).map(BasicAuthor.fromUser))).withLeft(KeepFail.INVALID_KEEP_ID)
         } yield {
           val viewerInfo = NewKeepViewerInfo(
             permissions = permissions

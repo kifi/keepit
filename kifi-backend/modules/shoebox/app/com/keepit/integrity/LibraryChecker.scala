@@ -57,13 +57,7 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
             if (zombieKtls.nonEmpty) {
               //airbrake.notify(s"Library ${library.id.get} has zombie ktls: ${zombieKtls.map(_.id.get)}")
               log.error(s"Library ${library.id.get} has zombie ktls: ${zombieKtls.map(_.id.get)}")
-
-              // TODO(ryan): when it's acceptable for a keep to be removed from a library, kill the code below and replace it with this commented out line
-              // zombieKtls.foreach(ktlCommander.deactivate)
-              zombieKtls.foreach { ktl =>
-                val keep = keepRepo.get(ktl.keepId)
-                keepMutator.deactivateKeep(keep)
-              }
+              zombieKtls.foreach(ktlCommander.deactivate)
             }
           }
         } else {

@@ -138,7 +138,8 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getPersonalKeepRecipientsOnUris(userId: Id[User], uriIds: Set[Id[NormalizedURI]], excludeAccess: Option[LibraryAccess] = None): Future[Map[Id[NormalizedURI], Set[CrossServiceKeepRecipients]]]
   def getSlackTeamIds(orgIds: Set[Id[Organization]]): Future[Map[Id[Organization], SlackTeamId]]
   def getSlackTeamInfo(slackTeamId: SlackTeamId): Future[Option[InternalSlackTeamInfo]]
-  // TODO(ryan): kill this once clients stop trying to create discussions through Eliza
+
+  // TODO[keepscussions]: kill these methods once Eliza endpoints are deprecated
   def internKeep(creator: Id[User], users: Set[Id[User]], emails: Set[EmailAddress], uriId: Id[NormalizedURI], url: String, title: Option[String], note: Option[String], source: Option[KeepSource]): Future[CrossServiceKeep]
   def editRecipientsOnKeep(editorId: Id[User], keepId: Id[Keep], diff: KeepRecipientsDiff, persistKeepEvent: Boolean, source: Option[KeepEventSource]): Future[Unit]
   def registerMessageOnKeep(keepId: Id[Keep], msg: CrossServiceMessage): Future[Unit]

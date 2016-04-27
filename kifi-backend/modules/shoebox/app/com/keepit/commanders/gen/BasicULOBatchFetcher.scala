@@ -23,7 +23,7 @@ class BasicULOBatchFetcher @Inject() (
     bf.f(values)
   }
 
-  // TODO(ryan): is this actually a good idea? I think it is not
+  // NB: it is probably a bad sign if you're using this function
   def runInPlace[T](bf: BatchFetchable[T])(implicit session: RSession): T = {
     val users = basicUserGen.loadAll(bf.keys.users)
     val libs = basicLibGen.getBasicLibraries(bf.keys.libraries)

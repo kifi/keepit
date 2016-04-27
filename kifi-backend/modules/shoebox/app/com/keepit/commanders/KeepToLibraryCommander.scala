@@ -38,7 +38,6 @@ trait KeepToLibraryCommander {
 
   def syncAndDeleteKeep(keep: Keep)(implicit session: RWSession): Unit
 
-  // TODO(ryan): expose a public method `syncLibrary(lib): Future[Unit]`
   def syncWithLibrary(ktl: KeepToLibrary, lib: Library)(implicit session: RWSession): KeepToLibrary
 }
 

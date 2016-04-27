@@ -76,7 +76,7 @@ class PageInfoController @Inject() (
   def getFirstOrderLibrariesForUserByUri() = UserAction(parse.tolerantJson) { implicit request =>
     import GetFirstOrderLibrariesByUri._
     val resultIfEverythingChecksOut = for {
-      input <- request.body.asOpt[GetFirstOrderKeepsByUri].withLeft(KeepFail.COULD_NOT_PARSE: KeepFail)
+      input <- request.body.asOpt[GetFirstOrderKeepsByUri].withLeft(KeepFail.COULD_NOT_PARSE)
     } yield getAllLibrariesForUserOnUrl(request.userId, input.url, input.limit)
 
     resultIfEverythingChecksOut.fold(

@@ -20,8 +20,6 @@ import scala.util.Try
 
 @ImplementedBy(classOf[KeepSourceCommanderImpl])
 trait KeepSourceCommander {
-  // TODO(ryan): once we have made `Keep.userId` optional and have set up proper attribution backfilling, remove the Option[BasicUser] here
-  // it is trying to hotfix misattributed keeps, and we should instead just do the Right Thing the first time
   def getSourceAttributionForKeep(keepId: Id[Keep])(implicit session: RSession): Option[(SourceAttribution, Option[BasicUser])]
   def getSourceAttributionForKeeps(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], (SourceAttribution, Option[BasicUser])]
 

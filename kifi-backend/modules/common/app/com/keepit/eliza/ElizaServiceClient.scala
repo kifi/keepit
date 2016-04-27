@@ -479,7 +479,6 @@ object ElizaServiceClient {
     implicit val responseFormat: Format[Response] = Json.format[Response]
   }
   object GetChangedMessagesFromKeeps {
-    // TODO(ryan): consider adding a `limit` or `fetchSize` here to prevent us from crashing Eliza
     case class Request(keepIds: Set[Id[Keep]], seq: SequenceNumber[Message])
     case class Response(msgs: Seq[CrossServiceMessage])
     implicit val requestFormat: Format[Request] = Json.format[Request]

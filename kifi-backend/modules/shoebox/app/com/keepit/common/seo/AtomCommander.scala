@@ -88,7 +88,7 @@ class AtomCommander @Inject() (
           (image.flatten, keep.userId.map(userRepo.getNoCache))
         }
         val title = keep.title.getOrElse("")
-        val author = keeper.map(_.fullName).getOrElse("unknown") // TODO(ryan): find actual author
+        val author = keeper.map(_.fullName).getOrElse("unknown")
         val content = descriptions.get(keep.uriId).flatMap(_.article.description).getOrElse("")
         val id = keep.externalId.id
         val updatedAt = keep.updatedAt
