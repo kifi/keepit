@@ -34,7 +34,7 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
   // Things that need to be replaced with a single "rpb"-style query
   def getUserThreadsForEmailing(lastNotifiedBefore: DateTime)(implicit session: RSession): Seq[UserThread]
   def getUnreadThreadCounts(userId: Id[User])(implicit session: RSession): UnreadThreadCounts
-  def getThreadCountsForUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): UnreadThreadCounts
+  def getThreadCountsForKeeps(userId: Id[User], keepIds: Set[Id[Keep]])(implicit session: RSession): UnreadThreadCounts
   def getLatestUnreadUnmutedThreads(userId: Id[User], howMany: Int)(implicit session: RSession): Seq[UserThread]
   def getUnreadThreadNotifications(userId: Id[User])(implicit session: RSession): Seq[UserThreadNotification]
   def getThreadStream(userId: Id[User], limit: Int, beforeId: Option[Id[Keep]], filter: ElizaFeedFilter)(implicit session: RSession): Map[Id[Keep], DateTime]
@@ -177,8 +177,6 @@ class UserThreadRepoImpl @Inject() (
       rs.filter(r => r.user === userId)
     } |> { rs =>
       utq.keepIds.map(keepIds => rs.filter(r => r.keepId.inSet(keepIds))).getOrElse(rs)
-    } |> { rs => // by uri
-      utq.onUri.map(uriId => rs.filter(r => r.uriId === uriId)).getOrElse(rs)
     } |> { rs => // by time
       utq.beforeTime.map(fromTime => rs.filter(r => r.notificationUpdatedAt < fromTime)).getOrElse(rs)
     } |> { rs => // by unread
@@ -192,8 +190,8 @@ class UserThreadRepoImpl @Inject() (
       .take(utq.limit).list
   }
 
-  def getThreadCountsForUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): UnreadThreadCounts = {
-    val threads = activeRows.filter(ut => ut.user === userId && ut.uriId === uriId)
+  def getThreadCountsForKeeps(userId: Id[User], keepIds: Set[Id[Keep]])(implicit session: RSession): UnreadThreadCounts = {
+    val threads = activeRows.filter(ut => ut.user === userId && ut.keepId.inSet(keepIds))
     val (total, unmuted) = (threads.length, threads.filter(t => t.unread && !t.muted).length).run
     UnreadThreadCounts(total, unmuted)
   }
