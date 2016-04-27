@@ -213,8 +213,9 @@ class SlackChannelToLibraryRepoImpl @Inject() (
     val q = sql"""
       SELECT id
       FROM `slack_channel_to_library`
-      WHERE `state` = 'active' AND `status` = 'on' AND `next_ingestion_at` < $now AND (`last_ingesting_at` IS NULL OR `last_ingesting_at` < $lastIngestingTooLongAgo) ORDER BY `last_ingested_at` IS NULL DESC, `next_ingestion_at` ASC LIMIT $limit;
+      WHERE `state` = 'active' AND `status` = 'on' AND `next_ingestion_at` < $now AND (`last_ingesting_at` IS NULL OR `last_ingesting_at` < $lastIngestingTooLongAgo) ORDER BY slack_team_id IN ('T02A81H50', 'T04SM6T1Z') DESC, `last_ingested_at` IS NULL DESC, `next_ingestion_at` ASC LIMIT $limit;
     """
+
     q.as[Id[SlackChannelToLibrary]].list
   }
 
