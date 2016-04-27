@@ -210,13 +210,8 @@ k.messageContext = k.messageContext || (function ($) {
       var data = $view.data();
       var val = input.value.trim();
 
-      if (val === '') {
-        return;
-      }
-
-      k.progress.emptyAndShow($view, deferred.promise);
-
       if (val && val !== data['title' in data.saving ? 'saving' : 'saved'].title) {
+        k.progress.emptyAndShow($view, deferred.promise);
         data.saving.title = val;
         api.port.emit('save_keepscussion_title', {keepId: keepId, newTitle: val}, function (success) {
           if (data.saving.title === val) {
