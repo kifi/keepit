@@ -263,7 +263,7 @@ class LibraryMembershipCommanderImpl @Inject() (
                   val updatedTargetMembership = libraryMembershipRepo.save(targetMem.copy(access = newAccess, subscribedToUpdates = newSubscription, state = LibraryMembershipStates.ACTIVE))
 
                   if (inviter.id.get.id != targetUserId.id) {
-                    s.onTransactionSuccess(libraryInviteCommander.notifyInviteeAboutInvitationToJoinLibrary(inviter, library, libOwner, Map(targetUserId -> updatedTargetMembership)))
+                    libraryInviteCommander.notifyInviteeAboutInvitationToJoinLibrary(inviter, library, libOwner, Map(targetUserId -> updatedTargetMembership))
                   }
 
                   Right(updatedTargetMembership)

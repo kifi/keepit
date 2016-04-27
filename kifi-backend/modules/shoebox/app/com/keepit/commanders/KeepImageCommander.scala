@@ -35,10 +35,10 @@ object KeepImageSizes {
 trait KeepImageCommander {
 
   def getUrl(keepImage: KeepImage): String
-  def getBestImageForKeep(keepId: Id[Keep], imageRequest: ProcessImageRequest)(implicit session: RSession): Option[Option[KeepImage]]
-  def getBestImagesForKeeps(keepIds: Set[Id[Keep]], imageRequest: ProcessImageRequest)(implicit session: RSession): Map[Id[Keep], Option[KeepImage]]
+  def getBestImageForKeep(keepId: Id[Keep], imageRequest: ProcessImageRequest): Option[Option[KeepImage]]
+  def getBestImagesForKeeps(keepIds: Set[Id[Keep]], imageRequest: ProcessImageRequest): Map[Id[Keep], Option[KeepImage]]
   def getBestImagesForKeepsPatiently(keepIds: Set[Id[Keep]], imageRequest: ProcessImageRequest): Future[Map[Id[Keep], Option[KeepImage]]]
-  def getBasicImagesForKeeps(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], BasicImages]
+  def getBasicImagesForKeeps(keepIds: Set[Id[Keep]]): Map[Id[Keep], BasicImages]
 
   def autoSetKeepImage(keepId: Id[Keep], localOnly: Boolean = true, overwriteExistingChoice: Boolean = false): Future[ImageProcessDone]
   def setKeepImageFromUrl(imageUrl: String, keepId: Id[Keep], source: ImageSource, requestId: Option[Id[KeepImageRequest]] = None): Future[ImageProcessDone]
@@ -65,30 +65,30 @@ class KeepImageCommanderImpl @Inject() (
 
   def getUrl(keepImage: KeepImage): String = keepImage.imagePath.getUrl
 
-  def getBestImageForKeep(keepId: Id[Keep], imageRequest: ProcessImageRequest)(implicit session: RSession): Option[Option[KeepImage]] = {
+  def getBestImageForKeep(keepId: Id[Keep], imageRequest: ProcessImageRequest): Option[Option[KeepImage]] = {
     getBestImagesForKeeps(Set(keepId), imageRequest).get(keepId)
   }
 
-  def getBestImagesForKeeps(keepIds: Set[Id[Keep]], imageRequest: ProcessImageRequest)(implicit session: RSession): Map[Id[Keep], Option[KeepImage]] = {
+  def getBestImagesForKeeps(keepIds: Set[Id[Keep]], imageRequest: ProcessImageRequest): Map[Id[Keep], Option[KeepImage]] = {
     val strictAspectRatio = imageRequest.operation == ProcessImageOperation.CenteredCrop
     val idealImageSize = imageRequest.size
     getAllImagesForKeeps(keepIds).mapValues(ProcessedImageSize.pickBestImage(idealImageSize, _, strictAspectRatio))
   }
 
-  def getBasicImagesForKeeps(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], BasicImages] = {
+  def getBasicImagesForKeeps(keepIds: Set[Id[Keep]]): Map[Id[Keep], BasicImages] = {
     getAllImagesForKeeps(keepIds).mapValues { keepImages =>
       val images = keepImages.map(BasicImage.fromBaseImage)
       BasicImages(images.toSet)
     }
   }
 
-  private def getAllImagesForKeeps(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Seq[KeepImage]] = {
+  private def getAllImagesForKeeps(keepIds: Set[Id[Keep]]): Map[Id[Keep], Seq[KeepImage]] = {
     if (keepIds.isEmpty) {
       Map.empty[Id[Keep], Seq[KeepImage]]
     } else {
-      val allImagesByKeepId = keepImageRepo.getAllForKeepIds(keepIds).groupBy(_.keepId)
+      val allImagesByKeepId = db.readOnlyReplica { implicit session => keepImageRepo.getAllForKeepIds(keepIds) }.groupBy(_.keepId)
       (keepIds -- allImagesByKeepId.keys).foreach { missingKeepId =>
-        SafeFuture { autoSetKeepImage(missingKeepId, localOnly = false, overwriteExistingChoice = false) } // creates a session in session, but creates a new session in a Future
+        SafeFuture { autoSetKeepImage(missingKeepId, localOnly = false, overwriteExistingChoice = false) }
       }
       allImagesByKeepId.mapValues { keepImages =>
         keepImages.filter(_.state == KeepImageStates.ACTIVE) // a missing set (keep image not set) is not equivalent to an empty set (keep image set to none)
@@ -118,7 +118,7 @@ class KeepImageCommanderImpl @Inject() (
             } else Future.successful(())
           }.getOrElse(Future.successful(()))
 
-          processDoneFOpt map { _ => keepId -> db.readOnlyMaster(implicit s => getBestImageForKeep(keepId, imageRequest).flatMap(identity)) }
+          processDoneFOpt map { _ => keepId -> getBestImageForKeep(keepId, imageRequest).flatMap(identity) }
       }.toSeq).map(_.toMap)
     }
   }

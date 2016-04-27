@@ -519,7 +519,7 @@ class ShoeboxController @Inject() (
 
   def getKeepImages() = Action(parse.tolerantJson) { request =>
     val keepIds = request.body.as[Set[Id[Keep]]]
-    val imagesByKeepId = db.readOnlyMaster(implicit s => keepImageCommander.getBasicImagesForKeeps(keepIds))
+    val imagesByKeepId = keepImageCommander.getBasicImagesForKeeps(keepIds)
     implicit val tupleWrites = TupleFormat.tuple2Writes[Id[Keep], BasicImages]
     val result = Json.toJson(imagesByKeepId.toSeq)
     Ok(result)
