@@ -71,7 +71,6 @@ class PageMetaTagsCommander @Inject() (
 
   private def relatedLibrariesLinks(library: Library): Future[Seq[String]] = relatedLibraryCommander.suggestedLibraries(library.id.get, None) map { relatedLibs =>
     val libs = relatedLibs.filterNot(_.kind == RelatedLibraryKind.POPULAR).take(6).map(_.library)
-    val users = db.readOnlyMaster { implicit s => basicUserRepo.loadAll(libs.map(_.ownerId).toSet) }
     libs.map { related =>
       val urlPathOnly = pathCommander.getPathForLibrary(related)
       val url = {
@@ -82,8 +81,8 @@ class PageMetaTagsCommander @Inject() (
     }
   }
 
-  private def libraryImages(library: Library, keeps: Seq[Keep]): Seq[String] = {
-    db.readOnlyMaster(implicit s => libraryImageCommander.getBestImageForLibrary(library.id.get, ProcessedImageSize.XLarge.idealSize)) match {
+  private def libraryImages(library: Library, keeps: Seq[Keep])(implicit session: RSession): Seq[String] = {
+    libraryImageCommander.getBestImageForLibrary(library.id.get, ProcessedImageSize.XLarge.idealSize) match {
       case Some(image) =>
         Seq(imageUrl(image))
       case None =>
@@ -139,16 +138,18 @@ class PageMetaTagsCommander @Inject() (
       Future.successful(PublicPageMetaPrivateTags(urlPathOnly, mobileDeeplink))
     } else {
       val relatedLibrariesLinksF: Future[Seq[String]] = relatedLibrariesLinks(library)
+
       val metaInfoF = db.readOnlyMasterAsync { implicit s =>
         val facebookId: Option[String] = socialUserInfoRepo.getByUser(library.ownerId).filter(i => i.networkType == SocialNetworks.FACEBOOK).map(_.socialId.id).headOption
-
-        val keeps = keepRepo.pageByLibrary(library.id.get, 0, 50)
-        val imageUrls = libraryImages(library, keeps)
 
         val url = {
           val fullUrl = s"${applicationConfig.applicationBaseUrl}$urlPathOnly"
           if (fullUrl.startsWith("http") || fullUrl.startsWith("https:")) fullUrl else s"http:$fullUrl"
         }
+
+        val keeps = keepRepo.pageByLibrary(library.id.get, 0, 50)
+
+        val imageUrls = libraryImages(library, keeps)
 
         val lowQualityLibrary: Boolean = {
           keeps.size <= 2 || ((library.description.isEmpty || library.description.get.length <= 10) && keeps.size <= 4)
@@ -156,6 +157,7 @@ class PageMetaTagsCommander @Inject() (
 
         (owner, url, imageUrls, facebookId, lowQualityLibrary)
       }
+
       for {
         (owner, url, imageUrls, facebookId, lowQualityLibrary) <- metaInfoF
         relatedLibrariesLinks <- relatedLibrariesLinksF
