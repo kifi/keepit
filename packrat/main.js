@@ -672,7 +672,7 @@ function makeRequest(name, method, url, data, callbacks) {
 
 // ===== Handling messages from content scripts or other extension pages
 
-var SUPPORT = {id: 'ae5d159c-5935-4ad5-b979-ea280cb6c7ba', firstName: 'Eishay', lastName: 'Smith', name: 'Eishay Smith', pictureName: 'gmAXC.jpg'};
+var SUPPORT = {id: 'ae5d159c-5935-4ad5-b979-ea280cb6c7ba', firstName: 'Eishay', lastName: 'Smith', name: 'Eishay Smith', pictureName: 'gmAXC.jpg', kind: 'user'};
 
 api.port.on({
   deauthenticate: deauthenticate,
