@@ -249,7 +249,7 @@ class NotificationDeliveryCommanderImpl @Inject() (
     val keeps = keepsWithThreads ++ moreKeeps
 
     threadNotifBuilder.buildForKeeps(userId, keeps.map(_._1).toSet).flatMap { notifJsonsByKeep =>
-      val inputs = keeps.flatMap { b => notifJsonsByKeep.get(b._1).map(notif => (Json.toJson(notif), b._2, b._3)) }
+      val inputs = keeps.flatMap { b => notifJsonsByKeep.get(b._1).collect { case notif if utq.beforeTime.forall(notif.time isBefore) => (Json.toJson(notif), b._2, b._3) } }
       notificationJsonMaker.make(inputs, includeUriSummary).map(_.take(utq.limit)) // TODO(ryan): here is where we filter after-the-fact
     }
   }
