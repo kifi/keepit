@@ -168,7 +168,6 @@ class SlackClientWrapperImpl @Inject() (
     val workingToken = db.readOnlyMaster { implicit s =>
       slackTeamMembershipRepo.getBySlackTeamAndUser(slackTeamId, slackUserId).flatMap(_.getTokenIncludingScopes(Set(SlackAuthScope.ChatWriteBot)))
     }
-    log.info(s"[SLACK-CLIENT-WRAPPER] Pushing to $slackChannelId in $slackTeamId from $slackUserId and using $workingToken")
     workingToken match {
       case None => Future.failed(SlackFail.NoValidToken)
       case Some(token) =>
