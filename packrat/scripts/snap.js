@@ -228,7 +228,7 @@ k.snap = k.snap || (function () {
       var rect = k.snapshot.getImgContentRect(img);
       var img2 = $(img.cloneNode()).removeAttr('id').removeAttr('class').removeAttr('style').removeAttr('alt')[0];
       k.snap.onLookHere.dispatch(img2, rect, href, '', 'image');
-    }, true)
+    }, true);
 
     api.port.emit('track_pane_view', {
       type: 'quotesOnHighlight',
@@ -308,17 +308,24 @@ k.snap = k.snap || (function () {
       parent.style.position = 'relative';
     }
 
+    var rect;
     $aSnapSel = $(k.render('html/keeper/snap_tip', { sel: true }))
     .css(styles)
     .appendTo(parent)
-    .data({range: r, parentPos: parentPos})
+    .each(function () {
+      rect = getAbsoluteBoundingClientRect(document.body, this);
+    })
+    .remove()
+    .appendTo(document.body)
+    .css({
+      position: 'absolute',
+      top: rect.top,
+      left: rect.left - (rect.width / 2)
+    })
     .layout()
     .addClass('kifi-snap-show')
-    .css({
-      left: function () {
-        return styles.left - ($(this).width() / 2);
-      }
-    });
+    .data({range: r, parentPos: parentPos});
+
     $aSnapSel.get(0).addEventListener('click', function (e) {
       e.stopPropagation();
       e.preventDefault();
@@ -334,6 +341,19 @@ k.snap = k.snap || (function () {
       content: 'selection',
       keeperState: getKeeperDiscussionState()
     });
+  }
+
+  function getAbsoluteBoundingClientRect(parent, child) {
+    var parentRect = parent.getBoundingClientRect();
+    var childRect = child.getBoundingClientRect();
+    return {
+      top: childRect.top - parentRect.top,
+      right: childRect.right - parentRect.left,
+      bottom: childRect.bottom - parentRect.top,
+      left: childRect.left - parentRect.left,
+      width: childRect.width,
+      height: childRect.height
+    };
   }
 
   function getKeeperDiscussionState() {
