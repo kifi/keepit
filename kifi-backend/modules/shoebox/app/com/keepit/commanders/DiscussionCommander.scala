@@ -115,11 +115,7 @@ class DiscussionCommanderImpl @Inject() (
   def modifyConnectionsForKeep(userId: Id[User], keepId: Id[Keep], diff: KeepRecipientsDiff, source: Option[KeepEventSource]): Future[Unit] = {
     if (diff.isEmpty) Future.successful(())
     else {
-      val (keepPermissions, uriCollisionsByLib) = db.readOnlyReplica { implicit s =>
-        val keepPermissions = permissionCommander.getKeepPermissions(keepId, Some(userId))
-        val uriCollisionsByLib = ktlRepo.getByLibraryIdsAndUriIds(diff.libraries.added, uriIds = Set(keepRepo.get(keepId).uriId)).groupBy(_.libraryId)
-        (keepPermissions, uriCollisionsByLib)
-      }
+      val keepPermissions = db.readOnlyReplica(implicit s => permissionCommander.getKeepPermissions(keepId, Some(userId)))
       val errs: Stream[DiscussionFail] = Stream(
         (diff.users.added.nonEmpty && !keepPermissions.contains(KeepPermission.ADD_PARTICIPANTS)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS,
         (diff.users.removed.nonEmpty && !keepPermissions.contains(KeepPermission.REMOVE_PARTICIPANTS)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS,
