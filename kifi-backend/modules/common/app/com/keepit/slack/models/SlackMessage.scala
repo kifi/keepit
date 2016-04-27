@@ -23,8 +23,6 @@ object KifiSlackApp {
 
   val BrewstercorpTeamId = SlackTeamId("T0FUL04N4")
   val KifiSlackTeamId = SlackTeamId("T02A81H50")
-  val Dev4SlackTeamId = SlackTeamId("T04SM6T1Z")
-  val specialTeamIds = Set(BrewstercorpTeamId, KifiSlackTeamId, Dev4SlackTeamId)
 }
 
 @json case class SlackTimestamp(value: String) extends Ordered[SlackTimestamp] { // channel-specific timestamp
