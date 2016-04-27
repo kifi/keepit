@@ -6,6 +6,7 @@ import com.keepit.common.strings.UTF8
 import com.keepit.common.util.RightBias._
 import com.keepit.common.util.{ MapHelpers, RightBias }
 import play.api.libs.functional._
+import play.api.mvc.QueryStringBindable
 
 import scala.util.Try
 
@@ -26,6 +27,18 @@ object QsFormat {
   implicit val string: QsFormat[String] = direct(Some(_), identity)
   implicit val int: QsFormat[Int] = direct(str => Try(str.toInt).toOption, _.toString)
   implicit val bool: QsFormat[Boolean] = direct(str => Try(str.toBoolean).toOption, _.toString)
+
+  def binder[T](implicit qsf: QsOFormat[T]): QueryStringBindable[T] = new QueryStringBindable[T] {
+    override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, T]] = {
+      val qsv = params.toSeq.map {
+        case (seg, v +: _) => QsValue.bump(seg)(QsPrimitive(v))
+      }.foldLeft(QsValue.obj())(_ ++ _) \ key
+      Some(qsf.reads.reads(qsv).fold(err => Left(err.msg), t => Right(t)))
+    }
+    override def unbind(key: String, value: T): String = {
+      QsValue.stringify(QsValue.bump(key)(qsf.writes.writes(value)))
+    }
+  }
 }
 object QsOFormat {
   def apply[T](reads: QsReads[T], writes: QsOWrites[T]) = new QsOFormat[T](reads, writes)
@@ -92,8 +105,9 @@ object QsValue {
   def obj(ps: (String, QsValueLike)*): QsObject = QsObject(ps.toMap.mapValues(_.value))
 
   def shift(path: QsPath)(qv: QsValue): QsObject = path.segments.init.foldRight(obj(path.segments.last -> qv)) {
-    case (seg, v) => obj(seg -> v)
+    case (seg, v) => bump(seg)(v)
   }
+  def bump(seg: String)(qv: QsValue): QsObject = obj(seg -> qv)
 
   private val fieldRegex = """(.*)=(.*)""".r
   def parse(str: String): RightBias[String, QsValue] = {
