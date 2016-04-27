@@ -64,12 +64,10 @@ angular.module('kifi')
             // else we continue normally
             var commentBox = getCommentBox(element);
             if (commentBox && !e.shiftKey && e.which === 13) {
-              var tagRe = /(?:\[(#\D[\w\-​_ ]+[\w])\])|(#\D[\w\-_​]{2,})/g;
-              var text = commentBox.textContent.replace(tagRe, '[$1$2]');
               var msg = {
                 sentAt: new Date().getTime(),
                 sentBy: profileService.me,
-                text: text
+                text: commentBox.textContent
               };
               $scope.comments.push(msg);
               $scope.visibleCount++;
