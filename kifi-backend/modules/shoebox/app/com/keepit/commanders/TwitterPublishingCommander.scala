@@ -39,10 +39,8 @@ class TwitterPublishingCommander @Inject() (
           twitterMessages.keepMessage(title.trim, keep.url.trim, library.name.trim, libraryUrl.trim) map { msg =>
             log.info(s"twitting about user $userId keeping $title with msg = $msg of size ${msg.size}")
             val imageOpt: Option[Future[TemporaryFile]] = {
-              val imagePath = db.readOnlyMaster { implicit s =>
-                keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(1024, 512)).flatten.map(_.imagePath) orElse {
-                  libraryImageCommander.getBestImageForLibrary(library.id.get, ImageSize(1024, 512)).map(_.imagePath)
-                }
+              val imagePath = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(1024, 512)).flatten.map(_.imagePath) orElse {
+                db.readOnlyMaster(implicit s => libraryImageCommander.getBestImageForLibrary(library.id.get, ImageSize(1024, 512))).map(_.imagePath)
               }
               imagePath.map(imageStore.get)
             }

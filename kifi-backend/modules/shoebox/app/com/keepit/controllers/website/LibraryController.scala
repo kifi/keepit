@@ -688,7 +688,7 @@ class LibraryController @Inject() (
               InternalServerError(Json.obj("error" -> fail.reason))
             case _: ImageProcessSuccess =>
               val idealSize = size.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(ExtLibraryController.defaultImageSize)
-              Ok(Json.obj("image" -> db.readOnlyMaster(implicit s => keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(idealSize)).flatten.map(keepImageCommander.getUrl))))
+              Ok(Json.obj("image" -> keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(idealSize)).flatten.map(keepImageCommander.getUrl)))
           }
         case JsString(badUrl) =>
           log.info(s"rejecting image url: $badUrl")
