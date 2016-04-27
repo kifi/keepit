@@ -26,8 +26,9 @@ object KeepActivityGen {
     import com.keepit.common.util.DescriptionElements._
 
     lazy val initialEventsBF = {
-      val basicAuthorBF = sourceAttrOpt.map {
-        case (sourceAttr, basicUserOpt) => BatchFetchable.trivial(BasicAuthor(sourceAttr, basicUserOpt))
+      val basicAuthorBF = sourceAttrOpt.flatMap {
+        case (ka: KifiAttribution, _) => None
+        case (sourceAttr, basicUserOpt) => Some(BatchFetchable.trivial(BasicAuthor(sourceAttr, basicUserOpt)))
       }.getOrElse {
         BatchFetchable.userOpt(keep.userId).map(_.map(BasicAuthor.fromUser).getOrElse(BasicAuthor.Fake))
       }
