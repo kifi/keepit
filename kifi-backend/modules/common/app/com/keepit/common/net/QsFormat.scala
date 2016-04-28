@@ -29,7 +29,7 @@ object QsFormat {
   implicit val int: QsFormat[Int] = direct(str => Try(str.toInt).toOption, _.toString)
   implicit val bool: QsFormat[Boolean] = direct(str => Try(str.toBoolean).toOption, _.toString)
 
-  def binder[T](implicit qsf: QsOFormat[T]): QueryStringBindable[T] = new QueryStringBindable[T] {
+  def binder[T](implicit qsf: QsFormat[T]): QueryStringBindable[T] = new QueryStringBindable[T] {
     override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, T]] = {
       Some(qsf.reads.reads(QsValue.fromPlay(key, params)).fold(err => Left(err.msg), t => Right(t)))
     }
