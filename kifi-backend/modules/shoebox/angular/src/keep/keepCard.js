@@ -285,7 +285,7 @@ angular.module('kifi')
           scope.$watch('keep.title', updateTitle);
           scope.defaultDescLines = 4;
           scope.me = profileService.me;
-          scope.showActivityEvents = keep.activity && profileService.hasExperiment('activity_log');
+          scope.showActivityEvents = keep.activity;
           scope.showOriginLibrary = scope.currentPageOrigin !== 'libraryPage' &&
             keep.library && keep.library.visibility !== 'discoverable' && keep.library.kind === 'system_secret';
           // Don't change until the link is updated to be a bit more secure:
