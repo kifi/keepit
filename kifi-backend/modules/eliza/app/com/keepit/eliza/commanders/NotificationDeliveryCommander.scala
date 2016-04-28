@@ -12,6 +12,7 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
+import com.keepit.common.util.Ord
 import com.keepit.discussion.Message
 import com.keepit.eliza._
 import com.keepit.eliza.controllers.WebSocketRouter
@@ -248,9 +249,13 @@ class NotificationDeliveryCommanderImpl @Inject() (
 
     val keeps = keepsWithThreads ++ moreKeeps
 
-    threadNotifBuilder.buildForKeeps(userId, keeps.map(_._1).toSet).flatMap { notifJsonsByKeep =>
-      val inputs = keeps.flatMap { b => notifJsonsByKeep.get(b._1).collect { case notif if utq.beforeTime.forall(notif.time isBefore) => (Json.toJson(notif), b._2, b._3) } }
-      notificationJsonMaker.make(inputs, includeUriSummary).map(_.take(utq.limit)) // TODO(ryan): here is where we filter after-the-fact
+    threadNotifBuilder.buildForKeeps(userId, keeps.map(_._1).toSet).flatMap { notifByKeep =>
+      val validNotifs = for {
+        (keepId, unread, uriId) <- keeps
+        notif <- notifByKeep.get(keepId) if utq.beforeTime.forall(notif.time isBefore)
+      } yield (notif, unread, uriId)
+      val sortedRawNotifs = validNotifs.sortBy(_._1.time)(Ord.descending).map { case (notif, unread, uriId) => (Json.toJson(notif), unread, uriId) }
+      notificationJsonMaker.make(sortedRawNotifs, includeUriSummary).map(_.take(utq.limit)) // TODO(ryan): here is where we filter after-the-fact
     }
   }
 
