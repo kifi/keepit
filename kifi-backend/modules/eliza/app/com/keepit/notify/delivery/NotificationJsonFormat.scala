@@ -61,8 +61,6 @@ class NotificationJsonFormat @Inject() (
       }
   }
 
-  private val idealImageSize = ImageSize(65, 95) // todo figure out where these somewhat magic image size numbers are needed
-
   def extendedJson(notifWithInfo: NotificationWithInfo, uriSummary: Boolean = false): Future[NotificationWithJson] = {
     notifWithInfo match {
       case NotificationWithInfo(notif, items, info) =>
