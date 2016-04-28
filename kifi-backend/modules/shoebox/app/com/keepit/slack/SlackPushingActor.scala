@@ -3,6 +3,7 @@ package com.keepit.slack
 import com.google.inject.Inject
 import com.keepit.commanders._
 import com.keepit.common.akka.FortyTwoActor
+import play.api.http.Status
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.core._
 import com.keepit.common.db.Id
@@ -159,6 +160,7 @@ class SlackPushingActor @Inject() (
           userPush.getOrElse(Future.failed(SlackFail.NoValidToken)).recoverWith {
             case SlackFail.NoValidToken | SlackErrorCode(_) =>
               slackClient.sendToSlackHoweverPossible(integration.slackTeamId, integration.slackChannelId, itemMsg.asBot).map(_.map(resp => (resp, itemMsg.asBot))).recoverWith {
+                case SlackAPIErrorResponse(Status.REQUEST_ENTITY_TOO_LARGE, _, _) => Future.successful(None) // pretend we succeeded
                 case SlackFail.NoValidPushMethod => Future.failed(BrokenSlackIntegration(integration, None, Some(SlackFail.NoValidPushMethod)))
               }
           }
