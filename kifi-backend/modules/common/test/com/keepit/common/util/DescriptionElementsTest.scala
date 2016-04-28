@@ -34,7 +34,7 @@ class DescriptionElementsTest extends Specification {
         Period.months(10) -> "in the last 10 months",
         Period.months(100) -> "in the last 8 years",
         Period.years(1) -> "in the last year",
-        Period.years(10) -> "in the last 10 years"
+        Period.years(10) -> "in the last decade"
       )
 
       for ((input, ans) <- tests) yield {
