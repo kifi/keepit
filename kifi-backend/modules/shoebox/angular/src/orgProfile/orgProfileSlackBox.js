@@ -11,14 +11,14 @@ angular.module('kifi')
   return {
     restrict: 'A',
     scope: {
-      organization: '=',
-      showNewSlackButton: '='
+      organization: '='
     },
     templateUrl: 'orgProfile/orgProfileSlackBox.tpl.html',
     link: function(scope) {
       scope.userLoggedIn = $rootScope.userLoggedIn;
       scope.slackTeamId = scope.organization.slackTeam.id;
       scope.requestFailed = $stateParams.error;
+      scope.showNewSlackButton = scope.organization.experiments && scope.organization.experiments.indexOf('sign_in_with_slack') !== -1;
 
       scope.trackClick = function(action) {
         var eventName = ($rootScope.userLoggedIn ? 'user' : 'visitor') + '_clicked_page';

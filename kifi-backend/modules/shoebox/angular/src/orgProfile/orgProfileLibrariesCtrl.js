@@ -60,7 +60,6 @@ angular.module('kifi')
 
     $scope.me = profileService.me;
     $scope.canInvite = $scope.viewer.permissions.indexOf(ORG_PERMISSION.INVITE_MEMBERS) > -1;
-    $scope.showNewSlackButton = profileService.hasExperiment('sign_in_with_slack');
 
     $scope.fetchLibraries = function () {
       libraryLazyLoader
