@@ -240,20 +240,19 @@ class NotificationDeliveryCommanderImpl @Inject() (
       userThreadRepo.getThreadsForUser(userId, utq.copy(limit = 2 * utq.limit))
     }
 
-    val keepsWithThreads = uts.map { ut => (ut.keepId, ut.unread, ut.uriId) }
+    val keepsWithThreads = uts.map { ut => (ut.keepId, ut.unread) }
     val moreKeeps = for {
-      uriId <- utq.onUri.toSeq if uts.length < utq.limit
       keepIds <- utq.keepIds.toSeq
       keepId <- keepIds if !uts.exists(_.keepId == keepId)
-    } yield (keepId, false, Some(uriId))
+    } yield (keepId, false)
 
     val keeps = keepsWithThreads ++ moreKeeps
 
     threadNotifBuilder.buildForKeeps(userId, keeps.map(_._1).toSet).flatMap { notifByKeep =>
       val validNotifs = for {
-        (keepId, unread, uriId) <- keeps
+        (keepId, unread) <- keeps
         notif <- notifByKeep.get(keepId) if utq.beforeTime.forall(notif.time isBefore)
-      } yield (notif, unread, uriId)
+      } yield (notif, unread, keepId)
       val sortedRawNotifs = validNotifs.sortBy(_._1.time)(Ord.descending).map { case (notif, unread, uriId) => (Json.toJson(notif), unread, uriId) }
       notificationJsonMaker.make(sortedRawNotifs, includeUriSummary).map(_.take(utq.limit)) // TODO(ryan): here is where we filter after-the-fact
     }
