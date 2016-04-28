@@ -160,7 +160,8 @@ class SlackPushingActor @Inject() (
           userPush.getOrElse(Future.failed(SlackFail.NoValidToken)).recoverWith {
             case SlackFail.NoValidToken | SlackErrorCode(_) =>
               slackClient.sendToSlackHoweverPossible(integration.slackTeamId, integration.slackChannelId, itemMsg.asBot).map(_.map(resp => (resp, itemMsg.asBot))).recoverWith {
-                case SlackAPIErrorResponse(Status.REQUEST_ENTITY_TOO_LARGE, _, _) => Future.successful(None) // pretend we succeeded
+                case SlackAPIErrorResponse(Status.REQUEST_ENTITY_TOO_LARGE, _, _)
+                  | SlackAPIErrorResponse(Status.REQUEST_URI_TOO_LONG, _, _) => Future.successful(None) // pretend we succeeded
                 case SlackFail.NoValidPushMethod => Future.failed(BrokenSlackIntegration(integration, None, Some(SlackFail.NoValidPushMethod)))
               }
           }
