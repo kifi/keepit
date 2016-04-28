@@ -527,29 +527,3 @@ object DepressedRobotGrumble extends NotificationKind[DepressedRobotGrumble] {
   override def shouldGroupWith(newEvent: DepressedRobotGrumble, existingEvents: Set[DepressedRobotGrumble]): Boolean = newEvent.shouldGroup.getOrElse(false)
 
 }
-
-case class LegacyNotification(
-  recipient: Recipient,
-  time: DateTime,
-  json: JsValue,
-  uriId: Option[Id[NormalizedURI]]
-) extends NotificationEvent {
-
-  type N = LegacyNotification
-  val kind = LegacyNotification
-
-}
-
-
-object LegacyNotification extends NonGroupingNotificationKind[LegacyNotification] {
-
-  override val name: String = "legacy"
-
-  override implicit val format = (
-    (__ \ "recipient").format[Recipient] and
-    (__ \ "time").format[DateTime] and
-    (__ \ "json").format[JsValue] and
-    (__ \ "uriId").formatNullable[Id[NormalizedURI]]
-  )(LegacyNotification.apply, unlift(LegacyNotification.unapply))
-
-}

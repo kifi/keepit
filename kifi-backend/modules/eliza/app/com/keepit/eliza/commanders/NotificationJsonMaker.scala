@@ -2,7 +2,7 @@ package com.keepit.eliza.commanders
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.store.{ S3ImageConfig, ImageSize }
-import com.keepit.model.{ NormalizedURI }
+import com.keepit.model.{ Keep, NormalizedURI }
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.RoverUriSummary
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -25,22 +25,22 @@ class NotificationJsonMaker @Inject() (
 
   private val idealImageSize = ImageSize(65, 95)
 
-  private type RawNotification = (JsValue, Boolean, Option[Id[NormalizedURI]]) // lastNotification, unread, uriId
-  def makeOne(rawNotification: RawNotification, includeUriSummary: Boolean = false): Future[NotificationJson] = {
-    make(Seq(rawNotification), includeUriSummary).imap(_.head)
-  }
+  private type RawNotification = (JsValue, Boolean, Id[Keep]) // lastNotification, unread, keepId
 
   def make(rawNotifications: Seq[RawNotification], includeUriSummary: Boolean = false): Future[Seq[NotificationJson]] = {
-    val futureSummariesByUriId: Future[Map[Id[NormalizedURI], RoverUriSummary]] = {
-      if (includeUriSummary) rover.getUriSummaryByUris(rawNotifications.flatMap(_._3).toSet) // todo(???): if title and description are not used, switch to getImagesByUris
-      else Future.successful(Map.empty)
-    }
+    val futureSummariesByKeepId: Future[Map[Id[Keep], RoverUriSummary]] = if (includeUriSummary) {
+      for {
+        keepsById <- shoebox.getCrossServiceKeepsByIds(rawNotifications.map(_._3).toSet)
+        summariesByUriId <- rover.getUriSummaryByUris(keepsById.values.map(_.uriId).toSet)
+      } yield keepsById.flatMap { case (keepId, keep) => summariesByUriId.get(keep.uriId).map(keepId -> _) }
+    } else Future.successful(Map.empty)
     Future.sequence(rawNotifications.flatMap { n =>
-      val futureUriSummary = n._3.map(uriId => futureSummariesByUriId.map(_.get(uriId))) getOrElse Future.successful(None)
+      val futureUriSummary = futureSummariesByKeepId.map(_.get(n._3))
       makeOpt(n, futureUriSummary)
     })
   }
 
+  // todo(???): this should probably use Keeps' title and image
   // including URI summaries is optional because it's currently slow and only used by the canary extension (new design)
   private def makeOpt(raw: RawNotification, futureUriSummary: Future[Option[RoverUriSummary]]): Option[Future[NotificationJson]] = {
     raw._1 match {
