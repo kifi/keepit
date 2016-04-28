@@ -2,6 +2,7 @@ package com.keepit.slack.models
 
 import com.keepit.common.cache.{ CacheStatistics, FortyTwoCachePlugin, JsonCacheImpl, Key }
 import com.keepit.common.db.Id
+import com.keepit.common.strings.AbbreviateString
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.strings.StringWithReplacements
@@ -62,7 +63,7 @@ object SlackAttachment {
   def simple(text: DescriptionElements): SlackAttachment = {
     SlackAttachment(
       text = Some(DescriptionElements.formatForSlack(text)),
-      fallback = Some(DescriptionElements.formatPlain(text))
+      fallback = Some(DescriptionElements.formatPlain(text).abbreviate(40))
     ).withFullMarkdown
   }
 
