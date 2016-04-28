@@ -4,7 +4,7 @@ import com.google.inject.Injector
 import com.keepit.common.actor.TestKitSupport
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.crypto.PublicIdConfiguration
-import com.keepit.common.mail.{ BasicContact, EmailAddress }
+import com.keepit.common.mail.BasicContact
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.time._
@@ -13,8 +13,8 @@ import com.keepit.model.KeepFactoryHelper.KeepPersister
 import com.keepit.model.LibraryFactoryHelper.LibraryPersister
 import com.keepit.model.UserFactoryHelper.UserPersister
 import com.keepit.model._
-import com.keepit.shoebox.data.assemblers.KeepInfoAssembler
-import com.keepit.social.{ BasicAuthor, BasicNonUser, BasicUser }
+import com.keepit.shoebox.data.assemblers.{ KeepActivityAssembler, KeepInfoAssembler }
+import com.keepit.social.{ BasicAuthor, BasicUser }
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.SpecificationLike
 import play.api.libs.json.Json
@@ -39,12 +39,12 @@ class KeepDataFormatTest extends TestKitSupport with SpecificationLike with Shoe
             val keep = KeepFactory.keep().withUser(user).withLibrary(lib).withTitle("foo bar").saved
             (keep, user, lib)
           }
-          val info = Await.result(inject[KeepInfoAssembler].assembleKeepInfos(viewer = Some(user.id.get), keepSet = Set(keep.id.get)), Duration.Inf)(keep.id.get).getRight.get
-          // TODO(cam): when the activity log is released, uncomment this line and use it in `expected`
-          // val activity = Await.result(keepCommander.getActivityForKeep(keep.id.get, None, 5), Duration.Inf)
+          val keepId = keep.id.get
+          val info = Await.result(inject[KeepInfoAssembler].assembleKeepInfos(viewer = Some(user.id.get), keepSet = Set(keepId)), Duration.Inf)(keepId).getRight.get
+          val activity = Await.result(inject[KeepActivityAssembler].getActivityForKeep(keepId, fromTime = None, limit = 10), Duration.Inf)
           val actual = NewKeepInfo.writes.writes(info)
           val expected = Json.obj(
-            "id" -> Keep.publicId(keep.id.get),
+            "id" -> Keep.publicId(keepId),
             "path" -> keep.path.relativeWithLeadingSlash,
             "url" -> keep.url,
             "title" -> keep.title,
@@ -57,6 +57,7 @@ class KeepDataFormatTest extends TestKitSupport with SpecificationLike with Shoe
               "emails" -> Seq.empty[BasicContact],
               "libraries" -> Seq(BasicLibrary(lib, BasicUser.fromUser(user), None, None))
             ),
+            "activity" -> Json.toJson(activity),
             "viewer" -> Json.obj(
               "permissions" -> db.readOnlyMaster { implicit s => permissionCommander.getKeepPermissions(keep.id.get, Some(user.id.get)) }
             )

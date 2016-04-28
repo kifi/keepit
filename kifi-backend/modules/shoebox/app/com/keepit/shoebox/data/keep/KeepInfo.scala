@@ -43,8 +43,8 @@ case class KeepInfo(
     organization: Option[BasicOrganization] = None,
     sourceAttribution: Option[(SourceAttribution, Option[BasicUser])],
     note: Option[String] = None,
-    discussion: Option[Discussion],
-    activity: Option[KeepActivity], // todo(cam): make non-optional when removing activity_log experiment
+    discussion: Option[Discussion], // deprecated: replaced by .activity
+    activity: KeepActivity,
     participants: Seq[BasicUser],
     members: KeepMembers, // Léo: this was Derek's idea.
     permissions: Set[KeepPermission]) {

@@ -217,12 +217,8 @@ class KeepDecoratorImpl @Inject() (
 
               KeepMembers(libraries, users, emails)
             }
-            val keepActivity = {
-              if (viewerIdOpt.exists(uid => db.readOnlyMaster(implicit s => userExperimentRepo.hasExperiment(uid, UserExperimentType.ACTIVITY_LOG)))) {
-                Some(basicULOBatchFetcher.run(KeepActivityGen.generateKeepActivity(keep, sourceAttrs.get(keepId), eventsByKeep.getOrElse(keepId, Seq.empty), discussionsByKeep.get(keepId),
-                  ktlsByKeep.getOrElse(keepId, Seq.empty), ktusByKeep.getOrElse(keepId, Seq.empty), maxMessagesShown)))
-              } else None
-            }
+            val keepActivity = basicULOBatchFetcher.run(KeepActivityGen.generateKeepActivity(keep, sourceAttrs.get(keepId), eventsByKeep.getOrElse(keepId, Seq.empty), discussionsByKeep.get(keepId),
+              ktlsByKeep.getOrElse(keepId, Seq.empty), ktusByKeep.getOrElse(keepId, Seq.empty), maxMessagesShown))
 
             val normalDiscussion = discussionsByKeep.get(keepId).map { csDisc =>
               Discussion(startedAt = csDisc.startedAt, numMessages = csDisc.numMessages, locator = csDisc.locator,
