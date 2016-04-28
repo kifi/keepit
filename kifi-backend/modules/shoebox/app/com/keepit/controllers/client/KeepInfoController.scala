@@ -11,11 +11,13 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.json
 import com.keepit.common.json.TupleFormat
 import com.keepit.common.logging.SlackLog
+import com.keepit.common.net.QsValue
 import com.keepit.common.performance.Stopwatch
 import com.keepit.common.time._
 import com.keepit.common.util.{ TimedComputation, RightBias }
 import com.keepit.common.util.RightBias.FromOption
 import com.keepit.model._
+import com.keepit.shoebox.data.assemblers.KeepInfoAssemblerConfig.KeepViewAssemblyOptions
 import com.keepit.shoebox.data.assemblers.{ KeepInfoAssemblerConfig, KeepActivityAssembler, KeepInfoAssembler }
 import com.keepit.slack.{ InhouseSlackClient, InhouseSlackChannel }
 import com.kifi.macros.json
@@ -38,16 +40,13 @@ class KeepInfoController @Inject() (
   typeaheadCommander: TypeaheadCommander,
   implicit val airbrake: AirbrakeNotifier,
   private implicit val defaultContext: ExecutionContext,
-  private implicit val publicIdConfig: PublicIdConfiguration,
-  private implicit val inhouseSlackClient: InhouseSlackClient)
+  private implicit val publicIdConfig: PublicIdConfiguration)
     extends UserActions with ShoeboxServiceController {
-
-  private val ryanLog = new SlackLog(InhouseSlackChannel.TEST_RYAN)
-  private val ryan = Id[User](84792)
 
   def getKeepView(pubId: PublicId[Keep]) = MaybeUserAction.async { implicit request =>
     val keepId = Keep.decodePublicId(pubId).get
-    keepInfoAssembler.assembleKeepViews(request.userIdOpt, Set(keepId), config = KeepInfoAssemblerConfig.default.withQueryString(request.queryString)).map { viewMap =>
+    val config = KeepInfoAssemblerConfig.qsf.reads.reads(QsValue.fromPlay("config", request.queryString)).getRight.get
+    keepInfoAssembler.assembleKeepViews(request.userIdOpt, Set(keepId), config = config).map { viewMap =>
       viewMap.getOrElse(keepId, RightBias.left(KeepFail.KEEP_NOT_FOUND)).fold(
         fail => fail.asErrorResponse,
         view => Ok(Json.toJson(view))
@@ -57,6 +56,7 @@ class KeepInfoController @Inject() (
 
   def getKeepStream(fromPubIdOpt: Option[String], limit: Int) = UserAction.async { implicit request =>
     val stopwatch = new Stopwatch(s"[KIC-STREAM-${RandomStringUtils.randomAlphanumeric(5)}]")
+    val config = KeepInfoAssemblerConfig.default
     val goodResult = for {
       _ <- RightBias.unit.filter(_ => limit < 100, KeepFail.LIMIT_TOO_LARGE: KeepFail)
       fromIdOpt <- fromPubIdOpt.filter(_.nonEmpty).fold[RightBias[KeepFail, Option[Id[Keep]]]](RightBias.right(None)) { pubId =>
@@ -69,7 +69,7 @@ class KeepInfoController @Inject() (
         keepRepo.getRecentKeepsByActivity(request.userId, limit = limit, beforeIdOpt = ugh, afterIdOpt = None, filterOpt = None).map(_._1.id.get)
       }
       stopwatch.logTimeWith(s"query_complete_n_${keepIds.length}")
-      keepInfoAssembler.assembleKeepViews(request.userIdOpt, keepSet = keepIds.toSet, config = KeepInfoAssemblerConfig.default.withQueryString(request.queryString)).map { viewMap =>
+      keepInfoAssembler.assembleKeepViews(request.userIdOpt, keepSet = keepIds.toSet, config = config).map { viewMap =>
         stopwatch.logTimeWith("done")
         Ok(Json.obj("keeps" -> keepIds.flatMap(kId => viewMap.get(kId).flatMap(_.getRight))))
       }
