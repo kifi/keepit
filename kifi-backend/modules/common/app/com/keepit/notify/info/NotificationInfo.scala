@@ -54,8 +54,6 @@ object StandardNotificationInfo {
 
 }
 
-case class LegacyNotificationInfo(json: JsValue) extends NotificationInfo
-
 sealed trait NotificationImage
 
 case class UserImage(user: BasicUser) extends NotificationImage

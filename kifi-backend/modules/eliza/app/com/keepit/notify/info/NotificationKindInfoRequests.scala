@@ -54,7 +54,6 @@ class NotificationKindInfoRequests @Inject()(
       case OwnedLibraryNewCollaborator => genericInfoFn(infoForOwnedLibraryNewCollaborator)
       case NewSocialConnection => genericInfoFn(infoForNewSocialConection)
       case SocialContactJoined => genericInfoFn(infoForSocialContactJoined)
-      case LegacyNotification => genericInfoFn(infoForLegacyNotification)
     }
     infoFn(items.map(_.event))
   }
@@ -501,15 +500,6 @@ class NotificationKindInfoRequests @Inject()(
         locator = None,
         extraJson = None,
         category = NotificationCategory.User.CONTACT_JOINED
-      )
-    }
-  }
-
-  def infoForLegacyNotification(events: Set[LegacyNotification]): RequestingNotificationInfos[LegacyNotificationInfo] = {
-    val event = requireOne(events)
-    RequestingNotificationInfos(Requests()) { batched =>
-      LegacyNotificationInfo(
-        json = event.json
       )
     }
   }

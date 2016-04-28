@@ -26,9 +26,6 @@ class NotificationJsonMaker @Inject() (
   private val idealImageSize = ImageSize(65, 95)
 
   private type RawNotification = (JsValue, Boolean, Option[Id[NormalizedURI]]) // lastNotification, unread, uriId
-  def makeOne(rawNotification: RawNotification, includeUriSummary: Boolean = false): Future[NotificationJson] = {
-    make(Seq(rawNotification), includeUriSummary).imap(_.head)
-  }
 
   def make(rawNotifications: Seq[RawNotification], includeUriSummary: Boolean = false): Future[Seq[NotificationJson]] = {
     val futureSummariesByUriId: Future[Map[Id[NormalizedURI], RoverUriSummary]] = {
