@@ -179,12 +179,7 @@ class KeepInfoAssemblerImpl @Inject() (
     stopwatch.logTimeWith("launched_permission")
 
     val activityFut = {
-      val viewerHasActivityLogExperiment = viewer.exists { viewerId =>
-        db.readOnlyMaster { implicit s =>
-          userExperimentRepo.hasExperiment(viewerId, UserExperimentType.ACTIVITY_LOG)
-        }
-      }
-      if (!viewerHasActivityLogExperiment || config.numEventsPerKeep <= 0) Future.successful(Map.empty[Id[Keep], KeepActivity])
+      if (config.numEventsPerKeep <= 0) Future.successful(Map.empty[Id[Keep], KeepActivity])
       else activityAssembler.getActivityForKeeps(keepSet, fromTime = None, numEventsPerKeep = config.numEventsPerKeep)
     } andThen { case _ => stopwatch.logTimeWith("complete_activity") }
     stopwatch.logTimeWith("launched_activity")
@@ -228,7 +223,7 @@ class KeepInfoAssemblerImpl @Inject() (
             keptAt = keep.keptAt,
             source = sourceByKeep.get(keepId).map(_._1),
             recipients = recipients,
-            activity = activityByKeep.get(keepId),
+            activity = activityByKeep(keepId),
             viewer = viewerInfo
           )
 
