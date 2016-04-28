@@ -2,11 +2,11 @@ package com.keepit.controllers.client
 
 import com.google.inject.Inject
 import com.keepit.commanders._
-import com.keepit.common.db.ExternalId
+import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.json
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.util.RightBias
-import com.keepit.common.util.RightBias.FromOption
+import com.keepit.common.util.RightBias._
 import com.keepit.common.core.tryExtensionOps
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
@@ -75,10 +75,9 @@ class KeepMutationController @Inject() (
     val result = for {
       externalCreateRequest <- request.body.asOpt[ExternalKeepCreateRequest].map(Future.successful).getOrElse(Future.failed(DiscussionFail.COULD_NOT_PARSE))
       userIdMap = db.readOnlyReplica { implicit s => userRepo.convertExternalIds(externalCreateRequest.users) }
-      internRequest <- Future.fromTry(for {
-        // TODO(ryan): actually handle the possibility that these fail
-        users <- Success(externalCreateRequest.users.map(extId => userIdMap(extId)))
-        libraries <- Success(externalCreateRequest.libraries.map(pubId => Library.decodePublicId(pubId).get))
+      internRequest <- Future.fromTry((for {
+        users <- externalCreateRequest.users.fragileMap { extId => userIdMap.get(extId).withLeft(DiscussionFail.INVALID_USER_ID) }
+        libraries <- externalCreateRequest.libraries.fragileMap { pubId => Library.decodePublicId(pubId).toOption.withLeft(DiscussionFail.INVALID_LIBRARY_ID) }
       } yield KeepInternRequest.onKifi(
         keeper = request.userId,
         url = externalCreateRequest.url,
@@ -87,7 +86,7 @@ class KeepMutationController @Inject() (
         note = externalCreateRequest.note,
         keptAt = externalCreateRequest.keptAt,
         recipients = KeepRecipients(libraries = libraries, emails = externalCreateRequest.emails, users = users + request.userId)
-      ))
+      )).asTry)
       (keep, keepIsNew, msgOpt) <- keepCommander.internKeep(internRequest)
       keepInfo <- keepInfoAssembler.assembleKeepInfos(Some(request.userId), Set(keep.id.get))
     } yield keepInfo.get(keep.id.get).flatMap(_.getRight).withLeft(keep.id.get)
@@ -152,8 +151,8 @@ class KeepMutationController @Inject() (
   def deleteKeep(pubId: PublicId[Keep]) = UserAction { implicit request =>
     db.readWrite { implicit s =>
       for {
-        keepId <- Keep.decodePublicId(pubId).airbrakingOption.withLeft(KeepFail.INVALID_KEEP_ID: KeepFail)
-        _ <- RightBias.unit.filter(_ => permissionCommander.getKeepPermissions(keepId, Some(request.userId)).contains(KeepPermission.DELETE_KEEP), KeepFail.INSUFFICIENT_PERMISSIONS: KeepFail)
+        keepId <- Keep.decodePublicId(pubId).airbrakingOption.withLeft(KeepFail.INVALID_KEEP_ID)
+        _ <- RightBias.unit.filter(_ => permissionCommander.getKeepPermissions(keepId, Some(request.userId)).contains(KeepPermission.DELETE_KEEP), KeepFail.INSUFFICIENT_PERMISSIONS)
       } yield keepMutator.deactivateKeep(keepRepo.get(keepId))
     }.fold(
       fail => fail.asErrorResponse,
@@ -175,8 +174,8 @@ class KeepMutationController @Inject() (
   def editKeepTitle(keepPubId: PublicId[Keep]) = UserAction(parse.tolerantJson) { implicit request =>
     import EditTitleRequest._
     val edit = for {
-      req <- request.body.asOpt[EditTitleRequest].withLeft(DiscussionFail.COULD_NOT_PARSE: DiscussionFail)
-      keepId <- Keep.decodePublicId(keepPubId).toOption.withLeft(DiscussionFail.INVALID_KEEP_ID: DiscussionFail)
+      req <- request.body.asOpt[EditTitleRequest].withLeft(DiscussionFail.COULD_NOT_PARSE)
+      keepId <- Keep.decodePublicId(keepPubId).toOption.withLeft(DiscussionFail.INVALID_KEEP_ID)
       editedKeep <- keepCommander.updateKeepTitle(keepId, request.userId, req.newTitle, Some(req.source)).mapLeft(_ => DiscussionFail.INSUFFICIENT_PERMISSIONS: DiscussionFail)
     } yield editedKeep
 

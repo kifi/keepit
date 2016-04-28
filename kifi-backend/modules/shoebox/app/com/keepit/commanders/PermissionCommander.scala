@@ -285,13 +285,12 @@ class PermissionCommanderImpl @Inject() (
         }
         val canRemoveLibraries = userIdOpt containsTheSameValueAs k.userId
         val canViewKeep = {
-          // TODO(ryan): remove deprecated permissions when more confident they're unnecessary
-          val deprecatedPermissions = userIdOpt.containsTheSameValueAs(k.userId) || userIdOpt.containsTheSameValueAs(k.originalKeeperId)
+          val viewerOwnsKeep = userIdOpt containsTheSameValueAs k.userId
 
           val viewerCanSeeKeepViaLibrary = keepLibraries.exists { libId =>
             libPermissions.getOrElse(libId, Set.empty).contains(LibraryPermission.VIEW_LIBRARY)
           }
-          deprecatedPermissions || viewerIsDirectlyConnectedToKeep || viewerCanSeeKeepViaLibrary
+          viewerOwnsKeep || viewerIsDirectlyConnectedToKeep || viewerCanSeeKeepViaLibrary
         }
         val canEditKeep = {
           (userIdOpt containsTheSameValueAs k.userId) || keepLibraries.flatMap(libPermissions.getOrElse(_, Set.empty)).contains(LibraryPermission.EDIT_OTHER_KEEPS)

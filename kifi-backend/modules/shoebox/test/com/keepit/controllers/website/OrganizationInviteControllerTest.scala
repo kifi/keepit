@@ -159,7 +159,7 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
           val link = (Json.parse(contentAsString(result)) \ "link").as[String]
           link must contain(s"authToken=$token")
           link must contain(Organization.publicId(org.id.get).id)
-          link must contain("http://dev.ezkeep.com:9000/site/") // TODO(ryan): why is this a requirement?
+          link must contain("http://dev.ezkeep.com:9000/site/")
         }
       }
 
@@ -385,7 +385,7 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
           val request = route.cancelInvites(publicOrgId).withBody(body)
           val result = controller.cancelInvites(publicOrgId)(request)
 
-          status(result) must equalTo(FORBIDDEN) // TODO(ryan): fix the organization fails, this should give a BAD_REQUEST
+          status(result) must equalTo(BAD_REQUEST)
         }
       }
     }

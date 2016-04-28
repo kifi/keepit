@@ -106,7 +106,7 @@ class FeedCommander @Inject() (
               }
 
               RssItem(title = keep.title.getOrElse(""), description = descriptions.get(keep.uriId).flatMap(_.article.description).getOrElse(""), link = keep.url,
-                guid = keep.externalId.id, pubDate = keep.keptAt, creator = originalKeeper.map(_.fullName).getOrElse("unknown"), // TODO(ryan): find the actual author!
+                guid = keep.externalId.id, pubDate = keep.keptAt, creator = originalKeeper.map(_.fullName).getOrElse("unknown"),
                 icon = keepImage.map(_.imagePath.getUrl(s3ImageConfig)).map(url => s"https:$url"))
             }
             rssItems(keeps map convertKeep)

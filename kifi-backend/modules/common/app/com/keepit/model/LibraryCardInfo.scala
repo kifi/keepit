@@ -41,8 +41,7 @@ case class LibraryCardInfo(
   slack: Option[LiteLibrarySlackInfo])
 
 object LibraryCardInfo {
-  // Ugh...what choices did I make in my life that have led me here, to this point?
-  // TODO(ryan): pray for forgiveness
+  // This nested-tupley-goodness is because of the 22-field limit on tuples in Scala
   private type LibraryCardInfoFirstArguments = (PublicId[Library], String, Option[String], Option[LibraryColor], Option[LibraryImageInfo], LibrarySlug, LibraryVisibility, BasicUser, Int, Int, Seq[BasicUser], Int, Seq[BasicUser])
   private type LibraryCardInfoSecondArguments = (DateTime, Option[Boolean], Option[LibraryMembershipInfo], Option[LibraryInviteInfo], Set[LibraryPermission], Option[String], DateTime, LibraryKind, Path, Option[BasicOrganizationView], Option[LibraryAccess], LibraryCommentPermissions, Option[LiteLibrarySlackInfo])
   private def fromSadnessTuples(firsts: LibraryCardInfoFirstArguments, seconds: LibraryCardInfoSecondArguments): LibraryCardInfo = (firsts, seconds) match {

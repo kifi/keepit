@@ -113,7 +113,7 @@ class SlackTeamDigestNotificationActor @Inject() (
     import DescriptionElements._
     val trackingParams = SlackAnalytics.generateTrackingParams(slackChannelId, NotificationCategory.NonUser.INTEGRATION_WELCOME)
     for {
-      ownerId <- slackMembershipRepo.getBySlackTeam(slackTeam.slackTeamId).filter(_.userId.isDefined).minBy(_.createdAt).userId // TODO(ryan): this might be stupid...
+      ownerId <- slackMembershipRepo.getBySlackTeam(slackTeam.slackTeamId).filter(_.userId.isDefined).minBy(_.createdAt).userId
       owner <- basicUserRepo.loadActive(ownerId)
       orgId <- slackTeam.organizationId
       org <- basicOrganizationGen.getBasicOrganizationHelper(orgId)

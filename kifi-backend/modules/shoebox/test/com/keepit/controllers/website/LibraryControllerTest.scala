@@ -1155,7 +1155,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val success4 = (jsonRes4 \\ "id").map(_.as[ExternalId[Keep]]).toSet === copiedKeeps.map(_.externalId).toSet
         (jsonRes4 \\ "keep").length === 0
 
-        // move duplicate active keeps 1 & 2 from Lib1 to Lib2 as user 2 (error: already exists in dst)
         val inputJson3 = Json.obj(
           "to" -> Library.publicId(lib1.id.get),
           "keeps" -> Seq(keep1.externalId, keep2.externalId)
@@ -1165,8 +1164,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         status(result5) must equalTo(OK)
         contentType(result5) must beSome("application/json")
         val jsonRes5 = Json.parse(contentAsString(result5))
-        (jsonRes5 \ "successes").as[Seq[JsObject]].length === 0
-        (contentAsJson(result5) \\ "error").map(_.as[String]).toSet === Set("already_exists_in_dest")
+        (jsonRes5 \ "successes").as[Seq[JsObject]].length === 1
+        (contentAsJson(result5) \\ "error") must beEmpty
       }
     }
 

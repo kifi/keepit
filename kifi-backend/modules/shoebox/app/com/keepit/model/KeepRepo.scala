@@ -22,7 +22,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getActiveByIds(ids: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Keep]
   def getByExtId(extId: ExternalId[Keep], excludeStates: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep]
   def getByExtIds(extIds: Set[ExternalId[Keep]])(implicit session: RSession): Map[ExternalId[Keep], Option[Keep]]
-  def getByExtIdandLibraryId(extId: ExternalId[Keep], libraryId: Id[Library], excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep] // TODO(ryan)[2015-08-03]: deprecate ASAP!
+  def getByExtIdandLibraryId(extId: ExternalId[Keep], libraryId: Id[Library], excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep]
   def getByIdGreaterThan(lowerBoundId: Id[Keep], limit: Int)(implicit session: RSession): Seq[Keep]
 
   def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep] //todo: replace option with seq
@@ -335,7 +335,6 @@ class KeepRepoImpl @Inject() (
   }
 
   def getByUriAndParticipantsHash(uriId: Id[NormalizedURI], users: Set[Id[User]], emails: Set[EmailAddress])(implicit session: RSession): Seq[Keep] = {
-    // TODO(ryan): make this filter by emails hash as well
     val userHash = ParticipantsHash(users)
     activeRows.filter(k => k.uriId === uriId && k.participantsHash === userHash).list.filter(k => k.recipients.users == users && k.recipients.emails == emails)
   }
@@ -603,7 +602,6 @@ class KeepRepoImpl @Inject() (
   }
 
   def getByExtIdandLibraryId(extId: ExternalId[Keep], libraryId: Id[Library], excludeSet: Set[State[Keep]])(implicit session: RSession): Option[Keep] = {
-    // TODO(ryan): deprecate ASAP
     getByExtId(extId, excludeSet).filter { keep => keep.recipients.libraries.contains(libraryId) }
   }
 

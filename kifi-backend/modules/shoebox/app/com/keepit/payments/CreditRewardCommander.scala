@@ -29,7 +29,7 @@ trait CreditRewardCommander {
   // Generic API for creating a credit reward (use for one-off rewards, like the org creation bonus)
   def createCreditReward(cr: CreditReward, userAttribution: Option[Id[User]])(implicit session: RWSession): Try[CreditReward]
 
-  // Initialize a hard-coded set of rewards (TODO(ryan): should probably be moved into an integrity plugin at some point)
+  // Initialize a hard-coded set of rewards
   def initializeRewards(orgId: Id[Organization])(implicit session: RWSession): Set[CreditReward]
   def initializeChecklistReward(orgId: Id[Organization], kind: RewardChecklistKind)(implicit session: RWSession): Try[CreditReward]
 

@@ -310,8 +310,8 @@ class ExtLibraryController @Inject() (
 
   def editKeepNote(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep]) = UserAction(parse.tolerantJson) { request =>
     val resultIfEverythingWentWell = for {
-      keepId <- db.readOnlyMaster { implicit s => Try(keepRepo.convertExternalId(keepExtId)).toOption }.withLeft(KeepFail.INVALID_KEEP_ID: KeepFail)
-      newNote <- (request.body \ "note").asOpt[String].withLeft(KeepFail.COULD_NOT_PARSE: KeepFail)
+      keepId <- db.readOnlyMaster { implicit s => Try(keepRepo.convertExternalId(keepExtId)).toOption }.withLeft(KeepFail.INVALID_KEEP_ID)
+      newNote <- (request.body \ "note").asOpt[String].withLeft(KeepFail.COULD_NOT_PARSE)
       updatedKeep <- keepsCommander.updateKeepNote(keepId, request.userId, newNote)
     } yield updatedKeep
     resultIfEverythingWentWell.fold(
