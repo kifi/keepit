@@ -1203,40 +1203,6 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           }
         }
       }
-      "handle obstacle keeps in the target lib" in {
-        withDb(modules: _*) { implicit injector =>
-          implicit val config = inject[PublicIdConfiguration]
-          val (user, sourceLib, targetLib, keeps, obstacleKeeps) = db.readWrite { implicit session =>
-            val user = UserFactory.user().saved
-            val sourceLib = LibraryFactory.library().withOwner(user).saved
-            val keeps = KeepFactory.keeps(50).map(_.withUser(user).withLibrary(sourceLib).withRandomTitle()).saved
-
-            val targetLib = LibraryFactory.library().withOwner(user).saved
-            val obstacleKeeps = for (uriId <- Random.shuffle(keeps).take(keeps.length / 2).map(_.uriId)) yield {
-              KeepFactory.keep().withUser(user).withLibrary(targetLib).withURIId(uriId).withRandomTitle().saved
-            }
-
-            (user, sourceLib, targetLib, keeps, obstacleKeeps)
-          }
-
-          db.readOnlyMaster { implicit session =>
-            inject[KeepRepo].pageByLibrary(targetLib.id.get, 0, 1000).length === obstacleKeeps.length
-            inject[KeepRepo].pageByLibrary(sourceLib.id.get, 0, 1000).length === keeps.length
-          }
-          val (yay, nay) = inject[LibraryCommander].copyKeeps(user.id.get, targetLib.id.get, keeps.toSet, withSource = None)
-          (yay.length, nay.length) === (keeps.length - obstacleKeeps.length, obstacleKeeps.length)
-
-          db.readOnlyMaster { implicit session =>
-            inject[KeepRepo].pageByLibrary(sourceLib.id.get, 0, 1000).length === keeps.length
-            val newKeeps = inject[KeepRepo].pageByLibrary(targetLib.id.get, 0, 1000)
-            val expectedKeeps = (obstacleKeeps ++ yay).sortBy(k => (k.keptAt, k.id.get)).reverse // they come out in reverse chronological order
-            newKeeps.length === keeps.length
-            newKeeps.map(_.title) === expectedKeeps.map(_.title)
-            newKeeps.map(_.keptAt) === expectedKeeps.map(_.keptAt)
-            newKeeps.map(_.note) === expectedKeeps.map(_.note)
-          }
-        }
-      }
     }
 
     "move keeps to another library" in {
@@ -1265,41 +1231,6 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
             newKeeps.length === keeps.length
             newKeeps.map(_.id.get) === expectedKeeps.map(_.id.get)
             newKeeps.map(_.title) === expectedKeeps.map(_.title)
-            newKeeps.map(_.keptAt) === expectedKeeps.map(_.keptAt)
-            newKeeps.map(_.note) === expectedKeeps.map(_.note)
-          }
-        }
-      }
-      "handle obstacle keeps in the target lib" in {
-        withDb(modules: _*) { implicit injector =>
-          implicit val config = inject[PublicIdConfiguration]
-          val (user, sourceLib, targetLib, keeps, obstacleKeeps) = db.readWrite { implicit session =>
-            val user = UserFactory.user().saved
-            val sourceLib = LibraryFactory.library().withOwner(user).saved
-            val keeps = KeepFactory.keeps(50).map(_.withUser(user).withLibrary(sourceLib).withRandomTitle()).saved
-
-            val targetLib = LibraryFactory.library().withOwner(user).saved
-            val obstacleKeeps = for (uriId <- Random.shuffle(keeps).take(keeps.length / 2).map(_.uriId)) yield {
-              KeepFactory.keep().withUser(user).withLibrary(targetLib).withURIId(uriId).withRandomTitle().saved
-            }
-
-            (user, sourceLib, targetLib, keeps, obstacleKeeps)
-          }
-
-          db.readOnlyMaster { implicit session =>
-            inject[KeepRepo].pageByLibrary(targetLib.id.get, 0, 1000).length === obstacleKeeps.length
-            inject[KeepRepo].pageByLibrary(sourceLib.id.get, 0, 1000).length === keeps.length
-          }
-          val (yay, nay) = inject[LibraryCommander].moveKeeps(user.id.get, targetLib.id.get, keeps)
-          (yay.length, nay.length) === (keeps.length - obstacleKeeps.length, obstacleKeeps.length)
-
-          db.readOnlyMaster { implicit session =>
-            inject[KeepRepo].pageByLibrary(sourceLib.id.get, 0, 1000).length === 0
-            val newKeeps = inject[KeepRepo].pageByLibrary(targetLib.id.get, 0, 1000)
-            val expectedKeeps = (obstacleKeeps ++ yay).sortBy(k => (k.keptAt, k.id.get)).reverse // they come out in reverse chronological order
-            newKeeps.length === keeps.length
-            newKeeps.map(_.id.get) === expectedKeeps.map(_.id.get)
-            newKeeps.map(_.title.get) === expectedKeeps.map(_.title.get)
             newKeeps.map(_.keptAt) === expectedKeeps.map(_.keptAt)
             newKeeps.map(_.note) === expectedKeeps.map(_.note)
           }
@@ -1369,89 +1300,6 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           keepRepo.count === 4
           keepRepo.pageByLibrary(libUSA.id.get, 0, 10).length === 1
           keepRepo.pageByLibrary(libMurica.id.get, 0, 10).length === 2
-        }
-      }
-    }
-
-    "move keeps between libraries from tag" in {
-      withDb(modules: _*) { implicit injector =>
-        implicit val config = inject[PublicIdConfiguration]
-        val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupLibraries
-
-        val t1 = new DateTime(2014, 8, 1, 4, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
-        val site1 = "http://www.reddit.com/r/murica"
-        val site2 = "http://www.freedom.org/"
-        val site3 = "http://www.mcdonalds.com/"
-
-        val (libUSA, k2) = db.readWrite { implicit s =>
-          val libUSA = libraryRepo.save(Library(name = "USA", slug = LibrarySlug("usa"), ownerId = userCaptain.id.get, visibility = LibraryVisibility.DISCOVERABLE, kind = LibraryKind.USER_CREATED, memberCount = 1))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = libUSA.id.get, userId = userCaptain.id.get, access = LibraryAccess.OWNER))
-
-          val uri1 = uriRepo.save(NormalizedURI.withHash(site1, Some("Reddit")))
-          val uri2 = uriRepo.save(NormalizedURI.withHash(site2, Some("Freedom")))
-          val uri3 = uriRepo.save(NormalizedURI.withHash(site3, Some("McDonalds")))
-
-          // libMurica has 3 keeps
-          val keep1 = KeepFactory.keep().withTitle("Reddit").withUser(userCaptain).withUri(uri1).withLibrary(libMurica).saved
-          val keep2 = KeepFactory.keep().withTitle("Freedom").withUser(userCaptain).withUri(uri2).withLibrary(libMurica).saved
-          val keep3 = KeepFactory.keep().withTitle("McDonalds").withUser(userCaptain).withUri(uri3).withLibrary(libMurica).saved
-
-          tagCommander.addTagsToKeep(keep1.id.get, Seq(Hashtag("tag1")), userCaptain.id, None)
-          tagCommander.addTagsToKeep(keep1.id.get, Seq(Hashtag("tag2")), userCaptain.id, None)
-          tagCommander.addTagsToKeep(keep2.id.get, Seq(Hashtag("tag2")), userCaptain.id, None)
-          tagCommander.addTagsToKeep(keep3.id.get, Seq(Hashtag("tag2")), userCaptain.id, None)
-
-          keepRepo.count === 3
-          (libUSA, keep2)
-        }
-
-        val libraryCommander = inject[LibraryCommander]
-
-        //move 1 keep to libUSA - libUSA has no keeps
-        val res1 = libraryCommander.moveKeepsFromCollectionToLibrary(userCaptain.id.get, libUSA.id.get, Hashtag("tag1"))
-        res1.right.get._1.length === 1 // all successes
-        res1.right.get._2.length === 0
-        db.readOnlyMaster { implicit s =>
-          keepRepo.pageByLibrary(libUSA.id.get, 0, 10).length === 1
-          keepRepo.pageByLibrary(libMurica.id.get, 0, 10).length === 2
-        }
-
-        //move 1 keep to libUSA - libUSA has no keeps
-        val res2 = libraryCommander.moveKeepsFromCollectionToLibrary(userCaptain.id.get, libMurica.id.get, Hashtag("tag1"))
-        res2.right.get._1.length === 1 // all successes
-        res2.right.get._2.length === 0
-        db.readOnlyMaster { implicit s =>
-          keepRepo.pageByLibrary(libUSA.id.get, 0, 10).length === 0
-          keepRepo.pageByLibrary(libMurica.id.get, 0, 10).length === 3
-        }
-
-        // move duplicate keeps to its own library
-        val res3 = libraryCommander.moveKeepsFromCollectionToLibrary(userCaptain.id.get, libMurica.id.get, Hashtag("tag1"))
-        res3.right.get._1.length === 0
-        res3.right.get._2.length === 1 // already kept
-        db.readOnlyMaster { implicit s =>
-          keepRepo.pageByLibrary(libUSA.id.get, 0, 10).length === 0
-          keepRepo.pageByLibrary(libMurica.id.get, 0, 10).length === 3
-        }
-
-        // move in bulk
-        val res4 = libraryCommander.moveKeepsFromCollectionToLibrary(userCaptain.id.get, libUSA.id.get, Hashtag("tag2"))
-        res4.right.get._1.length === 3
-        res4.right.get._2.length === 0
-        db.readOnlyMaster { implicit s =>
-          keepRepo.pageByLibrary(libUSA.id.get, 0, 10).length === 3
-          keepRepo.pageByLibrary(libMurica.id.get, 0, 10).length === 0
-        }
-
-        // keep URI in libMurica to test for duplicates -> now 4 keeps with 'tag2'
-        libraryCommander.copyKeeps(userCaptain.id.get, libMurica.id.get, Set(k2), None)
-
-        val res5 = libraryCommander.moveKeepsFromCollectionToLibrary(userCaptain.id.get, libMurica.id.get, Hashtag("tag2"))
-        res5.right.get._1.length === 2
-        res5.right.get._2.length === 1 // already kept
-        db.readOnlyMaster { implicit s =>
-          keepRepo.pageByLibrary(libUSA.id.get, 0, 10).length === 0
-          keepRepo.pageByLibrary(libMurica.id.get, 0, 10).length === 3
         }
       }
     }
