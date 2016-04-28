@@ -6,6 +6,7 @@ import com.keepit.common.strings.UTF8
 import com.keepit.common.util.RightBias._
 import com.keepit.common.util.{ MapHelpers, RightBias }
 import play.api.libs.functional._
+import play.api.libs.functional.syntax._
 import play.api.mvc.QueryStringBindable
 
 import scala.util.Try
@@ -48,6 +49,9 @@ object QsOFormat {
     def inmap[A, B](m: QsOFormat[A], f1: A => B, f2: B => A): QsOFormat[B] = {
       QsOFormat(QsReads.qsrFunctor.fmap(m.reads, f1), QsOWrites.qswFunctor.contramap(m.writes, f2))
     }
+  }
+  implicit class WithDefault[T](format: QsOFormat[Option[T]]) {
+    def withDefault(default: T): QsOFormat[T] = format.inmap(_ getOrElse default, Some(_).filterNot(_ == default))
   }
 }
 

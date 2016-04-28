@@ -66,14 +66,14 @@ object KeepInfoAssemblerConfig {
   )(ImageSize.apply, unlift(ImageSize.unapply))
 
   val qsf: QsFormat[KeepViewAssemblyOptions] = (
-    (q__ \ "idealImageSize").qsfOpt[ImageSize].inmap[ImageSize](_ getOrElse default.idealImageSize, Some(_)) and
-    (q__ \ "numEventsPerKeep").qsfOpt[Int].inmap[Int](_ getOrElse default.numEventsPerKeep, Some(_)) and
-    (q__ \ "hideOtherPublishedLibraries").qsfOpt[Boolean].inmap[Boolean](_ getOrElse default.hideOtherPublishedLibraries, Some(_)) and
-    (q__ \ "numContextualKeeps").qsfOpt[Int].inmap[Int](_ getOrElse default.numContextualKeeps, Some(_)) and
-    (q__ \ "numContextualKeepers").qsfOpt[Int].inmap[Int](_ getOrElse default.numContextualKeepers, Some(_)) and
-    (q__ \ "numContextualLibraries").qsfOpt[Int].inmap[Int](_ getOrElse default.numContextualLibraries, Some(_)) and
-    (q__ \ "numContextualTags").qsfOpt[Int].inmap[Int](_ getOrElse default.numContextualTags, Some(_)) and
-    (q__ \ "sanitizeUrls").qsfOpt[Boolean].inmap[Boolean](_ getOrElse default.sanitizeUrls, Some(_))
+    (q__ \ "idealImageSize").qsfOpt[ImageSize].withDefault(default.idealImageSize) and
+    (q__ \ "numEventsPerKeep").qsfOpt[Int].withDefault(default.numEventsPerKeep) and
+    (q__ \ "hideOtherPublishedLibraries").qsfOpt[Boolean].withDefault(default.hideOtherPublishedLibraries) and
+    (q__ \ "numContextualKeeps").qsfOpt[Int].withDefault(default.numContextualKeeps) and
+    (q__ \ "numContextualKeepers").qsfOpt[Int].withDefault(default.numContextualKeepers) and
+    (q__ \ "numContextualLibraries").qsfOpt[Int].withDefault(default.numContextualLibraries) and
+    (q__ \ "numContextualTags").qsfOpt[Int].withDefault(default.numContextualTags) and
+    (q__ \ "sanitizeUrls").qsfOpt[Boolean].withDefault(default.sanitizeUrls)
   )(KeepViewAssemblyOptions.apply, unlift(KeepViewAssemblyOptions.unapply))
 }
 
