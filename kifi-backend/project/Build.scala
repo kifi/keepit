@@ -109,7 +109,10 @@ object ApplicationBuild extends Build {
     unmanagedResourceDirectories in Compile += baseDirectory.value / "marketing/cdn",
     javaOptions in Test += "-Dconfig.resource=application-shoebox.conf",
     // Only necessary for admin:
-    includeFilter in (Assets, LessKeys.less) := "*.less"
+    includeFilter in (Assets, LessKeys.less) := "*.less",
+    routesImport ++= Seq(
+      "com.keepit.shoebox.data.assemblers.KeepInfoAssemblerConfig._"
+    )
   ).settings(
     Frontend.gulpCommands ++ Marketing.gulpCommands: _*
   ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile")

@@ -75,6 +75,8 @@ object KeepInfoAssemblerConfig {
     (q__ \ "numContextualTags").qsfOpt[Int].withDefault(default.numContextualTags) and
     (q__ \ "sanitizeUrls").qsfOpt[Boolean].withDefault(default.sanitizeUrls)
   )(KeepViewAssemblyOptions.apply, unlift(KeepViewAssemblyOptions.unapply))
+
+  implicit val qsBinder = QsFormat.binder(qsf)
 }
 
 class KeepInfoAssemblerImpl @Inject() (

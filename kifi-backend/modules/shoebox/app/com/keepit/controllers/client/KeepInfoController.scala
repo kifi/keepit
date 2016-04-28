@@ -43,9 +43,8 @@ class KeepInfoController @Inject() (
   private implicit val publicIdConfig: PublicIdConfiguration)
     extends UserActions with ShoeboxServiceController {
 
-  def getKeepView(pubId: PublicId[Keep]) = MaybeUserAction.async { implicit request =>
+  def getKeepView(pubId: PublicId[Keep], config: KeepViewAssemblyOptions) = MaybeUserAction.async { implicit request =>
     val keepId = Keep.decodePublicId(pubId).get
-    val config = KeepInfoAssemblerConfig.qsf.reads.reads(QsValue.fromPlay("config", request.queryString)).getRight.get
     keepInfoAssembler.assembleKeepViews(request.userIdOpt, Set(keepId), config = config).map { viewMap =>
       viewMap.getOrElse(keepId, RightBias.left(KeepFail.KEEP_NOT_FOUND)).fold(
         fail => fail.asErrorResponse,
@@ -54,9 +53,8 @@ class KeepInfoController @Inject() (
     }
   }
 
-  def getKeepStream(fromPubIdOpt: Option[String], limit: Int) = UserAction.async { implicit request =>
+  def getKeepStream(fromPubIdOpt: Option[String], limit: Int, config: KeepViewAssemblyOptions) = UserAction.async { implicit request =>
     val stopwatch = new Stopwatch(s"[KIC-STREAM-${RandomStringUtils.randomAlphanumeric(5)}]")
-    val config = KeepInfoAssemblerConfig.default
     val goodResult = for {
       _ <- RightBias.unit.filter(_ => limit < 100, KeepFail.LIMIT_TOO_LARGE: KeepFail)
       fromIdOpt <- fromPubIdOpt.filter(_.nonEmpty).fold[RightBias[KeepFail, Option[Id[Keep]]]](RightBias.right(None)) { pubId =>
