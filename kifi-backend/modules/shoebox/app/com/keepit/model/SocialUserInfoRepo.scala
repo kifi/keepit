@@ -77,7 +77,7 @@ class SocialUserInfoRepoImpl @Inject() (
 
   private val UNPROCESSED_STATES = SocialUserInfoStates.CREATED :: SocialUserInfoStates.FETCHED_USING_FRIEND :: Nil
   private val REFRESHING_STATES = SocialUserInfoStates.FETCHED_USING_SELF :: SocialUserInfoStates.FETCH_FAIL :: Nil
-  private val REFRESH_FREQUENCY = 14
+  private val REFRESH_FREQUENCY = 21
 
   override def save(socialUserInfo: SocialUserInfo)(implicit session: RWSession): SocialUserInfo = {
     val toSave = socialUserInfo.copy(seq = deferredSeqNum())
@@ -172,7 +172,7 @@ class SocialUserInfoRepoImpl @Inject() (
     else {
       val valueMap = basicInfoCache.bulkGetOrElse(ids.map(SocialUserBasicInfoKey(_)).toSet) { keys =>
         val missing = keys.map(_.id)
-        val suis = (for (f <- rows if f.id.inSet(missing)) yield f).list
+        val suis = (for (f <- rows if f.id.inSet(missing) && f.state =!= SocialUserInfoStates.INACTIVE) yield f).list
         suis.collect {
           case sui if sui.state != SocialUserInfoStates.INACTIVE =>
             (SocialUserBasicInfoKey(sui.id.get) -> SocialUserBasicInfo.fromSocialUser(sui))

@@ -73,45 +73,16 @@ class SocialConnectionRepoImpl @Inject() (
   }
 
   def getSociallyConnectedUsers(id: Id[User])(implicit session: RSession): Set[Id[User]] = {
-    val suidSQL = """
-        select
-             id
-        from
-             social_user_info
-        where
-             user_id = ?"""
-    val connectionsSQL = """
-        select
-             social_user_1, social_user_2
-        from
-             (%s) as suid, social_connection as sc
-        where
-             ( (sc.social_user_1 in (suid.id)) or (sc.social_user_2 in (suid.id)) )
-             and sc.state = 'active'
-                         """.format(suidSQL)
-    val sql = """
-        select
-             sui.user_id
-        from
-             (%s) as connections,
-             social_user_info as sui
-        where
-             (sui.id in (connections.social_user_1) or sui.id in (connections.social_user_2))
-             AND
-             (sui.user_id is not null)
-             AND
-             (sui.user_id != ?)
-              """.format(connectionsSQL)
-    //can use GetResult and SetParameter to be type safe, not sure its worth it at this point
-    val q = StaticQuery.query[(Long, Long), Long](sql)
-    val res: Seq[Long] = q.apply(id.id, id.id).list
-    res map { id => Id[User](id) } toSet
+    val connections = socialRepo.getByUser(id)
+      .filter { sui => sui.networkType != SocialNetworks.FORTYTWO }
+      .flatMap { sui => getSocialConnectionInfos(sui.id.get) }
+    connections.flatMap(_.userId).toSet - id
   }
 
   def getConnectionOpt(u1: Id[SocialUserInfo], u2: Id[SocialUserInfo])(implicit session: RSession): Option[SocialConnection] =
     (for {
       s <- rows
-      if ((s.socialUser1 === u1 && s.socialUser2 === u2) || (s.socialUser1 === u2 && s.socialUser2 === u1))
+      if (s.socialUser1 === u1 && s.socialUser2 === u2) || (s.socialUser1 === u2 && s.socialUser2 === u1)
     } yield s).firstOption
 
   def getUserConnectionCount(id: Id[User])(implicit session: RSession): Int = {
@@ -135,7 +106,7 @@ class SocialConnectionRepoImpl @Inject() (
     }
   }
 
-  private[this] val consolidateSocialConnectionReq = new RequestConsolidator[Id[User], Map[SocialNetworkType, Seq[SocialUserBasicInfo]]](10 seconds)
+  private[this] val consolidateSocialConnectionReq = new RequestConsolidator[Id[User], Map[SocialNetworkType, Seq[SocialUserBasicInfo]]](10.seconds)
 
   def getSocialConnectionInfosByUser(userId: Id[User])(implicit s: RSession): Map[SocialNetworkType, Seq[SocialUserBasicInfo]] = {
     val future = consolidateSocialConnectionReq(userId) { userId =>

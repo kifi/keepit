@@ -460,18 +460,27 @@
 }
 
 .kifi-message-participant-dialog {
+  box-sizing: border-box;
   position: absolute;
-  top: 100%;
+  top: ~"calc(100% + 1px)";
   left: 0;
   width: 100%;
-  padding: 9px 12px;
-  box-sizing: border-box;
-  -moz-box-sizing: border-box;
-  color: white;
-  background: @dotBgColor;
+  padding: 0 1px 4px 1px;
+  border-bottom: 1px solid #aaa;
+  border-bottom-left-radius: 7px;
+  border-bottom-right-radius: 7px;
+  background-color: #F6F6F6;
+  box-shadow: 0 6px 5px -4px rgba(0, 0, 0, .3);
+  color: #000;
 
-  :not(.kifi-dialog-opened)>& {
-    display: none;
+  opacity: 0;
+  transition: .33s transform;
+  transform: translateY(-100%);
+  z-index: -1;
+
+  .kifi-dialog-opened > & {
+    opacity: 1;
+    transform: translateY(0);
   }
 
   &>.kifi-ti-list {
@@ -499,37 +508,27 @@
     border: 0 !important;
     padding: 3px 0 !important;
   }
-
-  &>.kifi-ti-dropdown {
-    // border: 1px solid @buttonBgColor;
-    // border-bottom-width: 2px;
-  }
-}
-
-.kifi-message-participant-dialog-title {
-  font-weight: 200;
-  -webkit-font-smoothing: antialiased;
-  margin-bottom: 6px;
 }
 
 .kifi-message-participant-dialog-button {
   float: right;
-  font-size: 13px;
-  font-weight: 200;
-  -webkit-font-smoothing: antialiased;
-  padding: 7px 16px;
-  border-radius: 2px !important;
-  margin-top: 8px;
-  color: white;
-  background: @buttonBgColor;
-
-  &:hover, &:focus {
-    color: white;
-    background: shade(@buttonBgColor, 10%);
+  display: inline-block;
+  margin: 4px 3px 0;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 0 18px;
+  color: #333 !important;
+  background: linear-gradient(#fff, #f3f3f3);
+  line-height: 28px;
+  position: relative;
+  font-size: 12px;
+  font-smoothing: antialiased;
+  &:focus {
+    outline: 0 !important;
+    box-shadow: 0 0 4px #5b9dd9 !important;
   }
-
-  &:active {
-    color: white;
-    background: shade(@buttonBgColor, 20%);
+  &:active,
+  &:not([href]) {
+    background: #f3f3f3;
   }
 }

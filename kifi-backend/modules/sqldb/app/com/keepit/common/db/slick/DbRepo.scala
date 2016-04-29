@@ -101,7 +101,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
     getCompiled(id).firstOption.getOrElse(throw new IllegalArgumentException(s"can't find $id in ${_taggedTable.tableName}"))
   }
 
-  def all()(implicit session: RSession): Seq[M] = rows.list
+  def all()(implicit session: RSession): Seq[M] = rows.take(2000).list
 
   def page(page: Int, size: Int, excludeStates: Set[State[M]])(implicit session: RSession): Seq[M] = {
     // todo(Andrew): When Slick 2.2 is released, convert to Compiled query (upgrade necessary for .take & .drop)

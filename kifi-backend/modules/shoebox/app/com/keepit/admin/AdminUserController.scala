@@ -664,10 +664,7 @@ class AdminUserController @Inject() (
   }
 
   def bumpUserSeq() = AdminUserPage { implicit request =>
-    db.readWrite { implicit s =>
-      userRepo.all.sortBy(_.id.get.id).foreach { u => userRepo.save(u) }
-    }
-    Ok("OK. Bumping up user sequence numbers")
+    Ok("No, I refuse.")
   }
 
   def resetMixpanelProfile(userId: Id[User]) = AdminUserPage.async { implicit request =>
@@ -680,17 +677,17 @@ class AdminUserController @Inject() (
 
   def deleteAllMixpanelProfiles() = AdminUserPage.async { implicit request =>
     SafeFuture {
-      val allUsers = db.readOnlyReplica { implicit s => userRepo.all }
-      allUsers.foreach(user => heimdal.deleteUser(user.id.get))
-      Ok("All user profiles have been deleted from Mixpanel")
+      //      val allUsers = db.readOnlyReplica { implicit s => userRepo.all }
+      //      allUsers.foreach(user => heimdal.deleteUser(user.id.get))
+      Ok("No I refuse")
     }
   }
 
   def resetAllMixpanelProfiles() = AdminUserPage.async { implicit request =>
     SafeFuture {
-      val allUsers = db.readOnlyReplica { implicit s => userRepo.all }
-      allUsers.foreach(doResetMixpanelProfile)
-      Ok("All user profiles have been reset in Mixpanel")
+      //      val allUsers = db.readOnlyReplica { implicit s => userRepo.all }
+      //      allUsers.foreach(doResetMixpanelProfile)
+      Ok("No I refuse")
     }
   }
 
@@ -730,26 +727,26 @@ class AdminUserController @Inject() (
 
   def bumpUpSeqNumForConnections() = AdminUserPage.async { implicit request =>
     SafeFuture {
-      val conns = db.readOnlyReplica { implicit s =>
-        userConnectionRepo.all()
-      }
-
-      conns.grouped(100).foreach { cs =>
-        db.readWrite { implicit s =>
-          cs.foreach { c => userConnectionRepo.save(c) }
-        }
-      }
-
-      val friends = db.readOnlyReplica { implicit s =>
-        searchFriendRepo.all()
-      }
-
-      friends.grouped(100).foreach { fs =>
-        db.readWrite { implicit s =>
-          fs.foreach { f => searchFriendRepo.save(f) }
-        }
-      }
-      Ok("bump up seqNum for userConnRepo and searchFriendRepo")
+      //      val conns = db.readOnlyReplica { implicit s =>
+      //        userConnectionRepo.all()
+      //      }
+      //
+      //      conns.grouped(100).foreach { cs =>
+      //        db.readWrite { implicit s =>
+      //          cs.foreach { c => userConnectionRepo.save(c) }
+      //        }
+      //      }
+      //
+      //      val friends = db.readOnlyReplica { implicit s =>
+      //        searchFriendRepo.all()
+      //      }
+      //
+      //      friends.grouped(100).foreach { fs =>
+      //        db.readWrite { implicit s =>
+      //          fs.foreach { f => searchFriendRepo.save(f) }
+      //        }
+      //      }
+      Ok("No I refuse")
     }
   }
 
