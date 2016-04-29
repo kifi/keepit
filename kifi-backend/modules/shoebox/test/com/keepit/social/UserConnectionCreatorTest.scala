@@ -205,6 +205,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
           val sociallyConnectedUsers = inject[SocialConnectionRepo].getSociallyConnectedUsers(user.id.get)
           val userConnections = inject[UserConnectionRepo].getConnectedUsers(user.id.get)
           val connectionCount = inject[UserConnectionRepo].getConnectionCount(user.id.get)
+
           sociallyConnectedUsers.size === 1
           connectionCount === userConnections.size
           connectionCount === 2

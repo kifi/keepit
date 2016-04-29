@@ -73,14 +73,16 @@ class SocialConnectionRepoImpl @Inject() (
   }
 
   def getSociallyConnectedUsers(id: Id[User])(implicit session: RSession): Set[Id[User]] = {
-    val connections = getSocialConnectionInfosByUser(id)
-    connections.values.flatMap(_.flatMap(_.userId)).toSet
+    val connections = socialRepo.getByUser(id)
+      .filter { sui => sui.networkType != SocialNetworks.FORTYTWO }
+      .flatMap { sui => getSocialConnectionInfos(sui.id.get) }
+    connections.flatMap(_.userId).toSet - id
   }
 
   def getConnectionOpt(u1: Id[SocialUserInfo], u2: Id[SocialUserInfo])(implicit session: RSession): Option[SocialConnection] =
     (for {
       s <- rows
-      if ((s.socialUser1 === u1 && s.socialUser2 === u2) || (s.socialUser1 === u2 && s.socialUser2 === u1))
+      if (s.socialUser1 === u1 && s.socialUser2 === u2) || (s.socialUser1 === u2 && s.socialUser2 === u1)
     } yield s).firstOption
 
   def getUserConnectionCount(id: Id[User])(implicit session: RSession): Int = {

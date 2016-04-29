@@ -172,7 +172,7 @@ class SocialUserInfoRepoImpl @Inject() (
     else {
       val valueMap = basicInfoCache.bulkGetOrElse(ids.map(SocialUserBasicInfoKey(_)).toSet) { keys =>
         val missing = keys.map(_.id)
-        val suis = (for (f <- rows if f.id.inSet(missing)) yield f).list
+        val suis = (for (f <- rows if f.id.inSet(missing) && f.state =!= SocialUserInfoStates.INACTIVE) yield f).list
         suis.collect {
           case sui if sui.state != SocialUserInfoStates.INACTIVE =>
             (SocialUserBasicInfoKey(sui.id.get) -> SocialUserBasicInfo.fromSocialUser(sui))
