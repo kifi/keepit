@@ -1,16 +1,20 @@
 package com.keepit.common.util
 
 import com.keepit.common.crypto.PublicId
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.store.{ S3ImageConfig, ImagePath }
 import com.keepit.common.time._
 import com.keepit.model.BasicKeepEvent.BasicKeepEventId
 import com.keepit.model._
-import com.keepit.social.BasicAuthor
-import org.joda.time.{ Duration, DateTime, Period }
+import com.keepit.social.{ BasicUser, BasicAuthor }
+import org.joda.time.{ DateTime, Period }
 import org.specs2.mutable.Specification
 import play.api.libs.json.{ JsObject, Json }
 
 class DescriptionElementsTest extends Specification {
+
+  implicit val imageConfig = S3ImageConfig("", "http://dev.ezkeep.com:9000", isLocal = true)
+
   "DescriptionElements" should {
     "format time periods properly" in {
       import DescriptionElements._
@@ -62,6 +66,32 @@ class DescriptionElementsTest extends Specification {
       val jsEvent = Json.toJson(event)
       (jsEvent \ "header").as[Seq[JsObject]].map { o => (o \ "text").as[String] } === Seq(author.name, " kept in ", library.name)
       (jsEvent \ "body").as[Seq[JsObject]].map { o => (o \ "text").as[String] } === Seq("Here is a note with [#hashtags] all over")
+    }
+
+    "internally format elements" in {
+      import com.keepit.common.util.DescriptionElements._
+      val user1 = BasicUser(ExternalId[User](), "Hank", "Paulson", "0.jpg", Username("hank"))
+      val author = BasicAuthor.fromUser(user1)
+      val library = BasicLibrary(PublicId[Library]("l1234567"), "Paper Street Soap Company", "/paulson/soap", LibraryVisibility.DISCOVERABLE, color = None, slack = None)
+      val org = BasicOrganization(PublicId[Organization]("o7654321"), user1.externalId, OrganizationHandle("paperstreetsoap"), "Paper Street Soap Company", description = None, avatarPath = ImagePath("/"))
+
+      def exampleForKind(kind: DescriptionElementKind): DescriptionElement = kind match {
+        case DescriptionElementKind.Image => ImageElement(url = Some("https://www.flickr.com"), image = "/flickrImage")
+        case DescriptionElementKind.ShowOriginal => ShowOriginalElement("first comes first", "second come second")
+        case DescriptionElementKind.User => fromBasicUser(user1)
+        case DescriptionElementKind.NonUser => NonUserElement("hankpaulson@paperstreet.club")
+        case DescriptionElementKind.Author => fromBasicAuthor(author)
+        case DescriptionElementKind.Library => fromBasicLibrary(library)
+        case DescriptionElementKind.Organization => fromBasicOrg(org)
+        case DescriptionElementKind.Text => TextElement("testing one two three", url = Some("https://www.testing.com"), hover = Some(DescriptionElements("woo look at me!")))
+      }
+
+      for (kind <- DescriptionElementKind.all) {
+        val ex = exampleForKind(kind)
+        val payload = DescriptionElement.format.writes(ex)
+        DescriptionElement.format.reads(payload).asEither must beRight(ex)
+      }
+      1 === 1
     }
   }
 }
