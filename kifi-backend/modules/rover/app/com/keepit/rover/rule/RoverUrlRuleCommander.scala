@@ -15,7 +15,7 @@ class RoverUrlRuleCommander @Inject() (
     val httpProxyCommander: RoverHttpProxyCommander) {
 
   def all: Future[Seq[UrlRule]] = db.readOnlyMaster { implicit session =>
-    Future.successful(urlRuleRepo.all.map(roverUrlRuleToUrlRule))
+    Future.successful(urlRuleRepo.aTonOfRecords.map(roverUrlRuleToUrlRule))
   }
 
   def save(that: UrlRule): Future[UrlRule] = {

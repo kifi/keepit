@@ -113,7 +113,7 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         setup()
         db.readWrite { implicit s =>
-          val all = uriRepo.all
+          val all = uriRepo.aTonOfRecords
           all.size === 2
           // println(all.mkString("\n")) // can be removed?
           normalizedURIInterner.getByUri("http://www.keepit.com/short").get.url === "http://www.keepit.com/short"
@@ -135,7 +135,7 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
     "search gets something" in {
       withDb() { implicit injector =>
         db.readWrite { implicit s =>
-          uriRepo.all.size === 0 //making sure the db is clean, trying to understand some strange failures we got
+          uriRepo.aTonOfRecords.size === 0 //making sure the db is clean, trying to understand some strange failures we got
           val user1 = UserFactory.user().withName("Joe", "Smith").withUsername("test").saved
           val user2 = UserFactory.user().withName("Moo", "Brown").withUsername("moo").saved
           val uri1 = createUri(title = "one title", url = "http://www.keepit.com/one", state = NormalizedURIStates.ACTIVE)

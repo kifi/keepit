@@ -79,7 +79,7 @@ class ElizaDiscussionCommanderTest extends TestKitSupport with SpecificationLike
 
           ans(keep).numMessages === 1
           ans(keep).messages must haveLength(1)
-          db.readOnlyMaster { implicit s => messageRepo.all must haveLength(2) }
+          db.readOnlyMaster { implicit s => messageRepo.aTonOfRecords must haveLength(2) }
 
           1 === 1
         }
@@ -129,7 +129,7 @@ class ElizaDiscussionCommanderTest extends TestKitSupport with SpecificationLike
             _ <- discussionCommander.sendMessage(user2, "My first post too!", keep)
             _ <- discussionCommander.sendMessage(user2, "And another post!", keep)
           } yield Unit, Duration.Inf)
-          val msgs = db.readOnlyMaster { implicit s => messageRepo.all }
+          val msgs = db.readOnlyMaster { implicit s => messageRepo.aTonOfRecords }
 
           inject[WatchableExecutionContext].drain()
 

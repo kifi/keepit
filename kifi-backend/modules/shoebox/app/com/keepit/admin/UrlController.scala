@@ -137,7 +137,7 @@ class UrlController @Inject() (
 
   def getPatterns = AdminUserPage { implicit request =>
     val patterns = db.readOnlyReplica { implicit session =>
-      urlPatternRuleRepo.all.sortBy(_.id.get.id)
+      urlPatternRuleRepo.aTonOfRecords.sortBy(_.id.get.id)
     }
     Ok(html.admin.urlPatternRules(patterns))
   }
@@ -335,7 +335,7 @@ class UrlController @Inject() (
 
   def getDomainTags = AdminUserPage { implicit request =>
     val tags = db.readOnlyReplica { implicit session =>
-      domainTagRepo.all
+      domainTagRepo.aTonOfRecords
     }
     Ok(html.admin.domainTags(tags))
   }
@@ -345,7 +345,7 @@ class UrlController @Inject() (
     val sensitiveTags = request.body.asFormUrlEncoded.get.keys
       .collect { case tagIdValue(v) => Id[DomainTag](v.toInt) }.toSet
     val tagsToSave = db.readOnlyReplica { implicit s =>
-      domainTagRepo.all.map(tag => (tag, sensitiveTags contains tag.id.get)).collect {
+      domainTagRepo.aTonOfRecords.map(tag => (tag, sensitiveTags contains tag.id.get)).collect {
         case (tag, sensitive) if tag.state == DomainTagStates.ACTIVE && tag.sensitive != Some(sensitive) =>
           tag.withSensitive(Some(sensitive))
       }

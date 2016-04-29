@@ -67,7 +67,7 @@ class ExtAuthControllerTest extends Specification with ShoeboxApplicationInjecto
         val result1 = inject[ExtAuthController].start(fakeRequest1)
         status(result1) must equalTo(OK)
         val kifiInstallation1 = db.readOnlyMaster { implicit s =>
-          val all = installationRepo.all()(s)
+          val all = installationRepo.aTonOfRecords()(s)
           all.size === 1
           all.head
         }
@@ -89,7 +89,7 @@ class ExtAuthControllerTest extends Specification with ShoeboxApplicationInjecto
         val result2 = inject[ExtAuthController].start(fakeRequest2)
         status(result2) must equalTo(OK)
         val kifiInstallation2 = db.readOnlyMaster { implicit s =>
-          val all = installationRepo.all()(s)
+          val all = installationRepo.aTonOfRecords()(s)
           all.size === 1
           all.head
         }

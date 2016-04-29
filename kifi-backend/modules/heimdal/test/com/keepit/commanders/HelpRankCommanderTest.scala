@@ -185,7 +185,7 @@ class HelpRankCommanderTest extends Specification with HeimdalTestInjector with 
         db.readOnlyMaster { implicit s => rekeepRepo.getReKeepCountByURI(uriKifi.id.get) } === 2
 
         db.readOnlyMaster { implicit session =>
-          val allDiscoveries = keepDiscoveryRepo.all()
+          val allDiscoveries = keepDiscoveryRepo.aTonOfRecords()
           allDiscoveries.size === 5
 
           val cu0 = keepDiscoveryRepo.getDiscoveriesByUUID(kc0.hitUUID)
@@ -256,7 +256,7 @@ class HelpRankCommanderTest extends Specification with HeimdalTestInjector with 
             }
           } === true
 
-          val rekeeps = rekeepRepo.all
+          val rekeeps = rekeepRepo.aTonOfRecords
           rekeeps.size === 4
 
           val rk1 = rekeeps.find(_.keeperId == u1.id.get).get

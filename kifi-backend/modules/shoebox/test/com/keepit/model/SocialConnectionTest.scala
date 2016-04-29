@@ -206,7 +206,7 @@ class SocialConnectionTest extends Specification with ShoeboxTestInjector {
         val connectionRepo = inject[SocialConnectionRepo]
 
         val (eishayFortyTwoConnection, andrewFortyTwoConnection) = inject[Database].readOnlyMaster { implicit s =>
-          connectionRepo.all.size === 18
+          connectionRepo.aTonOfRecords.size === 18
           (connectionRepo.getSociallyConnectedUsers(eishaySocialUserInfo.userId.get),
             connectionRepo.getSociallyConnectedUsers(andrewSocialUserInfo.userId.get))
         }
@@ -279,7 +279,7 @@ class SocialConnectionTest extends Specification with ShoeboxTestInjector {
           Seq(eishay1Json, eishay2Json) flatMap extractFacebookFriendIds)
 
         val eishayFortyTwoConnection = inject[Database].readOnlyMaster { implicit s =>
-          connectionRepo.all.size === 12
+          connectionRepo.aTonOfRecords.size === 12
           connectionRepo.getSociallyConnectedUsers(eishaySocialUserInfo.userId.get)
         }
 

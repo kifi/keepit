@@ -298,7 +298,7 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
 
       val ids = (1 to 5) map { Id[NormalizedURI](_) }
       db.readOnlyMaster { implicit s =>
-        uriTopicRepo.all.size === 5
+        uriTopicRepo.aTonOfRecords.size === 5
         val feats = uriTopicRepo.getActiveByURIs(ids, ModelVersion[DenseLDA](1))
         feats.flatMap { x => x.map { _.uriId.id } }.toArray.sortBy(x => x).toList === List(1, 3, 5)
       }

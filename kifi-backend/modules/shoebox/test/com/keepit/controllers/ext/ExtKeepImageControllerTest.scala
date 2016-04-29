@@ -67,7 +67,7 @@ class ExtKeepImageControllerTest extends Specification with ShoeboxTestInjector 
         libPubId === libraryPubId
 
         db.readOnlyMaster { implicit session =>
-          keepImageRepo.all() === Seq.empty
+          keepImageRepo.aTonOfRecords() === Seq.empty
         }
 
         { // Wrong user
@@ -87,7 +87,7 @@ class ExtKeepImageControllerTest extends Specification with ShoeboxTestInjector 
           contentAsString(uploadResp) === "\"success\""
 
           db.readOnlyMaster { implicit session =>
-            keepImageRepo.all().head.imagePath.path === "keep/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png"
+            keepImageRepo.aTonOfRecords().head.imagePath.path === "keep/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png"
           }
         }
 
@@ -115,7 +115,7 @@ class ExtKeepImageControllerTest extends Specification with ShoeboxTestInjector 
         val libraryPubId = (keepJson \ "libraryId").as[PublicId[Library]]
 
         db.readOnlyMaster { implicit session =>
-          keepImageRepo.all() === Seq.empty
+          keepImageRepo.aTonOfRecords() === Seq.empty
         }
 
         { // Wrong user
@@ -134,7 +134,7 @@ class ExtKeepImageControllerTest extends Specification with ShoeboxTestInjector 
           status(changeResp) === INTERNAL_SERVER_ERROR
 
           db.readOnlyMaster { implicit session =>
-            keepImageRequestRepo.all().head.failureCode === Some("source_fetch_failed")
+            keepImageRequestRepo.aTonOfRecords().head.failureCode === Some("source_fetch_failed")
           }
         }
 

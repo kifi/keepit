@@ -108,7 +108,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
       (libShield, libMurica, libScience)
     }
     db.readOnlyMaster { implicit s =>
-      val allLibs = libraryRepo.all
+      val allLibs = libraryRepo.aTonOfRecords
       allLibs.length === 3
       allLibs.map(_.name) === Seq("Avengers Missions", "MURICA", "Science & Stuff")
       allLibs.map(_.slug.value) === Seq("avengers", "murica", "science")
@@ -229,12 +229,12 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           libraryCommander.createLibrary(lib4Request, userIron.id.get) must beLeft
 
           db.readOnlyMaster { implicit s =>
-            val allLibs = libraryRepo.all
+            val allLibs = libraryRepo.aTonOfRecords
             allLibs.length === 3
             allLibs.map(_.slug.value) === Seq("avengers", "murica", "science")
             allLibs.map(_.whoCanInvite).flatten === Seq(LibraryInvitePermissions.COLLABORATOR, LibraryInvitePermissions.COLLABORATOR, LibraryInvitePermissions.OWNER)
 
-            val allMemberships = libraryMembershipRepo.all
+            val allMemberships = libraryMembershipRepo.aTonOfRecords
             allMemberships.length === 3
             allMemberships.map(_.userId) === Seq(userAgent.id.get, userCaptain.id.get, userIron.id.get)
             allMemberships.map(_.access) === Seq(LibraryAccess.OWNER, LibraryAccess.OWNER, LibraryAccess.OWNER)
@@ -247,7 +247,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           }
           libraryCommander.createLibrary(lib3Request, userIron.id.get) must beRight
           db.readOnlyMaster { implicit s =>
-            val allLibs = libraryRepo.all
+            val allLibs = libraryRepo.aTonOfRecords
             allLibs.length === 3
             allLibs.map(_.slug.value) === Seq("avengers", "murica", "science")
             allLibs.foreach(_.color.nonEmpty === true)
@@ -491,7 +491,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           mod7.right.get.modifiedLibrary.whoCanComment === LibraryCommentPermissions.ANYONE
 
           db.readOnlyMaster { implicit s =>
-            val allLibs = libraryRepo.all
+            val allLibs = libraryRepo.aTonOfRecords
             allLibs.length === 3
             allLibs.map(_.name) === Seq("Avengers Missions", "MURICA #1!!!!!", "Science & Stuff")
             allLibs.map(_.slug.value) === Seq("avengers", "murica_#1", "science")
@@ -638,7 +638,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         implicit val config = inject[PublicIdConfiguration]
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupKeeps()
         db.readOnlyMaster { implicit s =>
-          val allLibs = libraryRepo.all
+          val allLibs = libraryRepo.aTonOfRecords
           allLibs.length === 3
           allLibs.map(_.slug.value) === Seq("avengers", "murica", "science")
           libraryMembershipRepo.count === 6
@@ -653,11 +653,11 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         libraryCommander.deleteLibrary(libMurica.id.get, userCaptain.id.get)
         db.readOnlyMaster { implicit s =>
-          val allLibs = libraryRepo.all.filter(_.state == LibraryStates.ACTIVE)
+          val allLibs = libraryRepo.aTonOfRecords.filter(_.state == LibraryStates.ACTIVE)
           allLibs.length === 2
           allLibs.map(_.slug.value) === Seq("avengers", "science")
-          libraryMembershipRepo.all.filter(_.state == LibraryMembershipStates.INACTIVE).length === 3
-          libraryInviteRepo.all.filter(_.state == LibraryInviteStates.INACTIVE).length === 3
+          libraryMembershipRepo.aTonOfRecords.filter(_.state == LibraryMembershipStates.INACTIVE).length === 3
+          libraryInviteRepo.aTonOfRecords.filter(_.state == LibraryInviteStates.INACTIVE).length === 3
         }
 
         db.readWrite { implicit s =>
@@ -676,11 +676,11 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         libraryCommander.deleteLibrary(libScience.id.get, userIron.id.get)
         libraryCommander.deleteLibrary(libShield.id.get, userAgent.id.get)
         db.readOnlyMaster { implicit s =>
-          val allLibs = libraryRepo.all.filter(_.state == LibraryStates.ACTIVE)
+          val allLibs = libraryRepo.aTonOfRecords.filter(_.state == LibraryStates.ACTIVE)
           allLibs.length === 0
           allLibs.map(_.slug.value) === Seq.empty
-          libraryMembershipRepo.all.filter(_.state == LibraryMembershipStates.INACTIVE).length === 6
-          libraryInviteRepo.all.filter(_.state == LibraryInviteStates.INACTIVE).length === 4
+          libraryMembershipRepo.aTonOfRecords.filter(_.state == LibraryMembershipStates.INACTIVE).length === 6
+          libraryInviteRepo.aTonOfRecords.filter(_.state == LibraryInviteStates.INACTIVE).length === 4
         }
       }
     }
@@ -849,7 +849,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupLibraries
 
         db.readOnlyMaster { implicit session =>
-          val all = libraryRepo.all()
+          val all = libraryRepo.aTonOfRecords()
           all.size === 3
 
           libraryRepo.getByUser(userIron.id.get).map(_._2).count(_.ownerId == userIron.id.get) === 1
@@ -861,7 +861,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         // System libraries are created
         db.readOnlyMaster { implicit session =>
-          libraryRepo.all().size === 7
+          libraryRepo.aTonOfRecords().size === 7
           libraryRepo.getByUser(userIron.id.get).map(_._2).count(_.ownerId == userIron.id.get) === 3
           libraryRepo.getByUser(userCaptain.id.get).map(_._2).count(_.ownerId == userCaptain.id.get) === 3
           libraryRepo.getByUser(userHulk.id.get).map(_._2).count(_.ownerId == userCaptain.id.get) === 0
@@ -871,7 +871,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         libraryCommander.internSystemGeneratedLibraries(userIron.id.get)
         libraryCommander.internSystemGeneratedLibraries(userHulk.id.get)
         db.readWrite { implicit session =>
-          libraryRepo.all().size === 9
+          libraryRepo.aTonOfRecords().size === 9
           libraryRepo.getByUser(userIron.id.get).map(_._2).count(_.ownerId == userIron.id.get) === 3
           libraryRepo.getByUser(userCaptain.id.get).map(_._2).count(_.ownerId == userCaptain.id.get) === 3
           libraryRepo.getByUser(userHulk.id.get).map(_._2).count(_.ownerId == userHulk.id.get) === 2
@@ -911,7 +911,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val ironMains = libraryRepo.getByUser(userIron.id.get, None).map(_._2).filter(_.ownerId == userIron.id.get).filter(_.kind == LibraryKind.SYSTEM_MAIN)
           ironMains.size === 1
           ironMains.count(l => l.state == LibraryStates.ACTIVE) === 1
-          libraryRepo.all.count(l => l.ownerId == userIron.id.get && l.state == LibraryStates.INACTIVE) === 1
+          libraryRepo.aTonOfRecords.count(l => l.ownerId == userIron.id.get && l.state == LibraryStates.INACTIVE) === 1
         }
 
       }
@@ -945,7 +945,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         db.readOnlyMaster { implicit s =>
           libraryInviteRepo.count === 4
-          val allInvites = libraryInviteRepo.all
+          val allInvites = libraryInviteRepo.aTonOfRecords
           allInvites.count(_.access == LibraryAccess.READ_ONLY) === 4
           allInvites.count(_.userId.isDefined) === 3
           allInvites.count(_.emailAddress.isDefined) === 1
@@ -1033,7 +1033,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
           db.readOnlyMaster { implicit s =>
             libraryInviteRepo.count === 6
-            val res = for (inv <- libraryInviteRepo.all) yield {
+            val res = for (inv <- libraryInviteRepo.aTonOfRecords) yield {
               (inv.libraryId, inv.userId.get, inv.access, inv.state)
             }
             res === Seq(
@@ -1142,7 +1142,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val libraryMembershipCommander = inject[LibraryMembershipCommander]
 
           db.readOnlyMaster { implicit s =>
-            libraryMembershipRepo.all.count(x => x.state == LibraryMembershipStates.INACTIVE) === 0
+            libraryMembershipRepo.aTonOfRecords.count(x => x.state == LibraryMembershipStates.INACTIVE) === 0
             libraryRepo.get(libMurica.id.get).memberCount === 3
           }
 
@@ -1150,7 +1150,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
           db.readOnlyMaster { implicit s =>
             libraryMembershipRepo.count === 6
-            libraryMembershipRepo.all.count(x => x.state == LibraryMembershipStates.INACTIVE) === 1
+            libraryMembershipRepo.aTonOfRecords.count(x => x.state == LibraryMembershipStates.INACTIVE) === 1
             libraryRepo.get(libMurica.id.get).memberCount === 2
           }
         }

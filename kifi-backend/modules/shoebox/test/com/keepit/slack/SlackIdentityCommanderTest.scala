@@ -38,10 +38,10 @@ class SlackIdentityCommanderTest extends TestKitSupport with SpecificationLike w
             None
           )
 
-          db.readOnlyMaster { implicit s => inject[SlackTeamMembershipRepo].all must beEmpty }
+          db.readOnlyMaster { implicit s => inject[SlackTeamMembershipRepo].aTonOfRecords must beEmpty }
           db.readWrite { implicit s => slackCommander.internSlackIdentity(Some(user1.id.get), slackIdentity) }
           db.readOnlyMaster { implicit s =>
-            inject[SlackTeamMembershipRepo].all must haveSize(1)
+            inject[SlackTeamMembershipRepo].aTonOfRecords must haveSize(1)
             inject[SlackTeamMembershipRepo].getBySlackTeamAndUser(slackTeam.slackTeamId, slackUser.userId).get.userId must beSome(user1.id.get)
           }
           db.readWrite { implicit s => slackCommander.internSlackIdentity(Some(user2.id.get), slackIdentity) should throwAn[SlackActionFail.MembershipAlreadyConnected] }

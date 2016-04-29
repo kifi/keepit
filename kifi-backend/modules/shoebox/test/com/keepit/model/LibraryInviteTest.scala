@@ -31,7 +31,7 @@ class LibraryInviteTest extends Specification with ShoeboxTestInjector {
     "basically work" in { // test read/write/save
       withDb() { implicit injector =>
         val (lib1, lib2, user1, user2, inv1, inv2) = setup()
-        val all = db.readOnlyMaster(implicit session => libraryInviteRepo.all)
+        val all = db.readOnlyMaster(implicit session => libraryInviteRepo.aTonOfRecords)
         all.map(_.inviterId) === Seq(user1.id.get, user2.id.get)
         all.map(_.userId.get) === Seq(user2.id.get, user1.id.get)
       }
@@ -46,7 +46,7 @@ class LibraryInviteTest extends Specification with ShoeboxTestInjector {
           libraryInviteRepo.delete(libInv)
         }
         db.readWrite { implicit s =>
-          libraryInviteRepo.all.size === 1
+          libraryInviteRepo.aTonOfRecords.size === 1
           libraryInviteRepo.count === 1
         }
         db.readWrite { implicit s =>

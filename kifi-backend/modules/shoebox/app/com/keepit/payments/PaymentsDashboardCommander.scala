@@ -58,18 +58,18 @@ class PaymentsDashboardCommanderImpl @Inject() (
 
     val now = clock.now
     val diffPeriod = Period.weeks(1)
-    val plans = paidPlanRepo.all.filter(_.isActive)
+    val plans = paidPlanRepo.aTonOfRecords.filter(_.isActive)
     val Seq(reverseChronologicalEvents, reallyOldEvents) = Seq(now, now.minus(diffPeriod)).map { end =>
       accountEventRepo.adminGetByKindAndDate(AccountEventKind.all, start = end.minus(diffPeriod), end = end)
         .filter(e => !fakeAccountIds.contains(e.accountId))
         .toList.sortBy(e => (e.eventTime.getMillis, e.id.get.id)).reverse
     }
 
-    val frozenAccounts = paidAccountRepo.all.filter(a => a.isActive && a.frozen).take(100).map(createAdminAccountView) // God help us if we have more than 100 frozen accounts
-    val failedAccounts = paidAccountRepo.all.filter(a => a.isActive && a.paymentStatus == PaymentStatus.Failed).take(100).map(createAdminAccountView) // God help us if we have more than 100 failed accounts
+    val frozenAccounts = paidAccountRepo.aTonOfRecords.filter(a => a.isActive && a.frozen).take(100).map(createAdminAccountView) // God help us if we have more than 100 frozen accounts
+    val failedAccounts = paidAccountRepo.aTonOfRecords.filter(a => a.isActive && a.paymentStatus == PaymentStatus.Failed).take(100).map(createAdminAccountView) // God help us if we have more than 100 failed accounts
 
     val upgradedPlans = plans.filter(_.pricePerCyclePerUser > DollarAmount.ZERO).map(_.id.get).toSet
-    val upgradedAccounts = paidAccountRepo.all.filter(a => a.isActive && upgradedPlans.contains(a.planId)).sortBy(_.planRenewal.getMillis).reverse.map(createAdminAccountView)
+    val upgradedAccounts = paidAccountRepo.aTonOfRecords.filter(a => a.isActive && upgradedPlans.contains(a.planId)).sortBy(_.planRenewal.getMillis).reverse.map(createAdminAccountView)
 
     val (creditChanges, chargesMade, rewardsGranted) = {
       def applyFn[T](fn: Seq[AccountEvent] => T): History[T] = History(old = fn(reallyOldEvents), cur = fn(reverseChronologicalEvents))
@@ -89,8 +89,8 @@ class PaymentsDashboardCommanderImpl @Inject() (
     }.toMap
     val oldPlanEnrollments = {
       // mutable map logic ahoy
-      val m_planByAccount = mutable.Map(paidAccountRepo.all.filter(_.isActive).map(a => a.id.get -> Option(a.planId)): _*)
-      val m_usersByAccount = mutable.Map(paidAccountRepo.all.filter(_.isActive).map(a => a.id.get -> a.activeUsers): _*)
+      val m_planByAccount = mutable.Map(paidAccountRepo.aTonOfRecords.filter(_.isActive).map(a => a.id.get -> Option(a.planId)): _*)
+      val m_usersByAccount = mutable.Map(paidAccountRepo.aTonOfRecords.filter(_.isActive).map(a => a.id.get -> a.activeUsers): _*)
 
       reverseChronologicalEvents.map(e => (e.accountId, e.action)).foreach {
         case (accountId, AccountEventAction.OrganizationCreated(initialPlan, _)) =>

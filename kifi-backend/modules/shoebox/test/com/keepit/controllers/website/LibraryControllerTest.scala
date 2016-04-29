@@ -1453,7 +1453,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
             // test that private libraries are not returned in the response
             val lib3 = library().withName("Private").withOwner(user1).saved
 
-            inject[KeepRepo].all() // force slick to create the table
+            inject[KeepRepo].aTonOfRecords() // force slick to create the table
 
             membership().withLibraryOwner(lib1).saved
             membership().withLibraryFollower(lib1, user2).saved

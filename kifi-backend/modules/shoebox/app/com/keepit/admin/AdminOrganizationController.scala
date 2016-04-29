@@ -395,7 +395,7 @@ class AdminOrganizationController @Inject() (
     val setting = (request.body \ "setting").as[FeatureSetting](feature.settingReads)
 
     val newPlans = db.readWrite { implicit s =>
-      paidPlanRepo.all.map { plan =>
+      paidPlanRepo.aTonOfRecords.map { plan =>
         paidPlanRepo.save(plan.withNewEditableFeature(feature).withNewDefaultSetting(feature -> setting))
       }
     }
