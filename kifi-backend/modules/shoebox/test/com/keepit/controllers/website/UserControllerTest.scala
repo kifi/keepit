@@ -141,7 +141,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
 
         inject[FakeUserActionsHelper].setUser(user)
         val userController = inject[UserController]
-        db.readOnlyMaster(s => inject[InvitationRepo].all()(s))
+        db.readOnlyMaster(s => inject[InvitationRepo].aTonOfRecords()(s))
         val path = routes.UserController.savePrefs().url
 
         val inputJson1 = Json.obj("show_delighted_question" -> false)

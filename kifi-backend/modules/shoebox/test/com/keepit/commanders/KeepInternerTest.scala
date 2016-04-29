@@ -52,7 +52,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
             updatedAt = bookmarks.head.updatedAt,
             seq = bookmarks.head.seq
           ) === bookmarks.head
-          keepRepo.all.size === 1
+          keepRepo.aTonOfRecords.size === 1
         }
       }
     }
@@ -70,8 +70,8 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
         ), libraryId = None))
         db.readWrite { implicit session =>
           userRepo.get(user.id.get) === user
-          rawKeepRepo.all.headOption.map(_.url) === Some("http://42go.com")
-          rawKeepRepo.all.size === 1
+          rawKeepRepo.aTonOfRecords.headOption.map(_.url) === Some("http://42go.com")
+          rawKeepRepo.aTonOfRecords.size === 1
         }
       }
     }
@@ -91,10 +91,10 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
         ), libraryId = lib.id))
         db.readWrite { implicit session =>
           userRepo.get(user.id.get) === user
-          val targetRawKeep = rawKeepRepo.all.headOption
+          val targetRawKeep = rawKeepRepo.aTonOfRecords.headOption
           targetRawKeep.map(_.url) === Some("http://42go.com")
           targetRawKeep.flatMap(_.libraryId) === lib.id
-          rawKeepRepo.all.size === 1
+          rawKeepRepo.aTonOfRecords.size === 1
         }
       }
     }
@@ -115,7 +115,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
         db.readWrite { implicit session =>
           userRepo.get(user.id.get) === user
           bookmarks.size === 2
-          keepRepo.all.size === 2
+          keepRepo.aTonOfRecords.size === 2
         }
       }
     }
@@ -144,8 +144,8 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
         fakeAirbrake.errorCount() === 2
         bookmarks.size === 2
         db.readWrite { implicit session =>
-          keepRepo.all.size === 2
-          keepRepo.all.map(_.url).toSet === Set[String](
+          keepRepo.aTonOfRecords.size === 2
+          keepRepo.aTonOfRecords.map(_.url).toSet === Set[String](
             "http://42go.com",
             "http://kifi.com")
         }
@@ -170,7 +170,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
         ))), user.id.get, library, KeepSource.Keeper)
         db.readOnlyMaster { implicit s =>
           bookmarks.size === 1
-          keepRepo.all.size === 1
+          keepRepo.aTonOfRecords.size === 1
         }
       }
     }

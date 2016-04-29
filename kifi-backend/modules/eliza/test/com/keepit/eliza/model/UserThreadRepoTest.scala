@@ -30,21 +30,21 @@ class UserThreadRepoTest extends Specification with ElizaTestInjector {
 
         // 3 uts, all alive
         db.readOnlyMaster { implicit s =>
-          userThreadRepo.all must haveSize(users.length)
+          userThreadRepo.aTonOfRecords must haveSize(users.length)
           userThreadRepo.getByKeep(keep) must haveSize(users.length)
         }
         // kill one of them
         db.readWrite { implicit s => userThreadRepo.deactivate(userThreadRepo.getUserThread(users.last, keep).get) }
         // 3 uts, 2 alive
         db.readOnlyMaster { implicit s =>
-          userThreadRepo.all must haveSize(users.length)
+          userThreadRepo.aTonOfRecords must haveSize(users.length)
           userThreadRepo.getByKeep(keep) must haveSize(users.length - 1)
         }
         // intern new thread, it snakes the old thread's id
         db.readWrite { implicit s => userThreadRepo.intern(UserThread.forMessageThread(mt)(users.last)) }
         // 3 uts, 3 alive
         db.readOnlyMaster { implicit s =>
-          userThreadRepo.all must haveSize(users.length)
+          userThreadRepo.aTonOfRecords must haveSize(users.length)
           userThreadRepo.getByKeep(keep) must haveSize(users.length)
         }
         1 === 1

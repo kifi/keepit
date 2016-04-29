@@ -45,7 +45,7 @@ class LibraryTest extends Specification with ShoeboxTestInjector {
     "basically work" in { // test read/write/save
       withDb() { implicit injector =>
         setup()
-        val all = db.readOnlyMaster(implicit session => libraryRepo.all)
+        val all = db.readOnlyMaster(implicit session => libraryRepo.aTonOfRecords)
         all.map(_.name) === Seq("lib1A", "lib1B", "lib2", Library.SYSTEM_MAIN_DISPLAY_NAME, Library.SYSTEM_SECRET_DISPLAY_NAME)
         all.map(_.visibility) === Seq(LibraryVisibility.SECRET, LibraryVisibility.DISCOVERABLE, LibraryVisibility.PUBLISHED, LibraryVisibility.DISCOVERABLE, LibraryVisibility.SECRET)
         all.map(_.slug.value) === Seq("A", "B", "C", "main", "secret")
@@ -116,7 +116,7 @@ class LibraryTest extends Specification with ShoeboxTestInjector {
     "reflect latest display naming scheme" in {
       withDb() { implicit injector =>
         setup()
-        val all = db.readOnlyMaster { implicit session => libraryRepo.all() }
+        val all = db.readOnlyMaster { implicit session => libraryRepo.aTonOfRecords() }
         val Some(r1) = all.collectFirst { case lib if lib.kind == LibraryKind.SYSTEM_MAIN => lib }
         println(s"r1=$r1")
         r1.kind === LibraryKind.SYSTEM_MAIN

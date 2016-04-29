@@ -218,7 +218,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
           val lib = libraryRepo.save(Library(name = "L", ownerId = user1.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("l"), memberCount = 1))
           val mem1 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user1.id.get, access = LibraryAccess.OWNER))
           val mem2 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user2.id.get, access = LibraryAccess.READ_WRITE))
-          libraryRepo.all.map { l => (l.id, l.state) } === Seq((lib.id, LibraryStates.ACTIVE))
+          libraryRepo.aTonOfRecords.map { l => (l.id, l.state) } === Seq((lib.id, LibraryStates.ACTIVE))
           (user1, user2, lib, mem1, mem2)
         }
         val libPubId = Library.publicId(lib.id.get)(inject[PublicIdConfiguration])
@@ -226,13 +226,13 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
         status(deleteLibrary(user2, libPubId)) === FORBIDDEN
 
         db.readOnlyMaster { implicit s =>
-          libraryRepo.all.map { l => (l.id, l.state) } === Seq((lib.id, LibraryStates.ACTIVE))
+          libraryRepo.aTonOfRecords.map { l => (l.id, l.state) } === Seq((lib.id, LibraryStates.ACTIVE))
         }
 
         status(deleteLibrary(user1, libPubId)) === NO_CONTENT
 
         db.readOnlyMaster { implicit s =>
-          libraryRepo.all.map { l => (l.id, l.state) } === Seq((lib.id, LibraryStates.INACTIVE))
+          libraryRepo.aTonOfRecords.map { l => (l.id, l.state) } === Seq((lib.id, LibraryStates.INACTIVE))
         }
       }
     }

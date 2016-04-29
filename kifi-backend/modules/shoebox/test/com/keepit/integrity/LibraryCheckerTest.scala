@@ -91,7 +91,7 @@ class LibraryCheckerTest extends TestKitSupport with SpecificationLike with Shoe
         val systemValueRepo = inject[SystemValueRepo]
         val (seqNum, memberSeqNum) = db.readOnlyMaster { implicit session =>
           val seqNum = systemValueRepo.getSequenceNumber(libraryChecker.MEMBER_COUNT_NAME).get
-          val memberSeqNum = libraryMembershipRepo.all.map(_.seq).max
+          val memberSeqNum = libraryMembershipRepo.aTonOfRecords.map(_.seq).max
           (seqNum, memberSeqNum)
         }
         // The last membership seq num is equal to the seqnum we set into libraryChecker.MEMBER_COUNT_NAME systemValueRepo sequence number.

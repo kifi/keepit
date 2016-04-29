@@ -148,7 +148,7 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
 
         db.readOnlyMaster { implicit session =>
           // Dependant on what sizes we do
-          val all = keepImageRepo.all()
+          val all = keepImageRepo.aTonOfRecords()
           all.length === 6
           keepImageRepo.getForKeepId(keep1.id.get).length === 1
           keepImageRepo.getForKeepId(keep2.id.get).length === 0
@@ -174,7 +174,7 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
 
         {
           val path = db.readOnlyMaster { implicit session =>
-            keepImageRepo.all().head.imagePath
+            keepImageRepo.aTonOfRecords().head.imagePath
           }
           val existingUrl = inject[S3ImageConfig].cdnBase + "/" + path.path
           val savedF = commander.setKeepImageFromUrl(existingUrl, keep1.id.get, ImageSource.UserPicked)

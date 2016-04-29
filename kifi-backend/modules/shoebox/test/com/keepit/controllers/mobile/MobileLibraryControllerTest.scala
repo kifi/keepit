@@ -713,7 +713,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         status(res1) must equalTo(OK)
         val invite1 = db.readOnlyMaster { implicit s =>
           libraryInviteRepo.count === 1
-          val invite = libraryInviteRepo.all.head
+          val invite = libraryInviteRepo.aTonOfRecords.head
           invite.inviterId === user1.id.get
           invite.message === Some("please follow")
           invite.access === LibraryAccess.READ_ONLY
@@ -743,7 +743,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         status(res2) must equalTo(OK)
         db.readOnlyMaster { implicit s =>
           libraryInviteRepo.count === 2
-          val invite = libraryInviteRepo.all.last
+          val invite = libraryInviteRepo.aTonOfRecords.last
           invite.inviterId === user2.id.get
           invite.message === None
           invite.access === LibraryAccess.READ_WRITE
@@ -759,7 +759,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         val res4 = inviteAnonymousToLibrary(user1, pubLibId1b, Json.obj("access" -> "read_only"))
         status(res4) must equalTo(OK)
         val invite2 = db.readOnlyMaster { implicit s =>
-          libraryInviteRepo.all.last
+          libraryInviteRepo.aTonOfRecords.last
         }
 
         contentAsJson(res4) === Json.parse(

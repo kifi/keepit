@@ -33,7 +33,7 @@ class SliderAdminController @Inject() (
 
   def getPatterns = AdminUserPage { implicit request =>
     val patterns = db.readOnlyReplica { implicit session =>
-      urlPatternRepo.all
+      urlPatternRepo.aTonOfRecords
     }
     Ok(html.admin.sliderPatterns(patterns))
   }

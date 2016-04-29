@@ -75,14 +75,14 @@ class SlackIntegrationCommanderTest extends TestKitSupport with SpecificationLik
             (user, lib, lts, stl)
           }
           db.readOnlyMaster { implicit s =>
-            inject[LibraryToSlackChannelRepo].all.map(_.id.get) === Seq(libToSlack.id.get)
-            inject[SlackChannelToLibraryRepo].all.map(_.id.get) === Seq(slackToLib.id.get)
+            inject[LibraryToSlackChannelRepo].aTonOfRecords.map(_.id.get) === Seq(libToSlack.id.get)
+            inject[SlackChannelToLibraryRepo].aTonOfRecords.map(_.id.get) === Seq(slackToLib.id.get)
           }
           val delRequest = SlackIntegrationDeleteRequest(user.id.get, libToSlack = Set(libToSlack.id.get), slackToLib = Set(slackToLib.id.get))
           slackIntegrationCommander.deleteIntegrations(delRequest) must beSuccessfulTry
           db.readOnlyMaster { implicit s =>
-            inject[LibraryToSlackChannelRepo].all.filter(_.isActive) === Seq.empty
-            inject[SlackChannelToLibraryRepo].all.filter(_.isActive) === Seq.empty
+            inject[LibraryToSlackChannelRepo].aTonOfRecords.filter(_.isActive) === Seq.empty
+            inject[SlackChannelToLibraryRepo].aTonOfRecords.filter(_.isActive) === Seq.empty
           }
           1 === 1
         }
@@ -103,7 +103,7 @@ class SlackIntegrationCommanderTest extends TestKitSupport with SpecificationLik
             (owner, member, org, lib, lts)
           }
           db.readOnlyMaster { implicit s =>
-            inject[LibraryToSlackChannelRepo].all.map(_.id.get) === Seq(libToSlack.id.get)
+            inject[LibraryToSlackChannelRepo].aTonOfRecords.map(_.id.get) === Seq(libToSlack.id.get)
           }
 
           // At first, if Member tries to modify they fail because they don't have access (the integration is in a personal space)

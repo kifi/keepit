@@ -67,7 +67,7 @@ class MobileAuthControllerTest extends Specification with ShoeboxTestInjector wi
         contentType(result) must beSome("application/json")
 
         val installation = db.readWrite { implicit s =>
-          val all = installationRepo.all()(s)
+          val all = installationRepo.aTonOfRecords()(s)
           all.size === 1
           all.head
         }
@@ -91,7 +91,7 @@ class MobileAuthControllerTest extends Specification with ShoeboxTestInjector wi
         Json.parse(contentAsString(result)) must equalTo(expected)
         db.readOnlyMaster { implicit s =>
           installationRepo.count === 1
-          installationRepo.all().head.version.toString === "1.2.3"
+          installationRepo.aTonOfRecords().head.version.toString === "1.2.3"
         }
       }
       {
@@ -110,8 +110,8 @@ class MobileAuthControllerTest extends Specification with ShoeboxTestInjector wi
         Json.parse(contentAsString(result)) must equalTo(expected)
         db.readWrite { implicit s =>
           installationRepo.count === 1
-          installationRepo.all().head.version.toString === "1.2.4"
-          installationRepo.all().head.platform === KifiInstallationPlatform.IPhone
+          installationRepo.aTonOfRecords().head.version.toString === "1.2.4"
+          installationRepo.aTonOfRecords().head.platform === KifiInstallationPlatform.IPhone
         }
       }
       {
@@ -121,7 +121,7 @@ class MobileAuthControllerTest extends Specification with ShoeboxTestInjector wi
         contentType(result) must beSome("application/json")
 
         val newOne = db.readWrite { implicit s =>
-          val all = installationRepo.all()
+          val all = installationRepo.aTonOfRecords()
           all.size === 2
           all(1)
         }
@@ -157,7 +157,7 @@ class MobileAuthControllerTest extends Specification with ShoeboxTestInjector wi
         contentType(result) must beSome("application/json");
 
         val installation = db.readWrite { implicit s =>
-          val all = installationRepo.all()(s)
+          val all = installationRepo.aTonOfRecords()(s)
           all.size === 1
           all.head
         }
@@ -181,7 +181,7 @@ class MobileAuthControllerTest extends Specification with ShoeboxTestInjector wi
         Json.parse(contentAsString(result)) must equalTo(expected)
         db.readOnlyMaster { implicit s =>
           installationRepo.count === 1
-          installationRepo.all().head.version.toString === "1.2.3"
+          installationRepo.aTonOfRecords().head.version.toString === "1.2.3"
         }
       }
       {
@@ -200,8 +200,8 @@ class MobileAuthControllerTest extends Specification with ShoeboxTestInjector wi
         Json.parse(contentAsString(result)) must equalTo(expected)
         db.readWrite { implicit s =>
           installationRepo.count === 1
-          installationRepo.all().head.version.toString === "1.2.4"
-          installationRepo.all().head.platform === KifiInstallationPlatform.Android
+          installationRepo.aTonOfRecords().head.version.toString === "1.2.4"
+          installationRepo.aTonOfRecords().head.platform === KifiInstallationPlatform.Android
         }
       }
       {
@@ -211,7 +211,7 @@ class MobileAuthControllerTest extends Specification with ShoeboxTestInjector wi
         contentType(result) must beSome("application/json")
 
         val newOne = db.readWrite { implicit s =>
-          val all = installationRepo.all()
+          val all = installationRepo.aTonOfRecords()
           all.size === 2
           all(1)
         }
