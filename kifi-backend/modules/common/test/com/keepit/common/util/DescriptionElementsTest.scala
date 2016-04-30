@@ -94,5 +94,17 @@ class DescriptionElementsTest extends Specification {
       }
       1 === 1
     }
+    "format invertably" in {
+      import com.keepit.common.util.DescriptionElements._
+      val orig: DescriptionElements = {
+        val ryan = BasicUser(ExternalId[User](), "Ryan", "Brewster", "0.jpg", Username("ryanpbrewster"))
+        val myMainLibrary = BasicLibrary(PublicId[Library]("l1234567"), "My Main Library", "/ryanpbrewster/main", LibraryVisibility.DISCOVERABLE, color = None, slack = None)
+        DescriptionElements("Hello, I'm", ryan, "and I created", myMainLibrary)
+      }
+      val iter1 = Json.toJson(orig).as[DescriptionElements]
+      val iter2 = Json.toJson(iter1).as[DescriptionElements]
+
+      iter2 === iter1
+    }
   }
 }
