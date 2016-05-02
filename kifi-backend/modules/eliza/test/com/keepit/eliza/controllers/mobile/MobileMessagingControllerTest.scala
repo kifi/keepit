@@ -347,6 +347,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
           path3 === s"/m/2/eliza/thread/${thread.pubKeepId.id}?pageSize=3&fromMessageId=${messages(2).pubId.id}"
 
           val action3 = controller.getPagedThread(thread.pubKeepId, 3, Some(messages(2).pubId.id))
+          println(contentAsString(action3(FakeRequest())))
           val res3 = Json.parse(contentAsString(action3(FakeRequest())))
 
           (res3 \ "id").as[PublicId[Keep]] === thread.pubKeepId

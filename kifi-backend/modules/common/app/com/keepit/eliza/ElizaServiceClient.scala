@@ -136,10 +136,9 @@ trait ElizaServiceClient extends ServiceClient {
   def getElizaKeepStream(userId: Id[User], limit: Int, beforeId: Option[Id[Keep]], filter: ElizaFeedFilter): Future[Map[Id[Keep], DateTime]]
   def editMessage(msgId: Id[Message], newText: String): Future[Message]
   def deleteMessage(msgId: Id[Message]): Future[Unit]
-  def syncAddParticipants(keepId: Id[Keep], event: KeepEventData.ModifyRecipients, source: Option[KeepEventSource]): Future[Unit]
 
   def keepHasThreadWithAccessToken(keepId: Id[Keep], accessToken: String): Future[Boolean]
-  def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], diff: KeepRecipientsDiff, source: Option[KeepEventSource]): Future[Boolean]
+  def handleKeepEvent(keepId: Id[Keep], commonEvent: CommonKeepEvent, basicEvent: BasicKeepEvent, source: Option[KeepEventSource]): Future[Unit]
   def getMessagesChanged(seqNum: SequenceNumber[Message], fetchSize: Int): Future[Seq[CrossServiceMessage]]
   def convertNonUserThreadToUserThread(userId: Id[User], accessToken: String): Future[(Option[EmailAddress], Option[Id[User]])]
 
@@ -380,13 +379,6 @@ class ElizaServiceClientImpl @Inject() (
       Unit
     }
   }
-  def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], diff: KeepRecipientsDiff, source: Option[KeepEventSource]): Future[Boolean] = {
-    import EditParticipantsOnKeep._
-    val request = Request(keepId, editor, diff, source)
-    call(Eliza.internal.editParticipantsOnKeep(), body = Json.toJson(request)).map { response =>
-      response.json.as[Response].success
-    }
-  }
   def keepHasThreadWithAccessToken(keepId: Id[Keep], accessToken: String): Future[Boolean] = {
     call(Eliza.internal.keepHasAccessToken(keepId, accessToken)).map { response =>
       log.info(s"[keepAccessToken] keepId=$keepId, accessToken=$accessToken, hasToken=${(response.json \ "hasToken").as[Boolean]}")
@@ -411,11 +403,12 @@ class ElizaServiceClientImpl @Inject() (
     }
   }
 
-  def syncAddParticipants(keepId: Id[Keep], event: KeepEventData.ModifyRecipients, source: Option[KeepEventSource]): Future[Unit] = {
-    import com.keepit.eliza.ElizaServiceClient.SyncAddParticipants._
-    val request = Request(keepId, event, source)
-    call(Eliza.internal.syncAddParticipants, body = Json.toJson(request)).map(_ => ())
+  def handleKeepEvent(keepId: Id[Keep], commonEvent: CommonKeepEvent, basicEvent: BasicKeepEvent, source: Option[KeepEventSource]): Future[Unit] = {
+    import HandleKeepEvent._
+    val request = Request(keepId, commonEvent, basicEvent, source)
+    call(Eliza.internal.handleKeepEvent, body = Json.toJson(request)).map(_ => ())
   }
+
 
   def pageSystemMessages(fromId: Id[Message], pageSize: Int): Future[Seq[CrossServiceMessage]] = {
     call(Eliza.internal.pageSystemMessages(fromId, pageSize)).map(_.json.as[Seq[CrossServiceMessage]])
@@ -501,13 +494,6 @@ object ElizaServiceClient {
       Writes { o => JsNumber(o.msgId.id) }
     )
   }
-  object EditParticipantsOnKeep {
-    implicit val diffFormat = KeepRecipientsDiff.internalFormat
-    case class Request(keepId: Id[Keep], editor: Id[User], diff: KeepRecipientsDiff, source: Option[KeepEventSource])
-    case class Response(success: Boolean)
-    implicit val requestFormat: Format[Request] = Json.format[Request]
-    implicit val responseFormat: Format[Response] = Json.format[Response]
-  }
 
   object GetInitialRecipientsByKeepId {
     case class Request(keepIds: Set[Id[Keep]])
@@ -516,9 +502,10 @@ object ElizaServiceClient {
     implicit val responseFormat: Format[Response] = Json.format[Response]
   }
 
-  object SyncAddParticipants {
-    implicit val diffFormat = KeepRecipientsDiff.internalFormat
-    case class Request(keepId: Id[Keep], event: KeepEventData.ModifyRecipients, source: Option[KeepEventSource])
+  object HandleKeepEvent {
+    implicit val commonEventFormat = CommonKeepEvent.format
+    implicit val basicEventFormat = BasicKeepEvent.format
+    case class Request(keepId: Id[Keep], commonEvent: CommonKeepEvent, basicEvent: BasicKeepEvent, source: Option[KeepEventSource])
     implicit val requestFormat: Format[Request] = Json.format[Request]
   }
 

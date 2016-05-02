@@ -179,16 +179,15 @@ class ElizaEmailCommander @Inject() (
     }
   }
 
-  def notifyAddedEmailUsers(thread: MessageThread, addedNonUsers: Seq[NonUserParticipant]): Unit = if (thread.participants.allNonUsers.nonEmpty) {
+  def notifyAddedEmailUsers(thread: MessageThread, addedNonUsers: Seq[EmailAddress]): Unit = if (thread.participants.allNonUsers.nonEmpty) {
     getThreadEmailData(thread) map { threadEmailData =>
-      val nuts = db.readOnlyMaster { implicit session => //redundant right now but I assume we will want to let everyone in the thread know that someone was added?
+      val nuts = db.readOnlyMaster { implicit session =>
         nonUserThreadRepo.getByKeepId(thread.keepId).map { nut =>
           nut.participant.identifier -> nut
         }.toMap
       }
-      addedNonUsers.map { nup =>
-        require(nup.kind == NonUserKinds.email)
-        val nut = nuts(nup.identifier)
+      addedNonUsers.map { email =>
+        val nut = nuts(email.address)
         if (!nut.muted) {
           safeProcessEmail(threadEmailData, nut, _.addedHtml, NotificationCategory.NonUser.ADDED_TO_DISCUSSION)
         } else Future.successful(())

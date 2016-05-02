@@ -19,12 +19,13 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ ImageSize, S3ImageStore }
 import com.keepit.common.time._
 import com.keepit.heimdal.HeimdalContext
+import com.keepit.model.KeepEventData.ModifyRecipients
 import com.keepit.model._
 import com.keepit.normalizer._
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.BasicImages
 import com.keepit.search.{ SearchConfigExperiment, SearchConfigExperimentRepo }
-import com.keepit.shoebox.ShoeboxServiceClient.{ GetPersonalKeepRecipientsOnUris, InternKeep, RegisterMessageOnKeep }
+import com.keepit.shoebox.ShoeboxServiceClient.{ PersistModifyRecipients, GetPersonalKeepRecipientsOnUris, InternKeep, RegisterMessageOnKeep }
 import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.slack.models._
 import com.keepit.slack.{ LibraryToSlackChannelPusher, SlackIntegrationCommander }
@@ -665,13 +666,20 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(csKeep))
   }
 
-  def editRecipientsOnKeep(editorId: Id[User], keepId: Id[Keep], persistKeepEvent: Boolean, source: Option[KeepEventSource]) = Action(parse.tolerantJson) { request =>
+  def editRecipientsOnKeep(editorId: Id[User], keepId: Id[Keep]) = Action(parse.tolerantJson) { request =>
     val diff = (request.body \ "diff").as[KeepRecipientsDiff](KeepRecipientsDiff.internalFormat)
+    db.readWrite(implicit s => keepMutator.unsafeModifyKeepRecipients(keepId, diff, Some(editorId)))
+    NoContent
+  }
+
+  def persistModifyRecipients() = Action(parse.tolerantJson) { request =>
+    import PersistModifyRecipients._
+    val Request(keepId, ModifyRecipients(editorId, diff), source) = request.body.as[Request]
     db.readWrite { implicit s =>
       keepMutator.unsafeModifyKeepRecipients(keepId, diff, Some(editorId))
-      if (persistKeepEvent) keepEventCommander.persistKeepEvent(keepId, KeepEventData.ModifyRecipients(editorId, diff), source, eventTime = None)
+      val internalAndExternalEvent = keepEventCommander.persistAndAssembleKeepEvent(keepId, KeepEventData.ModifyRecipients(editorId, diff), source, eventTime = None)
+      Ok(Json.toJson(Response(internalAndExternalEvent)))
     }
-    NoContent
   }
 
   def registerMessageOnKeep() = Action(parse.tolerantJson) { request =>

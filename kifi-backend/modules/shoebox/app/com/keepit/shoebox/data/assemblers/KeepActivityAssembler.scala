@@ -25,7 +25,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 trait KeepActivityAssembler {
   def getActivityForKeeps(keepIds: Set[Id[Keep]], fromTime: Option[DateTime], numEventsPerKeep: Int): Future[Map[Id[Keep], KeepActivity]]
   def getActivityForKeep(keepId: Id[Keep], fromTime: Option[DateTime], limit: Int): Future[KeepActivity]
-  def assembleBasicKeepEvent(keepId: Id[Keep], event: KeepEvent)(implicit session: RSession): BasicKeepEvent
+  def assembleBasicKeepEvent(event: KeepEvent)(implicit session: RSession): BasicKeepEvent
 }
 
 class KeepActivityAssemblerImpl @Inject() (
@@ -90,7 +90,7 @@ class KeepActivityAssemblerImpl @Inject() (
     KeepActivityGen.generateKeepActivity(keep, sourceAttrOpt, events, discussion, ktls, ktus, limit)
   }
 
-  def assembleBasicKeepEvent(keepId: Id[Keep], event: KeepEvent)(implicit session: RSession): BasicKeepEvent = {
-    basicULOBatchFetcher.runInPlace(KeepActivityGen.generateKeepEvent(keepId, event))
+  def assembleBasicKeepEvent(event: KeepEvent)(implicit session: RSession): BasicKeepEvent = {
+    basicULOBatchFetcher.runInPlace(KeepActivityGen.generateKeepEvent(event))
   }
 }

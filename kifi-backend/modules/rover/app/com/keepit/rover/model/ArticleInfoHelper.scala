@@ -37,7 +37,7 @@ class ArticleInfoHelper @Inject() (articleInfoRepo: ArticleInfoRepo, articleImag
               val newInfo = RoverArticleInfo.initialize(url, uriId, kind).copy(id = inactiveArticleInfoOpt.flatMap(_.id))
               articleInfoRepo.save(newInfo)
             } catch {
-              case ex: MySQLIntegrityConstraintViolationException =>
+              case ex: Throwable =>
                 log.error(s"[articleInfoConstraint] failed interning url=$url with uriId=$uriId, kind=$kind, and hash=${UrlHash.hashUrl(url)}")
                 throw ex
             }
