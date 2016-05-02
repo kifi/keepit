@@ -11,6 +11,7 @@ import com.keepit.common.time._
 import com.keepit.discussion.MessageSource
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
+import com.keepit.model.BasicKeepEvent.BasicKeepEventId.MessageId
 import com.keepit.model._
 import com.keepit.rover.FakeRoverServiceModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
@@ -55,7 +56,7 @@ class NotificationDeliveryCommanderTest extends TestKitSupport with Specificatio
           inject[WatchableExecutionContext].drain()
 
           val notif = Await.result(inject[MessageThreadNotificationBuilder].buildForKeep(user1, thread.keepId), Duration.Inf).get
-          notif.id === Some(msg.pubId)
+          notif.id === Some(MessageId(msg.pubId))
           notif.time === msg.createdAt
           notif.threadId === thread.pubKeepId
           notif.text === "I need this to work"
@@ -95,7 +96,7 @@ class NotificationDeliveryCommanderTest extends TestKitSupport with Specificatio
 
           val msg = db.readOnlyMaster { implicit s => messageRepo.all.last }
           val notif = notifs.last
-          notif.id === Some(msg.pubId)
+          notif.id === Some(MessageId(msg.pubId))
           notif.time === msg.createdAt
           notif.threadId === initThread.pubKeepId
           notif.text === s"Ruining Ryan's life! Yeah! ${uniqueTokens.last}"

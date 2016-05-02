@@ -1,5 +1,6 @@
 package com.keepit.common.util
 
+import com.google.inject.Injector
 import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.path.Path
@@ -11,6 +12,8 @@ import com.keepit.social.{ BasicUser, BasicAuthor }
 import org.joda.time.{ Duration, DateTime, Period }
 import org.specs2.mutable.Specification
 import play.api.libs.json.{ JsObject, Json }
+
+import scala.util.Try
 
 class DescriptionElementsTest extends Specification {
 

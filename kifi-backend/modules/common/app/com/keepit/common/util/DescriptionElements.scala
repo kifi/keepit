@@ -135,7 +135,7 @@ final case class NonUserElement(id: String) extends DescriptionElement(Descripti
   val url = None
 }
 object NonUserElementHelper extends DescriptionElementHelper[NonUserElement] {
-  val format = Json.format[NonUserElement]
+  val format: OFormat[NonUserElement] = Json.format[NonUserElement]
 }
 
 final case class AuthorElement(

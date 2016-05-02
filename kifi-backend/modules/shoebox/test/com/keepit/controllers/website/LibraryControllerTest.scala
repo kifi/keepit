@@ -1045,6 +1045,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                    "header" : [ {
                      "id" : "${user1.externalId}",
                      "text" : "Aaron Hsu",
+                     "name" : "Aaron Hsu",
                      "image" : "http://localhost/users/${user1.externalId}/pics/200/0.jpg",
                      "url" : "https://www.kifi.com/test",
                      "kind" : "author"
@@ -1069,6 +1070,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                    "header" : [ {
                      "id" : "${user1.externalId}",
                      "text" : "Aaron Hsu",
+                     "name" : "Aaron Hsu",
                      "image" : "http://localhost/users/${user1.externalId}/pics/200/0.jpg",
                      "url" : "https://www.kifi.com/test",
                      "kind" : "author"
@@ -1077,7 +1079,9 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                      "kind" : "text"
                    }, {
                      "id" : "l7jlKlnA36Su",
+                     "name" : "${lib1.name}",
                      "text" : "${lib1.name}",
+                     "path" : "/test/${lib1.slug.value}",
                      "url" : "https://www.kifi.com/test/${lib1.slug.value}",
                      "kind" : "library"
                    } ],
@@ -1126,6 +1130,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                      "header" : [ {
                        "id" : "${user1.externalId}",
                        "text" : "Aaron Hsu",
+                       "name" : "Aaron Hsu",
                        "image" : "http://localhost/users/${user1.externalId}/pics/200/0.jpg",
                        "url" : "https://www.kifi.com/test",
                        "kind" : "author"
@@ -1150,6 +1155,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                      "header" : [ {
                        "id" : "${user1.externalId}",
                        "text" : "Aaron Hsu",
+                       "name" : "Aaron Hsu",
                        "image" : "http://localhost/users/${user1.externalId}/pics/200/0.jpg",
                        "url" : "https://www.kifi.com/test",
                        "kind" : "author"
@@ -1158,7 +1164,9 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                        "kind" : "text"
                      }, {
                        "id" : "l7jlKlnA36Su",
+                       "name" : "${lib1.name}",
                        "text" : "${lib1.name}",
+                       "path": "/test/${lib1.slug.value}",
                        "url" : "https://www.kifi.com/test/${lib1.slug.value}",
                        "kind" : "library"
                      } ],

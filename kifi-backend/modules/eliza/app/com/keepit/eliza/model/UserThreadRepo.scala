@@ -42,6 +42,7 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
   // Single-use queries that are actually slower than just doing the sane thing
   def getThreadActivity(keepId: Id[Keep])(implicit session: RSession): Seq[UserThreadActivity]
   def isMuted(userId: Id[User], keepId: Id[Keep])(implicit session: RSession): Boolean
+  def isMutedByUser(userIds: Set[Id[User]], keepId: Id[Keep])(implicit session: RSession): Map[Id[User], Boolean]
 
   // Handling read/unread
   def setLastActive(userId: Id[User], keepId: Id[Keep], lastActive: DateTime)(implicit session: RWSession): Unit
@@ -243,6 +244,11 @@ class UserThreadRepoImpl @Inject() (
 
   def isMuted(userId: Id[User], keepId: Id[Keep])(implicit session: RSession): Boolean = {
     activeRows.filter(row => row.user === userId && row.keepId === keepId).map(_.muted).firstOption.getOrElse(false)
+  }
+
+  def isMutedByUser(userIds: Set[Id[User]], keepId: Id[Keep])(implicit session: RSession): Map[Id[User], Boolean] = {
+    activeRows.filter(row => row.user.inSet(userIds) && row.keepId === keepId).list.groupBy(_.user)
+      .map { case (userId, Seq(ut)) => userId -> ut.muted }.toMap
   }
 
   def setLastActive(userId: Id[User], keepId: Id[Keep], lastActive: DateTime)(implicit session: RWSession): Unit = {

@@ -68,17 +68,16 @@ class MessagingTest extends Specification with ElizaTestInjector with ElizaInjec
 
     "send correctly" in {
       withDb(modules: _*) { implicit injector =>
-        val (user1, user2, user3, user2n3Seq, shoebox) = setup()
+        val (user1, user2, _, user2n3Seq, _) = setup()
         val messagingCommander = inject[MessagingCommanderImpl]
-        val messageFetchingCommanger = inject[MessageFetchingCommander]
         val notificationCommander = inject[NotificationDeliveryCommander]
 
         val (thread1, msg1) = waitFor(messagingCommander.sendNewMessage(user1, user2n3Seq, Nil, "http://thenextgoogle.com", Some("title"), "World!", None))
-        val (thread2, msg2) = messagingCommander.sendMessage(user1, thread1, "Domination!", None, None)
+        val (_, msg2) = messagingCommander.sendMessage(user1, thread1, "Domination!", None, None)
         inject[WatchableExecutionContext].drain()
         waitFor(notificationCommander.getLatestSendableNotifications(user1, 20, includeUriSummary = false)).length === 1
 
-        val (allUserThreads, allMessages) = db.readOnlyMaster { implicit session =>
+        val (_, allMessages) = db.readOnlyMaster { implicit session =>
           val allUserThreads = userThreadRepo.getThreadsForUser(user2, UserThreadQuery(limit = 10))
           val allMessages = allUserThreads.flatMap(ut => messageRepo.getAllByKeep(ut.keepId))
           (allUserThreads, allMessages)
@@ -99,7 +98,7 @@ class MessagingTest extends Specification with ElizaTestInjector with ElizaInjec
       pending("pass reliably in Jenkins") {
         withDb(modules: _*) { implicit injector =>
 
-          val (user1, user2, user3, user2n3Seq, shoebox) = setup()
+          val (user1, user2, user3, user2n3Seq, _) = setup()
           val messagingCommander = inject[MessagingCommanderImpl]
           val notificationCommander = inject[NotificationDeliveryCommander]
           var notified = scala.collection.concurrent.TrieMap[Id[User], Int]()
@@ -112,8 +111,8 @@ class MessagingTest extends Specification with ElizaTestInjector with ElizaInjec
             }
           }
 
-          val (thread1, msg1) = waitFor(messagingCommander.sendNewMessage(user1, user2n3Seq, Nil, "http://kifi.com", Some("title"), "Hello Chat", None))
-          val (thread2, msg2) = waitFor(messagingCommander.sendNewMessage(user1, user2n3Seq, Nil, "http://kifi.com", Some("title"), "Hello Chat again!", None))
+          val (_, _) = waitFor(messagingCommander.sendNewMessage(user1, user2n3Seq, Nil, "http://kifi.com", Some("title"), "Hello Chat", None))
+          val (_, _) = waitFor(messagingCommander.sendNewMessage(user1, user2n3Seq, Nil, "http://kifi.com", Some("title"), "Hello Chat again!", None))
 
           messagingCommander.getUnreadUnmutedThreadCount(user1) === 0
 
@@ -143,16 +142,15 @@ class MessagingTest extends Specification with ElizaTestInjector with ElizaInjec
     "add participants correctly" in {
       withDb(modules: _*) { implicit injector =>
 
-        val (user1, user2, user3, user2n3Seq, shoebox) = setup()
+        val (user1, user2, user3, _, _) = setup()
 
-        val (thread, msg) = waitFor(messagingCommander.sendNewMessage(user1, Seq(user2), Nil, "http://kifi.com", Some("title"), "Fortytwo", None))
+        val (thread, _) = waitFor(messagingCommander.sendNewMessage(user1, Seq(user2), Nil, "http://kifi.com", Some("title"), "Fortytwo", None))
 
         inject[WatchableExecutionContext].drain()
         waitFor(notificationDeliveryCommander.getLatestSendableNotifications(user2, 1, includeUriSummary = false)).length === 1
         waitFor(notificationDeliveryCommander.getLatestSendableNotifications(user3, 1, includeUriSummary = false)).length === 0
 
-        val user3ExtId = Await.result(shoebox.getUser(user3), Duration(4, "seconds")).get.externalId
-        messagingCommander.addParticipantsToThread(user1, thread.keepId, Seq(user3), Seq.empty, Seq.empty, Seq.empty, source = None, updateShoebox = true)
+        messagingCommander.addParticipantsToThread(user1, thread.keepId, Seq(user3), Seq.empty, Seq.empty, source = None)
         inject[WatchableExecutionContext].drain()
         waitFor(notificationDeliveryCommander.getLatestSendableNotifications(user3, 1, includeUriSummary = false)).length === 1
       }
