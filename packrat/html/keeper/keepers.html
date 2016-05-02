@@ -44,7 +44,10 @@
     </div>
   {{/sources.length}}
   {{#libs.length}}
-    <div class="kifi-keepers-h">Kept In {{#oneLib}}This Library{{/oneLib}}{{^oneLib}}These Libraries{{/oneLib}}</div>
+    <div class="kifi-keepers-h">
+      Kept In {{#oneLib}}This Library{{/oneLib}}{{^oneLib}}These Libraries{{/oneLib}}
+      {{^noCloseButton}}<a class="kifi-keepers-h-close" href="javascript:"></a>{{/noCloseButton}}
+    </div>
     <div class="kifi-keepers-libs">
     {{#libs}}
       <a class="kifi-keepers-lib" href="{{origin}}{{path}}" target="_blank" tabindex="-1">
@@ -60,7 +63,9 @@
     </div>
   {{/libs.length}}
   {{#keepers.length}}
-    <div class="kifi-keepers-h">Kept By</div>
+    <div class="kifi-keepers-h">
+      Kept By
+      {{^noCloseButton}}<a class="kifi-keepers-h-close" href="javascript:"></a>{{/noCloseButton}}</div>
     <div class="kifi-keepers-pics">
     {{#keepers}}
       <a class="kifi-keepers-pic" href="{{origin}}/{{username}}" target="_blank" style="background-image:url({{cdnBase}}/users/{{id}}/pics/100/{{pictureName}})" data-id="{{id}}"></a>
