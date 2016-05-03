@@ -89,6 +89,7 @@ class LibraryToSlackChannelRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock,
     integrationsCache: SlackChannelIntegrationsCache,
+    liteLibrarySlackInfoCache: LiteLibrarySlackInfoCache,
     basicLibraryCache: BasicLibraryByIdCache) extends DbRepo[LibraryToSlackChannel] with LibraryToSlackChannelRepo {
 
   import com.keepit.common.db.slick.DBSession._
@@ -225,6 +226,7 @@ class LibraryToSlackChannelRepoImpl @Inject() (
           slackUserId = request.slackUserId,
           slackChannelId = request.slackChannelId
         ).withStatus(updatedStatus)
+        if (updatedStatus != integration.status) liteLibrarySlackInfoCache.remove(LiteLibrarySlackInfoKey(request.libraryId))
         val saved = if (updated == integration) integration else save(updated)
         saved
       case inactiveIntegrationOpt =>
@@ -235,10 +237,12 @@ class LibraryToSlackChannelRepoImpl @Inject() (
           slackChannelId = request.slackChannelId,
           libraryId = request.libraryId
         ).withStatus(request.status)
+        if (inactiveIntegrationOpt.forall(_.status != request.status)) liteLibrarySlackInfoCache.remove(LiteLibrarySlackInfoKey(request.libraryId))
         save(newIntegration)
     }
   }
   def deactivate(model: LibraryToSlackChannel)(implicit session: RWSession): Unit = {
+    liteLibrarySlackInfoCache.remove(LiteLibrarySlackInfoKey(model.libraryId))
     save(model.sanitizeForDelete)
   }
 

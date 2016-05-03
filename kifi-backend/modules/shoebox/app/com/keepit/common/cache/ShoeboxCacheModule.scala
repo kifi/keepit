@@ -490,4 +490,8 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides @Singleton
   def basicLibraryByIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new BasicLibraryByIdCache(stats, accessLog, (innerRepo, 10 seconds), (outerRepo, 7 days))
+
+  @Provides @Singleton
+  def liteLibrarySlackInfoCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new LiteLibrarySlackInfoCache(stats, accessLog, (innerRepo, 10 seconds), (outerRepo, 7 days))
 }

@@ -150,7 +150,7 @@ class KeepDecoratorImpl @Inject() (
           db.readOnlyMaster { implicit s => basicUserRepo.loadAll(keepersShown ++ libraryContributorsShown ++ libraryOwners ++ keepers ++ ktuUsers ++ msgUsers ++ emailParticipantsAddedBy ++ usersFromEvents) } //cached
         }
 
-        val idToLibrarySlackInfo = slackInfoCommander.getLiteSlackInfoForLibraries(idToLibrary.keySet)
+        val idToLibrarySlackInfo = db.readOnlyMaster { implicit s => slackInfoCommander.getLiteSlackInfoForLibraries(idToLibrary.keySet) }
 
         val idToBasicLibrary = idToLibrary.map {
           case (libId, library) =>
