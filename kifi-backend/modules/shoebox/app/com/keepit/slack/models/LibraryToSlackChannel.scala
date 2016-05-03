@@ -185,6 +185,7 @@ class LibraryToSlackChannelRepoImpl @Inject() (
   def table(tag: Tag) = new LibraryToSlackChannelTable(tag)
   initTable()
   override def deleteCache(info: LibraryToSlackChannel)(implicit session: RSession): Unit = {
+    basicLibraryCache.remove(BasicLibraryByIdKey(info.libraryId))
     integrationsCache.remove(SlackChannelIntegrationsKey(info.slackTeamId, info.slackChannelId))
   }
   override def invalidateCache(info: LibraryToSlackChannel)(implicit session: RSession): Unit = deleteCache(info)
@@ -193,7 +194,6 @@ class LibraryToSlackChannelRepoImpl @Inject() (
   private def workingRows = activeRows.filter(row => row.status === (SlackIntegrationStatus.On: SlackIntegrationStatus))
 
   override def save(model: LibraryToSlackChannel)(implicit session: RWSession): LibraryToSlackChannel = {
-    basicLibraryCache.remove(BasicLibraryByIdKey(model.libraryId))
     super.save(model)
   }
 

@@ -14,6 +14,13 @@ import com.keepit.slack.SlackInfoCommander
 
 import scala.concurrent.duration.Duration
 
+object PrecomputedInfo {
+  case class BuildForBasicLibrary(
+    libraries: Option[Map[Id[Library], Library]] = None,
+    organizations: Option[Map[Id[Organization], Organization]] = None,
+    usernames: Option[Map[Id[User], Username]] = None)
+}
+
 class BasicLibraryGen @Inject() (
     libRepo: LibraryRepo,
     orgRepo: OrganizationRepo,
@@ -31,19 +38,20 @@ class BasicLibraryGen @Inject() (
 
   def getBasicLibrary(libId: Id[Library])(implicit session: RSession): Option[BasicLibrary] = getBasicLibraries(Set(libId)).get(libId)
 
-  private def generateBasicLibraries(libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], BasicLibrary] = {
-    val libById = libRepo.getActiveByIds(libIds)
-    val orgById = {
+  def generateBasicLibraries(libIds: Set[Id[Library]], precomputedInfo: Option[PrecomputedInfo.BuildForBasicLibrary] = None)(implicit session: RSession): Map[Id[Library], BasicLibrary] = {
+    val libById = precomputedInfo.flatMap(_.libraries).getOrElse(libRepo.getActiveByIds(libIds))
+    val orgById = precomputedInfo.flatMap(_.organizations).getOrElse {
       val orgSet = libById.values.flatMap(_.organizationId).toSet
       orgRepo.getByIds(orgSet)
     }
-    val userById = {
+    val usernameById = precomputedInfo.flatMap(_.usernames).getOrElse {
       val userSet = libById.values.map(_.ownerId).toSet
-      basicUserRepo.loadAllActive(userSet)
+      basicUserRepo.loadAllActive(userSet).mapValuesStrict(_.username)
     }
     val slackInfoById = slackInfoCommander.getLiteSlackInfoForLibraries(libIds)
+
     libById.flatMapValues { lib =>
-      val spaceHandle = lib.organizationId.fold[Option[Handle]](userById.get(lib.ownerId).map(_.username))(orgId => orgById.get(orgId).map(_.handle))
+      val spaceHandle = lib.organizationId.fold[Option[Handle]](Some(usernameById(lib.ownerId)))(orgId => orgById.get(orgId).map(_.handle))
       spaceHandle.map(handle => pathCommander.libPageByHandleAndSlug(handle, lib.slug)).map { libPath =>
         BasicLibrary(
           id = Library.publicId(lib.id.get),

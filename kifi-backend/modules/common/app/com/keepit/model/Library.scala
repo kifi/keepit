@@ -241,6 +241,10 @@ object LibraryPathHelper {
     val handle = orgHandleOpt.map(Handle.fromOrganizationHandle).getOrElse(Handle.fromUsername(owner))
     s"/${handle.urlEncoded}/${slug.urlEncoded}"
   }
+
+  def formatLibraryPathForOrganization(orgHandle: OrganizationHandle, slug: LibrarySlug): String = {
+    s"/${orgHandle.value}/${slug.value}"
+  }
 }
 
 case class LibraryIdKey(id: Id[Library]) extends Key[Library] {
@@ -356,6 +360,7 @@ object DetailedLibraryView {
 
 case class BasicLibrary(id: PublicId[Library], name: String, path: String, visibility: LibraryVisibility, color: Option[LibraryColor], slack: Option[LiteLibrarySlackInfo]) {
   def isSecret = visibility == LibraryVisibility.SECRET
+  def withPath(path: String): BasicLibrary = this.copy(path = path)
 }
 
 object BasicLibrary {
