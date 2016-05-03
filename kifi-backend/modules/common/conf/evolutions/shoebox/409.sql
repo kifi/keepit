@@ -78,6 +78,7 @@ CREATE TABLE library_to_slack_channel (
 
   PRIMARY KEY(id),
   UNIQUE KEY library_to_slack_channel_u_team_id_channel_id_library_id (slack_team_id, slack_channel_id, library_id),
+  INDEX library_to_slack_channel_i_library_id (library_id),
   CONSTRAINT library_to_slack_channel_f_slack_team_membership FOREIGN KEY (slack_team_id, slack_user_id) REFERENCES slack_team_membership(slack_team_id, slack_user_id),
   INDEX library_to_slack_channel_i_pushable (state, status, last_processing_at, next_push_at)
 );
