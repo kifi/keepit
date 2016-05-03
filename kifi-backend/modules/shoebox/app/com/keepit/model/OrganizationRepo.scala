@@ -2,6 +2,7 @@ package com.keepit.model
 
 import com.google.inject.{ ImplementedBy, Inject, Provider, Singleton }
 import com.keepit.commanders._
+import com.keepit.commanders.gen.{ BasicLibraryByIdKey, BasicLibraryGen, BasicLibraryByIdCache }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
@@ -10,7 +11,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{ SchedulingProperties, SequencingActor, SequencingPlugin }
 import com.keepit.common.time.Clock
-import com.keepit.controllers.admin.AdminOrganizationController
+import com.keepit.model.LibrarySpace.OrganizationSpace
 
 @ImplementedBy(classOf[OrganizationRepoImpl])
 trait OrganizationRepo extends Repo[Organization] with SeqNumberFunction[Organization] {
@@ -35,7 +36,10 @@ class OrganizationRepoImpl @Inject() (
     orgCache: OrganizationCache,
     orgMetadataCache: OrgMetadataCache,
     basicOrgCache: BasicOrganizationIdCache,
-    orgPermissionsNamespaceCache: OrganizationPermissionsNamespaceCache) extends OrganizationRepo with DbRepo[Organization] with SeqNumberDbFunction[Organization] with Logging {
+    orgPermissionsNamespaceCache: OrganizationPermissionsNamespaceCache,
+    basicLibraryCache: BasicLibraryByIdCache,
+    basicLibraryGen: Provider[BasicLibraryGen],
+    libraryRepo: Provider[LibraryRepo]) extends OrganizationRepo with DbRepo[Organization] with SeqNumberDbFunction[Organization] with Logging {
 
   import DBSession._
   import db.Driver.simple._
@@ -63,11 +67,19 @@ class OrganizationRepoImpl @Inject() (
     orgCache.remove(OrganizationKey(model.id.get))
     basicOrgCache.remove(BasicOrganizationIdKey(model.id.get))
     orgPermissionsNamespaceCache.remove(OrganizationPermissionsNamespaceKey(model.id.get))
+    deleteBasicLibrariesCache(model)
   }
+
   override def invalidateCache(model: Organization)(implicit session: RSession) {
     orgCache.set(OrganizationKey(model.id.get), model)
     basicOrgCache.remove(BasicOrganizationIdKey(model.id.get))
     orgPermissionsNamespaceCache.remove(OrganizationPermissionsNamespaceKey(model.id.get))
+    deleteBasicLibrariesCache(model)
+  }
+
+  private def deleteBasicLibrariesCache(org: Organization)(implicit session: RSession): Unit = {
+    val libs = libraryRepo.get().getBySpace(OrganizationSpace(org.id.get))
+    libs.foreach { lib => basicLibraryCache.remove(BasicLibraryByIdKey(lib.id.get)) }
   }
 
   override def save(model: Organization)(implicit session: RWSession): Organization = {

@@ -1,6 +1,7 @@
 package com.keepit.model
 
 import com.google.inject.{ Provider, Inject, Singleton, ImplementedBy }
+import com.keepit.commanders.gen.{ BasicLibraryGen, BasicLibraryByIdKey, BasicLibraryByIdCache }
 import com.keepit.commanders.{ UserProfileTab, UserMetadataKey, UserMetadataCache, HandleOps }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.slick.DBSession.RSession
@@ -9,16 +10,14 @@ import com.keepit.common.db._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{ SchedulingProperties, SequencingActor, SequencingPlugin }
-import com.keepit.common.time.{ zones, Clock }
+import com.keepit.common.time.Clock
 import com.keepit.slack.models.SlackTeamMembershipRepo
 import com.keepit.social._
 import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.heimdal.{ HeimdalContextBuilder, HeimdalServiceClient }
 import com.keepit.common.akka.SafeFuture
-import scala.slick.jdbc.{ PositionedResult, GetResult, StaticQuery }
+import scala.slick.jdbc.StaticQuery
 import org.joda.time.DateTime
-import scala.slick.lifted.{ TableQuery, Tag }
-import scala.slick.jdbc.{ StaticQuery => Q }
 import com.keepit.common.time._
 
 @ImplementedBy(classOf[UserRepoImpl])
@@ -58,9 +57,13 @@ class UserRepoImpl @Inject() (
   basicUserCache: BasicUserUserIdCache,
   userMetadataCache: UserMetadataCache,
   usernameCache: UsernameCache,
+  basicLibraryCache: BasicLibraryByIdCache,
+  basicLibraryGen: Provider[BasicLibraryGen],
   heimdal: HeimdalServiceClient,
   expRepoProvider: Provider[UserExperimentRepoImpl],
   emailRepo: Provider[UserEmailAddressRepo],
+  orgRepo: Provider[OrganizationRepo],
+  libraryRepo: Provider[LibraryRepo],
   slackMembershipRepo: Provider[SlackTeamMembershipRepo])
     extends DbRepo[User] with DbRepoWithDelete[User] with UserRepo with ExternalIdColumnDbFunction[User] with SeqNumberDbFunction[User] with Logging {
 
@@ -154,6 +157,7 @@ class UserRepoImpl @Inject() (
         usernameCache.remove(UsernameKey(username.original))
         basicUserCache.remove(BasicUserUserIdKey(id))
       }
+      deleteBasicLibrariesCache(user)
     }
     session.onTransactionSuccess {
       invalidateMixpanel(user.withState(UserStates.INACTIVE))
@@ -169,6 +173,7 @@ class UserRepoImpl @Inject() (
           usernameCache.set(UsernameKey(username.original), user)
           basicUserCache.set(BasicUserUserIdKey(id), BasicUser.fromUser(user))
         }
+        deleteBasicLibrariesCache(user)
       }
       externalIdCache.set(UserExternalIdKey(user.externalId), user)
       session.onTransactionSuccess {
@@ -176,6 +181,12 @@ class UserRepoImpl @Inject() (
       }
     } else {
       deleteCache(user)
+    }
+  }
+
+  private def deleteBasicLibrariesCache(user: User)(implicit session: RSession) = {
+    libraryRepo.get().getAllByOwner(user.id.get).foreach { lib =>
+      basicLibraryCache.remove(BasicLibraryByIdKey(lib.id.get))
     }
   }
 

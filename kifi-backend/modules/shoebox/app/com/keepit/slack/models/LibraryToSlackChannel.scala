@@ -9,11 +9,9 @@ import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.{ DbRepo, DataBaseComponent, Repo }
 import com.keepit.common.db._
 import com.keepit.common.time._
-import com.keepit.discussion.{ CrossServiceMessage, Message }
-import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
+import com.keepit.discussion.Message
 import com.keepit.model._
-import org.joda.time.{ Duration, Period, DateTime }
-import com.keepit.common.core._
+import org.joda.time.{ Duration, DateTime }
 
 case class LibraryToSlackChannel(
   id: Option[Id[LibraryToSlackChannel]] = None,
@@ -185,17 +183,13 @@ class LibraryToSlackChannelRepoImpl @Inject() (
   def table(tag: Tag) = new LibraryToSlackChannelTable(tag)
   initTable()
   override def deleteCache(info: LibraryToSlackChannel)(implicit session: RSession): Unit = {
+    basicLibraryCache.remove(BasicLibraryByIdKey(info.libraryId))
     integrationsCache.remove(SlackChannelIntegrationsKey(info.slackTeamId, info.slackChannelId))
   }
   override def invalidateCache(info: LibraryToSlackChannel)(implicit session: RSession): Unit = deleteCache(info)
 
   private def activeRows = rows.filter(row => row.state === LibraryToSlackChannelStates.ACTIVE)
   private def workingRows = activeRows.filter(row => row.status === (SlackIntegrationStatus.On: SlackIntegrationStatus))
-
-  override def save(model: LibraryToSlackChannel)(implicit session: RWSession): LibraryToSlackChannel = {
-    basicLibraryCache.remove(BasicLibraryByIdKey(model.libraryId))
-    super.save(model)
-  }
 
   def getByIds(ids: Set[Id[LibraryToSlackChannel]])(implicit session: RSession): Map[Id[LibraryToSlackChannel], LibraryToSlackChannel] = {
     rows.filter(row => row.id.inSet(ids)).list.map(r => (r.id.get, r)).toMap
