@@ -1,6 +1,7 @@
 package com.keepit.model
 
 import com.google.inject.{ Provider, Inject, Singleton, ImplementedBy }
+import com.keepit.commanders.gen.{ PrecomputedInfo, BasicLibraryGen, BasicLibraryByIdKey, BasicLibraryByIdCache }
 import com.keepit.commanders.{ UserProfileTab, UserMetadataKey, UserMetadataCache, HandleOps }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.slick.DBSession.RSession
@@ -20,6 +21,8 @@ import org.joda.time.DateTime
 import scala.slick.lifted.{ TableQuery, Tag }
 import scala.slick.jdbc.{ StaticQuery => Q }
 import com.keepit.common.time._
+
+import scala.util.Try
 
 @ImplementedBy(classOf[UserRepoImpl])
 trait UserRepo extends Repo[User] with RepoWithDelete[User] with ExternalIdColumnFunction[User] with SeqNumberFunction[User] {
@@ -58,9 +61,13 @@ class UserRepoImpl @Inject() (
   basicUserCache: BasicUserUserIdCache,
   userMetadataCache: UserMetadataCache,
   usernameCache: UsernameCache,
+  basicLibraryCache: BasicLibraryByIdCache,
+  basicLibraryGen: Provider[BasicLibraryGen],
   heimdal: HeimdalServiceClient,
   expRepoProvider: Provider[UserExperimentRepoImpl],
   emailRepo: Provider[UserEmailAddressRepo],
+  orgRepo: Provider[OrganizationRepo],
+  libraryRepo: Provider[LibraryRepo],
   slackMembershipRepo: Provider[SlackTeamMembershipRepo])
     extends DbRepo[User] with DbRepoWithDelete[User] with UserRepo with ExternalIdColumnDbFunction[User] with SeqNumberDbFunction[User] with Logging {
 
@@ -154,11 +161,15 @@ class UserRepoImpl @Inject() (
         usernameCache.remove(UsernameKey(username.original))
         basicUserCache.remove(BasicUserUserIdKey(id))
       }
+      deleteBasicLibrariesCache(user)
     }
-    invalidateMixpanel(user.withState(UserStates.INACTIVE))
+    session.onTransactionSuccess {
+      invalidateMixpanel(user.withState(UserStates.INACTIVE))
+    }
   }
 
   override def invalidateCache(user: User)(implicit session: RSession) = {
+
     if (user.state == UserStates.ACTIVE) {
       for (id <- user.id) {
         idCache.set(UserIdKey(id), user)
@@ -167,6 +178,7 @@ class UserRepoImpl @Inject() (
           usernameCache.set(UsernameKey(username.original), user)
           basicUserCache.set(BasicUserUserIdKey(id), BasicUser.fromUser(user))
         }
+        invalidateBasicLibrariesCache(user)
       }
       externalIdCache.set(UserExternalIdKey(user.externalId), user)
       session.onTransactionSuccess {
@@ -175,6 +187,41 @@ class UserRepoImpl @Inject() (
     } else {
       deleteCache(user)
     }
+  }
+
+  private def invalidateBasicLibrariesCache(user: User)(implicit session: RSession) = {
+    val usernameOpt = user.primaryUsername.map(_.original) // username may not be set
+    val libsById = libraryRepo.get().getAllByOwner(user.id.get).map { lib => lib.id.get -> lib }.toMap
+    val orgsById = orgRepo.get().getByIds(libsById.values.flatMap(_.organizationId).toSet)
+    val hitOptById = basicLibraryCache.bulkGet(libsById.keys.map(BasicLibraryByIdKey).toSet)
+
+    // invalidate hits
+    hitOptById.collect {
+      case (key, Some(basicLib)) =>
+        val lib = libsById(key.libraryId)
+        val orgHandleOpt = lib.organizationId.flatMap(orgsById.get).map(_.handle)
+        val pathOpt = {
+          usernameOpt.map(username => LibraryPathHelper.formatLibraryPath(username, orgHandleOpt, lib.slug))
+            .orElse(orgHandleOpt.map(handle => LibraryPathHelper.formatLibraryPathForOrganization(handle, lib.slug)))
+        }
+        pathOpt.map(path => basicLibraryCache.set(key, basicLib.withPath(path)))
+          .getOrElse {
+            if (user.isActive && lib.isActive) log.error(s"[basicLibCache#user] user ${user.id.get} owns active lib ${lib.id.get} which has no username or org handle")
+            basicLibraryCache.remove(key)
+          }
+    }
+
+    // refresh misses
+    val misses = hitOptById.collect { case (key, None) => key.libraryId }
+    val precomputedInfo = PrecomputedInfo.BuildForBasicLibrary(libraries = Some(libsById), organizations = Some(orgsById), usernames = usernameOpt.map(username => Map(user.id.get -> username)))
+    basicLibraryGen.get().generateBasicLibraries(misses.toSet, Some(precomputedInfo)).foreach {
+      case (id, basicLib) => basicLibraryCache.set(BasicLibraryByIdKey(id), basicLib)
+    }
+  }
+
+  private def deleteBasicLibrariesCache(user: User)(implicit session: RSession) = {
+    val libs = libraryRepo.get().getAllByOwner(user.id.get)
+    libs.foreach(lib => basicLibraryCache.remove(BasicLibraryByIdKey(lib.id.get)))
   }
 
   private def invalidateMixpanel(user: User) = SafeFuture {

@@ -50,7 +50,7 @@ class UserTest extends Specification with ShoeboxTestInjector {
           db.readOnlyMaster { implicit s => userRepoImpl.get(Id[User](1)) }
         }
         Try(db.readOnlyMaster { implicit s => userRepoImpl.get(Id[User](2)) })
-        sessionProvider.readOnlySessionsCreated === 1
+        sessionProvider.readOnlySessionsCreated === 3 // sessions created by invalidating BasicLibraryByIdCache
       }
     }
 

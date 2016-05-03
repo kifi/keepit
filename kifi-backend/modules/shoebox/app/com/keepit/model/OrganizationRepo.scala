@@ -2,6 +2,7 @@ package com.keepit.model
 
 import com.google.inject.{ ImplementedBy, Inject, Provider, Singleton }
 import com.keepit.commanders._
+import com.keepit.commanders.gen.{ PrecomputedInfo, BasicLibraryByIdKey, BasicLibraryGen, BasicLibraryByIdCache }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
@@ -11,6 +12,9 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{ SchedulingProperties, SequencingActor, SequencingPlugin }
 import com.keepit.common.time.Clock
 import com.keepit.controllers.admin.AdminOrganizationController
+import com.keepit.model.LibrarySpace.OrganizationSpace
+
+import scala.util.Try
 
 @ImplementedBy(classOf[OrganizationRepoImpl])
 trait OrganizationRepo extends Repo[Organization] with SeqNumberFunction[Organization] {
@@ -35,7 +39,10 @@ class OrganizationRepoImpl @Inject() (
     orgCache: OrganizationCache,
     orgMetadataCache: OrgMetadataCache,
     basicOrgCache: BasicOrganizationIdCache,
-    orgPermissionsNamespaceCache: OrganizationPermissionsNamespaceCache) extends OrganizationRepo with DbRepo[Organization] with SeqNumberDbFunction[Organization] with Logging {
+    orgPermissionsNamespaceCache: OrganizationPermissionsNamespaceCache,
+    basicLibraryCache: BasicLibraryByIdCache,
+    basicLibraryGen: Provider[BasicLibraryGen],
+    libraryRepo: Provider[LibraryRepo]) extends OrganizationRepo with DbRepo[Organization] with SeqNumberDbFunction[Organization] with Logging {
 
   import DBSession._
   import db.Driver.simple._
@@ -63,11 +70,45 @@ class OrganizationRepoImpl @Inject() (
     orgCache.remove(OrganizationKey(model.id.get))
     basicOrgCache.remove(BasicOrganizationIdKey(model.id.get))
     orgPermissionsNamespaceCache.remove(OrganizationPermissionsNamespaceKey(model.id.get))
+    deleteBasicLibrariesCache(model)
   }
+
   override def invalidateCache(model: Organization)(implicit session: RSession) {
     orgCache.set(OrganizationKey(model.id.get), model)
     basicOrgCache.remove(BasicOrganizationIdKey(model.id.get))
     orgPermissionsNamespaceCache.remove(OrganizationPermissionsNamespaceKey(model.id.get))
+    invalidateBasicLibrariesCache(model)
+  }
+
+  private def invalidateBasicLibrariesCache(org: Organization)(implicit session: RSession): Unit = {
+    val handleOpt = org.primaryHandle.map(_.original) // org.handle may not be set
+    val libsById = libraryRepo.get().getBySpace(OrganizationSpace(org.id.get)).map { lib => lib.id.get -> lib }.toMap
+    val hitOptById = basicLibraryCache.bulkGet(libsById.keys.map(BasicLibraryByIdKey).toSet)
+
+    // invalidate hits
+    hitOptById.collect {
+      case (key, Some(basicLib)) =>
+        val lib = libsById(key.libraryId)
+        handleOpt.map { handle =>
+          val path = s"/${handle.value}/${lib.slug.value}"
+          basicLibraryCache.set(key, basicLib.withPath(path))
+        }.getOrElse {
+          if (org.isActive && lib.isActive) log.error(s"[basicLibCache#org] org ${org.id.get} owns a lib ${lib.id.get} but has no handle")
+          basicLibraryCache.remove(key)
+        }
+    }
+
+    // refresh misses
+    val misses = hitOptById.collect { case (key, None) => key.libraryId }
+    val precomputedInfo = PrecomputedInfo.BuildForBasicLibrary(libraries = Some(libsById), organizations = Some(Map(org.id.get -> org)), usernames = None)
+    basicLibraryGen.get().generateBasicLibraries(misses.toSet, Some(precomputedInfo)).foreach {
+      case (id, basicLib) => basicLibraryCache.set(BasicLibraryByIdKey(id), basicLib)
+    }
+  }
+
+  private def deleteBasicLibrariesCache(org: Organization)(implicit session: RSession): Unit = {
+    val libs = libraryRepo.get().getBySpace(OrganizationSpace(org.id.get))
+    libs.foreach { lib => basicLibraryCache.remove(BasicLibraryByIdKey(lib.id.get)) }
   }
 
   override def save(model: Organization)(implicit session: RWSession): Organization = {

@@ -135,7 +135,7 @@ class MobileSearchController @Inject() (
                 val owner = usersById(library.ownerId)
                 val organization = library.orgId.map(organizationsById(_))
                 val details = libraryDetails(library.id)
-                val path = LibraryPathHelper.formatLibraryPath(owner, organization.map(_.handle), details.slug)
+                val path = LibraryPathHelper.formatLibraryPath(owner.username, organization.map(_.handle), details.slug)
 
                 val description = library.description.orElse(details.description).getOrElse("")
 

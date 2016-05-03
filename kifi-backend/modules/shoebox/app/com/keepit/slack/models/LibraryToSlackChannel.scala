@@ -3,6 +3,7 @@ package com.keepit.slack.models
 import javax.crypto.spec.IvParameterSpec
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
+import com.keepit.commanders.gen.{ BasicLibraryByIdKey, BasicLibraryByIdCache }
 import com.keepit.common.crypto.{ PublicIdGenerator, ModelWithPublicId }
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.{ DbRepo, DataBaseComponent, Repo }
@@ -89,7 +90,8 @@ trait LibraryToSlackChannelRepo extends Repo[LibraryToSlackChannel] {
 class LibraryToSlackChannelRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock,
-    integrationsCache: SlackChannelIntegrationsCache) extends DbRepo[LibraryToSlackChannel] with LibraryToSlackChannelRepo {
+    integrationsCache: SlackChannelIntegrationsCache,
+    basicLibraryCache: BasicLibraryByIdCache) extends DbRepo[LibraryToSlackChannel] with LibraryToSlackChannelRepo {
 
   import com.keepit.common.db.slick.DBSession._
   import db.Driver.simple._
@@ -183,12 +185,17 @@ class LibraryToSlackChannelRepoImpl @Inject() (
   def table(tag: Tag) = new LibraryToSlackChannelTable(tag)
   initTable()
   override def deleteCache(info: LibraryToSlackChannel)(implicit session: RSession): Unit = {
+    basicLibraryCache.remove(BasicLibraryByIdKey(info.libraryId))
     integrationsCache.remove(SlackChannelIntegrationsKey(info.slackTeamId, info.slackChannelId))
   }
   override def invalidateCache(info: LibraryToSlackChannel)(implicit session: RSession): Unit = deleteCache(info)
 
   private def activeRows = rows.filter(row => row.state === LibraryToSlackChannelStates.ACTIVE)
   private def workingRows = activeRows.filter(row => row.status === (SlackIntegrationStatus.On: SlackIntegrationStatus))
+
+  override def save(model: LibraryToSlackChannel)(implicit session: RWSession): LibraryToSlackChannel = {
+    super.save(model)
+  }
 
   def getByIds(ids: Set[Id[LibraryToSlackChannel]])(implicit session: RSession): Map[Id[LibraryToSlackChannel], LibraryToSlackChannel] = {
     rows.filter(row => row.id.inSet(ids)).list.map(r => (r.id.get, r)).toMap

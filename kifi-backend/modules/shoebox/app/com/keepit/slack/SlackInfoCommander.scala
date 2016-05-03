@@ -229,7 +229,7 @@ class SlackInfoCommanderImpl @Inject() (
         val orgIds = libs.flatMap(_.organizationId).toSet
         val basicOrgs = orgIds.flatMap { orgId => basicOrganizationGen.getBasicOrganizationHelper(orgId).map(orgId -> _) }.toMap
         libs.map { lib =>
-          lib.id.get -> BasicLibrary(lib, basicUserById(lib.ownerId), lib.organizationId.flatMap(basicOrgs.get).map(_.handle), slackInfoByLibId.get(lib.id.get))
+          lib.id.get -> BasicLibrary(lib, basicUserById(lib.ownerId).username, lib.organizationId.flatMap(basicOrgs.get).map(_.handle), slackInfoByLibId.get(lib.id.get))
         }.toMap
       }
       val integrationInfosByLib = generateLibrarySlackIntegrationInfos(viewerId, visibleSlackToLibs, visibleLibToSlacks)

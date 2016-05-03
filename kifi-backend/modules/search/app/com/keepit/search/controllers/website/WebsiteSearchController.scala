@@ -391,7 +391,7 @@ class WebsiteSearchController @Inject() (
                 val owner = usersById(library.ownerId)
                 val organization = library.orgId.map(organizationsById(_))
                 val details = libraryDetailsById(library.id)
-                val path = LibraryPathHelper.formatLibraryPath(owner, organization.map(_.handle), details.slug)
+                val path = LibraryPathHelper.formatLibraryPath(owner.username, organization.map(_.handle), details.slug)
                 val (collaboratorIds, followerIds) = libraryMembersById(hit.id)
                 val collaborators = orderWithPictureFirst(collaboratorIds.map(usersById(_)))
                 val followers = orderWithPictureFirst(followerIds.map(usersById(_)))
