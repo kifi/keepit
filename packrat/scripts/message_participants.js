@@ -250,6 +250,7 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
       var keep = this.getKeep();
       var keepLibraries = (keep && keep.recipients && keep.recipients.libraries) || [];
       var elidedCount = Math.max(0, participants.length - avatars.length);
+      var canAddParticipants = (keep && keep.viewer && keep.viewer.permissions && ~keep.viewer.permissions.indexOf('add_participants'));
 
       // This count is no longer an accurate "number" of participants.
       var participantCount = participants.filter(function (user) {
@@ -273,7 +274,8 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
         elidedCount: elidedCount,
         keptInLibrary: keptInLibrary,
         avatars: avatars,
-        participants: this.renderParticipants()
+        participants: this.renderParticipants(),
+        canAddParticipants: canAddParticipants
       };
     },
     /**
