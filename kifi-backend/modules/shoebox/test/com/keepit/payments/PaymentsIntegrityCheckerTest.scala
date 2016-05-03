@@ -53,7 +53,7 @@ class PaymentsIntegrityCheckerTest extends TestKitSupport with SpecificationLike
         }
         paymentsChecker.checkAccounts(modulus = 1)
         db.readOnlyMaster { implicit session =>
-          inject[PaidAccountRepo].all.filter(_.frozen).map(_.orgId) === Seq.empty
+          inject[PaidAccountRepo].aTonOfRecords.filter(_.frozen).map(_.orgId) === Seq.empty
         }
       }
     }
@@ -75,7 +75,7 @@ class PaymentsIntegrityCheckerTest extends TestKitSupport with SpecificationLike
 
         paymentsChecker.checkAccounts(modulus = 1)
         db.readOnlyMaster { implicit session =>
-          paidAccountRepo.all.filter(_.frozen).map(_.orgId) === Seq(org.id.get)
+          paidAccountRepo.aTonOfRecords.filter(_.frozen).map(_.orgId) === Seq(org.id.get)
         }
       }
     }

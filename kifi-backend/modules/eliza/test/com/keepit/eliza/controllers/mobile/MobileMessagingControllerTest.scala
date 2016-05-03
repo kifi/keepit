@@ -63,8 +63,8 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
     "getUnreadNotificationsCount" in {
       withDb(modules: _*) { implicit injector =>
         inject[Database].readOnlyMaster { implicit s =>
-          inject[UserThreadRepo].all.isEmpty === true
-          inject[NonUserThreadRepo].all.isEmpty === true
+          inject[UserThreadRepo].aTonOfRecords.isEmpty === true
+          inject[NonUserThreadRepo].aTonOfRecords.isEmpty === true
         }
 
         val Seq(shanee, shachaf, _) = initUsers()
@@ -84,8 +84,8 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
     "addParticipantsToThread" in {
       withDb(modules: _*) { implicit injector =>
         inject[Database].readOnlyMaster { implicit s =>
-          inject[UserThreadRepo].all.isEmpty === true
-          inject[NonUserThreadRepo].all.isEmpty === true
+          inject[UserThreadRepo].aTonOfRecords.isEmpty === true
+          inject[NonUserThreadRepo].aTonOfRecords.isEmpty === true
         }
         val Seq(shanee, shachaf, eishay) = initUsers()
 
@@ -99,7 +99,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
             "title": "Search Experiments", "text": "message #2", "recipients":["${shachaf.externalId.toString}"],
             "url": "https://admin.kifi.com/admin/searchExperiments", "extVersion": "2.6.65" } """)))) must equalTo(OK)
 
-        val thread = inject[Database].readOnlyMaster { implicit s => inject[MessageThreadRepo].all.head }
+        val thread = inject[Database].readOnlyMaster { implicit s => inject[MessageThreadRepo].aTonOfRecords.head }
         inject[Database].readOnlyMaster { implicit s =>
           inject[UserThreadRepo].getByKeep(thread.keepId).map(_.user).toSet === Set(shanee.id.get, shachaf.id.get)
           inject[NonUserThreadRepo].getByKeepId(thread.keepId).map(_.participant.identifier).toSet === Set.empty
@@ -127,8 +127,8 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
     "addParticipantsToThread with no email" in {
       withDb(modules: _*) { implicit injector =>
         inject[Database].readOnlyMaster { implicit s =>
-          inject[UserThreadRepo].all.isEmpty === true
-          inject[NonUserThreadRepo].all.isEmpty === true
+          inject[UserThreadRepo].aTonOfRecords.isEmpty === true
+          inject[NonUserThreadRepo].aTonOfRecords.isEmpty === true
         }
         val Seq(shanee, shachaf, eishay) = initUsers()
 
@@ -142,7 +142,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
             "title": "Search Experiments", "text": "message #2", "recipients":["${shachaf.externalId.toString}"],
             "url": "https://admin.kifi.com/admin/searchExperiments", "extVersion": "2.6.65" } """)))) must equalTo(OK)
 
-        val thread = inject[Database].readOnlyMaster { implicit s => inject[MessageThreadRepo].all.head }
+        val thread = inject[Database].readOnlyMaster { implicit s => inject[MessageThreadRepo].aTonOfRecords.head }
         inject[Database].readOnlyMaster { implicit s =>
           inject[UserThreadRepo].getByKeep(thread.keepId).map(_.user).toSet === Set(shanee.id.get, shachaf.id.get)
           inject[NonUserThreadRepo].getByKeepId(thread.keepId).map(_.participant.identifier).toSet === Set.empty
@@ -189,10 +189,10 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
 
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
-        val messages = inject[Database].readOnlyMaster { implicit s => inject[MessageRepo].all }
+        val messages = inject[Database].readOnlyMaster { implicit s => inject[MessageRepo].aTonOfRecords }
         messages.size === 1
         val message = messages.head
-        val threads = inject[Database].readOnlyMaster { implicit s => inject[MessageThreadRepo].all }
+        val threads = inject[Database].readOnlyMaster { implicit s => inject[MessageThreadRepo].aTonOfRecords }
         threads.size === 1
         val thread = threads.head
 
@@ -231,7 +231,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
             "title": "Search Experiments", "text": "message #5", "recipients":["${shachaf.externalId.toString}"],
             "url": "https://admin.kifi.com/admin/searchExperiments", "extVersion": "2.6.65" } """)))) must equalTo(OK)
 
-        val thread = inject[Database].readOnlyMaster { implicit s => inject[MessageThreadRepo].all.head }
+        val thread = inject[Database].readOnlyMaster { implicit s => inject[MessageThreadRepo].aTonOfRecords.head }
 
         val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.getCompactThread(thread.pubKeepId).toString
         path === s"/m/1/eliza/thread/${thread.pubKeepId.id}"
@@ -241,7 +241,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
 
         contentType(result) must beSome("application/json")
 
-        val messages = inject[Database].readOnlyMaster { implicit s => inject[MessageRepo].all }
+        val messages = inject[Database].readOnlyMaster { implicit s => inject[MessageRepo].aTonOfRecords }
         messages.size === 5
 
         val res = Json.parse(contentAsString(result))
@@ -293,8 +293,8 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
             "title": "Search Experiments", "text": "message #5", "recipients":["${shachaf.externalId.toString}"],
             "url": "https://admin.kifi.com/admin/searchExperiments", "extVersion": "2.6.65" } """)))) must equalTo(OK)
 
-        val thread = inject[Database].readOnlyMaster { implicit s => inject[MessageThreadRepo].all.head }
-        val messages = inject[Database].readOnlyMaster { implicit s => inject[MessageRepo].all }
+        val thread = inject[Database].readOnlyMaster { implicit s => inject[MessageThreadRepo].aTonOfRecords.head }
+        val messages = inject[Database].readOnlyMaster { implicit s => inject[MessageRepo].aTonOfRecords }
         messages.size === 5
 
         {
@@ -379,8 +379,8 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
 
         status(controller.sendMessageAction()(FakeRequest("POST", "/m/1/eliza/messages").withBody(createThreadJson))) must equalTo(OK)
 
-        val message = inject[Database].readOnlyMaster { implicit s => inject[MessageRepo].all } head
-        val thread = inject[Database].readOnlyMaster { implicit s => inject[MessageThreadRepo].all } head
+        val message = inject[Database].readOnlyMaster { implicit s => inject[MessageRepo].aTonOfRecords } head
+        val thread = inject[Database].readOnlyMaster { implicit s => inject[MessageThreadRepo].aTonOfRecords } head
 
         val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.sendMessageReplyAction(thread.pubKeepId).toString
         path === s"/m/1/eliza/messages/${thread.pubKeepId.id}"
@@ -401,7 +401,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
         contentType(result) must beSome("application/json")
         // println(s"thread = $thread") // can be removed?
 
-        val messages = inject[Database].readOnlyMaster { implicit s => inject[MessageRepo].all }
+        val messages = inject[Database].readOnlyMaster { implicit s => inject[MessageRepo].aTonOfRecords }
         messages.size === 2
         val replys = messages filter { m => m.id != message.id }
         replys.size === 1

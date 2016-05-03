@@ -36,7 +36,7 @@ class LDALibraryUpdaterTest extends Specification with CortexTestInjector with L
         updater.update()
 
         db.readOnlyReplica { implicit s =>
-          libLDARepo.all().size === 1
+          libLDARepo.aTonOfRecords().size === 1
           val model = libLDARepo.getActiveByLibraryId(Id[Library](1), uriRep.version).get
           model.topic.get.value.toList === List(0.1f, 0.5f, 0.4f)
           model.firstTopicScore === Some(0.5f)

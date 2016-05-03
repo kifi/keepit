@@ -32,7 +32,7 @@ class CortexDataIngestionUpdaterTest extends Specification with CortexTestInject
         updates === 3
 
         db.readOnlyMaster { implicit s =>
-          cortexURIRepo.all.size === 3
+          cortexURIRepo.aTonOfRecords.size === 3
           cortexURIRepo.getSince(SequenceNumber[CortexURI](-1), 100).map { _.seq.value } === List(1, 2, 3)
         }
 
@@ -41,7 +41,7 @@ class CortexDataIngestionUpdaterTest extends Specification with CortexTestInject
         updates === 1
 
         val changed = db.readOnlyMaster { implicit s =>
-          cortexURIRepo.all.size === 3
+          cortexURIRepo.aTonOfRecords.size === 3
           cortexURIRepo.getSince(SequenceNumber[CortexURI](3), 100)
         }.headOption.get
 
@@ -60,7 +60,7 @@ class CortexDataIngestionUpdaterTest extends Specification with CortexTestInject
         Await.result(updater.updateKeepRepo(100), FiniteDuration(5, SECONDS)) === 2
 
         db.readOnlyMaster { implicit s =>
-          cortexKeepRepo.all.map { _.source } === List(KeepSource.Keeper, KeepSource.BookmarkImport)
+          cortexKeepRepo.aTonOfRecords.map { _.source } === List(KeepSource.Keeper, KeepSource.BookmarkImport)
         }
 
         val library = Library(name = "foo", ownerId = Id[User](1), visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("foo"), memberCount = 1)

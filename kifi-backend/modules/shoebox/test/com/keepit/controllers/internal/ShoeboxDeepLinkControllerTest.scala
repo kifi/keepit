@@ -52,7 +52,7 @@ class ShoeboxDeepLinkControllerTest extends Specification with ShoeboxTestInject
           status(result) must equalTo(OK)
         }
 
-        val deepLinks = db.readOnlyMaster { implicit s => deepLinkRepo.all() }
+        val deepLinks = db.readOnlyMaster { implicit s => deepLinkRepo.aTonOfRecords() }
         deepLinks.size === 1
         val deepLink = deepLinks.head
         deepLink.deepLocator.value === "/my/location"

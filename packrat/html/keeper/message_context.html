@@ -1,7 +1,13 @@
 <div class="kifi-message-context">
   <div class="kifi-message-context-main">
     <div class="kifi-message-context-controls">
-      <input class="kifi-message-context-controls-title" type="text" name="keep_title" value="{{title}}" placeholder="Add a title..."/>
+      <input
+        class="kifi-message-context-controls-title"
+        name="keep_title"
+        value="{{title}}"
+        placeholder="Add a title..."
+        {{^editPermission}}disabled{{/editPermission}}
+      />
       <div class="kifi-message-context-controls-location kifi-message-context-elide">{{location}}</div>
     </div>
     <div class="kifi-message-context-image-container">

@@ -56,7 +56,7 @@ class KeepTest extends Specification with ShoeboxTestInjector {
           keepRepo.getByUser(user1.id.get, None, Some(marks(0).externalId), 5) must beEmpty
           keepRepo.getByUser(user1.id.get, None, None, 0) must beEmpty
 
-          def activityCount(uriId: Id[NormalizedURI]) = ktlRepo.all.count(ktl => ktl.uriId == uriId && !ktl.isPrivate)
+          def activityCount(uriId: Id[NormalizedURI]) = ktlRepo.aTonOfRecords.count(ktl => ktl.uriId == uriId && !ktl.isPrivate)
           activityCount(uri1.id.get) === 2
           activityCount(uri2.id.get) === 1
           activityCount(uri3.id.get) === 0
@@ -68,9 +68,9 @@ class KeepTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         val (user1, user2, uri1, uri2, _, lib) = setup()
         val cxAll = db.readOnlyMaster { implicit s =>
-          keepRepo.all
+          keepRepo.aTonOfRecords
         }
-        val all = inject[Database].readOnlyMaster(implicit session => keepRepo.all)
+        val all = inject[Database].readOnlyMaster(implicit session => keepRepo.aTonOfRecords)
         all.map(_.title) === Seq(Some("G1"), Some("A1"), Some("A2"), None)
       }
     }

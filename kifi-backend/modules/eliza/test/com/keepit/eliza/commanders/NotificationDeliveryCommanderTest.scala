@@ -93,7 +93,7 @@ class NotificationDeliveryCommanderTest extends TestKitSupport with Specificatio
             Await.result(inject[MessageThreadNotificationBuilder].buildForKeep(user1, thread.keepId), Duration.Inf).get
           }
 
-          val msg = db.readOnlyMaster { implicit s => messageRepo.all.last }
+          val msg = db.readOnlyMaster { implicit s => messageRepo.aTonOfRecords.last }
           val notif = notifs.last
           notif.id === Some(msg.pubId)
           notif.time === msg.createdAt

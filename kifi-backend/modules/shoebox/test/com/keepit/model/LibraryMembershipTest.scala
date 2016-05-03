@@ -35,7 +35,7 @@ class LibraryMembershipTest extends Specification with ShoeboxTestInjector {
     "basically work" in { // test read/write/save
       withDb() { implicit injector =>
         val (library1, library2, user1, user2, lm1, lm2, lm3, lm4, t1) = setup()
-        val all = db.readOnlyMaster(implicit session => libraryMembershipRepo.all)
+        val all = db.readOnlyMaster(implicit session => libraryMembershipRepo.aTonOfRecords)
         all.map(_.access) === Seq(LibraryAccess.OWNER, LibraryAccess.READ_ONLY, LibraryAccess.OWNER, LibraryAccess.OWNER)
         db.readOnlyMaster { implicit session =>
           libraryMembershipRepo.countNonTrivialLibrariesWithUserIdAndAccess(user1.id.get, LibraryAccess.OWNER) === 2
@@ -65,7 +65,7 @@ class LibraryMembershipTest extends Specification with ShoeboxTestInjector {
           libraryMembershipRepo.delete(libMem)
         }
         db.readWrite { implicit s =>
-          libraryMembershipRepo.all.size === 3
+          libraryMembershipRepo.aTonOfRecords.size === 3
           libraryMembershipRepo.count === 3
         }
         db.readWrite { implicit s =>

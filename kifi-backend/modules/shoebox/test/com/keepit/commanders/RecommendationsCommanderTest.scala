@@ -104,7 +104,7 @@ class RecommendationsCommanderTest extends Specification with ShoeboxTestInjecto
       (libMurica, libScience, libIron)
     }
     db.readOnlyMaster { implicit s =>
-      val allLibs = libraryRepo.all
+      val allLibs = libraryRepo.aTonOfRecords
       allLibs.length === 3
       allLibs.map(_.name) === Seq("MURICA", "Science & Stuff", "Iron Working")
       allLibs.map(_.slug.value) === Seq("murica", "science", "iron")

@@ -25,14 +25,14 @@ class UserKeepInfoRepoTest extends Specification with HeimdalTestInjector {
               (0 until numSelf).foreach { i => repo.increaseCounts(userId, uriId, isSelf = true) }
               (0 until numOther).foreach { i => repo.increaseCounts(userId, uriId, isSelf = false) }
 
-              repo.all.zipWithIndex map {
+              repo.aTonOfRecords.zipWithIndex map {
                 case (row, i) =>
                   repo.save(row.copy(rekeepCount = rekeepCounts(i), rekeepTotalCount = rekeepTotalCounts(i)))
               }
             }
         }
 
-        val all = db.readOnlyMaster { implicit s => repo.all }
+        val all = db.readOnlyMaster { implicit s => repo.aTonOfRecords }
 
         (userIds zip uriIds) foreach {
           case (userId, uriId) =>

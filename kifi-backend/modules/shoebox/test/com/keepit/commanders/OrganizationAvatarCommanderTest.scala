@@ -133,7 +133,7 @@ class OrganizationAvatarCommanderTest extends Specification with ShoeboxTestInje
 
         db.readOnlyMaster { implicit s =>
           repo.count === n * OrganizationAvatarConfiguration.numSizes
-          repo.all.map(_.imagePath).toSet.size === n * OrganizationAvatarConfiguration.numSizes
+          repo.aTonOfRecords.map(_.imagePath).toSet.size === n * OrganizationAvatarConfiguration.numSizes
           // Now check the actually active avatars
           repo.getByOrgId(org1.id.get).length === OrganizationAvatarConfiguration.numSizes
         }

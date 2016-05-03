@@ -374,7 +374,7 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
           val pageSize = 3
           val expectedPages = db.readOnlyMaster { implicit session =>
             inject[AccountEventRepo].count must beGreaterThanOrEqualTo(3 * pageSize)
-            val allEvents = inject[AccountEventRepo].all.filter(e => AccountEventKind.activityLog.contains(e.action.eventType))
+            val allEvents = inject[AccountEventRepo].aTonOfRecords.filter(e => AccountEventKind.activityLog.contains(e.action.eventType))
             val orderedEvents = allEvents.sortBy(ae => (ae.eventTime.getMillis, ae.id.get.id)).reverse
             orderedEvents.map(e => e.id.get).grouped(pageSize).toList
           }
@@ -405,7 +405,7 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
           val publicId = Organization.publicId(org.id.get)
 
           val pageSize = 3
-          val firstEvent = db.readOnlyMaster { implicit session => accountEventRepo.all.head }
+          val firstEvent = db.readOnlyMaster { implicit session => accountEventRepo.aTonOfRecords.head }
           val fromIdOpt = Option(AccountEvent.publicId(firstEvent.id.get).id)
 
           inject[FakeUserActionsHelper].setUser(owner)
