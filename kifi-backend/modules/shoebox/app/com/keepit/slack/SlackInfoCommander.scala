@@ -12,13 +12,13 @@ import com.keepit.common.json.KeyFormat
 import com.keepit.common.logging.Logging
 import com.keepit.common.performance.StatsdTiming
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.model.ExternalLibrarySpace.{ ExternalOrganizationSpace, ExternalUserSpace }
-import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
+import com.keepit.model.ExternalLibrarySpace.ExternalOrganizationSpace
 import com.keepit.model._
 import com.keepit.slack.models._
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.json.{ Json, Writes }
+import com.keepit.common.core._
 
 @json
 case class LibraryToSlackIntegrationInfo(
@@ -105,6 +105,7 @@ class SlackInfoCommanderImpl @Inject() (
   basicOrganizationGen: BasicOrganizationGen,
   permissionCommander: PermissionCommander,
   airbrake: AirbrakeNotifier,
+  liteSlackInfoCache: LiteLibrarySlackInfoCache,
   implicit val publicIdConfiguration: PublicIdConfiguration)
     extends SlackInfoCommander with Logging {
 
@@ -116,15 +117,21 @@ class SlackInfoCommanderImpl @Inject() (
       val libToSlacks = libToChannelRepo.getAllBySlackTeamsAndLibraries(slackTeamIds, libraryIds)
       generateLibrarySlackIntegrationInfos(viewerId, slackToLibs, libToSlacks)
     }
-    assembleLibrarySlackInfos(libraryIds, integrationInfosByLib)
+    assembleFullLibrarySlackInfos(libraryIds, integrationInfosByLib)
   }
 
   def getLiteSlackInfoForLibraries(libraries: Set[Id[Library]]): Map[Id[Library], LiteLibrarySlackInfo] = {
-    val (ltscsByLib, channelsById) = db.readOnlyMaster { implicit s =>
-      val ltscsByLib = libToChannelRepo.getActiveByLibraries(libraries)
-      val channelsById = slackChannelRepo.getByChannelIds(ltscsByLib.values.flatten.map(ltsc => (ltsc.slackTeamId, ltsc.slackChannelId)).toSet)
-      (ltscsByLib, channelsById)
-    }
+    liteSlackInfoCache.direct.bulkGetOrElse(libraries.map(LiteLibrarySlackInfoKey)) { missingKeys =>
+      db.readOnlyMaster { implicit s =>
+        generateLiteLibrarySlackInfos(missingKeys.map(_.libraryId))
+          .map { case (libId, info) => LiteLibrarySlackInfoKey(libId) -> info }
+      }
+    }.map { case (LiteLibrarySlackInfoKey(libId), libSlackInfo) => libId -> libSlackInfo }
+  }
+
+  private def generateLiteLibrarySlackInfos(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], LiteLibrarySlackInfo] = {
+    val ltscsByLib = libToChannelRepo.getActiveByLibraries(libraryIds)
+    val channelsById = slackChannelRepo.getByChannelIds(ltscsByLib.values.flatten.map(ltsc => (ltsc.slackTeamId, ltsc.slackChannelId)).toSet)
     ltscsByLib.map {
       case (libraryId, ltscs) =>
         val basicChannels = ltscs.map { ltsc =>
@@ -135,7 +142,7 @@ class SlackInfoCommanderImpl @Inject() (
     }
   }
 
-  private def assembleLibrarySlackInfos(libraryIds: Set[Id[Library]], integrationInfosByLib: Map[Id[Library], Seq[LibrarySlackIntegrationInfo]]): Map[Id[Library], FullLibrarySlackInfo] = {
+  private def assembleFullLibrarySlackInfos(libraryIds: Set[Id[Library]], integrationInfosByLib: Map[Id[Library], Seq[LibrarySlackIntegrationInfo]]): Map[Id[Library], FullLibrarySlackInfo] = {
     libraryIds.map { libId =>
       val pubLibId = Library.publicId(libId)
       libId -> FullLibrarySlackInfo(
@@ -240,7 +247,7 @@ class SlackInfoCommanderImpl @Inject() (
     val permissionsByLib = permissionCommander.getLibrariesPermissions(libIds, Some(viewerId))
     def canViewLib(libId: Id[Library]): Boolean = permissionsByLib.getOrElse(libId, Set.empty).contains(LibraryPermission.VIEW_LIBRARY)
 
-    val librarySlackInfosByLib = assembleLibrarySlackInfos(libIds, integrationInfosByLib)
+    val librarySlackInfosByLib = assembleFullLibrarySlackInfos(libIds, integrationInfosByLib)
     OrganizationSlackInfo(
       slackTeam,
       libraries = libIds.toList.sorted.collect {
