@@ -16,6 +16,7 @@ import com.keepit.common.time._
 import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.discussion.{ CrossServiceMessage, DiscussionKeep }
+import com.keepit.model.KeepEventData.ModifyRecipients
 import com.keepit.model._
 import com.keepit.model.view.{ LibraryMembershipView, UserSessionView }
 import com.keepit.rover.model.BasicImages
@@ -739,6 +740,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
     ))
   }
 
-  def editRecipientsOnKeep(editorId: Id[User], keepId: Id[Keep], recipients: KeepRecipientsDiff, persistKeepEvent: Boolean, source: Option[KeepEventSource]): Future[Unit] = Future.successful(())
-  def registerMessageOnKeep(keepId: Id[Keep], msg: CrossServiceMessage): Future[Unit] = Future.successful(())
+  def editRecipientsOnKeep(editorId: Id[User], keepId: Id[Keep], diff: KeepRecipientsDiff): Future[Unit] = Future.successful(Unit)
+  def persistModifyRecipients(keepId: Id[Keep], eventData: ModifyRecipients, source: Option[KeepEventSource]): Future[Option[CommonAndBasicKeepEvent]] = Future.successful(None)
+  def registerMessageOnKeep(keepId: Id[Keep], msg: CrossServiceMessage): Future[Unit] = Future.successful(Unit)
 }

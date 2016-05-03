@@ -1,7 +1,6 @@
 package com.keepit.commanders.gen
 
 import com.keepit.common.crypto.PublicIdConfiguration
-import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.util.DescriptionElements._
@@ -87,7 +86,7 @@ object KeepActivityGen {
     }
 
     val basicEventsBF = {
-      val keepEvents = events.map(event => generateKeepEvent(keep.id.get, event))
+      val keepEvents = events.map(event => generateKeepEvent(event))
       val comments = discussionOpt.map(_.messages.flatMap { msg =>
         msg.sentBy.map { sender =>
           val myAuthor = sender.fold(u => BatchFetchable.user(u).map(_.map(BasicAuthor.fromUser).getOrElse(BasicAuthor.Fake)), nu => BatchFetchable.trivial(BasicAuthor.fromNonUser(nu)))
@@ -128,7 +127,7 @@ object KeepActivityGen {
     }
   }
 
-  def generateKeepEvent(keepId: Id[Keep], event: KeepEvent)(implicit imageConfig: S3ImageConfig, idConfig: PublicIdConfiguration, airbrake: AirbrakeNotifier): BatchFetchable[BasicKeepEvent] = {
+  def generateKeepEvent(event: KeepEvent)(implicit imageConfig: S3ImageConfig, idConfig: PublicIdConfiguration, airbrake: AirbrakeNotifier): BatchFetchable[BasicKeepEvent] = {
     val publicEventId = CommonKeepEvent.publicId(KeepEvent.toCommonId(event.id.get))
     val (addedByBF, kind, headerBF) = event.eventData match {
       case ModifyRecipients(adder, diff) =>
@@ -159,14 +158,13 @@ object KeepActivityGen {
         val headerBF = basicAddedByBF.map { basicAddedBy =>
           DescriptionElements(basicAddedBy.map(generateUserElement(_, fullName = true)).getOrElse(fromText("Someone")), "edited the title", updated.map(DescriptionElements("to", _)))
         }
-
         (basicAddedByBF, KeepEventKind.EditTitle, headerBF)
     }
 
     (addedByBF and headerBF).tupled.map {
       case (addedBy, header) =>
         BasicKeepEvent(
-          id = BasicKeepEventId.fromEvent(publicEventId),
+          id = BasicKeepEventId.fromPubEvent(publicEventId),
           author = addedBy.map(BasicAuthor.fromUser).getOrElse(BasicAuthor.Fake),
           kind = kind,
           header = header,

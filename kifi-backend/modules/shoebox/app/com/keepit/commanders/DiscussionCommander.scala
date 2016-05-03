@@ -19,9 +19,6 @@ trait DiscussionCommander {
   def getMessagesOnKeep(userId: Id[User], keepId: Id[Keep], limit: Int, fromId: Option[Id[Message]]): Future[Seq[Message]]
   def editMessageOnKeep(userId: Id[User], keepId: Id[Keep], msgId: Id[Message], newText: String): Future[Message]
   def deleteMessageOnKeep(userId: Id[User], keepId: Id[Keep], msgId: Id[Message]): Future[Unit]
-
-  // deprecate this in favor of modifyConnectionsForKeep
-  def editParticipantsOnKeep(userId: Id[User], keepId: Id[Keep], newUsers: Set[Id[User]], source: Option[KeepEventSource]): Future[Unit]
   def modifyConnectionsForKeep(userId: Id[User], keepId: Id[Keep], diff: KeepRecipientsDiff, source: Option[KeepEventSource]): Future[Unit]
 }
 
@@ -96,22 +93,6 @@ class DiscussionCommanderImpl @Inject() (
     } yield res
   }
 
-  def editParticipantsOnKeep(userId: Id[User], keepId: Id[Keep], newUsers: Set[Id[User]], source: Option[KeepEventSource]): Future[Unit] = {
-    val keepPermissions = db.readOnlyReplica { implicit s =>
-      permissionCommander.getKeepPermissions(keepId, Some(userId))
-    }
-    val errs: Stream[DiscussionFail] = Stream(
-      Some(DiscussionFail.INSUFFICIENT_PERMISSIONS).filter(_ => !keepPermissions.contains(KeepPermission.ADD_PARTICIPANTS))
-    ).flatten
-
-    errs.headOption.map(fail => Future.failed(fail)).getOrElse {
-      val diff = KeepRecipientsDiff.addUsers(newUsers)
-      val keep = db.readWrite { implicit s =>
-        keepMutator.unsafeModifyKeepRecipients(keepId, diff, userAttribution = Some(userId))
-      }
-      eliza.editParticipantsOnKeep(keepId, userId, diff, source).map(_ => ())
-    }
-  }
   def modifyConnectionsForKeep(userId: Id[User], keepId: Id[Keep], diff: KeepRecipientsDiff, source: Option[KeepEventSource]): Future[Unit] = {
     if (diff.isEmpty) Future.successful(())
     else {

@@ -12,6 +12,7 @@ import com.keepit.common.time._
 import com.keepit.common.http._
 import com.keepit.discussion.{ MessageSource, DiscussionFail, Message }
 import com.keepit.eliza.commanders._
+import com.keepit.model.BasicKeepEvent.BasicKeepEventId.MessageId
 import scala.collection._
 import com.keepit.heimdal._
 import com.keepit.model.{ KeepEventSource, Keep, Organization, User }
@@ -208,7 +209,7 @@ class MobileMessagingController @Inject() (
               case None => discussion.messages.take(pageSize)
               case Some(idString) =>
                 val publicId = Message.validatePublicId(idString).get
-                val afterId = discussion.messages.dropWhile(_.id != publicId)
+                val afterId = discussion.messages.dropWhile(_.id != MessageId(publicId))
                 if (afterId.isEmpty) throw new IllegalStateException(s"thread of ${discussion.messages.size} had no message id $publicId")
                 afterId.drop(1).take(pageSize)
             }
@@ -231,9 +232,8 @@ class MobileMessagingController @Inject() (
                   "text" -> m.text
                 )
                 val msgJson = baseJson ++ (m.user match {
-                  case Some(BasicUserLikeEntity.user(bu)) => Json.obj("userId" -> bu.externalId.toString)
-                  case Some(BasicUserLikeEntity.nonUser(bnu)) if bnu.kind.name == "email" => Json.obj("userId" -> bnu.id)
-                  case _ => Json.obj()
+                  case BasicUserLikeEntity.user(bu) => Json.obj("userId" -> bu.externalId.toString)
+                  case BasicUserLikeEntity.nonUser(bnu) if bnu.kind.name == "email" => Json.obj("userId" -> bnu.id)
                 })
 
                 adderAndAddedOpt.map { adderAndAdded =>
@@ -283,9 +283,8 @@ class MobileMessagingController @Inject() (
                   "text" -> m.text
                 )
                 val msgJson = baseJson ++ (m.user match {
-                  case Some(BasicUserLikeEntity.user(bu)) => Json.obj("userId" -> bu.externalId.toString)
-                  case Some(BasicUserLikeEntity.nonUser(bnu)) if bnu.kind.name == "email" => Json.obj("userId" -> bnu.id)
-                  case _ => Json.obj()
+                  case BasicUserLikeEntity.user(bu) => Json.obj("userId" -> bu.externalId.toString)
+                  case BasicUserLikeEntity.nonUser(bnu) if bnu.kind.name == "email" => Json.obj("userId" -> bnu.id)
                 })
 
                 adderAndAddedOpt.map { adderAndAdded =>
@@ -354,7 +353,7 @@ class MobileMessagingController @Inject() (
         }.toSeq.partitionEithers
         for {
           userIds <- shoebox.getUserIdsByExternalIds(extUserIds.toSet).map(_.values.toList)
-          _ <- discussionCommander.editParticipantsOnKeep(keepId, request.userId, userIds, addReq.emails, Seq.empty, orgIds, source, updateShoebox = true)(contextBuilder.build)
+          _ <- discussionCommander.editParticipantsOnKeep(keepId, request.userId, userIds, addReq.emails, orgIds, source)(contextBuilder.build)
         } yield Ok
       case _ => Future.successful(BadRequest("invalid_keep_id"))
     }
@@ -375,7 +374,7 @@ class MobileMessagingController @Inject() (
         }.partitionEithers
         for {
           userIds <- shoebox.getUserIdsByExternalIds(extUserIds.toSet).map(_.values.toList)
-          _ <- discussionCommander.editParticipantsOnKeep(keepId, request.userId, userIds, validEmails, Seq.empty, orgIds, source, updateShoebox = true)(contextBuilder.build)
+          _ <- discussionCommander.editParticipantsOnKeep(keepId, request.userId, userIds, validEmails, orgIds, source)(contextBuilder.build)
         } yield Ok("")
       case Failure(_) => Future.successful(BadRequest("invalid_keep_id"))
     }

@@ -54,7 +54,7 @@ object Path {
 
   def apply(value: String): Path = {
     val (path, query) = splitQuery(value)
-    new Path("/" + path.stripPrefix(base).stripPrefix("/"), query)
+    new Path(path.stripPrefix(base).stripPrefix("/"), query)
   }
 
   def encode(value: String): EncodedPath = {

@@ -178,8 +178,9 @@ object Shoebox extends Service {
     def getSlackTeamIds() = ServiceRoute(POST, "/internal/shoebox/database/getSlackTeamIds")
     def getSlackTeamInfo(slackTeamId: SlackTeamId) = ServiceRoute(GET, "/internal/shoebox/database/getSlackTeamInfo", Param("slackTeamId", slackTeamId.value))
     def internKeep() = ServiceRoute(POST, "/internal/shoebox/database/internKeep")
-    def editRecipientsOnKeep(editorId: Id[User], keepId: Id[Keep], persistKeepEvent: Boolean, source: Option[KeepEventSource]) = ServiceRoute(POST, "/internal/shoebox/database/editRecipientsOnKeep", Param("editorId", editorId), Param("keepId", keepId), Param("persistKeepEvent", persistKeepEvent), Param("source", source.map(_.value)))
+    def editRecipientsOnKeep(editorId: Id[User], keepId: Id[Keep]) = ServiceRoute(POST, "/internal/shoebox/database/editRecipientsOnKeep", Param("editorId", editorId), Param("keepId", keepId))
     def registerMessageOnKeep() = ServiceRoute(POST, "/internal/shoebox/database/registerMessageOnKeep")
+    def persistModifyRecipients() = ServiceRoute(POST, "/internal/shoebox/database/persistModifyRecipients")
   }
 }
 
@@ -271,12 +272,11 @@ object Eliza extends Service {
     def editMessage() = ServiceRoute(POST, "/internal/eliza/editMessage")
     def deleteMessage() = ServiceRoute(POST, "/internal/eliza/deleteMessage")
     def keepHasAccessToken(keepId: Id[Keep], accessToken: String) = ServiceRoute(GET, "/internal/eliza/keepHasAccessToken", Param("keepId", keepId), Param("accessToken", accessToken))
-    def editParticipantsOnKeep() = ServiceRoute(POST, "/internal/eliza/editParticipantsOnKeep")
     def deleteThreadsForKeeps() = ServiceRoute(POST, "/internal/eliza/deleteThreadsForKeeps")
     def getMessagesChanged(seqNum: SequenceNumber[Message], fetchSize: Int) = ServiceRoute(GET, "/internal/eliza/getMessagesChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def convertNonUserThreadToUserThread(userId: Id[User], accessToken: String) = ServiceRoute(POST, "/internal/eliza/convertNonUserThreadToUserThread", Param("userId", userId), Param("accessToken", accessToken))
 
-    def syncAddParticipants = ServiceRoute(POST, "/internal/eliza/syncAddParticipants")
+    def handleKeepEvent = ServiceRoute(POST, "/internal/eliza/handleKeepEvent")
     def pageSystemMessages(fromId: Id[Message], pageSize: Int) = ServiceRoute(GET, "/internal/eliza/pageSystemMessages", Param("fromId", fromId.id), Param("pageSize", pageSize))
     def rpbTest = ServiceRoute(POST, "/internal/eliza/rpbTest")
 
