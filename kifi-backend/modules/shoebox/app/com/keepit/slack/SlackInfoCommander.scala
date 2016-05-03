@@ -78,7 +78,7 @@ object UserSlackInfo {
 trait SlackInfoCommander {
   // For use in the LibraryInfoCommander to send info down to clients
   def getFullSlackInfoForLibraries(userId: Id[User], libraryIds: Set[Id[Library]]): Map[Id[Library], FullLibrarySlackInfo]
-  def getLiteSlackInfoForLibraries(libraryIds: Set[Id[Library]]): Map[Id[Library], LiteLibrarySlackInfo]
+  def getLiteSlackInfoForLibraries(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], LiteLibrarySlackInfo]
 
   // For generating OrganizationInfo
   def getOrganizationSlackInfo(orgId: Id[Organization], viewerId: Id[User], max: Option[Int] = None)(implicit session: RSession): OrganizationSlackInfo
@@ -120,12 +120,9 @@ class SlackInfoCommanderImpl @Inject() (
     assembleFullLibrarySlackInfos(libraryIds, integrationInfosByLib)
   }
 
-  def getLiteSlackInfoForLibraries(libraries: Set[Id[Library]]): Map[Id[Library], LiteLibrarySlackInfo] = {
-    liteSlackInfoCache.direct.bulkGetOrElse(libraries.map(LiteLibrarySlackInfoKey)) { missingKeys =>
-      db.readOnlyMaster { implicit s =>
-        generateLiteLibrarySlackInfos(missingKeys.map(_.libraryId))
-          .map { case (libId, info) => LiteLibrarySlackInfoKey(libId) -> info }
-      }
+  def getLiteSlackInfoForLibraries(libraries: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], LiteLibrarySlackInfo] = {
+    liteSlackInfoCache.bulkGetOrElse(libraries.map(LiteLibrarySlackInfoKey)) { missingKeys =>
+      generateLiteLibrarySlackInfos(missingKeys.map(_.libraryId)).map { case (libId, info) => LiteLibrarySlackInfoKey(libId) -> info }
     }.map { case (LiteLibrarySlackInfoKey(libId), libSlackInfo) => libId -> libSlackInfo }
   }
 
