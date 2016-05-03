@@ -3,16 +3,15 @@ package com.keepit.slack.models
 import javax.crypto.spec.IvParameterSpec
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
+import com.keepit.commanders.gen.{ BasicLibraryByIdKey, BasicLibraryByIdCache }
 import com.keepit.common.crypto.{ PublicIdGenerator, ModelWithPublicId }
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.{ DbRepo, DataBaseComponent, Repo }
 import com.keepit.common.db._
 import com.keepit.common.time._
-import com.keepit.discussion.{ CrossServiceMessage, Message }
-import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
+import com.keepit.discussion.Message
 import com.keepit.model._
-import org.joda.time.{ Duration, Period, DateTime }
-import com.keepit.common.core._
+import org.joda.time.{ Duration, DateTime }
 
 case class LibraryToSlackChannel(
   id: Option[Id[LibraryToSlackChannel]] = None,
@@ -89,7 +88,8 @@ trait LibraryToSlackChannelRepo extends Repo[LibraryToSlackChannel] {
 class LibraryToSlackChannelRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock,
-    integrationsCache: SlackChannelIntegrationsCache) extends DbRepo[LibraryToSlackChannel] with LibraryToSlackChannelRepo {
+    integrationsCache: SlackChannelIntegrationsCache,
+    basicLibraryCache: BasicLibraryByIdCache) extends DbRepo[LibraryToSlackChannel] with LibraryToSlackChannelRepo {
 
   import com.keepit.common.db.slick.DBSession._
   import db.Driver.simple._
@@ -183,6 +183,7 @@ class LibraryToSlackChannelRepoImpl @Inject() (
   def table(tag: Tag) = new LibraryToSlackChannelTable(tag)
   initTable()
   override def deleteCache(info: LibraryToSlackChannel)(implicit session: RSession): Unit = {
+    basicLibraryCache.remove(BasicLibraryByIdKey(info.libraryId))
     integrationsCache.remove(SlackChannelIntegrationsKey(info.slackTeamId, info.slackChannelId))
   }
   override def invalidateCache(info: LibraryToSlackChannel)(implicit session: RSession): Unit = deleteCache(info)

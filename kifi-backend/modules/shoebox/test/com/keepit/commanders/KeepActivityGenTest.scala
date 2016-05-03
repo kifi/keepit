@@ -50,7 +50,7 @@ class KeepActivityGenTest extends Specification with ShoeboxTestInjector {
         val libIdsToAdd = libsToAdd.map(_.id.get).toSet
 
         val basicUserById = usersToAdd.map(usr => usr.id.get -> BasicUser.fromUser(usr)).toMap + (user.id.get -> basicUser)
-        val basicLibById = libsToAdd.map(lib => lib.id.get -> BasicLibrary(lib, basicUser, None, None)).toMap
+        val basicLibById = libsToAdd.map(lib => lib.id.get -> BasicLibrary(lib, basicUser.username, None, None)).toMap
 
         import com.keepit.common.util.DescriptionElements._
         val eventHeaders = db.readWrite { implicit s =>
