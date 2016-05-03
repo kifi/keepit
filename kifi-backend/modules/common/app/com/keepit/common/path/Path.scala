@@ -1,17 +1,16 @@
 package com.keepit.common.path
 
-import com.keepit.common.net.{ Param, Query }
+import com.keepit.common.net.Query
 import com.keepit.common.strings._
 
 import java.net.{ URLDecoder, URLEncoder }
 
 import play.api.libs.json._
 
-sealed class Path(private val value: String, private val query: Query) {
-  def encode: EncodedPath = new EncodedPath(value, query)
-  def decode: Path = this
-
-  def isEncoded: Boolean = false
+sealed abstract class AbstractPath(private val value: String, private val query: Query) {
+  def encode: EncodedPath
+  def decode: Path
+  def isEncoded: Boolean
 
   def absolute: String = Path.base + relativeWithLeadingSlash + query.toUrlString
 
@@ -32,28 +31,30 @@ sealed class Path(private val value: String, private val query: Query) {
   def withQueryString(str: String, overwrite: Boolean = false): Path = withQuery(Query.parse(str), overwrite)
 }
 
-class EncodedPath(private val value: String, private val query: Query) extends Path(URLEncoder.encode(value, UTF8), Query.parse(URLEncoder.encode(query.toString, UTF8))) {
+case class Path(private val value: String, private val query: Query) extends AbstractPath(value, query) {
+  def encode: EncodedPath = new EncodedPath(value, query)
+  def decode: Path = this
+  def isEncoded: Boolean = false
+}
 
+case class EncodedPath(private val value: String, private val query: Query) extends AbstractPath(URLEncoder.encode(value, UTF8), Query.parse(URLEncoder.encode(query.toString, UTF8))) {
   override def encode: EncodedPath = this
-
   override def decode: Path = new Path(value, query)
-
   override def isEncoded: Boolean = true
-
 }
 
 object Path {
 
   def base: String = "https://www.kifi.com"
 
-  private def splitQuery(str: String): (String, Query) = str.split('?').toList match {
+  def splitQuery(str: String): (String, Query) = str.split('?').toList match {
     case relative :: params => (relative, params.map(Query.parse).foldLeft(Query.empty)(_ ++ _))
     case _ => ("", Query.empty)
   }
 
   def apply(value: String): Path = {
     val (path, query) = splitQuery(value)
-    new Path(path.stripPrefix(base), query)
+    new Path("/" + path.stripPrefix(base).stripPrefix("/"), query)
   }
 
   def encode(value: String): EncodedPath = {
