@@ -282,9 +282,6 @@ trait ProcessedImageHelper {
       is.reset()
       is.close()
 
-
-
-
       val formatOpt = if (c1 == 'G' && c2 == 'I' && c3 == 'F' && c4 == '8') {
         Some(ImageFormat.GIF)
       } else if (c1 == '#' && c2 == 'd' && c3 == 'e' && c4 == 'f') {
