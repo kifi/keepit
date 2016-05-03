@@ -80,9 +80,9 @@ trait ProcessedImageHelper {
       log.info(s"[pih] Fetching $imageUrl")
       val loadedF: Future[Either[ImageStoreFailure, ImageProcessState.ImageLoadedAndHashed]] = fetchRemoteImage(imageUrl).map {
         case (format, file) =>
-          hashImageFile(file.file) match {
+          hashImageFile(file) match {
             case Success(hash) if !ProcessedImageHelper.blacklistedHash.contains(hash.hash) =>
-              Right(ImageProcessState.ImageLoadedAndHashed(file.file, format, hash, Some(imageUrl)))
+              Right(ImageProcessState.ImageLoadedAndHashed(file, format, hash, Some(imageUrl)))
             case Success(hash) => // blacklisted hash
               Left(ImageProcessState.BlacklistedImage)
             case Failure(ex) =>
@@ -247,13 +247,10 @@ trait ProcessedImageHelper {
 
   protected val inputFormatToOutputFormat: ImageFormat => ImageFormat = {
     case ImageFormat.JPG => ImageFormat.JPG
+    case ImageFormat.GIF => ImageFormat.GIF
     case _ => ImageFormat.PNG
   }
 
-  protected val imageFormatToJavaFormatName: ImageFormat => String = {
-    case ImageFormat.JPG | ImageFormat("jpeg") => "jpeg"
-    case _ => "png"
-  }
 
   protected val imageFormatToMimeType: ImageFormat => String = {
     case ImageFormat.JPG | ImageFormat("jpeg") => "image/jpeg"
@@ -261,52 +258,57 @@ trait ProcessedImageHelper {
     case ImageFormat("gif") => "image/gif"
   }
 
-  protected val mimeTypeToImageFormat: String => Option[ImageFormat] = {
-    case t if t.startsWith("image/jpeg") || t.startsWith("image/jpg") => Some(ImageFormat.JPG)
-    case t if t.startsWith("image/png") => Some(ImageFormat.PNG)
-    case t if t.startsWith("image/tiff") => Some(ImageFormat("tiff"))
-    case t if t.startsWith("image/bmp") => Some(ImageFormat("bmp"))
-    case t if t.startsWith("image/gif") => Some(ImageFormat("gif"))
-    case _ => None
-  }
-
-  protected val imageFilenameToFormat: String => Option[ImageFormat] = {
-    case "jpeg" | "jpg" => Some(ImageFormat.JPG)
-    case "png" => Some(ImageFormat.PNG)
-    case "tiff" => Some(ImageFormat("tiff"))
-    case "bmp" => Some(ImageFormat("bmp"))
-    case "gif" => Some(ImageFormat("gif"))
-    case _ => None
-  }
-
   protected def detectImageType(file: File): Option[ImageFormat] = {
-    val is = new BufferedInputStream(new FileInputStream(file))
-    val formatOpt = Option(URLConnection.guessContentTypeFromStream(is)).flatMap { mimeType =>
-      mimeTypeToImageFormat(mimeType)
-    }.orElse {
-      imageFilenameToFormat(file.getName)
-    }
-    is.close()
-    formatOpt
+    Try {
+      val is = new BufferedInputStream(new FileInputStream(file))
+
+      is.mark(8)
+      val c1 = is.read()
+      val c2 = is.read()
+      val c3 = is.read()
+      val c4 = is.read()
+      val c5 = is.read()
+      val c6 = is.read()
+      val c7 = is.read()
+      val c8 = is.read()
+      is.reset()
+      is.close()
+
+      val formatOpt = if (c1 == 'G' && c2 == 'I' && c3 == 'F' && c4 == '8') {
+        Some(ImageFormat.GIF)
+      } else if (c1 == '#' && c2 == 'd' && c3 == 'e' && c4 == 'f') {
+        Some(ImageFormat("bmp"))
+      } else if (c1 == 137 && c2 == 80 && c3 == 78 && c4 == 71 && c5 == 13 && c6 == 10 && c7 == 26 && c8 == 10) {
+        Some(ImageFormat.PNG)
+      } else if (c1 == 0xFF && c2 == 0xD8 && c3 == 0xFF) {
+        Some(ImageFormat.JPG)
+      } else if ((c1 == 0x49 && c2 == 0x49 && c3 == 0x2A && c4 == 0x00) || (c1 == 0x4D && c2 == 0x4D && c3 == 0x00 && c4 == 0x2A)) {
+        Some(ImageFormat("tiff"))
+      } else if (c3 == '<' && c4 == 0 && c5 == '?' && c6 == 0 && c7 == 'x' && c8 == 0) {
+        Some(ImageFormat("svg"))
+      } else if (c1 == 'W' && c2 == 'E' && c3 == 'B' && c4 == 'P') {
+        Some(ImageFormat("webp"))
+      } else {
+        None
+      }
+
+      formatOpt
+    }.toOption.flatten
   }
 
-  private val remoteFetchConsolidater = new RequestConsolidator[String, (ImageFormat, TemporaryFile)](2.minutes)
+  private val remoteFetchConsolidater = new RequestConsolidator[String, (ImageFormat, File)](2.minutes)
 
-  protected def fetchRemoteImage(imageUrl: String, timeoutMs: Int = 20000): Future[(ImageFormat, TemporaryFile)] = {
+  protected def fetchRemoteImage(imageUrl: String, timeoutMs: Int = 20000): Future[(ImageFormat, File)] = {
     remoteFetchConsolidater(imageUrl) { imageUrl =>
       webService.url(imageUrl).withRequestTimeout(20000).withFollowRedirects(true).getStream().flatMap {
         case (headers, streamBody) =>
-          val formatOpt = headers.headers.get("Content-Type").flatMap(_.headOption)
-            .flatMap(mimeTypeToImageFormat).orElse {
-              val path = URI.parse(imageUrl).toOption.flatMap(_.path).getOrElse(imageUrl)
-              imageFilenameToFormat(path.substring(path.lastIndexOf('.') + 1))
-            }
 
           if (headers.status != 200) {
             Future.failed(new RuntimeException(s"Image returned non-200 code, ${headers.status}, $imageUrl"))
           } else {
-            val tempFile = TemporaryFile("remote-file")
-            val outputStream = new FileOutputStream(tempFile.file)
+            val tempFile = File.createTempFile("remote-file", "")
+            tempFile.deleteOnExit()
+            val outputStream = new FileOutputStream(tempFile)
 
             val maxSize = 1024 * 1024 * 16
 
@@ -325,7 +327,7 @@ trait ProcessedImageHelper {
               case _ =>
                 outputStream.close()
             } flatMap { _ =>
-              formatOpt.orElse(detectImageType(tempFile.file)) map { format =>
+              detectImageType(tempFile) map { format =>
                 Future.successful((format, tempFile))
               } getOrElse {
                 Future.failed(new Exception(s"Unknown image type, ${headers.headers.get("Content-Type")}, $imageUrl"))
