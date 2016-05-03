@@ -55,7 +55,7 @@ class KeepDataFormatTest extends TestKitSupport with SpecificationLike with Shoe
             "recipients" -> Json.obj(
               "users" -> Seq(BasicUser.fromUser(user)),
               "emails" -> Seq.empty[BasicContact],
-              "libraries" -> Seq(BasicLibrary(lib, BasicUser.fromUser(user), None, None))
+              "libraries" -> Seq(BasicLibrary(lib, user.username, None, None))
             ),
             "viewer" -> Json.obj(
               "permissions" -> db.readOnlyMaster { implicit s => permissionCommander.getKeepPermissions(keep.id.get, Some(user.id.get)) }

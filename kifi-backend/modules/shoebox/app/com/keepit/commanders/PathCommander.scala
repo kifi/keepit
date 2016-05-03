@@ -127,7 +127,7 @@ class PathCommander @Inject() (
       val org = lib.organizationId.map(orgRepo.get)
       (user, org)
     }
-    LibraryPathHelper.formatLibraryPath(user, org.map(_.handle), lib.slug)
+    LibraryPathHelper.formatLibraryPath(user.username, org.map(_.handle), lib.slug)
   }
 
   // todo: remove this as well
@@ -138,7 +138,7 @@ class PathCommander @Inject() (
       (user, org)
     }
 
-    LibraryPathHelper.formatLibraryPathUrlEncoded(user, org.map(_.handle), lib.slug)
+    LibraryPathHelper.formatLibraryPathUrlEncoded(user.username, org.map(_.handle), lib.slug)
   }
 }
 

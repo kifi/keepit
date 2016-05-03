@@ -156,7 +156,7 @@ class KeepDecoratorImpl @Inject() (
           case (libId, library) =>
             val orgOpt = basicOrgByLibId.get(libId)
             val user = idToBasicUser(library.ownerId)
-            libId -> BasicLibrary(library, user, orgOpt.map(_.handle), idToLibrarySlackInfo.get(libId))
+            libId -> BasicLibrary(library, user.username, orgOpt.map(_.handle), idToLibrarySlackInfo.get(libId))
         }
         val libraryCardByLibId = {
           val libraries = idToLibrary.values.toSeq
