@@ -1,5 +1,7 @@
 package com.keepit.commanders
 
+import java.io.File
+
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ WebService, FakeWebService }
 import com.keepit.model.ImageFormat
@@ -28,8 +30,8 @@ class FakeProcessedImageHelper extends ProcessedImageHelper with Logging {
     }
   }
 
-  val fakeRemoteImages = mutable.Map[String, (ImageFormat, TemporaryFile)]()
-  protected override def fetchRemoteImage(imageUrl: String, timeoutMs: Int = 20000): Future[(ImageFormat, TemporaryFile)] = {
+  val fakeRemoteImages = mutable.Map[String, (ImageFormat, File)]()
+  protected override def fetchRemoteImage(imageUrl: String, timeoutMs: Int = 20000): Future[(ImageFormat, File)] = {
     fakeRemoteImages.get(imageUrl).map(Future.successful).getOrElse { super.fetchRemoteImage(imageUrl, timeoutMs) }
   }
 }
