@@ -2,6 +2,7 @@ package com.keepit.model
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton, Provider }
 import com.keepit.commanders._
+import com.keepit.commanders.gen.{ BasicLibraryByIdKey, BasicLibraryByIdCache }
 import com.keepit.common.core.anyExtensionOps
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
@@ -89,6 +90,7 @@ class LibraryRepoImpl @Inject() (
   val libraryInviteRepo: Provider[LibraryInviteRepoImpl],
   val libraryMembershipRepo: Provider[LibraryMembershipRepoImpl],
   val libraryMetadataCache: LibraryMetadataCache,
+  val basicLibraryCache: BasicLibraryByIdCache,
   val topLibsCache: TopFollowedLibrariesCache,
   relevantSuggestedLibrariesCache: RelevantSuggestedLibrariesCache,
   libraryResultTypeaheadCache: LibraryResultTypeaheadCache,
@@ -176,6 +178,7 @@ class LibraryRepoImpl @Inject() (
     library.id.map { id =>
       libraryResultTypeaheadCache.remove(LibraryResultTypeaheadKey(library.ownerId, id))
       libraryMetadataCache.remove(LibraryMetadataKey(id))
+      basicLibraryCache.remove(BasicLibraryByIdKey(id))
       idCache.remove(LibraryIdKey(id))
     }
     if (library.memberCount >= 5 + 1) {
@@ -188,6 +191,7 @@ class LibraryRepoImpl @Inject() (
     library.id.map { id =>
       libraryResultTypeaheadCache.remove(LibraryResultTypeaheadKey(library.ownerId, id))
       libraryMetadataCache.remove(LibraryMetadataKey(id))
+      basicLibraryCache.remove(BasicLibraryByIdKey(id))
       if (library.state == LibraryStates.INACTIVE) {
         deleteCache(library)
       } else {

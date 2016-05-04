@@ -9,7 +9,7 @@ import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration, ModelWithPubl
 import com.keepit.common.db._
 import com.keepit.common.json.EnumFormat
 import com.keepit.common.logging.AccessLog
-import com.keepit.common.path.Path
+import com.keepit.common.path.{ EncodedPath, Path }
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.strings.UTF8
 import com.keepit.common.time._
@@ -232,21 +232,18 @@ object LibraryFilter {
 
 object LibraryPathHelper {
 
-  private def getHandle(owner: BasicUser, orgHandleOpt: Option[OrganizationHandle]): Handle = {
-    orgHandleOpt match {
-      case Some(orgHandle) => orgHandle
-      case None => owner.username
-    }
-  }
-
-  def formatLibraryPath(owner: BasicUser, orgHandleOpt: Option[OrganizationHandle], slug: LibrarySlug): String = {
-    val handle = getHandle(owner, orgHandleOpt)
+  def formatLibraryPath(owner: Username, orgHandleOpt: Option[OrganizationHandle], slug: LibrarySlug): String = {
+    val handle = orgHandleOpt.map(Handle.fromOrganizationHandle).getOrElse(Handle.fromUsername(owner))
     s"/${handle.value}/${slug.value}"
   }
 
-  def formatLibraryPathUrlEncoded(owner: BasicUser, orgHandleOpt: Option[OrganizationHandle], slug: LibrarySlug): String = {
-    val handle = getHandle(owner, orgHandleOpt)
+  def formatLibraryPathUrlEncoded(owner: Username, orgHandleOpt: Option[OrganizationHandle], slug: LibrarySlug): String = {
+    val handle = orgHandleOpt.map(Handle.fromOrganizationHandle).getOrElse(Handle.fromUsername(owner))
     s"/${handle.urlEncoded}/${slug.urlEncoded}"
+  }
+
+  def formatLibraryPathForOrganization(orgHandle: OrganizationHandle, slug: LibrarySlug): String = {
+    s"/${orgHandle.value}/${slug.value}"
   }
 }
 
@@ -363,11 +360,12 @@ object DetailedLibraryView {
 
 case class BasicLibrary(id: PublicId[Library], name: String, path: String, visibility: LibraryVisibility, color: Option[LibraryColor], slack: Option[LiteLibrarySlackInfo]) {
   def isSecret = visibility == LibraryVisibility.SECRET
+  def withPath(path: String): BasicLibrary = this.copy(path = path)
 }
 
 object BasicLibrary {
   val fake = BasicLibrary(PublicId("l42424242"), "a deleted library", "/", LibraryVisibility.SECRET, None, None)
-  def apply(library: Library, owner: BasicUser, orgHandle: Option[OrganizationHandle], slack: Option[LiteLibrarySlackInfo])(implicit publicIdConfig: PublicIdConfiguration): BasicLibrary = {
+  def apply(library: Library, owner: Username, orgHandle: Option[OrganizationHandle], slack: Option[LiteLibrarySlackInfo])(implicit publicIdConfig: PublicIdConfiguration): BasicLibrary = {
     val path = LibraryPathHelper.formatLibraryPath(owner, orgHandle, library.slug)
     BasicLibrary(Library.publicId(library.id.get), library.name, path, library.visibility, library.color, slack)
   }

@@ -89,7 +89,7 @@ class LibraryQueryCommanderImpl @Inject() (
     }
     val libsById = libRepo.getActiveByIds(sortedLibIds.toSet)
     val basicUser = basicUserRepo.load(userId)
-    sortedLibIds.flatMap(libsById.get).map(lib => BasicLibrary(lib, basicUser, None, slack = None))
+    sortedLibIds.flatMap(libsById.get).map(lib => BasicLibrary(lib, basicUser.username, None, slack = None))
   }
 
   def getLHRLibrariesForOrg(userId: Id[User], orgId: Id[Organization], arrangement: Arrangement, fromIdOpt: Option[Id[Library]], offset: Offset, limit: Limit, windowSize: Option[Int])(implicit session: RSession): Seq[BasicLibrary] = {
@@ -103,7 +103,7 @@ class LibraryQueryCommanderImpl @Inject() (
     val libs = sortedLibIds.flatMap(libsById.get)
     val libOwners = basicUserRepo.loadAll(libs.map(_.ownerId).toSet)
     val orgHandle = orgRepo.get(orgId).primaryHandle.get.normalized
-    libs.map(lib => BasicLibrary(lib, libOwners(lib.ownerId), Some(orgHandle), slack = None))
+    libs.map(lib => BasicLibrary(lib, libOwners(lib.ownerId).username, Some(orgHandle), slack = None))
   }
 
 }

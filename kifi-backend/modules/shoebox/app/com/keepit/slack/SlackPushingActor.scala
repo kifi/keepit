@@ -41,6 +41,7 @@ class SlackPushingActor @Inject() (
   slackTeamMembershipRepo: SlackTeamMembershipRepo,
   slackChannelRepo: SlackChannelRepo,
   integrationRepo: LibraryToSlackChannelRepo,
+  liteLibrarySlackInfoCache: LiteLibrarySlackInfoCache,
   permissionCommander: PermissionCommander,
   clock: Clock,
   airbrake: AirbrakeNotifier,
@@ -134,6 +135,7 @@ class SlackPushingActor @Inject() (
 
         db.readWrite { implicit session =>
           integrationRepo.updateAfterPush(integration.id.get, nextPushAt, updatedStatus getOrElse integration.status)
+          updatedStatus.foreach(_ => liteLibrarySlackInfoCache.remove(LiteLibrarySlackInfoKey(integration.libraryId)))
         }
     }
   }

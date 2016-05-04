@@ -37,8 +37,8 @@ class LibraryToSlackChannelPusherImpl @Inject() (
         val now = clock.now
         SetHelpers.unions(allLibs).foreach { libId => pushLibraryAtLatest(libId, now) }
       }
+      pushingActor.ref ! IfYouCouldJustGoAhead
     }
-    pushingActor.ref ! IfYouCouldJustGoAhead
   }
 
   def pushLibraryAtLatest(libId: Id[Library], when: DateTime)(implicit session: RWSession): Unit = {

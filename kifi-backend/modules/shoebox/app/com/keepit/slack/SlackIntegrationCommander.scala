@@ -50,6 +50,7 @@ class SlackIntegrationCommanderImpl @Inject() (
   permissionCommander: PermissionCommander,
   libRepo: LibraryRepo,
   orgMembershipRepo: OrganizationMembershipRepo,
+  liteLibrarySlackInfoCache: LiteLibrarySlackInfoCache,
   basicOrganizationGen: BasicOrganizationGen,
   airbrake: AirbrakeNotifier,
   implicit val imageConfig: S3ImageConfig,
@@ -142,6 +143,7 @@ class SlackIntegrationCommanderImpl @Inject() (
         val updatedIntegration = {
           if (integration.slackUserId == slackUserId) integration else integration.copy(slackUserId = slackUserId)
         }.withStatus(newStatus)
+        if (newStatus != integration.status) liteLibrarySlackInfoCache.remove(LiteLibrarySlackInfoKey(integration.libraryId))
         libToChannelRepo.save(updatedIntegration)
       }
       integration.libraryId

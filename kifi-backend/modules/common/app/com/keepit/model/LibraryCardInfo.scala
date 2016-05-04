@@ -1,6 +1,9 @@
 package com.keepit.model
 
+import com.keepit.common.cache.{ ImmutableJsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.crypto.PublicId
+import com.keepit.common.db.Id
+import com.keepit.common.logging.AccessLog
 import com.keepit.common.path.Path
 import com.keepit.slack.models.SlackChannelName
 import com.keepit.social.BasicUser
@@ -9,8 +12,19 @@ import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
+import scala.concurrent.duration.Duration
+
 @jsonstrict case class BasicSlackChannel(slackChannelName: SlackChannelName)
 @jsonstrict case class LiteLibrarySlackInfo(toSlackChannels: Seq[BasicSlackChannel]) // everything needed for slack UI on libraries
+
+case class LiteLibrarySlackInfoKey(libraryId: Id[Library]) extends Key[LiteLibrarySlackInfo] {
+  override val version = 1
+  val namespace = "lite_library_slack_info_by_library"
+  def toKey(): String = libraryId.id.toString
+}
+
+class LiteLibrarySlackInfoCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends ImmutableJsonCacheImpl[LiteLibrarySlackInfoKey, LiteLibrarySlackInfo](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class LibraryCardInfo(
   id: PublicId[Library],

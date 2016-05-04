@@ -209,7 +209,7 @@ object LibraryInfo {
       name = lib.name,
       visibility = lib.visibility,
       shortDescription = lib.description,
-      url = LibraryPathHelper.formatLibraryPath(owner, org.map(_.handle), lib.slug),
+      url = LibraryPathHelper.formatLibraryPath(owner.username, org.map(_.handle), lib.slug),
       color = lib.color,
       image = image,
       owner = owner,

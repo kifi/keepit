@@ -64,7 +64,6 @@ class PageCommander @Inject() (
   }
 
   def getPageInfo(uri: URI, userId: Id[User], experiments: Set[UserExperimentType]): Future[KeeperPageInfo] = {
-    val useMultilibLogic = experiments.contains(UserExperimentType.KEEP_MULTILIB)
     val host: Option[NormalizedHostname] = uri.host.flatMap(host => NormalizedHostname.fromHostname(host.name, allowInvalid = true))
     val domainF = db.readOnlyMasterAsync { implicit session =>
       val domainOpt = host.flatMap(domainRepo.get(_))
@@ -92,7 +91,7 @@ class PageCommander @Inject() (
       }
 
       nUriOpt.map { normUri =>
-        augmentUriInfo(normUri, userId, useMultilibLogic).map { info =>
+        augmentUriInfo(normUri, userId).map { info =>
           if (filteredPage(normUri.url)) {
             KeeperPageInfo(nUriStr, position, neverOnSite, shown, Seq.empty[BasicUser], 0, Seq.empty[JsObject], Seq.empty[SourceAttribution], info.keeps)
           } else {
@@ -203,7 +202,7 @@ class PageCommander @Inject() (
       )
     }
   }
-  private def augmentUriInfo(normUri: NormalizedURI, userId: Id[User], useMultilibLogic: Boolean = false): Future[KeeperPagePartialInfo] = {
+  private def augmentUriInfo(normUri: NormalizedURI, userId: Id[User]): Future[KeeperPagePartialInfo] = {
     val augmentFuture = searchClient.augment(
       userId = Some(userId),
       hideOtherPublishedKeeps = false,
