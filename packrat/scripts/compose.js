@@ -53,6 +53,11 @@ k.compose = k.compose || (function() {
   function newRichEditor($d, notifyInput, notifyEmpty) {
     var defaultText = $d.data('default');
     $d.focus(function () {
+      if (this.hasAttribute('disabled')) {
+        this.blur();
+        return;
+      }
+
       var r;
       if (defaultText && $d.text() === defaultText) {
         // select default text for easy replacement
@@ -382,21 +387,53 @@ k.compose = k.compose || (function() {
       },
       focus: function () {
         log('[compose.focus]');
-        if ($to.length && !$to.tokenInput('get').length) {
-          $form.find('.kifi-ti-token-for-input>input').focus();
-        } else {
-          editor.$el.focus();
+        if (!this.isDisabled()) {
+          if ($to.length && !$to.tokenInput('get').length) {
+            $form.find('.kifi-ti-token-for-input>input').focus();
+          } else {
+            editor.$el.focus();
+          }
         }
       },
       isBlank: function () {
         return $form.hasClass('kifi-empty') && !($to.length && $to.tokenInput('get').length);
       },
       save: saveDraft.bind(null, $form, $to, editor),
-      lookHere: k.snap.createLookHere(getDraft),
+      lookHere: function () {
+        var form;
+        var lookHereFn;
+        if (!this.isDisabled()) {
+          lookHereFn = k.snap.createLookHere(getDraft);
+          lookHereFn.apply(this, arguments);
+        } else {
+          form = this.form();
+          form.addEventListener('animationend', function endShake() {
+            form.removeEventListener('animationend', endShake);
+            form.classList.remove('kifi-shake');
+          });
+          form.classList.add('kifi-shake');
+        }
+      },
       initTagSuggest: function (keepId) {
         var $d = getDraft();
         k.keepNote.init($d, $container, keepId, editor.getRaw());
         $d.attr('data-kifi-note', true);
+      },
+      toggle: function (enable) {
+        var form = this.form();
+        enable = false;//enable || form.classList.contains('kifi-disabled');
+        var draft = form.querySelector('.kifi-compose-draft');
+
+        form.classList.toggle('kifi-disabled', !enable);
+        draft[enable ? 'removeAttribute' : 'setAttribute']('disabled', '');
+
+        if (!enable) {
+          editor.clear();
+          document.activeElement.blur();
+        }
+      },
+      isDisabled: function () {
+        return this.form().classList.contains('kifi-disabled');
       },
       destroy: function () {
         $forms = $forms.not($form);
