@@ -31,6 +31,8 @@ CREATE TABLE slack_team_membership (
   INDEX slack_team_membership_i_personal_digest (last_processing_at,next_personal_digest_at)
 );
 
+ALTER TABLE slack_team_membership ADD INDEX slack_team_membership_i_slack_user_id (slack_user_id);
+
 -- MySQL:
 -- CREATE TABLE slack_team_membership_sequence (id bigint(20) NOT NULL);
 -- INSERT INTO slack_team_membership_sequence VALUES (0);
