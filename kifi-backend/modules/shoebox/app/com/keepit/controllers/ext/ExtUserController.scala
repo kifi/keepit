@@ -88,13 +88,13 @@ class ExtUserController @Inject() (
 
   def getGuideInfo = UserAction { request =>
     Ok(Json.obj("keep" -> Json.obj(
-      "url" -> "http://www.ted.com/talks/steve_jobs_how_to_live_before_you_die",
-      "image" -> Json.obj("url" -> "//d1dwdv9wd966qu.cloudfront.net/img/guide/steve_960x892.d25b7d8.jpg", "width" -> 480, "height" -> 446),
+      "url" -> "https://www.ted.com/talks/shawn_achor_the_happy_secret_to_better_work",
+      "image" -> Json.obj("url" -> "https://djty7jcqog9qu.cloudfront.net/keep/e6861d0851a0e817f4dc459ebc435989_1050x550_o.jpg", "width" -> 1050, "height" -> 550),
       "noun" -> "video",
-      "query" -> "steve+jobs",
-      "title" -> "Steve Jobs: How to live before you die | Talk Video | TED.com",
-      "matches" -> Json.obj("title" -> Json.toJson(Seq(Seq(0, 5), Seq(6, 4))), "url" -> Json.toJson(Seq(Seq(25, 5), Seq(31, 4)))),
-      "track" -> "steveJobsSpeech"
+      "query" -> "better+work",
+      "title" -> "The happy secret to better work | TED Talk | TED.com",
+      "matches" -> Json.obj("title" -> Json.toJson(Seq(Seq(20, 6), Seq(27, 4))), "url" -> Json.toJson(Seq(Seq(58, 64), Seq(65, 69)))),
+      "track" -> "betterWorkVideo"
     )))
   }
 }
