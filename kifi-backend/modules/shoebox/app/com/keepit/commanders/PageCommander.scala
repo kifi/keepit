@@ -156,7 +156,7 @@ class PageCommander @Inject() (
     val allowedLibraryKinds: Set[LibraryKind] = Set(LibraryKind.USER_CREATED, LibraryKind.SLACK_CHANNEL, LibraryKind.SYSTEM_ORG_GENERAL)
     val relevantLibraries = for {
       (libraryId, keeperId, keptAt) <- libraries if keeperId != viewerId
-      library <- libraryById.get(libraryId) if allowedLibraryKinds.contains(library.kind)
+      library <- libraryById.get(libraryId) if allowedLibraryKinds.contains(library.kind) && library.keepCount >= 10
     } yield (library, keeperId, keptAt)
     CollectionHelpers.dedupBy(relevantLibraries)(_._1.id.get)
   }
@@ -167,23 +167,6 @@ class PageCommander @Inject() (
     val libraryIds = otherLibraryIds.diff(memberLibraryIds.toSeq)
     val libraryMap = libraryRepo.getActiveByIds(libraryIds.toSet).filter(_._2.state == LibraryStates.ACTIVE)
     libraryIds.flatMap(libraryMap.get)
-  }
-
-  def firstQualityFilterAndSort(libraries: Seq[Library]): Seq[Library] = {
-    val allowedLibraryKinds: Set[LibraryKind] = Set(LibraryKind.USER_CREATED)
-    libraries.filter { lib =>
-      allowedLibraryKinds.contains(lib.kind) && !libraryQualityHelper.isBadLibraryName(lib.name)
-    }.sortBy(lib => (-lib.memberCount, lib.name))
-  }
-
-  def secondQualityFilter(libraries: Seq[Library]): Seq[Library] = libraries.filter { lib =>
-    val count = lib.keepCount
-    val followers = lib.memberCount
-    val descriptionCredit = lib.description.map(d => (d.length / 10).max(2)).getOrElse(0)
-    val credit = followers + descriptionCredit
-    //must have at least five keeps, if have some followers or description can do with a bit less
-    //also, must not have more then 30 keeps unless has some followers or description and then we'll scale by that
-    (count >= (5 - credit).min(2)) && (count < (30 + credit * 50))
   }
 
   private def getWriteableKeepDatasForUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Seq[KeepData] = {
