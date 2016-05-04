@@ -421,7 +421,7 @@ k.compose = k.compose || (function() {
       },
       toggle: function (enable) {
         var form = this.form();
-        enable = false;//enable || form.classList.contains('kifi-disabled');
+        enable = enable || form.classList.contains('kifi-disabled');
         var draft = form.querySelector('.kifi-compose-draft');
 
         form.classList.toggle('kifi-disabled', !enable);
