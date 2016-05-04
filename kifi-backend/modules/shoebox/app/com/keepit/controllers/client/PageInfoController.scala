@@ -53,7 +53,7 @@ class PageInfoController @Inject() (
           paging = KeepQuery.Paging(fromId = None, offset = Offset(0), limit = Limit(limit)),
           arrangement = None
         )
-        val keepIds = keepRepo.getKeepIdsForQuery(query).toSet
+        val keepIds = keepRepo.getKeepIdsForQuery(query).sorted(implicitly[Ordering[Id[Keep]]].reverse).take(50).toSet
         val libs = keepToLibraryRepo.getAllByKeepIds(keepIds).values.flatten.map(_.libraryId)
         basicLibraryGen.getBasicLibraries(libs.toSet).values.toList
       }
