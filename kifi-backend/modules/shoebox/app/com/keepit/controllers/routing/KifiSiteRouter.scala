@@ -283,10 +283,7 @@ class KifiSiteRouter @Inject() (
 
         canSeeKeepFut.map { canSeeKeep =>
           val keepOpt = {
-            if (canSeeKeep) db.readOnlyReplica { implicit s => keepRepo.getActive(keepId) }.filter { keep =>
-              val numLibs = keep.recipients.libraries.size
-              numLibs <= 1 || (numLibs > 1 && experiments.contains(KEEP_MULTILIB))
-            }
+            if (canSeeKeep) db.readOnlyReplica { implicit s => keepRepo.getActive(keepId) }
             else None
           }
           keepOpt.map(keep => app(() => keepMetadata(keep))).getOrElse(notFound(request))
