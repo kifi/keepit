@@ -432,7 +432,7 @@ k.panes.thread = k.panes.thread || (function () {
   }
 
   function reflectComposePermissions(keep) {
-    var canSendMessage = keep && keep.viewer && keep.viewer.permissions && ~keep.viewer.permissions.indexOf('send_message');
+    var canSendMessage = keep && keep.viewer && keep.viewer.permissions && ~keep.viewer.permissions.indexOf('add_message');
     var compose = $holder.data('compose');
     compose.toggle(canSendMessage);
   }
