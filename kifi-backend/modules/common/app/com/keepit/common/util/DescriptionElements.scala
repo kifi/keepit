@@ -11,7 +11,7 @@ import com.keepit.macros.Location
 import com.keepit.model.{ BasicLibrary, BasicOrganization, Library, LibraryColor, Organization, OrganizationRole, User }
 import com.keepit.slack.models.{ SlackEmoji, SlackUsername }
 import com.keepit.social.BasicAuthor.{ EmailUser, KifiUser, SlackUser, TwitterUser }
-import com.keepit.social.{ BasicAuthor, BasicNonUser, BasicUser }
+import com.keepit.social.{ AuthorKind, BasicAuthor, BasicNonUser, BasicUser }
 import org.joda.time.{ DateTime, Duration }
 import org.ocpsoft.prettytime.PrettyTime
 import play.api.libs.json._
@@ -87,9 +87,10 @@ final case class AuthorElement(
     id: String,
     name: String,
     image: String,
-    override val url: Option[String]) extends DescriptionElement("author") {
+    override val url: Option[String],
+    subtype: AuthorKind) extends DescriptionElement("author") {
   val text = name
-  def asJson = Json.obj("id" -> id, "text" -> text, "image" -> image, "url" -> url)
+  def asJson = Json.obj("id" -> id, "text" -> text, "image" -> image, "url" -> url, "subtype" -> subtype.value)
 }
 
 final case class LibraryElement(
@@ -138,10 +139,10 @@ object DescriptionElements {
   implicit def fromBasicOrg(bo: BasicOrganization): OrganizationElement = OrganizationElement(bo.orgId, bo.name, bo.avatarPath.path, bo.path)
   implicit def fromNonUser(bnu: BasicNonUser): NonUserElement = NonUserElement(bnu.id)
   implicit def fromBasicAuthor(ba: BasicAuthor): AuthorElement = ba match {
-    case KifiUser(id, name, picture, url) => AuthorElement(id, name, picture, Some(url))
-    case SlackUser(id, name, picture, url) => AuthorElement(id, name, picture, Some(url))
-    case TwitterUser(id, name, picture, url) => AuthorElement(id, name, picture, Some(url))
-    case EmailUser(id, name, picture) => AuthorElement(id, name, picture, None)
+    case KifiUser(id, name, picture, url) => AuthorElement(id, name, picture, Some(url), ba.kind)
+    case SlackUser(id, name, picture, url) => AuthorElement(id, name, picture, Some(url), ba.kind)
+    case TwitterUser(id, name, picture, url) => AuthorElement(id, name, picture, Some(url), ba.kind)
+    case EmailUser(id, name, picture) => AuthorElement(id, name, picture, None, ba.kind)
   }
   implicit def fromBasicLibrary(bl: BasicLibrary): LibraryElement = LibraryElement(bl.id, bl.name, bl.color, Path(bl.path))
 
