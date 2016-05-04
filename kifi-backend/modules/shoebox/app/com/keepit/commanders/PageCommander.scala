@@ -188,8 +188,9 @@ class PageCommander @Inject() (
 
   private def getWriteableKeepDatasForUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Seq[KeepData] = {
     val keepIds = keepRepo.getPersonalKeepsOnUris(userId, Set(uriId), excludeAccess = Some(LibraryAccess.READ_ONLY)).getOrElse(uriId, Set.empty)
-    val keepsById = keepRepo.getActiveByIds(keepIds)
-    val ktlsByKeep = ktlRepo.getAllByKeepIds(keepIds)
+    val keepIdsToUse = keepIds.toSeq.sorted(implicitly[Ordering[Id[Keep]]].reverse).take(50).toSet // 50 most recent. You don't get more.
+    val keepsById = keepRepo.getActiveByIds(keepIdsToUse)
+    val ktlsByKeep = ktlRepo.getAllByKeepIds(keepIdsToUse)
     keepsById.traverseByKey.map { k =>
       val bestKtl = ktlsByKeep.getOrElse(k.id.get, Seq.empty).maxByOpt(_.visibility)
       KeepData(
