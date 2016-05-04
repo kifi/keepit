@@ -50,7 +50,7 @@ class PageInfoController @Inject() (
       uriInterner.getByUri(url).map(_.id.get).fold(Seq.empty[BasicLibrary]) { uriId =>
         val query = KeepQuery(
           target = FirstOrder(uriId, viewer),
-          paging = KeepQuery.Paging(fromId = None, offset = Offset(0), limit = Limit(limit)),
+          paging = KeepQuery.Paging(fromId = None, offset = Offset(0), limit = Limit(Math.min(limit, 50))),
           arrangement = None
         )
         val keepIds = keepRepo.getKeepIdsForQuery(query).toSet

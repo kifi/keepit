@@ -42,7 +42,6 @@ trait KeepToLibraryRepo extends Repo[KeepToLibrary] {
   def countNonImportedKeepsInOrg(orgId: Id[Organization])(implicit session: RSession): Int
 
   // For backwards compatibility with KeepRepo
-  def getByLibraryIdsAndUriIds(libraryIds: Set[Id[Library]], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Seq[KeepToLibrary]
   def getFromLibrarySince(since: DateTime, library: Id[Library], max: Int)(implicit session: RSession): Seq[KeepToLibrary]
   def getByLibraryWithInconsistentOrgId(libraryId: Id[Library], expectedOrgId: Option[Id[Organization]], limit: Limit)(implicit session: RSession): Seq[KeepToLibrary]
   def getByLibraryWithInconsistentVisibility(libraryId: Id[Library], expectedVisibility: LibraryVisibility, limit: Limit)(implicit session: RSession): Seq[KeepToLibrary]
@@ -130,7 +129,16 @@ class KeepToLibraryRepoImpl @Inject() (
     activeRows.filter(_.organizationId === orgId).groupBy(_.keepId).map { case (kId, ktls) => kId }.length.run
   }
   def getAllByKeepIds(keepIds: Set[Id[Keep]], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Map[Id[Keep], Seq[KeepToLibrary]] = {
-    val resultMap = getByKeepIdsHelper(keepIds, excludeStateOpt).list.groupBy(_.keepId)
+    val smallerSet = if (keepIds.size > 500) {
+      def _stack() = {
+        new Exception().getStackTrace.filter(_.getClassName.contains("com.keepit")).map(l => l.getClassName + "." + l.getMethodName + "(" + l.getFileName + ":" + l.getLineNumber + ")")
+      }
+      log.info(s"[getAllByKeepIds] Too many keeps sent: ${_stack().slice(2, 6).mkString("\n")}")
+      keepIds.toSeq.sorted(implicitly[Ordering[Id[Keep]]].reverse).take(500).toSet
+    } else {
+      keepIds
+    }
+    val resultMap = getByKeepIdsHelper(smallerSet, excludeStateOpt).list.groupBy(_.keepId)
     keepIds.map { keepId => keepId -> resultMap.getOrElse(keepId, Seq.empty) }.toMap
   }
   def countByKeepId(keepId: Id[Keep], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Int = {
