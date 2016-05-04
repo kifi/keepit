@@ -1047,7 +1047,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                      "text" : "Aaron Hsu",
                      "image" : "http://localhost/users/${user1.externalId}/pics/200/0.jpg",
                      "url" : "https://www.kifi.com/test",
-                     "kind" : "author"
+                     "kind" : "author",
+                     "subtype": "kifi"
                    }, {
                      "text" : " sent this",
                      "kind" : "text"
@@ -1071,7 +1072,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                      "text" : "Aaron Hsu",
                      "image" : "http://localhost/users/${user1.externalId}/pics/200/0.jpg",
                      "url" : "https://www.kifi.com/test",
-                     "kind" : "author"
+                     "kind" : "author",
+                     "subtype": "kifi"
                    }, {
                      "text" : " sent this to ",
                      "kind" : "text"
@@ -1128,7 +1130,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                        "text" : "Aaron Hsu",
                        "image" : "http://localhost/users/${user1.externalId}/pics/200/0.jpg",
                        "url" : "https://www.kifi.com/test",
-                       "kind" : "author"
+                       "kind" : "author",
+                       "subtype": "kifi"
                      }, {
                        "text" : " sent this",
                        "kind" : "text"
@@ -1152,7 +1155,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                        "text" : "Aaron Hsu",
                        "image" : "http://localhost/users/${user1.externalId}/pics/200/0.jpg",
                        "url" : "https://www.kifi.com/test",
-                       "kind" : "author"
+                       "kind" : "author",
+                       "subtype": "kifi"
                      }, {
                        "text" : " sent this to ",
                        "kind" : "text"
