@@ -82,9 +82,12 @@ class SlackIngestingActor @Inject() (
     val (integrationsByIds, isAllowed, getIntegrationInfo) = db.readOnlyMaster { implicit session =>
       val integrationsByIds = integrationRepo.getByIds(integrationIds.toSet)
 
+      val slackIdentities = integrationsByIds.values.map { sctl => (sctl.slackTeamId, sctl.slackUserId) }
+      val slackMembershipsByIdentity = slackTeamMembershipRepo.getBySlackIdentities(slackIdentities.toSet)
+
       val isAllowed = integrationsByIds.map {
         case (integrationId, integration) =>
-          integrationId -> slackTeamMembershipRepo.getBySlackTeamAndUser(integration.slackTeamId, integration.slackUserId).exists { stm =>
+          integrationId -> slackMembershipsByIdentity.get((integration.slackTeamId, integration.slackUserId)).exists { stm =>
             permissionCommander.getLibraryPermissions(integration.libraryId, stm.userId).contains(LibraryPermission.ADD_KEEPS)
           }
       }
@@ -92,8 +95,6 @@ class SlackIngestingActor @Inject() (
       val getIntegrationInfo = {
         val slackTeamsById = slackTeamRepo.getBySlackTeamIds(integrationsByIds.values.map(_.slackTeamId).toSet)
         val settingsByOrgIds = orgConfigRepo.getByOrgIds(slackTeamsById.values.flatMap(_.organizationId).toSet).mapValues(_.settings)
-        val slackIdentities = integrationsByIds.values.map(sctl => (sctl.slackTeamId, sctl.slackUserId)).toSet
-        val slackMembershipsByIdentity = slackTeamMembershipRepo.getBySlackIdentities(slackIdentities)
         val slackChannelBySlackTeamAndChannelId = slackChannelRepo.getByChannelIds(integrationsByIds.values.map(sctl => (sctl.slackTeamId, sctl.slackChannelId)).toSet)
 
         integrationsByIds.map {
