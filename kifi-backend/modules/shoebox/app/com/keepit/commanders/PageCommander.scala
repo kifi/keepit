@@ -156,7 +156,7 @@ class PageCommander @Inject() (
     val allowedLibraryKinds: Set[LibraryKind] = Set(LibraryKind.USER_CREATED, LibraryKind.SLACK_CHANNEL, LibraryKind.SYSTEM_ORG_GENERAL)
     val relevantLibraries = for {
       (libraryId, keeperId, keptAt) <- libraries if keeperId != viewerId
-      library <- libraryById.get(libraryId) if allowedLibraryKinds.contains(library.kind) && library.keepCount >= 10
+      library <- libraryById.get(libraryId) if allowedLibraryKinds.contains(library.kind) //&& library.keepCount >= 10 && !LibraryQualityHelper.isBadLibraryName(library.name)
     } yield (library, keeperId, keptAt)
     CollectionHelpers.dedupBy(relevantLibraries)(_._1.id.get)
   }
@@ -200,7 +200,7 @@ class PageCommander @Inject() (
       case Seq(info) =>
         val userIdSet = info.keepers.map(_._1).toSet
         val (basicUserMap, libraries, sources, followerCounts, paths, keepDatas) = db.readOnlyMaster { implicit session =>
-          val relevantLibraries = getRelevantLibraries(userId, info.libraries)
+          val relevantLibraries = Seq.empty[(Library, Id[User], DateTime)] //getRelevantLibraries(userId, info.libraries)
           val basicUserMap = basicUserRepo.loadAll(userIdSet ++ relevantLibraries.map(_._1.ownerId) ++ relevantLibraries.map(_._2))
           val keepDatas = getWriteableKeepDatasForUri(userId, normUri.id.get)
 
