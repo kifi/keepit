@@ -65,6 +65,28 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
     }
   }
 
+  window.addEventListener('scroll', onScroll, true);
+  var minScrollListeners = [];
+  var minScrollDistance = Math.min(300, Math.max((document.documentElement.offsetHeight - window.innerHeight) / 3, 0));
+  var hasScrolledPastMin = (minScrollDistance === 0);
+  function onScroll() {
+    if (window.scrollY >  minScrollDistance) {
+      log('[window.onscroll] scrolled past minimum');
+      hasScrolledPastMin = true;
+      minScrollListeners.forEach(function (f) {
+        if (f) { f(); }
+      });
+      window.removeEventListener('scroll', onScroll, true);
+    }
+  }
+  function addMinimumScrollListener(f) {
+    if (hasScrolledPastMin) {
+      f();
+    } else {
+      minScrollListeners.push(f);
+    }
+  }
+
   api.onEnd.push(function () {
     log('[keeper:onEnd]');
     $slider && $slider.remove();
@@ -646,7 +668,8 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
     engage: function () {
       if (lastCreatedAt) return;
       var $tile = $(k.tile);
-        api.port.emit('get_keepers', function (o) {
+      api.port.emit('get_keepers', function (o) {
+        addMinimumScrollListener(function () {
           if ((o.keepers.length || o.libraries.length || o.sources.length) && !lastCreatedAt) {
             $tile.hoverfu(function (configureHover) {
               // TODO: preload friend pictures
@@ -700,6 +723,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
             }).hoverfu('show');
           }
         });
+      });
     },
     showKeepBox: function (trigger) {
       log('[keeper:showKeepBox]');
