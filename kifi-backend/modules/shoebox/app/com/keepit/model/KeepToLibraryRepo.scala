@@ -129,12 +129,12 @@ class KeepToLibraryRepoImpl @Inject() (
     activeRows.filter(_.organizationId === orgId).groupBy(_.keepId).map { case (kId, ktls) => kId }.length.run
   }
   def getAllByKeepIds(keepIds: Set[Id[Keep]], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Map[Id[Keep], Seq[KeepToLibrary]] = {
-    val smallerSet = if (keepIds.size > 100) {
+    val smallerSet = if (keepIds.size > 500) {
       def _stack() = {
         new Exception().getStackTrace.filter(_.getClassName.contains("com.keepit")).map(l => l.getClassName + "." + l.getMethodName + "(" + l.getFileName + ":" + l.getLineNumber + ")")
       }
-      log.info(s"[getAllByKeepIds] Too many keeps sent: ${_stack().drop(2).take(6).mkString("\n")}")
-      keepIds.toSeq.sorted(implicitly[Ordering[Id[Keep]]].reverse).take(200).toSet
+      log.info(s"[getAllByKeepIds] Too many keeps sent: ${_stack().slice(2, 6).mkString("\n")}")
+      keepIds.toSeq.sorted(implicitly[Ordering[Id[Keep]]].reverse).take(500).toSet
     } else {
       keepIds
     }
