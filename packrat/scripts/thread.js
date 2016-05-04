@@ -19,7 +19,7 @@
 // @require scripts/maintain_height.js
 // @require scripts/message_header.js
 
-k.panes.thread = k.panes.thread || function () {
+k.panes.thread = k.panes.thread || (function () {
   'use strict';
   var $who, $holder, browserName;
 
@@ -27,6 +27,7 @@ k.panes.thread = k.panes.thread || function () {
     thread_info: function (o) {
       if ($holder && $holder.data('threadId') === o.th.thread) {
         $holder.data('keep', o.keep);
+        reflectComposePermissions(o.keep);
         var participants;
         if (o.keep) {
           var recipients = o.keep.recipients;
@@ -50,6 +51,7 @@ k.panes.thread = k.panes.thread || function () {
     thread: function (o) {
       if ($holder && $holder.data('threadId') === o.id) {
         $holder.data('keep', o.keep);
+        reflectComposePermissions(o.keep);
         updateAllActivity(o.id, o.activity.events);
       }
     },
@@ -429,6 +431,12 @@ k.panes.thread = k.panes.thread || function () {
     api.port.emit('activity_event_rendered', {keepId: keepId, eventId: activityEvent.id, time: activityEvent.timestamp});
   }
 
+  function reflectComposePermissions(keep) {
+    var canSendMessage = keep && keep.viewer && keep.viewer.permissions && ~keep.viewer.permissions.indexOf('send_message');
+    var compose = $holder.data('compose');
+    compose.toggle(canSendMessage);
+  }
+
   function scrollToBottomResiliently(instantly) {
     log('[thread.scrollToBottomResiliently]', instantly || '');
     var $img = $holder.find('img').on('load', scrollToBottom);
@@ -448,4 +456,4 @@ k.panes.thread = k.panes.thread || function () {
       }
     }
   }
-}();
+}());

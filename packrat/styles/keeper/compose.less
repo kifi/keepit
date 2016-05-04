@@ -32,6 +32,23 @@ textarea.kifi-compose-draft {
   -webkit-animation: paddingLeft12 .16s ease-out;
   animation: paddingLeft12 .16s ease-out;
 }
+.kifi-compose.kifi-disabled {
+  position: relative;
+}
+.kifi-compose.kifi-disabled .kifi-compose-draft {
+  pointer-events: none;
+}
+.kifi-compose.kifi-disabled::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  margin: 0;
+  background-color: rgba(255, 255, 255, .66);
+  z-index: 1;
+}
 @-webkit-keyframes paddingLeft12 {
   50% {padding-left: 12px}
 }
@@ -40,6 +57,10 @@ textarea.kifi-compose-draft {
 }
 .kifi-compose.kifi-empty div.kifi-compose-draft::after {
   content: attr(data-placeholder);
+  color: #a9a9a9;
+}
+.kifi-compose.kifi-empty.kifi-disabled div.kifi-compose-draft::after {
+  content: 'Read-only mode';
   color: #a9a9a9;
 }
 textarea.kifi-compose-draft::-moz-placeholder {
