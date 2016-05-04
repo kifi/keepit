@@ -33,7 +33,7 @@ object SlackIngestionConfig {
 
   val ingestionTimeout = Period.minutes(30)
   val minChannelIngestionConcurrency = 5
-  val maxChannelIngestionConcurrency = 50
+  val maxChannelIngestionConcurrency = 10
 
   val messagesPerRequest = 10
   val messagesPerIngestion = 50
