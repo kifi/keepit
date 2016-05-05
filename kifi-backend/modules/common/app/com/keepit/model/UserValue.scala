@@ -45,6 +45,7 @@ object UserValueName {
   val EXT_SHOW_MOVE_INTRO = UserValueName("ext_show_move_intro")
   val HAS_SEEN_INSTALL = UserValueName("has_seen_install")
   val QUOTE_ANYWHERE_FTUE = UserValueName("quote_anywhere_ftue")
+  val HIDE_SOCIAL_TOOLTIP = UserValueName("hide_social_tooltip")
   val WELCOME_EMAIL_SENT = UserValueName("welcomeEmailSent")
   val LAST_ACTIVE = UserValueName("last_active")
   val GENDER = UserValueName("gender")
@@ -165,8 +166,9 @@ object UserValues {
   val showExtMsgIntro = UserValueBooleanHandler(UserValueName.EXT_SHOW_EXT_MSG_INTRO, true)
   val showExtMoveIntro = UserValueBooleanHandler(UserValueName.EXT_SHOW_MOVE_INTRO, true)
   val quoteAnywhereFtue = UserValueBooleanHandler(UserValueName.QUOTE_ANYWHERE_FTUE, true)
+  val hideSocialTooltip = UserValueBooleanHandler(UserValueName.HIDE_SOCIAL_TOOLTIP, false)
 
-  val ExtUserInitPrefs: Seq[UserValueName] = Seq(lookHereMode, enterToSend, maxResults, showExtMsgIntro, showExtMoveIntro, quoteAnywhereFtue).map(_.name)
+  val ExtUserInitPrefs: Seq[UserValueName] = Seq(lookHereMode, enterToSend, maxResults, showExtMsgIntro, showExtMoveIntro, quoteAnywhereFtue, hideSocialTooltip).map(_.name)
 
   val hasSeenInstall = UserValueBooleanHandler(UserValueName.HAS_SEEN_INSTALL, false)
   val welcomeEmailSent = UserValueBooleanHandler(UserValueName.WELCOME_EMAIL_SENT, false)
