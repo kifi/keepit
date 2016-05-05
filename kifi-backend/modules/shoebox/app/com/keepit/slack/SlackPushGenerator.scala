@@ -98,7 +98,7 @@ class SlackPushGenerator @Inject() (
     }.map {
       case (attributionByKeepId, lastPushedKtl) =>
         def shouldKeepBePushed(keep: Keep, ktl: KeepToLibrary): Boolean = {
-          keep.source != KeepSource.Slack && ktl.addedAt.isAfter(lts.changedStatusAt)
+          keep.source != KeepSource.Slack && (ktl.addedAt isAfter lts.changedStatusAt.minusSeconds(5))
         }
 
         def hasAlreadyBeenPushed(ktl: KeepToLibrary) = lastPushedKtl.exists { last =>
@@ -111,8 +111,8 @@ class SlackPushGenerator @Inject() (
       def hasAlreadyBeenPushed(msg: CrossServiceMessage) = lts.lastProcessedMsg.exists(msg.id.id <= _.id)
       def shouldMessageBePushed(msg: CrossServiceMessage) = keepAndKtlByKeep.get(msg.keep).exists {
         case (k, ktl) =>
-          def messageWasSentAfterKeepWasAddedToThisLibrary = ktl.addedAt isBefore msg.sentAt
-          def messageWasSentAfterIntegrationWasActivated = lts.changedStatusAt isBefore msg.sentAt
+          def messageWasSentAfterKeepWasAddedToThisLibrary = msg.sentAt isAfter ktl.addedAt.minusSeconds(5)
+          def messageWasSentAfterIntegrationWasActivated = msg.sentAt isAfter lts.changedStatusAt.minusSeconds(5)
           messageWasSentAfterKeepWasAddedToThisLibrary && messageWasSentAfterIntegrationWasActivated
       }
       val msgsWithKeep = changedMsgs.flatAugmentWith(msg => keepAndKtlByKeep.get(msg.keep).map(_._1)).map(_.swap)
