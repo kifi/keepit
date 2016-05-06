@@ -650,6 +650,7 @@ class ShoeboxController @Inject() (
       emails = input.emails,
       libraries = Set.empty
     )
+    implicit val ctx = HeimdalContext.empty
     val internResponse = db.readWrite { implicit s =>
       keepInterner.internKeepByRequest(KeepInternRequest.onKifi(
         keeper = input.creator,
