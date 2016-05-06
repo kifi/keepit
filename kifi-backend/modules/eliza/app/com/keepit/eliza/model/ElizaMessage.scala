@@ -121,7 +121,7 @@ object SystemMessageData {
     case mr: ModifyRecipients =>
       val KeepRecipientsDiff(usersDelta, _, emailsDelta) = mr.diff
       val (usersAdded, emailsAdded) = (usersDelta.added.toSeq, emailsDelta.added.map(NonUserEmailParticipant).toSeq)
-      Some(AddParticipants(mr.editedBy, usersAdded, emailsAdded))
+      Some(AddParticipants(mr.addedBy, usersAdded, emailsAdded))
   }
 
   def isFullySupported(data: SystemMessageData): Boolean = data match {

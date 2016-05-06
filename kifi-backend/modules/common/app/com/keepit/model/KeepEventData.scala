@@ -124,7 +124,7 @@ sealed abstract class KeepEventData(val kind: KeepEventKind) {
 }
 object KeepEventData {
   implicit val diffFormat = KeepRecipientsDiff.internalFormat
-  @json case class ModifyRecipients(editedBy: Id[User], diff: KeepRecipientsDiff) extends KeepEventData(KeepEventKind.ModifyRecipients) {
+  @json case class ModifyRecipients(addedBy: Id[User], diff: KeepRecipientsDiff) extends KeepEventData(KeepEventKind.ModifyRecipients) {
     def isValid = diff.nonEmpty
   }
   @json case class EditTitle(editedBy: Id[User], original: Option[String], updated: Option[String]) extends KeepEventData(KeepEventKind.EditTitle) {
