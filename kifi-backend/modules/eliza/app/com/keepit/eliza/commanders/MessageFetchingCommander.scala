@@ -53,7 +53,7 @@ class MessageFetchingCommander @Inject() (
     val from = event.fold(
       ev => ev.eventData match {
         case et: EditTitle => BasicUserLikeEntity(basicUserById(et.editedBy))
-        case mr: ModifyRecipients => BasicUserLikeEntity(basicUserById(mr.editedBy))
+        case mr: ModifyRecipients => BasicUserLikeEntity(basicUserById(mr.addedBy))
       },
       msg => msg.from match {
         case MessageSender.User(id) => BasicUserLikeEntity(basicUserById(id))

@@ -118,7 +118,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
   }
 
   def syncAddParticipants(keepId: Id[Keep], event: KeepEventData.ModifyRecipients, source: Option[KeepEventSource]): Future[Unit] = {
-    getOrCreateMessageThreadWithUser(keepId, event.editedBy).map { thread =>
+    getOrCreateMessageThreadWithUser(keepId, event.addedBy).map { thread =>
       db.readWrite { implicit s =>
         messageRepo.save(ElizaMessage(
           keepId = thread.keepId,
