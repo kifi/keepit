@@ -52,13 +52,6 @@ class ElizaDiscussionController @Inject() (
     Ok(Json.toJson(output))
   }
 
-  // deprecated, use editParticipantsOnKeep instead
-  def syncAddParticipants = Action.async(parse.tolerantJson) { request =>
-    import SyncAddParticipants._
-    val input = request.body.as[Request]
-    discussionCommander.syncAddParticipants(input.keepId, input.event, input.source).map(_ => NoContent)
-  }
-
   def getMessagesOnKeep = Action.async(parse.tolerantJson) { request =>
     import GetMessagesOnKeep._
     val input = request.body.as[Request]
@@ -120,16 +113,13 @@ class ElizaDiscussionController @Inject() (
     discussionCommander.deleteMessage(msgId)
     NoContent
   }
-  def editParticipantsOnKeep() = Action.async(parse.tolerantJson) { request =>
-    import EditParticipantsOnKeep._
+  def handleKeepEvent() = Action.async(parse.tolerantJson) { request =>
+    import HandleKeepEvent._
     implicit val context = heimdalContextBuilder().build
     val input = request.body.as[Request]
-    val KeepRecipientsDiff(users, libraries, emails) = input.diff
-    discussionCommander.editParticipantsOnKeep(input.keepId, input.editor, users.added.toSeq, emails.added.map(BasicContact(_)).toSeq, libraries.added.toSeq, orgs = Seq.empty, input.source, updateShoebox = false).map { success =>
-      val output = Response(success)
-      Ok(Json.toJson(output))
-    }
+    discussionCommander.handleKeepEvent(input.keepId, input.commonEvent, input.basicEvent, input.source).map { _ => NoContent }
   }
+
   def keepHasAccessToken(keepId: Id[Keep], accessToken: String) = Action { request =>
     val hasToken = Try(ThreadAccessToken(accessToken)).map { token =>
       discussionCommander.keepHasAccessToken(keepId, token)
