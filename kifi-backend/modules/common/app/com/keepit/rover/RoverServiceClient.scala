@@ -10,10 +10,11 @@ import com.keepit.common.net.{ CallTimeouts, HttpClient }
 import com.keepit.common.routes.{ Scraper, Rover }
 import com.keepit.common.service.{ ServiceType, ServiceClient }
 import com.keepit.common.zookeeper.ServiceCluster
-import com.keepit.model.{ NormalizedURI }
+import com.keepit.model.{KeepFail, Keep, NormalizedURI}
 import com.keepit.rover.article.{ ArticleKind, Article }
 import com.keepit.rover.document.utils.Signature
 import com.keepit.rover.model._
+import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.json.Json
 import com.keepit.common.core._
 import com.keepit.common.time._
@@ -33,7 +34,7 @@ trait RoverServiceClient extends ServiceClient {
   def getUriSummaryByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], RoverUriSummary]]
 
   // slow, prefer get methods
-  def getOrElseFetchUriSummary(uriId: Id[NormalizedURI], url: String): Future[Option[RoverUriSummary]]
+  def getOrElseFetchUriSummaryForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], RoverUriSummary]]
   def getOrElseFetchRecentArticle[A <: Article](url: String, recency: Duration)(implicit kind: ArticleKind[A]): Future[Option[A]]
   def getOrElseComputeRecentContentSignature[A <: Article](url: String, recency: Duration)(implicit kind: ArticleKind[A]): Future[Option[Signature]]
 
@@ -53,6 +54,7 @@ class RoverServiceClientImpl(
     override val httpClient: HttpClient,
     val airbrakeNotifier: AirbrakeNotifier,
     cacheProvider: RoverCacheProvider,
+    shoebox: ShoeboxServiceClient,
     private implicit val executionContext: ExecutionContext) extends RoverServiceClient with Logging {
 
   private val longTimeout = CallTimeouts(responseTimeout = Some(300000), maxWaitTime = Some(30000), maxJsonParseTime = Some(10000))
@@ -162,24 +164,11 @@ class RoverServiceClientImpl(
     }
   }
 
-  def getOrElseFetchUriSummary(uriId: Id[NormalizedURI], url: String): Future[Option[RoverUriSummary]] = {
-    val contentSummaryProvider = RoverUriSummary.defaultProvider
-    getOrElseFetchArticleSummaryAndImages(uriId, url)(contentSummaryProvider).imap(_.map {
-      case (summary, images) => RoverUriSummary(summary, images)
-    })
-  }
-
-  // Do not use the cache for this one (Rover takes care of it, needs more information, limits race conditions)
-  private def getOrElseFetchArticleSummaryAndImages[A <: Article](uriId: Id[NormalizedURI], url: String)(implicit kind: ArticleKind[A]): Future[Option[(RoverArticleSummary, BasicImages)]] = {
-    val payload = Json.obj(
-      "uriId" -> uriId,
-      "url" -> url,
-      "kind" -> kind
-    )
-    call(Rover.internal.getOrElseFetchArticleSummaryAndImages, payload, callTimeouts = longTimeout).map { r =>
-      implicit val reads = TupleFormat.tuple2Reads[RoverArticleSummary, BasicImages]
-      r.json.asOpt[(RoverArticleSummary, BasicImages)]
-    }
+  def getOrElseFetchUriSummaryForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], RoverUriSummary]] = {
+    for {
+    keepsById <- shoebox.getCrossServiceKeepsByIds(keepIds)
+    summariesByUriId <- getUriSummaryByUris(keepsById.values.map(_.uriId).toSet)
+    } yield keepsById.flatMap { case (keepId, keep) => summariesByUriId.get(keep.uriId).map(keepId -> _) }
   }
 
   def getOrElseFetchRecentArticle[A <: Article](url: String, recency: Duration)(implicit kind: ArticleKind[A]): Future[Option[A]] = {

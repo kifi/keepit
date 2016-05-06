@@ -29,10 +29,7 @@ class NotificationJsonMaker @Inject() (
 
   def make(rawNotifications: Seq[RawNotification], includeUriSummary: Boolean = false): Future[Seq[NotificationJson]] = {
     val futureSummariesByKeepId: Future[Map[Id[Keep], RoverUriSummary]] = if (includeUriSummary) {
-      for {
-        keepsById <- shoebox.getCrossServiceKeepsByIds(rawNotifications.map(_._3).toSet)
-        summariesByUriId <- rover.getUriSummaryByUris(keepsById.values.map(_.uriId).toSet)
-      } yield keepsById.flatMap { case (keepId, keep) => summariesByUriId.get(keep.uriId).map(keepId -> _) }
+      rover.getOrElseFetchUriSummaryForKeeps(rawNotifications.map(_._3).toSet)
     } else Future.successful(Map.empty)
     Future.sequence(rawNotifications.flatMap { n =>
       val futureUriSummary = futureSummariesByKeepId.map(_.get(n._3))

@@ -54,12 +54,6 @@ class ElizaEmailCommander @Inject() (
 
   case class ProtoEmail(digestHtml: Html, initialHtml: Html, addedHtml: Html, starterName: String, pageTitle: String)
 
-  def getUriSummary(thread: MessageThread): Future[Option[RoverUriSummary]] = {
-    val uriId = thread.uriId
-    val normalizedUrl = thread.nUrl
-    rover.getOrElseFetchUriSummary(uriId, normalizedUrl)
-  }
-
   def getThreadEmailInfo(
     thread: MessageThread,
     uriSummary: Option[RoverUriSummary],
@@ -136,7 +130,7 @@ class ElizaEmailCommander @Inject() (
     val allUserIds: Set[Id[User]] = thread.participants.allUsers
     val allUsersFuture: Future[Map[Id[User], User]] = new SafeFuture(shoebox.getUsers(allUserIds.toSeq).map(s => s.map(u => u.id.get -> u).toMap))
     val allUserImageUrlsFuture: Future[Map[Id[User], String]] = new SafeFuture(FutureHelpers.map(allUserIds.map(u => u -> shoebox.getUserImageUrl(u, 73)).toMap))
-    val uriSummaryFuture = getUriSummary(thread)
+    val uriSummaryFuture = rover.getOrElseFetchUriSummaryForKeeps(Set(thread.keepId)).map(_.get(thread.keepId))
 
     for {
       allUsers <- allUsersFuture
