@@ -635,7 +635,7 @@ function emitSettings(tab) {
     sounds: enabled('sounds'),
     popups: enabled('popups'),
     emails: prefs ? prefs.messagingEmails : true,
-    social: enabled('social'),
+    social: prefs ? prefs.hideSocialTooltip : false,
     keeper: enabled('keeper'),
     search: enabled('search'),
     maxResults: prefs ? prefs.maxResults : 1
@@ -1438,6 +1438,13 @@ api.port.on({
       ajax('POST', '/ext/pref/email/message/' + o.value, function () {
         if (prefs) {
           prefs.messagingEmails = o.value;
+        }
+        onSettingCommitted();
+      });
+    } else if (o.name === 'social') {
+      ajax('POST', '/ext/pref/hideSocialTooltip?hideTooltips=' + !o.value, function () {
+        if (prefs) {
+          prefs.hideSocialTooltip = !o.value;
         }
         onSettingCommitted();
       });
@@ -2264,6 +2271,7 @@ function kififyWithPageData(tab, d) {
     hide: hide
   }, {queue: 1});
 
+  var hideSocialTooltip = prefs && prefs.hideSocialTooltip;
   // consider triggering automatic keeper behavior on page to engage user (only once)
   if (!tab.engaged) {
     tab.engaged = true;
@@ -2272,7 +2280,7 @@ function kififyWithPageData(tab, d) {
         log('[initTab]', tab.id, 'restricted');
       } else if (d.shown) {
         log('[initTab]', tab.id, 'shown before');
-      } else if (enabled('social') && (d.keepers.length || d.libraries.length || d.sources.length)) {
+      } else if (!hideSocialTooltip && (d.keepers.length || d.libraries.length || d.sources.length)) {
         tab.keepersSec = d.sources.filter(isSlack).length ? 0 : 20;
         if (api.tabs.isFocused(tab)) {
           scheduleAutoEngage(tab, 'keepers');
@@ -2446,7 +2454,7 @@ api.tabs.on.focus.add(function(tab) {
   }
   delete tab.focusCallbacks;
   kifify(tab);
-  if (enabled('social')) {
+  if (prefs && prefs.hideSocialTooltip) {
     scheduleAutoEngage(tab, 'keepers');
   }
 });
