@@ -104,6 +104,11 @@ class ExtPreferenceController @Inject() (
     Ok(JsNumber(0))
   }
 
+  def setHideSocialTooltip(hideTooltips: Boolean) = UserAction { request =>
+    db.readWrite(implicit s => userValueRepo.setValue(request.userId, UserValues.hideSocialTooltip.name, hideTooltips))
+    Ok(JsNumber(0))
+  }
+
   def getPrefs(version: Int) = UserAction.async { request =>
     val ip = IpAddress.fromRequest(request).ip
     val encryptedIp: String = scala.util.Try(crypt.crypt(ipkey, ip)).getOrElse("").trim
