@@ -635,7 +635,7 @@ function emitSettings(tab) {
     sounds: enabled('sounds'),
     popups: enabled('popups'),
     emails: prefs ? prefs.messagingEmails : true,
-    social: prefs ? prefs.hideSocialTooltip : false,
+    social: prefs ? !prefs.hideSocialTooltip : true,
     keeper: enabled('keeper'),
     search: enabled('search'),
     maxResults: prefs ? prefs.maxResults : 1
