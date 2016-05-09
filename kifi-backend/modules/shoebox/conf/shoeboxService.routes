@@ -130,6 +130,7 @@ POST    /ext/pref/showExtMsgIntro   @com.keepit.controllers.ext.ExtPreferenceCon
 POST    /ext/pref/showLibraryIntro  @com.keepit.controllers.ext.ExtPreferenceController.setShowLibraryIntro(show: Boolean)
 POST    /ext/pref/showExtMoveIntro  @com.keepit.controllers.ext.ExtPreferenceController.setShowExtMoveIntro(show: Boolean)
 POST    /ext/pref/quoteAnywhereFtue @com.keepit.controllers.ext.ExtPreferenceController.setQuoteAnywhereFtue(show: Boolean)
+POST    /ext/pref/hideSocialTooltip @com.keepit.controllers.ext.ExtPreferenceController.hideSocialTooltip(show: Boolean)
 POST    /ext/pref/email/:kind/:send @com.keepit.controllers.ext.ExtPreferenceController.setEmailNotifyPreference(kind: com.keepit.common.mail.ElectronicMailCategory, send: Boolean)
 
 GET     /ext/contacts/search        @com.keepit.controllers.ext.ExtUserController.searchForContacts(query:Option[String], limit: Option[Int])
