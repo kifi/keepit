@@ -277,6 +277,7 @@ object Eliza extends Service {
     def convertNonUserThreadToUserThread(userId: Id[User], accessToken: String) = ServiceRoute(POST, "/internal/eliza/convertNonUserThreadToUserThread", Param("userId", userId), Param("accessToken", accessToken))
 
     def handleKeepEvent = ServiceRoute(POST, "/internal/eliza/handleKeepEvent")
+    def internEmptyThreads = ServiceRoute(POST, "/internal/eliza/internEmptyThreads")
     def pageSystemMessages(fromId: Id[Message], pageSize: Int) = ServiceRoute(GET, "/internal/eliza/pageSystemMessages", Param("fromId", fromId.id), Param("pageSize", pageSize))
     def rpbTest = ServiceRoute(POST, "/internal/eliza/rpbTest")
 

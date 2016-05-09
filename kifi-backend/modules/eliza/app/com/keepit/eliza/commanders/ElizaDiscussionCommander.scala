@@ -24,6 +24,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 
 @ImplementedBy(classOf[ElizaDiscussionCommanderImpl])
 trait ElizaDiscussionCommander {
+  def internThreadForKeep(csKeep: CrossServiceKeep, owner: Id[User]): (MessageThread, Boolean)
   def getMessagesOnKeep(keepId: Id[Keep], fromIdOpt: Option[Id[ElizaMessage]], limit: Int): Future[Seq[Message]]
   def getCrossServiceDiscussionsForKeeps(keepIds: Set[Id[Keep]], fromTime: Option[DateTime], maxMessagesShown: Int): Map[Id[Keep], CrossServiceDiscussion]
   def syncAddParticipants(keepId: Id[Keep], event: KeepEventData.ModifyRecipients, source: Option[KeepEventSource]): Future[Unit]
@@ -150,44 +151,18 @@ class ElizaDiscussionCommanderImpl @Inject() (
     }.map(mt => Future.successful((mt, false))).getOrElse {
       shoebox.getCrossServiceKeepsByIds(Set(keepId)).imap { csKeeps =>
         val csKeep = csKeeps.getOrElse(keepId, throw DiscussionFail.INVALID_KEEP_ID)
-        val users = csKeep.users ++ csKeep.owner + userId
-        val emails = csKeep.emails
-        val mt = db.readWrite { implicit s =>
-          // If someone created the message thread while we were messing around in Shoebox,
-          // sigh, shrug, and use that message thread. Sad waste of effort, but cést la vie
-          messageThreadRepo.getByKeepId(keepId).getOrElse {
-            val mt = messageThreadRepo.intern(MessageThread(
-              uriId = csKeep.uriId,
-              url = csKeep.url,
-              nUrl = csKeep.url,
-              pageTitle = csKeep.title,
-              startedBy = csKeep.owner getOrElse userId,
-              participants = MessageThreadParticipants(users),
-              keepId = csKeep.id,
-              numMessages = 0
-            ))
-            users.foreach(userId => userThreadRepo.intern(UserThread.forMessageThread(mt)(userId)))
-            emails.foreach(email => nonUserThreadRepo.intern(NonUserThread.forMessageThread(mt)(NonUserEmailParticipant(email))))
-            mt
-          }
-        }
-
-        (mt, true)
+        internThreadForKeep(csKeep, userId)
       }
     }
     threadFut.map {
       case (oldThread, isNew) =>
-        val newThread = {
-          if (!oldThread.containsUser(userId)) {
-            val newThread = db.readWrite { implicit s =>
-              messageThreadRepo.save(oldThread.withParticipants(clock.now, Set(userId))) tap { updatedThread =>
-                val ut = userThreadRepo.intern(UserThread.forMessageThread(updatedThread)(userId))
-              }
+        val newThread = if (oldThread.containsUser(userId)) {
+          oldThread
+        } else {
+          db.readWrite { implicit s =>
+            messageThreadRepo.save(oldThread.withParticipants(clock.now, Set(userId))) tap { updatedThread =>
+              userThreadRepo.intern(UserThread.forMessageThread(updatedThread)(userId))
             }
-
-            newThread
-          } else {
-            oldThread
           }
         }
 
@@ -199,6 +174,26 @@ class ElizaDiscussionCommanderImpl @Inject() (
         }
 
         newThread
+    }
+  }
+  def internThreadForKeep(csKeep: CrossServiceKeep, owner: Id[User]): (MessageThread, Boolean) = {
+    val users = csKeep.users ++ csKeep.owner
+    db.readWrite { implicit s =>
+      messageThreadRepo.getByKeepId(csKeep.id).map(_ -> false).getOrElse {
+        val mt = messageThreadRepo.intern(MessageThread(
+          uriId = csKeep.uriId,
+          url = csKeep.url,
+          nUrl = csKeep.url,
+          pageTitle = csKeep.title,
+          startedBy = csKeep.owner getOrElse owner,
+          participants = MessageThreadParticipants(users),
+          keepId = csKeep.id,
+          numMessages = 0
+        ))
+        users.foreach(userId => userThreadRepo.intern(UserThread.forMessageThread(mt)(userId)))
+        csKeep.emails.foreach(email => nonUserThreadRepo.intern(NonUserThread.forMessageThread(mt)(NonUserEmailParticipant(email))))
+        (mt, true)
+      }
     }
   }
 
@@ -261,11 +256,11 @@ class ElizaDiscussionCommanderImpl @Inject() (
       thread <- getOrCreateMessageThreadWithUser(keepId, editor)
       threadAndDiffOpt <- messagingCommander.addParticipantsToThread(editor, keepId, newUsers, newNonUsers, orgs.toSeq, source)
       success <- threadAndDiffOpt.map {
-        case (thread, diff) =>
+        case (updatedThread, diff) =>
           shoebox.persistModifyRecipients(keepId, ModifyRecipients(editor, diff), source).map {
             case None => false
             case Some(CommonAndBasicKeepEvent(commonEvent, basicEvent)) =>
-              notifDeliveryCommander.notifyAddParticipants(editor, diff, thread, commonEvent, basicEvent, source)
+              notifDeliveryCommander.notifyAddParticipants(editor, diff, updatedThread, commonEvent, basicEvent, source)
               true
           }
       }.getOrElse(Future.successful(false))

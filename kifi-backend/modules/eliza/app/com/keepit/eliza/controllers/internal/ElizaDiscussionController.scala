@@ -6,6 +6,7 @@ import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.logging.Logging
+import com.keepit.common.core.iterableExtensionOps
 import com.keepit.common.mail.BasicContact
 import com.keepit.eliza.ElizaServiceClient._
 import com.keepit.model.{ KeepRecipientsDiff, KeepRecipients, ElizaFeedFilter, User, Keep }
@@ -118,6 +119,30 @@ class ElizaDiscussionController @Inject() (
     implicit val context = heimdalContextBuilder().build
     val input = request.body.as[Request]
     discussionCommander.handleKeepEvent(input.keepId, input.commonEvent, input.basicEvent, input.source).map { _ => NoContent }
+  }
+  def internEmptyThreads() = Action(parse.tolerantJson) { request =>
+    import InternEmptyThreads._
+    implicit val context = heimdalContextBuilder().build
+    val keeps = request.body.as[Request].keeps
+    require(keeps.forall(_.isActive), "internEmptyThreads called with a dead keep")
+    val existingThreads = db.readOnlyMaster { implicit s =>
+      threadRepo.getByKeepIds(keeps.map(_.id).toSet)
+    }
+    val (oldKeeps, newKeeps) = keeps.partition(k => existingThreads.contains(k.id))
+    val existingKeepsWithThreads = oldKeeps.flatAugmentWith(k => existingThreads.get(k.id))
+    db.readWrite { implicit s =>
+      existingKeepsWithThreads.foreach {
+        case (keep, thread) => (keep.users -- thread.participants.allUsers).foreach { u =>
+          userThreadRepo.intern(UserThread.forMessageThread(thread)(u))
+        }
+      }
+      newKeeps.foreach { k =>
+        k.owner.foreach { owner =>
+          val (thread, isNew) = discussionCommander.internThreadForKeep(k, owner)
+        }
+      }
+    }
+    NoContent
   }
 
   def keepHasAccessToken(keepId: Id[Keep], accessToken: String) = Action { request =>

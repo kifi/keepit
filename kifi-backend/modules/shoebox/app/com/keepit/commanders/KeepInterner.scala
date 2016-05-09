@@ -7,6 +7,7 @@ import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.{ ReactiveLock, FutureHelpers, ExecutionContext }
 import com.keepit.common.mail.EmailAddress
+import com.keepit.eliza.ElizaServiceClient
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.Author
 import com.keepit.typeahead.{ LibraryResultTypeaheadKey, LibraryResultTypeaheadCache }
@@ -98,6 +99,7 @@ class KeepInternerImpl @Inject() (
   userValueRepo: UserValueRepo,
   heimdalClient: HeimdalServiceClient,
   roverClient: RoverServiceClient,
+  eliza: ElizaServiceClient,
   libraryNewFollowersCommander: LibraryNewKeepsCommander,
   integrityHelpers: UriIntegrityHelpers,
   sourceAttrRepo: KeepSourceAttributionRepo,
@@ -310,6 +312,7 @@ class KeepInternerImpl @Inject() (
   }
 
   private val reportingLock = new ReactiveLock(2)
+  private val debouncer = new Debouncing.Buffer[Seq[CrossServiceKeep]]
   private def reportNewKeeps(keeps: Seq[Keep], libraries: Seq[Library], ctx: HeimdalContext, notifyExternalSources: Boolean): Unit = {
     if (keeps.nonEmpty) {
       // Don't block keeping for these
@@ -343,6 +346,17 @@ class KeepInternerImpl @Inject() (
                 normalizedURIRepo.get(keep.uriId)
               }
               roverClient.fetchAsap(nuri.id.get, nuri.url)
+            }
+            val csKeeps = {
+              val ktls = db.readOnlyMaster { implicit s => ktlRepo.getAllByKeepIds(keeps.map(_.id.get).toSet) }
+              keeps.filter(_.recipients.numParticipants > 1).map { k =>
+                CrossServiceKeep.fromKeepAndRecipients(k, k.recipients.users, k.recipients.emails, ktls.getOrElse(k.id.get, Seq.empty).map { ktl =>
+                  CrossServiceKeep.LibraryInfo.fromKTL(ktl)
+                }.toSet)
+              }
+            }
+            debouncer.debounce("intern_empty_threads", 1 second)(csKeeps) { allCSKeeps =>
+              eliza.internEmptyThreads(allCSKeeps.flatten)
             }
           }
 
