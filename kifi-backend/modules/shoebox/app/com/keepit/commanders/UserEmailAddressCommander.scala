@@ -200,27 +200,33 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
   }
 
   def updateEmailAddresses(userId: Id[User], emails: Seq[EmailInfo]): Unit = {
-    db.readWrite { implicit session =>
-      val uniqueEmails = emails.map(_.address).toSet
+    val uniqueEmails = emails.map(_.address).toSet
+    val (added, existing, toRemove) = db.readWrite(attempts = 2) { implicit session =>
       val (existing, toRemove) = userEmailAddressRepo.getAllByUser(userId).partition(em => uniqueEmails contains em.address)
-
       // Add new emails
       val added = (uniqueEmails -- existing.map(_.address)).map { address =>
         intern(userId, address).get._1 tap { addedEmail =>
           session.onTransactionSuccess(sendVerificationEmail(addedEmail))
         }
       }
-
-      // Set the correct email as primary
-      (added ++ existing).foreach { emailRecord =>
-        val isPrimary = emails.exists { emailInfo => (emailInfo.address == emailRecord.address) && (emailInfo.isPrimary || emailInfo.isPendingPrimary) }
-        if (isPrimary && !emailRecord.primary) {
+      (added, existing, toRemove)
+    }
+    // Set the correct email as primary
+    (added ++ existing).foreach { emailRecord =>
+      val isPrimary = emails.exists { emailInfo => (emailInfo.address == emailRecord.address) && (emailInfo.isPrimary || emailInfo.isPendingPrimary) }
+      if (isPrimary && !emailRecord.primary) {
+        db.readWrite(attempts = 2) { implicit s =>
           setAsPrimaryEmail(emailRecord)
         }
       }
+    }
 
-      // Remove missing emails
-      toRemove.foreach(deactivate(_))
+    // Remove missing emails
+    toRemove.foreach { email =>
+      db.readWrite(attempts = 2) { implicit s =>
+        deactivate(email)
+      }
     }
   }
+
 }
