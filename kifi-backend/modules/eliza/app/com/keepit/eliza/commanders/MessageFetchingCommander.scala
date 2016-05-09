@@ -15,7 +15,7 @@ import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick.Database
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.model._
-import com.keepit.social.{ BasicUserLikeEntity, BasicUser }
+import com.keepit.social.{ BasicAuthor, BasicUserLikeEntity, BasicUser }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.core._
 
@@ -34,27 +34,17 @@ class MessageFetchingCommander @Inject() (
     airbrake: AirbrakeNotifier,
     implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
 
-  def getMessageWithBasicUser(event: Either[CommonKeepEvent, ElizaMessage], thread: MessageThread, basicUserById: Map[Id[User], BasicUser]): MessageWithBasicUser = {
+  def getMessageWithBasicUser(event: Either[BasicKeepEvent, ElizaMessage], thread: MessageThread, basicUserById: Map[Id[User], BasicUser]): MessageWithBasicUser = {
     val participants = thread.allParticipants.toSeq.map(u => BasicUserLikeEntity(basicUserById(u))) ++
       thread.participants.nonUserParticipants.keySet.map(nup => BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nup)))
 
     val text = event.fold(
-      ev => ev.eventData match {
-        case et: EditTitle => s"${basicUserById(et.editedBy).fullName} edited the title."
-        case ModifyRecipients(addedBy, diff) if diff.onlyAdditions.nonEmpty =>
-          val editorText = basicUserById(addedBy).fullName
-          import DescriptionElements._
-          val addedText = DescriptionElements.unwordsPretty((diff.users.added.map(basicUserById(_).firstName).toSeq ++ diff.emails.added.map(_.address).toSeq).map(fromText))
-          s"$editorText added ${DescriptionElements.formatPlain(addedText)} to this discussion"
-      },
+      ev => DescriptionElements.formatPlain(ev.header),
       msg => msg.messageText
     )
 
     val from = event.fold(
-      ev => ev.eventData match {
-        case et: EditTitle => BasicUserLikeEntity(basicUserById(et.editedBy))
-        case mr: ModifyRecipients => BasicUserLikeEntity(basicUserById(mr.addedBy))
-      },
+      ev => BasicAuthor.toBasicUserLikeEntity(ev.author),
       msg => msg.from match {
         case MessageSender.User(id) => BasicUserLikeEntity(basicUserById(id))
         case MessageSender.NonUser(nup) => BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nup))
@@ -62,14 +52,14 @@ class MessageFetchingCommander @Inject() (
       }
     )
 
-    val auxData = event.fold(ev => SystemMessageData.fromKeepEvent(ev.eventData), msg => msg.auxData)
+    val auxData = event.fold(ev => None, msg => msg.auxData)
       .map(SystemMessageData.publish(_, basicUserById))
 
     MessageWithBasicUser(
-      event.fold(ev => BasicKeepEventId.fromEvent(ev.id), msg => BasicKeepEventId.fromMsg(ElizaMessage.toCommonId(msg.id.get))),
+      event.fold(_.id, msg => BasicKeepEventId.fromMsg(ElizaMessage.toCommonId(msg.id.get))),
       event.fold(_.timestamp, _.createdAt),
       text,
-      event.fold(ev => ev.source.flatMap(KeepEventSource.toMessageSource), _.source),
+      event.fold(ev => ev.source.flatMap(bkes => KeepEventSource.toMessageSource(bkes.kind)), _.source),
       auxData,
       event.right.toOption.flatMap(_.sentOnUrl).getOrElse(thread.url),
       thread.nUrl,

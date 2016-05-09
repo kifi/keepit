@@ -134,14 +134,14 @@ object KeepEventData {
     Reads {
       js =>
         (js \ "kind").validate[KeepEventKind].flatMap {
-          case KeepEventKind.EditTitle => Json.reads[EditTitle].reads(js)
-          case KeepEventKind.ModifyRecipients => Json.reads[ModifyRecipients].reads(js)
+          case KeepEventKind.EditTitle => Json.fromJson[EditTitle](js)
+          case KeepEventKind.ModifyRecipients => Json.fromJson[ModifyRecipients](js)
           case KeepEventKind.Initial | KeepEventKind.Note | KeepEventKind.Comment => throw new Exception(s"unsupported reads for activity event kind, js $js}")
         }
     },
     Writes {
-      case et: EditTitle => Json.writes[EditTitle].writes(et).as[JsObject] ++ Json.obj("kind" -> KeepEventKind.EditTitle.value)
-      case ar: ModifyRecipients => Json.writes[ModifyRecipients].writes(ar).as[JsObject] ++ Json.obj("kind" -> KeepEventKind.ModifyRecipients.value)
+      case et: EditTitle => Json.toJson[EditTitle](et).as[JsObject] ++ Json.obj("kind" -> KeepEventKind.EditTitle.value)
+      case ar: ModifyRecipients => Json.toJson[ModifyRecipients](ar).as[JsObject] ++ Json.obj("kind" -> KeepEventKind.ModifyRecipients.value)
       case o => throw new Exception(s"unsupported writes for ActivityEventData $o")
     }
   )
