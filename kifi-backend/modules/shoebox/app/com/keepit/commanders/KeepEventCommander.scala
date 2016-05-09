@@ -7,7 +7,7 @@ import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model.KeepEventData.{ EditTitle, ModifyRecipients }
-import com.keepit.model.{ CommonAndBasicKeepEvent, CommonKeepEvent, BasicKeepEvent, KeepToUserRepo, KeepEventData, KeepEvent, KeepEventRepo, KeepEventSource, User, Keep }
+import com.keepit.model._
 import com.keepit.common.time._
 import com.keepit.shoebox.data.assemblers.KeepActivityAssembler
 import org.joda.time.DateTime
@@ -35,7 +35,11 @@ class KeepEventCommanderImpl @Inject() (
 
   def persistKeepEventAndUpdateEliza(keepId: Id[Keep], event: KeepEventData, source: Option[KeepEventSource], eventTime: Option[DateTime])(implicit session: RWSession): Future[Unit] = {
     persistAndAssembleKeepEvent(keepId, event, source, eventTime).map {
-      case CommonAndBasicKeepEvent(commonEvent, basicEvent) => eliza.handleKeepEvent(keepId, commonEvent, basicEvent, source)
+      case CommonAndBasicKeepEvent(commonEvent, basicEvent) => event match {
+        case et: EditTitle => eliza.modifyRecipientsAndSendEvent(keepId, et.editedBy, KeepRecipientsDiff.addUser(et.editedBy), source, Some(basicEvent))
+        case mr: ModifyRecipients => eliza.modifyRecipientsAndSendEvent(keepId, mr.addedBy, mr.diff, source, Some(basicEvent))
+        case _ => Future.successful(())
+      }
     }.getOrElse(Future.successful(None))
   }
 

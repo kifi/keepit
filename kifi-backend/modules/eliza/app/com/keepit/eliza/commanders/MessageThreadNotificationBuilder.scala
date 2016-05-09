@@ -102,8 +102,7 @@ trait MessageThreadNotificationBuilder {
   import MessageThreadNotificationBuilder.PrecomputedInfo
 
   def buildForKeeps(userId: Id[User], keepIds: Set[Id[Keep]], precomputed: Option[PrecomputedInfo.BuildForKeeps] = None): Future[Map[Id[Keep], MessageThreadNotification]]
-  def buildForUsers(keepId: Id[Keep], userIds: Set[Id[User]], precomputed: Option[PrecomputedInfo.BuildForUsers] = None): Future[Map[Id[User], MessageThreadNotification]]
-  def buildForUsersFromEvent(userIds: Set[Id[User]], keepId: Id[Keep], event: CommonKeepEvent, precomputedInfo: Option[PrecomputedInfo.BuildForEvent] = None): Future[Map[Id[User], MessageThreadNotification]]
+  def buildForUsersFromEvent(userIds: Set[Id[User]], keepId: Id[Keep], event: BasicKeepEvent, precomputedInfo: Option[PrecomputedInfo.BuildForEvent] = None): Future[Map[Id[User], MessageThreadNotification]]
 
   // Convenience methods, just wrappers around the real methods above
   def buildForKeep(userId: Id[User], keepId: Id[Keep], precomputed: Option[PrecomputedInfo.BuildForKeep] = None): Future[Option[MessageThreadNotification]]
@@ -253,7 +252,7 @@ class MessageThreadNotificationBuilderImpl @Inject() (
     }
   }
 
-  def buildForUsersFromEvent(userIds: Set[Id[User]], keepId: Id[Keep], event: CommonKeepEvent, precomputedInfo: Option[PrecomputedInfo.BuildForEvent] = None): Future[Map[Id[User], MessageThreadNotification]] = {
+  def buildForUsersFromEvent(userIds: Set[Id[User]], keepId: Id[Keep], event: BasicKeepEvent, precomputedInfo: Option[PrecomputedInfo.BuildForEvent] = None): Future[Map[Id[User], MessageThreadNotification]] = {
     val (thread, threadActivity, messageCountByUser, mutedByUser) = db.readOnlyMaster { implicit s =>
       val thread = precomputedInfo.flatMap(_.thread).getOrElse(messageThreadRepo.getByKeepId(keepId).get)
       val threadActivity = userThreadRepo.getThreadActivity(keepId).sortBy { uta => (-uta.lastActive.getOrElse(START_OF_TIME).getMillis, uta.id.id) }
@@ -296,7 +295,5 @@ class MessageThreadNotificationBuilderImpl @Inject() (
 
     }
   }
-
-  def buildForUsers(keepId: Id[Keep], userIds: Set[Id[User]], precomputed: Option[PrecomputedInfo.BuildForUsers] = None): Future[Map[Id[User], MessageThreadNotification]] = ???
 }
 
