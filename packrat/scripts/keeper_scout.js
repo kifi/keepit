@@ -449,6 +449,7 @@ k.tile = k.tile || (function () {
       tileObserver = tileParent = null;
       tile.remove();
     }
+    k.snap.disable();
   }
 
   api.onEnd.push(function() {
