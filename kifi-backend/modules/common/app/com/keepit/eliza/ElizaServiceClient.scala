@@ -139,7 +139,7 @@ trait ElizaServiceClient extends ServiceClient {
 
   def keepHasThreadWithAccessToken(keepId: Id[Keep], accessToken: String): Future[Boolean]
   def handleKeepEvent(keepId: Id[Keep], commonEvent: CommonKeepEvent, basicEvent: BasicKeepEvent, source: Option[KeepEventSource]): Future[Unit]
-  def internEmptyThreads(keeps: Seq[CrossServiceKeep]): Future[Unit]
+  def internEmptyThreadsForKeeps(keeps: Seq[CrossServiceKeep]): Future[Unit]
   def getMessagesChanged(seqNum: SequenceNumber[Message], fetchSize: Int): Future[Seq[CrossServiceMessage]]
   def convertNonUserThreadToUserThread(userId: Id[User], accessToken: String): Future[(Option[EmailAddress], Option[Id[User]])]
 
@@ -409,10 +409,10 @@ class ElizaServiceClientImpl @Inject() (
     val request = Request(keepId, commonEvent, basicEvent, source)
     call(Eliza.internal.handleKeepEvent, body = Json.toJson(request)).map(_ => ())
   }
-  def internEmptyThreads(keeps: Seq[CrossServiceKeep]): Future[Unit] = {
-    import InternEmptyThreads._
+  def internEmptyThreadsForKeeps(keeps: Seq[CrossServiceKeep]): Future[Unit] = {
+    import InternEmptyThreadsForKeeps._
     val request = Request(keeps)
-    call(Eliza.internal.internEmptyThreads, body = Json.toJson(request)).map(_ => ())
+    call(Eliza.internal.internEmptyThreadsForKeeps, body = Json.toJson(request)).map(_ => ())
   }
 
 
@@ -514,7 +514,7 @@ object ElizaServiceClient {
     case class Request(keepId: Id[Keep], commonEvent: CommonKeepEvent, basicEvent: BasicKeepEvent, source: Option[KeepEventSource])
     implicit val requestFormat: Format[Request] = Json.format[Request]
   }
-  object InternEmptyThreads {
+  object InternEmptyThreadsForKeeps {
     case class Request(keeps: Seq[CrossServiceKeep])
     implicit val requestFormat: Format[Request] = Json.format[Request]
   }

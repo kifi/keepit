@@ -356,7 +356,7 @@ class KeepInternerImpl @Inject() (
               }
             }
             debouncer.debounce("intern_empty_threads", 1 second)(csKeeps) { allCSKeeps =>
-              eliza.internEmptyThreads(allCSKeeps.flatten)
+              eliza.internEmptyThreadsForKeeps(allCSKeeps.flatten)
             }
           }
 

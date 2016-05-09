@@ -120,8 +120,8 @@ class ElizaDiscussionController @Inject() (
     val input = request.body.as[Request]
     discussionCommander.handleKeepEvent(input.keepId, input.commonEvent, input.basicEvent, input.source).map { _ => NoContent }
   }
-  def internEmptyThreads() = Action(parse.tolerantJson) { request =>
-    import InternEmptyThreads._
+  def internEmptyThreadsForKeeps() = Action(parse.tolerantJson) { request =>
+    import InternEmptyThreadsForKeeps._
     implicit val context = heimdalContextBuilder().build
     val keeps = request.body.as[Request].keeps
     require(keeps.forall(_.isActive), "internEmptyThreads called with a dead keep")
