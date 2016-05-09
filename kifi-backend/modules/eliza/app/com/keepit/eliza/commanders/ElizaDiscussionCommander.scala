@@ -261,7 +261,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
           shoebox.persistModifyRecipients(keepId, ModifyRecipients(editor, diff), source).map {
             case None => false
             case Some(CommonAndBasicKeepEvent(commonEvent, basicEvent)) =>
-              notifDeliveryCommander.notifyAddParticipants(editor, diff, updatedThread, commonEvent, basicEvent, source)
+              notifDeliveryCommander.notifyAddParticipants(editor, diff.users.added, diff.emails.added, updatedThread, basicEvent)
               true
           }
       }.getOrElse(Future.successful(false))
@@ -297,7 +297,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
           messagingCommander.addParticipantsToThread(editor, keepId, proposedDiff.users.added.toSeq, proposedDiff.emails.added.map(BasicContact(_)).toSeq, orgIds = Seq.empty, source).map {
             case None => Unit
             case Some((updatedThread, realDiff)) =>
-              notifDeliveryCommander.notifyAddParticipants(editor, realDiff, updatedThread, commonEvent, basicEvent, source)
+              notifDeliveryCommander.notifyAddParticipants(editor, realDiff.users.added, realDiff.emails.added, updatedThread, basicEvent)
           }
         }
     }
