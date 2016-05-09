@@ -141,6 +141,7 @@ class NotificationDeliveryCommanderImpl @Inject() (
           "text" -> DescriptionElements.formatPlain(basicEvent.header),
           "url" -> thread.url,
           "title" -> theTitle,
+          "author" -> author,
           "participants" -> participants,
           "locator" -> thread.deepLocator,
           "unread" -> true,

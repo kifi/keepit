@@ -287,7 +287,7 @@ class MessageThreadNotificationBuilderImpl @Inject() (
           author = author,
           text = DescriptionElements.formatPlain(event.header),
           participants = participants.toSeq,
-          unread = basicUserById.get(userId).exists(_.externalId == author.externalId),
+          unread = !basicUserById.get(userId).exists(_.externalId == author.externalId),
           numUnseenAuthors = unseenAuthors,
           numAuthors = authorActivityInfos.length,
           numMessages = numMessages,
