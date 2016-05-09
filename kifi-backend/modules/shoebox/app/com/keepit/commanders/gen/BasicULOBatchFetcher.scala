@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.util.BatchFetchable
+import com.keepit.common.util.{ BatchComputable, BatchFetchable }
 import com.keepit.common.util.BatchFetchable.Values
 
 class BasicULOBatchFetcher @Inject() (
@@ -14,13 +14,19 @@ class BasicULOBatchFetcher @Inject() (
     basicOrgGen: BasicOrganizationGen) {
 
   def run[T](bf: BatchFetchable[T]): T = {
-    val values = db.readOnlyMaster { implicit s =>
+    bf.f(fetch(bf))
+  }
+
+  def fetch(bf: BatchFetchable[_]): Values = {
+    db.readOnlyMaster { implicit s =>
       val users = basicUserGen.loadAll(bf.keys.users)
       val libs = basicLibGen.getBasicLibraries(bf.keys.libraries)
       val orgs = basicOrgGen.getBasicOrganizations(bf.keys.orgs)
       Values(users, libs, orgs)
     }
-    bf.f(values)
+  }
+  def compute[I, O](input: I)(tbf: I => BatchFetchable[O]): BatchComputable[I, O] = {
+    BatchComputable[I, O](input, fetch(tbf(input)))
   }
 
   // NB: it is probably a bad sign if you're using this function

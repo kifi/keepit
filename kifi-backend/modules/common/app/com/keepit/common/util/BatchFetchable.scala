@@ -1,10 +1,11 @@
 package com.keepit.common.util
 
 import com.keepit.common.db.Id
-import com.keepit.common.util.BatchFetchable.{ Values, Keys }
+import com.keepit.common.util.BatchFetchable.{ Keys, Values }
 import com.keepit.model._
 import com.keepit.social.BasicUser
-import play.api.libs.functional.{ FunctionalBuilder, Functor, ~, FunctionalCanBuild }
+import play.api.libs.functional.{ FunctionalCanBuild, Functor, ~ }
+import play.api.libs.json._
 
 final case class BatchFetchable[T](keys: Keys, f: Values => T) {
   def map[S](g: T => S) = this.copy(f = f andThen g)
@@ -22,6 +23,7 @@ object BatchFetchable {
   final case class Values(users: Map[Id[User], BasicUser], libs: Map[Id[Library], BasicLibrary], orgs: Map[Id[Organization], BasicOrganization])
   object Values {
     val empty = Values(Map.empty, Map.empty, Map.empty)
+    implicit val format: Format[Values] = Json.format[Values]
   }
 
   val empty = BatchFetchable[Unit](Keys.empty, _ => ())
