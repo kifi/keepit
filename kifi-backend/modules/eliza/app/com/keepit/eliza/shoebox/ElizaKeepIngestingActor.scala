@@ -61,7 +61,7 @@ class ElizaKeepIngestingActor @Inject() (
           newUsers.map(u => userThreadRepo.intern(UserThread.forMessageThread(newThread)(u)))
           newEmails.map(e => nuThreadRepo.intern(NonUserThread.forMessageThread(newThread)(NonUserEmailParticipant(e))))
       }
-      keepsWithoutThreads.foreach { keep =>
+      keepsWithoutThreads.filter(_.users.size > 1).foreach { keep =>
         keep.owner.foreach(owner => discussionCommander.internThreadForKeep(keep, owner))
       }
       systemValueRepo.setSequenceNumber(elizaKeepSeq, keeps.map(_.seq).max)
