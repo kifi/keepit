@@ -4,6 +4,7 @@ import com.keepit.common.cache.{ CacheStatistics, FortyTwoCachePlugin, JsonCache
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.strings.StringWithNoLineBreaks
 import com.keepit.common.time.{ DateTimeJsonFormat, _ }
 import com.keepit.model.{ DeepLocator, Keep, NormalizedURI, User }
@@ -61,6 +62,7 @@ case class MessageThread(
   def containsNonUser(nonUser: NonUserParticipant): Boolean = participants.contains(nonUser)
   def allParticipantsExcept(user: Id[User]): Set[Id[User]] = participants.allUsersExcept(user)
   def allParticipants: Set[Id[User]] = participants.allUsers
+  def allEmails: Set[EmailAddress] = participants.allEmails
 
   def sanitizeForDelete = this.copy(state = MessageThreadStates.INACTIVE)
 }
