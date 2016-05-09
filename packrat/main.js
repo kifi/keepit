@@ -635,6 +635,7 @@ function emitSettings(tab) {
     sounds: enabled('sounds'),
     popups: enabled('popups'),
     emails: prefs ? prefs.messagingEmails : true,
+    social: enabled('social'),
     keeper: enabled('keeper'),
     search: enabled('search'),
     maxResults: prefs ? prefs.maxResults : 1
@@ -1454,7 +1455,7 @@ api.port.on({
     }
     tracker.track('user_changed_setting', {
       category:
-        ~['sounds','popups','emails'].indexOf(o.name) ? 'notification' :
+        ~['sounds','popups','emails','social'].indexOf(o.name) ? 'notification' :
         'keeper' === o.name ? 'keeper' :
         'search' === o.name ? 'search' : 'unknown',
       type: 'search' === o.name ? 'inGoogle' : o.name,
@@ -2271,7 +2272,7 @@ function kififyWithPageData(tab, d) {
         log('[initTab]', tab.id, 'restricted');
       } else if (d.shown) {
         log('[initTab]', tab.id, 'shown before');
-      } else if (d.keepers.length || d.libraries.length || d.sources.length) {
+      } else if (enabled('social') && (d.keepers.length || d.libraries.length || d.sources.length)) {
         tab.keepersSec = d.sources.filter(isSlack).length ? 0 : 20;
         if (api.tabs.isFocused(tab)) {
           scheduleAutoEngage(tab, 'keepers');
@@ -2445,7 +2446,9 @@ api.tabs.on.focus.add(function(tab) {
   }
   delete tab.focusCallbacks;
   kifify(tab);
-  scheduleAutoEngage(tab, 'keepers');
+  if (enabled('social')) {
+    scheduleAutoEngage(tab, 'keepers');
+  }
 });
 
 api.tabs.on.blur.add(function(tab) {
