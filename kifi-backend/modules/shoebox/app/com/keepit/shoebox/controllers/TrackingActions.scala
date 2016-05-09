@@ -14,7 +14,7 @@ trait TrackingActions {
 
   implicit val ec: ExecutionContext
 
-  def SlackClickTracking(slackTeamIdOpt: Option[SlackTeamId], subactionFallback: String)(implicit slackAnalytics: SlackAnalytics) = MaybeUserAction andThen new ActionFunction[MaybeUserRequest, MaybeUserRequest] {
+  def SlackClickTracking(slackTeamIdOpt: Option[SlackTeamId], subactionFallback: String)(implicit slackAnalytics: SlackAnalytics) = new ActionFunction[MaybeUserRequest, MaybeUserRequest] {
     override def invokeBlock[A](request: MaybeUserRequest[A], block: (MaybeUserRequest[A]) => Future[Result]): Future[Result] = {
       Future {
         val signedParamsOpt = request.getQueryString("t").map(KifiUrlRedirectHelper.extractTrackingParams(_, Some("ascii")))
