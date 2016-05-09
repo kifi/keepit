@@ -635,6 +635,7 @@ function emitSettings(tab) {
     sounds: enabled('sounds'),
     popups: enabled('popups'),
     emails: prefs ? prefs.messagingEmails : true,
+    social: prefs ? !prefs.hideSocialTooltip : true,
     keeper: enabled('keeper'),
     search: enabled('search'),
     maxResults: prefs ? prefs.maxResults : 1
@@ -1440,6 +1441,13 @@ api.port.on({
         }
         onSettingCommitted();
       });
+    } else if (o.name === 'social') {
+      ajax('POST', '/ext/pref/hideSocialTooltip?hideTooltips=' + !o.value, function () {
+        if (prefs) {
+          prefs.hideSocialTooltip = !o.value;
+        }
+        onSettingCommitted();
+      });
     } else {
       store('_' + o.name, o.value ? 'y' : 'n');
       onSettingCommitted();
@@ -1454,7 +1462,7 @@ api.port.on({
     }
     tracker.track('user_changed_setting', {
       category:
-        ~['sounds','popups','emails'].indexOf(o.name) ? 'notification' :
+        ~['sounds','popups','emails','social'].indexOf(o.name) ? 'notification' :
         'keeper' === o.name ? 'keeper' :
         'search' === o.name ? 'search' : 'unknown',
       type: 'search' === o.name ? 'inGoogle' : o.name,
@@ -2263,6 +2271,7 @@ function kififyWithPageData(tab, d) {
     hide: hide
   }, {queue: 1});
 
+  var hideSocialTooltip = prefs && prefs.hideSocialTooltip;
   // consider triggering automatic keeper behavior on page to engage user (only once)
   if (!tab.engaged) {
     tab.engaged = true;
@@ -2271,7 +2280,7 @@ function kififyWithPageData(tab, d) {
         log('[initTab]', tab.id, 'restricted');
       } else if (d.shown) {
         log('[initTab]', tab.id, 'shown before');
-      } else if (d.keepers.length || d.libraries.length || d.sources.length) {
+      } else if (!hideSocialTooltip && (d.keepers.length || d.libraries.length || d.sources.length)) {
         tab.keepersSec = d.sources.filter(isSlack).length ? 0 : 20;
         if (api.tabs.isFocused(tab)) {
           scheduleAutoEngage(tab, 'keepers');
@@ -2445,7 +2454,9 @@ api.tabs.on.focus.add(function(tab) {
   }
   delete tab.focusCallbacks;
   kifify(tab);
-  scheduleAutoEngage(tab, 'keepers');
+  if (prefs && prefs.hideSocialTooltip) {
+    scheduleAutoEngage(tab, 'keepers');
+  }
 });
 
 api.tabs.on.blur.add(function(tab) {
