@@ -7,6 +7,7 @@ import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.{ ReactiveLock, FutureHelpers, ExecutionContext }
 import com.keepit.common.mail.EmailAddress
+import com.keepit.eliza.ElizaServiceClient
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.Author
 import com.keepit.typeahead.{ LibraryResultTypeaheadKey, LibraryResultTypeaheadCache }
@@ -64,7 +65,7 @@ final case class KeepInternResponse(newKeeps: Seq[Keep], existingKeeps: Seq[Keep
 @ImplementedBy(classOf[KeepInternerImpl])
 trait KeepInterner {
   // This is a modern API that supports multiple libraries, use it preferentially when possible
-  def internKeepByRequest(req: KeepInternRequest)(implicit session: RWSession): Try[(Keep, Boolean)]
+  def internKeepByRequest(req: KeepInternRequest)(implicit session: RWSession, context: HeimdalContext): Try[(Keep, Boolean)]
 
   // This is an older API that supports [0,1] libraries
   def internRawBookmarksWithStatus(rawBookmarks: Seq[RawBookmarkRepresentation], ownerIdOpt: Option[Id[User]], libraryOpt: Option[Library], usersAdded: Set[Id[User]], source: KeepSource)(implicit context: HeimdalContext): KeepInternResponse
@@ -98,6 +99,7 @@ class KeepInternerImpl @Inject() (
   userValueRepo: UserValueRepo,
   heimdalClient: HeimdalServiceClient,
   roverClient: RoverServiceClient,
+  eliza: ElizaServiceClient,
   libraryNewFollowersCommander: LibraryNewKeepsCommander,
   integrityHelpers: UriIntegrityHelpers,
   sourceAttrRepo: KeepSourceAttributionRepo,
@@ -122,7 +124,7 @@ class KeepInternerImpl @Inject() (
     }
     candidates.maxByOpt { keep => (keep.recipients == connections, keep.lastActivityAt, keep.id.get) }
   }
-  def internKeepByRequest(internReq: KeepInternRequest)(implicit session: RWSession): Try[(Keep, Boolean)] = {
+  def internKeepByRequest(internReq: KeepInternRequest)(implicit session: RWSession, context: HeimdalContext): Try[(Keep, Boolean)] = {
     val urlIsCompletelyUnusable = httpPrefix.findPrefixOf(internReq.url.toLowerCase).isEmpty || normalizationService.prenormalize(internReq.url).isFailure
     if (urlIsCompletelyUnusable) Failure(KeepFail.MALFORMED_URL)
     else {
@@ -166,6 +168,11 @@ class KeepInternerImpl @Inject() (
               log.warn(s"[keepinterner] Persisting keep failed of ${keep.url}", ex.getUndeclaredThrowable)
               throw ex.getUndeclaredThrowable
           }
+
+          val libs = libraryRepo.getActiveByIds(newKeep.recipients.libraries)
+          session.onTransactionSuccess {
+            reportNewKeeps(Seq(newKeep), libs.traverseByKey, context, notifyExternalSources = true)
+          }
           Success((newKeep, false))
       }
     }
@@ -178,7 +185,7 @@ class KeepInternerImpl @Inject() (
       case (newKs, existingKs) => (newKs.map(_.keep), existingKs.map(_.keep))
     }
 
-    reportNewKeeps(newKeeps, libraryOpt, context, notifyExternalSources = true)
+    reportNewKeeps(newKeeps, libraryOpt.toSeq, context, notifyExternalSources = true)
 
     KeepInternResponse(newKeeps, existingKeeps, failures)
   }
@@ -305,16 +312,17 @@ class KeepInternerImpl @Inject() (
   }
 
   private val reportingLock = new ReactiveLock(2)
-  private def reportNewKeeps(keeps: Seq[Keep], libraryOpt: Option[Library], ctx: HeimdalContext, notifyExternalSources: Boolean): Unit = {
+  private val debouncer = new Debouncing.Buffer[Seq[CrossServiceKeep]]
+  private def reportNewKeeps(keeps: Seq[Keep], libraries: Seq[Library], ctx: HeimdalContext, notifyExternalSources: Boolean): Unit = {
     if (keeps.nonEmpty) {
       // Don't block keeping for these
       reportingLock.withLockFuture {
         SafeFuture {
           // Analytics & typeaheads
-          libraryOpt.foreach { lib => libraryAnalytics.keptPages(keeps, lib, ctx) }
+          libraries.foreach { lib => libraryAnalytics.keptPages(keeps, lib, ctx) }
           keeps.groupBy(_.userId).collect {
             case (Some(userId), ks) =>
-              libraryOpt.foreach { lib =>
+              libraries.foreach { lib =>
                 libResCache.direct.remove(LibraryResultTypeaheadKey(userId, lib.id.get))
                 relevantSuggestedLibrariesCache.direct.remove(RelevantSuggestedLibrariesKey(userId))
               }
@@ -324,7 +332,7 @@ class KeepInternerImpl @Inject() (
 
           // Make external notifications & fetch
           if (notifyExternalSources) { // Only report first to not spam
-            libraryOpt.foreach { lib =>
+            libraries.foreach { lib =>
               libraryNewFollowersCommander.notifyFollowersOfNewKeeps(lib, keeps)
               libToSlackProcessor.schedule(Set(lib.id.get))
               if (KeepSource.manual.contains(keeps.head.source)) {
@@ -339,11 +347,22 @@ class KeepInternerImpl @Inject() (
               }
               roverClient.fetchAsap(nuri.id.get, nuri.url)
             }
+            val csKeeps = {
+              val ktls = db.readOnlyMaster { implicit s => ktlRepo.getAllByKeepIds(keeps.map(_.id.get).toSet) }
+              keeps.filter(_.recipients.numParticipants > 1).map { k =>
+                CrossServiceKeep.fromKeepAndRecipients(k, k.recipients.users, k.recipients.emails, ktls.getOrElse(k.id.get, Seq.empty).map { ktl =>
+                  CrossServiceKeep.LibraryInfo.fromKTL(ktl)
+                }.toSet)
+              }
+            }
+            debouncer.debounce("intern_empty_threads", 1 second)(csKeeps) { allCSKeeps =>
+              eliza.internEmptyThreadsForKeeps(allCSKeeps.flatten)
+            }
           }
 
           // Update data-dependencies
           db.readWrite(attempts = 3) { implicit s =>
-            libraryOpt.foreach { lib =>
+            libraries.foreach { lib =>
               libraryRepo.updateLastKept(lib.id.get)
               Try(libraryRepo.save(libraryRepo.getNoCache(lib.id.get).copy(keepCount = ktlRepo.getCountByLibraryId(lib.id.get)))) // wrapped in a Try because this is super deadlock prone
             }

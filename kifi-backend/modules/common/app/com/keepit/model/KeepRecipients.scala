@@ -40,6 +40,9 @@ case class KeepRecipients(
     emails = emails ++ diff.emails.added -- diff.emails.removed,
     libraries = libraries ++ diff.libraries.added -- diff.libraries.removed
   )
+
+  def numLibraries: Int = libraries.size
+  def numParticipants: Int = users.size + emails.size
 }
 object KeepRecipients {
   val EMPTY: KeepRecipients = KeepRecipients(libraries = Set.empty, users = Set.empty, emails = Set.empty)
