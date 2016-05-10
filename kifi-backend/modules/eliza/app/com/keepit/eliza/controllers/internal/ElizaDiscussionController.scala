@@ -145,10 +145,10 @@ class ElizaDiscussionController @Inject() (
           userThreadRepo.intern(UserThread.forMessageThread(thread)(u))
         }
       }
-      newKeeps.foreach { k =>
-        k.owner.foreach { owner =>
-          val (thread, isNew) = discussionCommander.internThreadForKeep(k, owner)
-        }
+    }
+    newKeeps.foreach { k =>
+      k.owner.foreach { owner =>
+        discussionCommander.internThreadForKeep(k, owner)
       }
     }
     NoContent
