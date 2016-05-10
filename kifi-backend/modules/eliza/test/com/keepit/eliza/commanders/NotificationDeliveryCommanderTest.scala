@@ -22,6 +22,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
 class NotificationDeliveryCommanderTest extends TestKitSupport with SpecificationLike with ElizaTestInjector with ElizaInjectionHelpers {
+  implicit def time: CrossServiceTime = CrossServiceTime(currentDateTime)
   implicit val context = HeimdalContext.empty
   val modules = Seq(
     FakeExecutionContextModule(),

@@ -54,10 +54,9 @@ object BlockingFilter extends Filter {
     "203.215.118."
   )
 
-  val tarpit = Seq(
-//    "12.47.130.201", // Declara
-//    "24.6.100.185", // edcast
-//    "173.13.190.50" // edcast
+  val tarpit = Seq( //    "12.47.130.201", // Declara
+  //    "24.6.100.185", // edcast
+  //    "173.13.190.50" // edcast
   )
 
   private def throwThemInAPit[T](andThen: => Future[T]) = {

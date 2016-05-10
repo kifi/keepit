@@ -31,6 +31,7 @@ class ExtMessagingController @Inject() (
     protected val heimdal: HeimdalServiceClient,
     protected val heimdalContextBuilder: HeimdalContextBuilderFactory,
     val accessLog: AccessLog) extends UserActions with ElizaServiceController {
+  implicit def time = CrossServiceTime(clock.now)
 
   def sendMessageAction() = UserAction.async(parse.tolerantJson) { request =>
     val o = request.body
@@ -52,7 +53,6 @@ class ExtMessagingController @Inject() (
       contextBuilder += ("guided", true)
     }
 
-    implicit val time = CrossServiceTime(clock.now)
     messagingCommander.sendMessageAction(title, text, source, validUserRecipients, validEmailRecipients, validOrgRecipients, url, request.userId, contextBuilder.build).map {
       case (message, threadInfo, messages) =>
         Ok(Json.obj(
@@ -84,7 +84,6 @@ class ExtMessagingController @Inject() (
           contextBuilder.data.remove("remoteAddress") // To be removed when the extension if fixed to send the client's ip //
           contextBuilder.build
         }
-        implicit val time = CrossServiceTime(clock.now)
         discussionCommander.sendMessage(request.userId, text, keepId, source)
       }
     } yield {

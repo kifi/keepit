@@ -36,6 +36,7 @@ class DiscussionCommanderImpl @Inject() (
   airbrake: AirbrakeNotifier,
   implicit val executionContext: ExecutionContext)
     extends DiscussionCommander with Logging {
+  implicit def csNow: CrossServiceTime = CrossServiceTime(clock.now)
 
   def markKeepsAsRead(userId: Id[User], lastSeenByKeep: Map[Id[Keep], Id[Message]]): Future[Map[Id[Keep], Int]] = {
     eliza.markKeepsAsReadForUser(userId, lastSeenByKeep)
@@ -53,7 +54,7 @@ class DiscussionCommanderImpl @Inject() (
       db.readWrite { implicit s =>
         keepMutator.unsafeModifyKeepRecipients(keepId, KeepRecipientsDiff.addUser(userId), userAttribution = Some(userId))
       }
-      eliza.sendMessageOnKeep(userId, text, keepId, source)(time = CrossServiceTime(clock.now))
+      eliza.sendMessageOnKeep(userId, text, keepId, source)
     }
   }
   def getMessagesOnKeep(userId: Id[User], keepId: Id[Keep], limit: Int, fromIdOpt: Option[Id[Message]]): Future[Seq[Message]] = {
