@@ -72,7 +72,7 @@ trait MessagingCommander {
   def setUserThreadMuteState(userId: Id[User], keepId: Id[Keep], mute: Boolean)(implicit context: HeimdalContext): Boolean
   def setNonUserThreadMuteState(id: Id[NonUserThread], mute: Boolean): Boolean
   def addParticipantsToThread(adderUserId: Id[User], keepId: Id[Keep], newUsers: Seq[Id[User]], emailContacts: Seq[BasicContact],
-    orgIds: Seq[Id[Organization]], source: Option[KeepEventSource])(implicit context: HeimdalContext): Future[Option[(MessageThread, KeepRecipientsDiff)]]
+    orgIds: Seq[Id[Organization]], source: Option[KeepEventSource])(implicit context: HeimdalContext): Future[(MessageThread, KeepRecipientsDiff)]
 
   def validateUsers(rawUsers: Seq[JsValue]): Seq[JsResult[ExternalId[User]]]
   def validateEmailContacts(rawNonUsers: Seq[JsValue]): Seq[JsResult[BasicContact]]
@@ -465,7 +465,7 @@ class MessagingCommanderImpl @Inject() (
   // todo(cam): make this `editParticipantsOnThread` with inactivation behavior
   def addParticipantsToThread(adderUserId: Id[User], keepId: Id[Keep],
     newUsers: Seq[Id[User]], emailContacts: Seq[BasicContact], orgIds: Seq[Id[Organization]],
-    source: Option[KeepEventSource])(implicit context: HeimdalContext): Future[Option[(MessageThread, KeepRecipientsDiff)]] = {
+    source: Option[KeepEventSource])(implicit context: HeimdalContext): Future[(MessageThread, KeepRecipientsDiff)] = {
     val newUserParticipantsFuture = Future.successful(newUsers)
     val newNonUserParticipantsFuture = constructNonUserRecipients(adderUserId, emailContacts)
 
@@ -476,7 +476,7 @@ class MessagingCommanderImpl @Inject() (
       }
     }).map(_.flatten)
 
-    val addedOpt = for {
+    val addedFut = for {
       newUserParticipants <- newUserParticipantsFuture
       newNonUserParticipants <- newNonUserParticipantsFuture
       newOrgParticipants <- newOrgParticipantsFuture
@@ -494,7 +494,7 @@ class MessagingCommanderImpl @Inject() (
         val actuallyNewUsers = (newUserParticipants ++ newOrgParticipants).filterNot(oldThread.containsUser)
         val actuallyNewNonUsers = newNonUserParticipants.filterNot(oldThread.containsNonUser)
 
-        if (actuallyNewNonUsers.isEmpty && actuallyNewUsers.isEmpty) None
+        if (actuallyNewNonUsers.isEmpty && actuallyNewUsers.isEmpty) (oldThread, KeepRecipientsDiff.empty)
         else {
           val thread = threadRepo.save(oldThread.withParticipants(clock.now, actuallyNewUsers.toSet, actuallyNewNonUsers.toSet))
           actuallyNewUsers.foreach(pUserId => userThreadRepo.intern(UserThread.forMessageThread(thread)(user = pUserId)))
@@ -518,12 +518,12 @@ class MessagingCommanderImpl @Inject() (
             db.readOnlyMaster(implicit session => messageRepo.refreshCache(keepId))
           }
 
-          Some((thread, diff))
+          (thread, diff)
         }
       }
     }
 
-    new SafeFuture[Option[(MessageThread, KeepRecipientsDiff)]](addedOpt, Some("Adding Participants to Thread"))
+    new SafeFuture[(MessageThread, KeepRecipientsDiff)](addedFut, Some("Adding Participants to Thread"))
   }
 
   def setRead(userId: Id[User], messageId: Id[ElizaMessage])(implicit context: HeimdalContext): Unit = {
