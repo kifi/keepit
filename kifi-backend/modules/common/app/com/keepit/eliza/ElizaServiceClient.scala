@@ -139,7 +139,7 @@ trait ElizaServiceClient extends ServiceClient {
   def deleteMessage(msgId: Id[Message]): Future[Unit]
 
   def keepHasThreadWithAccessToken(keepId: Id[Keep], accessToken: String): Future[Boolean]
-  def handleKeepEvent(keepId: Id[Keep], commonEvent: CommonKeepEvent, basicEvent: BasicKeepEvent, source: Option[KeepEventSource]): Future[Unit]
+  def modifyRecipientsAndSendEvent(keepId: Id[Keep], user: Id[User], diff: KeepRecipientsDiff, source: Option[KeepEventSource], notifEvent: Option[BasicKeepEvent]): Future[Unit]
   def internEmptyThreadsForKeeps(keeps: Seq[CrossServiceKeep]): Future[Unit]
   def getMessagesChanged(seqNum: SequenceNumber[Message], fetchSize: Int): Future[Seq[CrossServiceMessage]]
   def convertNonUserThreadToUserThread(userId: Id[User], accessToken: String): Future[(Option[EmailAddress], Option[Id[User]])]
@@ -405,10 +405,10 @@ class ElizaServiceClientImpl @Inject() (
     }
   }
 
-  def handleKeepEvent(keepId: Id[Keep], commonEvent: CommonKeepEvent, basicEvent: BasicKeepEvent, source: Option[KeepEventSource]): Future[Unit] = {
-    import HandleKeepEvent._
-    val request = Request(keepId, commonEvent, basicEvent, source)
-    call(Eliza.internal.handleKeepEvent, body = Json.toJson(request)).map(_ => ())
+  def modifyRecipientsAndSendEvent(keepId: Id[Keep], user: Id[User], diff: KeepRecipientsDiff, source: Option[KeepEventSource], notifEvent: Option[BasicKeepEvent]): Future[Unit] = {
+    import ModifyRecipientsAndSendEvent._
+    val request = Request(keepId, user, diff, source, notifEvent)
+    call(Eliza.internal.modifyRecipientsAndSendEvent, body = Json.toJson(request)).map(_ => ())
   }
   def internEmptyThreadsForKeeps(keeps: Seq[CrossServiceKeep]): Future[Unit] = {
     import InternEmptyThreadsForKeeps._
@@ -508,15 +508,15 @@ object ElizaServiceClient {
     implicit val requestFormat: Format[Request] = Json.format[Request]
     implicit val responseFormat: Format[Response] = Json.format[Response]
   }
-
-  object HandleKeepEvent {
-    implicit val commonEventFormat = CommonKeepEvent.format
-    implicit val basicEventFormat = BasicKeepEvent.format
-    case class Request(keepId: Id[Keep], commonEvent: CommonKeepEvent, basicEvent: BasicKeepEvent, source: Option[KeepEventSource])
-    implicit val requestFormat: Format[Request] = Json.format[Request]
-  }
   object InternEmptyThreadsForKeeps {
     case class Request(keeps: Seq[CrossServiceKeep])
+    implicit val requestFormat: Format[Request] = Json.format[Request]
+  }
+  object ModifyRecipientsAndSendEvent {
+    implicit val diffFormat = KeepRecipientsDiff.internalFormat
+    implicit val eventFormat = BasicKeepEvent.format
+    // if notifEvent.isDefined, a notification will be sent
+    case class Request(keepId: Id[Keep], userAttribution: Id[User], diff: KeepRecipientsDiff, source: Option[KeepEventSource], notifEvent: Option[BasicKeepEvent])
     implicit val requestFormat: Format[Request] = Json.format[Request]
   }
 

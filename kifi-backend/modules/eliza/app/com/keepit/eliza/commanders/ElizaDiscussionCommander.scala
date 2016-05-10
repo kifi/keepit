@@ -30,8 +30,8 @@ trait ElizaDiscussionCommander {
   def syncAddParticipants(keepId: Id[Keep], event: KeepEventData.ModifyRecipients, source: Option[KeepEventSource]): Future[Unit]
   def getEmailParticipantsForKeeps(keepIds: Set[Id[Keep]]): Map[Id[Keep], Map[EmailAddress, (Id[User], DateTime)]]
   def sendMessage(userId: Id[User], txt: String, keepId: Id[Keep], source: Option[MessageSource])(implicit time: CrossServiceTime, context: HeimdalContext): Future[Message]
-  def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], newUsers: Seq[Id[User]], newNonUsers: Seq[BasicContact], orgs: Seq[Id[Organization]], source: Option[KeepEventSource])(implicit context: HeimdalContext): Future[Boolean]
-  def handleKeepEvent(keepId: Id[Keep], commonEvent: CommonKeepEvent, basicEvent: BasicKeepEvent, source: Option[KeepEventSource])(implicit context: HeimdalContext): Future[Unit]
+  def editParticipantsOnKeepForOldElizaClients(keepId: Id[Keep], editor: Id[User], newUsers: Seq[Id[User]], newNonUsers: Seq[BasicContact], orgs: Seq[Id[Organization]], source: Option[KeepEventSource])(implicit context: HeimdalContext): Future[Boolean]
+  def modifyRecipientsForKeep(keepId: Id[Keep], userAttribution: Id[User], diff: KeepRecipientsDiff, source: Option[KeepEventSource])(implicit ctxt: HeimdalContext): Future[(MessageThread, KeepRecipientsDiff)]
   def muteThread(userId: Id[User], keepId: Id[Keep])(implicit context: HeimdalContext): Future[Boolean]
   def unmuteThread(userId: Id[User], keepId: Id[Keep])(implicit context: HeimdalContext): Future[Boolean]
   def markAsRead(userId: Id[User], keepId: Id[Keep], msgId: Id[ElizaMessage]): Option[Int]
@@ -250,7 +250,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
   }
 
   // path for modifying participants from old clients: client --> eliza (thread updates) -> shoebox (keep event updates) -> eliza (event notifications)
-  def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], newUsers: Seq[Id[User]], newNonUsers: Seq[BasicContact], orgs: Seq[Id[Organization]], source: Option[KeepEventSource])(implicit context: HeimdalContext): Future[Boolean] = {
+  def editParticipantsOnKeepForOldElizaClients(keepId: Id[Keep], editor: Id[User], newUsers: Seq[Id[User]], newNonUsers: Seq[BasicContact], orgs: Seq[Id[Organization]], source: Option[KeepEventSource])(implicit context: HeimdalContext): Future[Boolean] = {
     implicit val context = HeimdalContext.empty
     for {
       thread <- getOrCreateMessageThreadWithUser(keepId, editor)
@@ -260,30 +260,26 @@ class ElizaDiscussionCommanderImpl @Inject() (
           shoebox.persistModifyRecipients(keepId, ModifyRecipients(editor, diff), source).map {
             case None => false
             case Some(CommonAndBasicKeepEvent(commonEvent, basicEvent)) =>
-              notifDeliveryCommander.notifyAddParticipants(editor, diff, updatedThread, commonEvent, basicEvent, source)
+              notifDeliveryCommander.notifyAddParticipants(editor, diff, updatedThread, basicEvent)
               true
           }
       }.getOrElse(Future.successful(false))
     } yield success
   }
 
-  // path for modifying participants: client -> shoebox (keep event updates) -> eliza (thread updates + event notifications)
-  def handleKeepEvent(keepId: Id[Keep], commonEvent: CommonKeepEvent, basicEvent: BasicKeepEvent, source: Option[KeepEventSource])(implicit context: HeimdalContext): Future[Unit] = {
-    implicit val context = HeimdalContext.empty
-    commonEvent.eventData match {
-      case et: EditTitle =>
-        getOrCreateMessageThreadWithUser(keepId, et.editedBy).map { thread =>
-          thread.participants.allUsers.foreach { uid => notifDeliveryCommander.sendKeepEvent(uid, Keep.publicId(keepId), basicEvent) }
-        }
-      case ModifyRecipients(editor, proposedDiff) =>
-        getOrCreateMessageThreadWithUser(keepId, editor).flatMap { thread =>
-          messagingCommander.addParticipantsToThread(editor, keepId, proposedDiff.users.added.toSeq, proposedDiff.emails.added.map(BasicContact(_)).toSeq, orgIds = Seq.empty, source).map {
-            case None => Unit
-            case Some((updatedThread, realDiff)) =>
-              notifDeliveryCommander.notifyAddParticipants(editor, realDiff, updatedThread, commonEvent, basicEvent, source)
-          }
-        }
-    }
+  def modifyRecipientsForKeep(keepId: Id[Keep], userAttribution: Id[User], diff: KeepRecipientsDiff, source: Option[KeepEventSource])(implicit ctxt: HeimdalContext): Future[(MessageThread, KeepRecipientsDiff)] = {
+    for {
+      _ <- getOrCreateMessageThreadWithUser(keepId, userAttribution)
+      updatedThreadOpt <- messagingCommander.addParticipantsToThread(
+        adderUserId = userAttribution,
+        keepId = keepId,
+        newUsers = diff.users.added.toList,
+        emailContacts = diff.emails.added.toList.map(BasicContact(_)),
+        orgIds = Seq.empty,
+        source = source
+      )
+      (updatedThread, realDiff) <- updatedThreadOpt.map(Future.successful).getOrElse(Future.failed(DiscussionFail.NO_NEW_PARTICIPANTS))
+    } yield (updatedThread, realDiff)
   }
 
   def deleteThreadsForKeeps(keepIds: Set[Id[Keep]])(implicit session: RWSession): Unit = {

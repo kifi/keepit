@@ -11,7 +11,7 @@ import com.keepit.common.mail.BasicContact
 import com.keepit.eliza.ElizaServiceClient._
 import com.keepit.model.{ KeepRecipientsDiff, KeepRecipients, ElizaFeedFilter, User, Keep }
 import com.keepit.discussion.Message
-import com.keepit.eliza.commanders.ElizaDiscussionCommander
+import com.keepit.eliza.commanders.{ NotificationDeliveryCommander, ElizaDiscussionCommander }
 import com.keepit.eliza.model._
 import com.keepit.heimdal._
 import org.joda.time.DateTime
@@ -19,10 +19,11 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import play.api.mvc.Action
 
-import scala.util.Try
+import scala.util.{ Success, Try }
 
 class ElizaDiscussionController @Inject() (
   discussionCommander: ElizaDiscussionCommander,
+  notifDeliveryCommander: NotificationDeliveryCommander,
   db: Database,
   messageRepo: MessageRepo,
   threadRepo: MessageThreadRepo,
@@ -118,11 +119,15 @@ class ElizaDiscussionController @Inject() (
     discussionCommander.deleteMessage(msgId)
     NoContent
   }
-  def handleKeepEvent() = Action.async(parse.tolerantJson) { request =>
-    import HandleKeepEvent._
-    implicit val context = heimdalContextBuilder().build
+  def modifyRecipientsAndSendEvent() = Action.async(parse.tolerantJson) { request =>
+    import ModifyRecipientsAndSendEvent._
     val input = request.body.as[Request]
-    discussionCommander.handleKeepEvent(input.keepId, input.commonEvent, input.basicEvent, input.source).map { _ => NoContent }
+    implicit val ctxt = HeimdalContext.empty
+    discussionCommander.modifyRecipientsForKeep(input.keepId, input.userAttribution, input.diff, input.source).andThen {
+      case Success((thread, diff)) => input.notifEvent.foreach { event =>
+        thread.allParticipantsExcept(input.userAttribution).foreach(userId => notifDeliveryCommander.notifyAddParticipants(userId, diff, thread, event))
+      }
+    }.map(_ => NoContent)
   }
   def internEmptyThreadsForKeeps() = Action(parse.tolerantJson) { request =>
     import InternEmptyThreadsForKeeps._

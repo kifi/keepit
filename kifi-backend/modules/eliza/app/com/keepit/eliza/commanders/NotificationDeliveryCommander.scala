@@ -46,7 +46,7 @@ trait NotificationDeliveryCommander {
   // todo: For each method here, remove if no one's calling it externally, and set as private in the implementation
   def updateEmailParticipantThreads(thread: MessageThread, newMessage: ElizaMessage): Unit
   def notifyEmailParticipants(thread: MessageThread): Unit
-  def notifyAddParticipants(adderUserId: Id[User], diff: KeepRecipientsDiff, thread: MessageThread, commonEvent: CommonKeepEvent, basicEvent: BasicKeepEvent, source: Option[KeepEventSource]): Unit
+  def notifyAddParticipants(adderUserId: Id[User], diff: KeepRecipientsDiff, thread: MessageThread, basicEvent: BasicKeepEvent): Unit
   def notifyMessage(userId: Id[User], keepId: PublicId[Keep], message: MessageWithBasicUser): Unit
   def notifyRead(userId: Id[User], keepId: Id[Keep], messageId: Id[ElizaMessage], nUrl: String, creationDate: DateTime): Unit
   def notifyUnread(userId: Id[User], keepId: Id[Keep], messageId: Id[ElizaMessage], nUrl: String, creationDate: DateTime): Unit
@@ -126,9 +126,10 @@ class NotificationDeliveryCommanderImpl @Inject() (
     emailCommander.notifyEmailUsers(thread)
   }
 
-  def notifyAddParticipants(adderUserId: Id[User], diff: KeepRecipientsDiff, thread: MessageThread, commonEvent: CommonKeepEvent, basicEvent: BasicKeepEvent, source: Option[KeepEventSource]): Unit = {
+  def notifyAddParticipants(adderUserId: Id[User], diff: KeepRecipientsDiff, thread: MessageThread, basicEvent: BasicKeepEvent): Unit = {
     new SafeFuture(shoebox.getRecipientsOnKeep(thread.keepId) map {
       case (basicUsers, basicLibraries, emails) =>
+        val author = basicUsers(adderUserId)
         val theTitle: String = thread.pageTitle.getOrElse("New conversation")
         val participants: Seq[BasicUserLikeEntity] =
           basicUsers.values.toSeq.map(u => BasicUserLikeEntity(u)) ++
@@ -140,16 +141,15 @@ class NotificationDeliveryCommanderImpl @Inject() (
           "text" -> DescriptionElements.formatPlain(basicEvent.header),
           "url" -> thread.url,
           "title" -> theTitle,
-          "author" -> basicUsers(adderUserId),
+          "author" -> author,
           "participants" -> participants,
           "locator" -> thread.deepLocator,
           "unread" -> true,
           "category" -> NotificationCategory.User.MESSAGE.category
         )
 
-        val messageWithBasicUser = basicMessageCommander.getMessageWithBasicUser(Left(commonEvent), thread, basicUsers)
-        val precomputedInfo = PrecomputedInfo.BuildForEvent(Some(thread), Some(basicUsers), Some(messageWithBasicUser))
-        val threadNotifsByUserFut = threadNotifBuilder.buildForUsersFromEvent(diff.users.added, thread.keepId, commonEvent, Some(precomputedInfo))
+        val precomputedInfo = PrecomputedInfo.BuildForEvent(Some(thread), Some(basicUsers))
+        val threadNotifsByUserFut = threadNotifBuilder.buildForUsersFromEvent(diff.users.added, thread.keepId, basicEvent, author, Some(precomputedInfo))
 
         threadNotifsByUserFut.foreach { threadNotifsByUser =>
           diff.users.added.foreach { userId =>
@@ -158,7 +158,6 @@ class NotificationDeliveryCommanderImpl @Inject() (
         }
 
         thread.participants.allUsers.par.foreach { userId =>
-          sendToUser(userId, Json.arr("message", thread.pubKeepId, messageWithBasicUser))
           sendToUser(userId, Json.arr("event", thread.pubKeepId, basicEvent))
           sendToUser(userId, Json.arr("thread_participants", thread.pubKeepId, participants))
         }

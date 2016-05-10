@@ -7,12 +7,13 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
+import com.keepit.common.util.DescriptionElements
 import com.keepit.eliza.model._
 import com.keepit.model._
 import com.keepit.model.BasicKeepEvent.BasicKeepEventId
 import com.keepit.model.{ CommonKeepEvent, DeepLocator, Keep, NotificationCategory, User }
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.social.{ BasicUser, BasicUserLikeEntity }
+import com.keepit.social.{ BasicNonUser, BasicUser, BasicUserLikeEntity }
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -45,10 +46,9 @@ case class MessageThreadNotification(
   numUnreadMessages: Int, // used only for client bookkeeping
   forceOverwrite: Boolean) // this flag will tell the extension to overwrite any existing notifications with this keep id
 object MessageThreadNotification {
-  def apply(thread: MessageThread, threadStarter: ExternalId[User], messageWithBasicUser: MessageWithBasicUser,
-    unread: Boolean, numUnseenAuthors: Int, numAuthors: Int,
-    numMessages: Int, numUnread: Int, muted: Boolean)(implicit publicIdConfig: PublicIdConfiguration, airbrake: AirbrakeNotifier): MessageThreadNotification = {
-    val orderedParticipants = messageWithBasicUser.participants.sortBy(x => x.fold(nu => (nu.firstName.getOrElse(""), nu.lastName.getOrElse("")), u => (u.firstName, u.lastName)))
+  def apply(thread: MessageThread, threadStarter: ExternalId[User], id: BasicKeepEventId, eventTime: DateTime, author: BasicUser, text: String,
+    participants: Seq[BasicUserLikeEntity], unread: Boolean, numUnseenAuthors: Int, numAuthors: Int, numMessages: Int, numUnread: Int, muted: Boolean)(implicit publicIdConfig: PublicIdConfiguration, airbrake: AirbrakeNotifier): MessageThreadNotification = {
+    val orderedParticipants = participants.sortBy(x => x.fold(nu => (nu.firstName.getOrElse(""), nu.lastName.getOrElse("")), u => (u.firstName, u.lastName)))
     val indexOfFirstAuthor = orderedParticipants.zipWithIndex.collectFirst {
       case (Right(user), idx) if user.externalId == threadStarter => idx
     }.getOrElse {
@@ -56,10 +56,10 @@ object MessageThreadNotification {
       0
     }
     MessageThreadNotification(
-      id = Some(messageWithBasicUser.id),
-      time = messageWithBasicUser.createdAt,
-      author = Some(messageWithBasicUser.user),
-      text = messageWithBasicUser.text,
+      id = Some(id),
+      time = eventTime,
+      author = Some(BasicUserLikeEntity(author)),
+      text = text,
       threadId = thread.pubKeepId,
       locator = thread.deepLocator,
       url = thread.url,
@@ -103,7 +103,7 @@ trait MessageThreadNotificationBuilder {
 
   def buildForKeeps(userId: Id[User], keepIds: Set[Id[Keep]], precomputed: Option[PrecomputedInfo.BuildForKeeps] = None): Future[Map[Id[Keep], MessageThreadNotification]]
   def buildForUsers(keepId: Id[Keep], userIds: Set[Id[User]], precomputed: Option[PrecomputedInfo.BuildForUsers] = None): Future[Map[Id[User], MessageThreadNotification]]
-  def buildForUsersFromEvent(userIds: Set[Id[User]], keepId: Id[Keep], event: CommonKeepEvent, precomputedInfo: Option[PrecomputedInfo.BuildForEvent] = None): Future[Map[Id[User], MessageThreadNotification]]
+  def buildForUsersFromEvent(userIds: Set[Id[User]], keepId: Id[Keep], event: BasicKeepEvent, author: BasicUser, precomputedInfo: Option[PrecomputedInfo.BuildForEvent] = None): Future[Map[Id[User], MessageThreadNotification]]
 
   // Convenience methods, just wrappers around the real methods above
   def buildForKeep(userId: Id[User], keepId: Id[Keep], precomputed: Option[PrecomputedInfo.BuildForKeep] = None): Future[Option[MessageThreadNotification]]
@@ -136,9 +136,7 @@ object MessageThreadNotificationBuilder {
     }
     case class BuildForEvent(
       thread: Option[MessageThread] = None,
-      basicUserById: Option[Map[Id[User], BasicUser]] = None,
-      messageWithBasicUser: Option[MessageWithBasicUser] = None)
-
+      basicUserById: Option[Map[Id[User], BasicUser]] = None)
     case class BuildForUsers(dummy: Int)
   }
 }
@@ -253,7 +251,7 @@ class MessageThreadNotificationBuilderImpl @Inject() (
     }
   }
 
-  def buildForUsersFromEvent(userIds: Set[Id[User]], keepId: Id[Keep], event: CommonKeepEvent, precomputedInfo: Option[PrecomputedInfo.BuildForEvent] = None): Future[Map[Id[User], MessageThreadNotification]] = {
+  def buildForUsersFromEvent(userIds: Set[Id[User]], keepId: Id[Keep], event: BasicKeepEvent, author: BasicUser, precomputedInfo: Option[PrecomputedInfo.BuildForEvent] = None): Future[Map[Id[User], MessageThreadNotification]] = {
     val (thread, threadActivity, messageCountByUser, mutedByUser) = db.readOnlyMaster { implicit s =>
       val thread = precomputedInfo.flatMap(_.thread).getOrElse(messageThreadRepo.getByKeepId(keepId).get)
       val threadActivity = userThreadRepo.getThreadActivity(keepId).sortBy { uta => (-uta.lastActive.getOrElse(START_OF_TIME).getMillis, uta.id.id) }
@@ -270,8 +268,6 @@ class MessageThreadNotificationBuilderImpl @Inject() (
       basicUserById <- precomputedInfo.flatMap(_.basicUserById).map(Future.successful)
         .getOrElse(shoebox.getBasicUsers(thread.allParticipants.toSeq))
     } yield {
-      val message = precomputedInfo.flatMap(_.messageWithBasicUser).getOrElse(messageFetchingCommander.getMessageWithBasicUser(Left(event), thread, basicUserById))
-
       userIds.map { userId =>
         val authorActivityInfos = threadActivity.filter(_.lastActive.isDefined)
         val lastSeenOpt = threadActivity.find(_.userId == userId).flatMap(_.lastSeen)
@@ -281,11 +277,17 @@ class MessageThreadNotificationBuilderImpl @Inject() (
         }
         val MessageCount(numMessages, numUnread) = messageCountByUser(userId)
 
+        val participants = thread.allParticipants.map(uid => BasicUserLikeEntity.user(basicUserById(uid))) ++ thread.allEmails.map(email => BasicUserLikeEntity.nonUser(BasicNonUser.fromEmail(email)))
+
         userId -> MessageThreadNotification(
           thread = thread,
           threadStarter = basicUserById(thread.startedBy).externalId,
-          messageWithBasicUser = message,
-          unread = !message.user.right.toOption.exists(_.externalId == basicUserById(userId).externalId),
+          id = event.id,
+          eventTime = event.timestamp,
+          author = author,
+          text = DescriptionElements.formatPlain(event.header),
+          participants = participants.toSeq,
+          unread = !basicUserById.get(userId).exists(_.externalId == author.externalId),
           numUnseenAuthors = unseenAuthors,
           numAuthors = authorActivityInfos.length,
           numMessages = numMessages,
