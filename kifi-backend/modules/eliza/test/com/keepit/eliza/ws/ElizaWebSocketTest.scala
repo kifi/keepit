@@ -5,17 +5,18 @@ import java.util.UUID
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.FakeUserActionsModule
-import com.keepit.common.crypto.{ PublicId }
-import com.keepit.common.db.{ Id }
+import com.keepit.common.crypto.PublicId
+import com.keepit.common.db.Id
 import com.keepit.common.store.FakeElizaStoreModule
+import com.keepit.common.time.{ CrossServiceTime, DEFAULT_DATE_TIME_ZONE, currentDateTime }
 import com.keepit.eliza.commanders.MessagingCommander
 import com.keepit.eliza.controllers.shared.SharedWsMessagingController
 import com.keepit.eliza.model._
 import com.keepit.eliza.notify.WsTestBehavior
-import com.keepit.heimdal.{ HeimdalContext, FakeHeimdalServiceClientModule }
+import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
 import com.keepit.model.{ Keep, MessageThreadFactory, User }
 import com.keepit.rover.FakeRoverServiceClientModule
-import com.keepit.shoebox.{ FakeShoeboxServiceModule }
+import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.{ ElizaApplication, ElizaApplicationInjector }
 import org.specs2.mutable.Specification
 import org.specs2.time.NoTimeConversions
@@ -24,7 +25,7 @@ import play.api.mvc.WebSocket
 import play.api.test.Helpers._
 
 class ElizaWebSocketTest extends Specification with ElizaApplicationInjector with NoTimeConversions with WsTestBehavior {
-
+  implicit def time: CrossServiceTime = CrossServiceTime(currentDateTime)
   val modules = List(
     FakeElizaStoreModule(),
     FakeHeimdalServiceClientModule(),

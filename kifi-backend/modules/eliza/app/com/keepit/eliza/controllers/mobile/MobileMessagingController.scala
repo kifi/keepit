@@ -42,6 +42,7 @@ class MobileMessagingController @Inject() (
     clock: Clock,
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val executionContext: ExecutionContext) extends UserActions with ElizaServiceController {
+  implicit def time = CrossServiceTime(clock.now)
 
   private def sanitizeUrls(obj: JsObject): JsObject = { // yolo
     val url = obj.value.get("url").collect { case JsString(raw) => JsString(URISanitizer.sanitize(raw)) }
@@ -157,7 +158,6 @@ class MobileMessagingController @Inject() (
       contextBuilder += ("source", "mobile")
       contextBuilder.build
     }
-    implicit val time = CrossServiceTime(clock.now)
 
     messagingCommander.sendMessageAction(title, text, source, validUserRecipients, validEmailRecipients, validOrgRecipients, url, request.userId, context).map {
       case (message, threadInfo, messages) =>
@@ -195,7 +195,6 @@ class MobileMessagingController @Inject() (
           contextBuilder += ("source", "mobile")
           contextBuilder.build
         }
-        implicit val time = CrossServiceTime(clock.now)
         discussionCommander.sendMessage(request.user.id.get, text, keepId, headerSourceOpt.orElse(passedSourceOpt)).map { message =>
           val tDiff = currentDateTime.getMillis - tStart.getMillis
           statsd.timing(s"messaging.replyMessage", tDiff, ONE_IN_HUNDRED)

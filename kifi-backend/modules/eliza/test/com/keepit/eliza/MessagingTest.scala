@@ -5,27 +5,28 @@ import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.cache.ElizaCacheModule
 import com.keepit.common.concurrent.{ FakeExecutionContextModule, WatchableExecutionContext }
-import com.keepit.common.crypto.{ PublicId, FakeCryptoModule }
+import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.common.db.Id
 import com.keepit.common.store.FakeElizaStoreModule
+import com.keepit.common.time.{ CrossServiceTime, DEFAULT_DATE_TIME_ZONE, currentDateTime }
 import com.keepit.eliza.commanders._
 import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.eliza.model._
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
-import com.keepit.model.{ Organization, UserFactory, User }
-import com.keepit.realtime.{ FakeAppBoyModule }
+import com.keepit.model.{ User, UserFactory }
+import com.keepit.realtime.FakeAppBoyModule
 import com.keepit.rover.FakeRoverServiceClientModule
 import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, FakeShoeboxServiceModule, ShoeboxServiceClient }
 import com.keepit.social.BasicUser
 import com.keepit.test.{ ElizaInjectionHelpers, ElizaTestInjector }
 import org.specs2.mutable._
-import play.api.libs.json.{ JsObject, Json }
+import play.api.libs.json.JsObject
 
-import scala.concurrent.{ Future, Await }
 import scala.concurrent.duration.Duration
+import scala.concurrent.{ Await, Future }
 
 class MessagingTest extends Specification with ElizaTestInjector with ElizaInjectionHelpers {
-
+  implicit def time: CrossServiceTime = CrossServiceTime(currentDateTime)
   implicit val context = HeimdalContext.empty
 
   def modules = {
