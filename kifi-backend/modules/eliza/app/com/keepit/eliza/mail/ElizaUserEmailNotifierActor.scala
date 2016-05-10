@@ -15,6 +15,7 @@ import com.keepit.eliza.model._
 import com.keepit.eliza.model.ExtendedThreadItem
 import com.keepit.eliza.model.UserThread
 import com.keepit.model.{ NotificationCategory, UserStates, User }
+import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.RoverUriSummary
 import com.keepit.shoebox.ShoeboxServiceClient
 import org.joda.time.Minutes
@@ -29,6 +30,7 @@ class ElizaUserEmailNotifierActor @Inject() (
     userThreadRepo: UserThreadRepo,
     threadRepo: MessageThreadRepo,
     shoebox: ShoeboxServiceClient,
+    rover: RoverServiceClient,
     elizaEmailCommander: ElizaEmailCommander,
     implicit val publicIdConfig: PublicIdConfiguration) extends ElizaEmailNotifierActor[UserThread](airbrake) {
 
@@ -61,7 +63,7 @@ class ElizaUserEmailNotifierActor @Inject() (
     )
     val allUserImageUrlsFuture: Future[Map[Id[User], String]] = new SafeFuture(FutureHelpers.map(allUserIds.map(u => u -> shoebox.getUserImageUrl(u, 73)).toMap))
     val allUserEmailAddressesFuture: Future[Map[Id[User], Option[EmailAddress]]] = new SafeFuture(shoebox.getEmailAddressForUsers(allUserIds.toSet))
-    val uriSummaryFuture = elizaEmailCommander.getUriSummary(thread)
+    val uriSummaryFuture = new SafeFuture[Option[RoverUriSummary]](rover.getOrElseFetchUriSummaryForKeeps(Set(thread.keepId)).map(_.get(thread.keepId)))
     val threadDataFuture = for {
       allUsers <- allUsersFuture
       allUserImageUrls <- allUserImageUrlsFuture
