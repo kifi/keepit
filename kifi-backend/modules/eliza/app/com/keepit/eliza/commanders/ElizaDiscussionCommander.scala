@@ -254,23 +254,22 @@ class ElizaDiscussionCommanderImpl @Inject() (
     implicit val context = HeimdalContext.empty
     for {
       thread <- getOrCreateMessageThreadWithUser(keepId, editor)
-      threadAndDiffOpt <- messagingCommander.addParticipantsToThread(editor, keepId, newUsers, newNonUsers, orgs.toSeq, source)
-      success <- threadAndDiffOpt.map {
-        case (updatedThread, diff) =>
-          shoebox.persistModifyRecipients(keepId, ModifyRecipients(editor, diff), source).map {
-            case None => false
-            case Some(CommonAndBasicKeepEvent(commonEvent, basicEvent)) =>
-              notifDeliveryCommander.notifyAddParticipants(editor, diff, updatedThread, basicEvent)
-              true
-          }
-      }.getOrElse(Future.successful(false))
+      (updatedThread, realDiff) <- messagingCommander.addParticipantsToThread(editor, keepId, newUsers, newNonUsers, orgs.toSeq, source)
+      success <- if (realDiff.nonEmpty) {
+        shoebox.persistModifyRecipients(keepId, ModifyRecipients(editor, realDiff), source).map {
+          case None => false
+          case Some(CommonAndBasicKeepEvent(_, basicEvent)) =>
+            notifDeliveryCommander.notifyAddParticipants(editor, realDiff, updatedThread, basicEvent)
+            true
+        }
+      } else Future.successful(false)
     } yield success
   }
 
   def modifyRecipientsForKeep(keepId: Id[Keep], userAttribution: Id[User], diff: KeepRecipientsDiff, source: Option[KeepEventSource])(implicit ctxt: HeimdalContext): Future[(MessageThread, KeepRecipientsDiff)] = {
     for {
       _ <- getOrCreateMessageThreadWithUser(keepId, userAttribution)
-      updatedThreadOpt <- messagingCommander.addParticipantsToThread(
+      (thread, realDiff) <- messagingCommander.addParticipantsToThread(
         adderUserId = userAttribution,
         keepId = keepId,
         newUsers = diff.users.added.toList,
@@ -278,8 +277,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
         orgIds = Seq.empty,
         source = source
       )
-      (updatedThread, realDiff) <- updatedThreadOpt.map(Future.successful).getOrElse(Future.failed(DiscussionFail.NO_NEW_PARTICIPANTS))
-    } yield (updatedThread, realDiff)
+    } yield (thread, realDiff)
   }
 
   def deleteThreadsForKeeps(keepIds: Set[Id[Keep]])(implicit session: RWSession): Unit = {
