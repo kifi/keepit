@@ -346,14 +346,16 @@ class KeepInternerImpl @Inject() (
               }
             }
           }
+          val keepsToNotifyAbout = keeps.filter(_.recipients.users.size > 1)
           val (ktls, ktus, sourceAttrs) = db.readOnlyMaster { implicit s =>
-            val ktls = ktlRepo.getAllByKeepIds(keepIds)
-            val ktus = ktuRepo.getAllByKeepIds(keepIds)
-            val sourceAttrs = keepSourceCommander.getSourceAttributionForKeeps(keepIds)
+            val keepIdsToNotifyAbout = keepsToNotifyAbout.map(_.id.get).toSet
+            val ktls = ktlRepo.getAllByKeepIds(keepIdsToNotifyAbout)
+            val ktus = ktuRepo.getAllByKeepIds(keepIdsToNotifyAbout)
+            val sourceAttrs = keepSourceCommander.getSourceAttributionForKeeps(keepIdsToNotifyAbout)
             (ktls, ktus, sourceAttrs)
           }
-          val basicKeeps = { keepActivityAssembler.assembleInitialEventsForKeeps(keeps, sourceAttrs, ktls, ktus) }
-          FutureHelpers.sequentialExec(keeps) { keep =>
+          val basicKeeps = { keepActivityAssembler.assembleInitialEventsForKeeps(keepsToNotifyAbout, sourceAttrs, ktls, ktus) }
+          FutureHelpers.sequentialExec(keepsToNotifyAbout) { keep =>
             keep.recipients.users.map { uid =>
               val basicKeep = basicKeeps.get(keep.id.get)
               eliza.modifyRecipientsAndSendEvent(keep.id.get, uid, keep.recipients.toDiff, basicKeep.flatMap(_.source.map(_.kind)), basicKeep)
