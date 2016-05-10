@@ -13,6 +13,7 @@ import com.keepit.search.SearchServiceClient
 import com.keepit.shoebox.data.assemblers.KeepActivityAssembler
 import com.keepit.social.Author
 import com.keepit.typeahead.{ LibraryResultTypeaheadKey, LibraryResultTypeaheadCache }
+import scala.concurrent.Future
 import scala.concurrent.duration._
 import com.keepit.common.core._
 import com.keepit.common.db._
@@ -356,24 +357,14 @@ class KeepInternerImpl @Inject() (
           }
           val basicKeeps = { keepActivityAssembler.assembleInitialEventsForKeeps(keepsToNotifyAbout, sourceAttrs, ktls, ktus) }
           FutureHelpers.sequentialExec(keepsToNotifyAbout) { keep =>
-            keep.recipients.users.map { uid =>
-              val basicKeep = basicKeeps.get(keep.id.get)
-              eliza.modifyRecipientsAndSendEvent(keep.id.get, uid, keep.recipients.toDiff, basicKeep.flatMap(_.source.map(_.kind)), basicKeep)
-            }
+            val basicKeep = basicKeeps.get(keep.id.get)
+            keep.userId.map(uid => eliza.modifyRecipientsAndSendEvent(keep.id.get, uid, keep.recipients.toDiff, basicKeep.flatMap(_.source.map(_.kind)), basicKeep)).getOrElse(Future.successful(()))
+          }
+          FutureHelpers.sequentialExec(keeps) { keep =>
             val nuri = db.readOnlyMaster { implicit session =>
               normalizedURIRepo.get(keep.uriId)
             }
             roverClient.fetchAsap(nuri.id.get, nuri.url)
-          }
-          val csKeeps = {
-            keeps.filter(_.recipients.numParticipants > 1).map { k =>
-              CrossServiceKeep.fromKeepAndRecipients(k, k.recipients.users, k.recipients.emails, ktls.getOrElse(k.id.get, Seq.empty).map { ktl =>
-                CrossServiceKeep.LibraryInfo.fromKTL(ktl)
-              }.toSet)
-            }
-          }
-          debouncer.debounce("intern_empty_threads", 1 second)(csKeeps) { allCSKeeps =>
-            eliza.internEmptyThreadsForKeeps(allCSKeeps.flatten)
           }
 
           // Update data-dependencies
