@@ -68,7 +68,7 @@ k.tile = k.tile || (function () {
       });
 
       api.port.emit('prefs', function (prefs) {
-        configureLookHere(prefs.lookHereMode);
+        configureLookHere(prefs && prefs.lookHereMode);
       });
     },
     show_keeper: function(show) {
