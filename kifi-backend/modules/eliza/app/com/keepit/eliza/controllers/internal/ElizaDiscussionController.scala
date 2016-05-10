@@ -80,9 +80,13 @@ class ElizaDiscussionController @Inject() (
   def sendMessageOnKeep() = Action.async(parse.tolerantJson) { request =>
     import SendMessageOnKeep._
     val input = request.body.as[Request]
-    val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
-    input.source.foreach { src => contextBuilder += ("source", src.value) }
-    discussionCommander.sendMessage(input.userId, input.text, input.keepId, source = input.source)(contextBuilder.build).map { msg =>
+    implicit val context = {
+      val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
+      input.source.foreach { src => contextBuilder += ("source", src.value) }
+      contextBuilder.build
+    }
+    implicit val time = input.time
+    discussionCommander.sendMessage(input.userId, input.text, input.keepId, source = input.source).map { msg =>
       val output = Response(msg)
       Ok(Json.toJson(output))
     }

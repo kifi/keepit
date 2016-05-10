@@ -6,6 +6,7 @@ import com.keepit.common.core.anyExtensionOps
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.common.time.{ Clock, CrossServiceTime, DEFAULT_DATE_TIME_ZONE }
 import com.keepit.discussion.{ DiscussionFail, Message, MessageSource }
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
@@ -25,6 +26,7 @@ trait DiscussionCommander {
 @Singleton
 class DiscussionCommanderImpl @Inject() (
   db: Database,
+  clock: Clock,
   keepRepo: KeepRepo,
   ktlRepo: KeepToLibraryRepo,
   keepMutator: KeepMutator,
@@ -51,7 +53,7 @@ class DiscussionCommanderImpl @Inject() (
       db.readWrite { implicit s =>
         keepMutator.unsafeModifyKeepRecipients(keepId, KeepRecipientsDiff.addUser(userId), userAttribution = Some(userId))
       }
-      eliza.sendMessageOnKeep(userId, text, keepId, source)
+      eliza.sendMessageOnKeep(userId, text, keepId, source)(time = CrossServiceTime(clock.now))
     }
   }
   def getMessagesOnKeep(userId: Id[User], keepId: Id[Keep], limit: Int, fromIdOpt: Option[Id[Message]]): Future[Seq[Message]] = {

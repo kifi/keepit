@@ -39,6 +39,7 @@ class MobileMessagingController @Inject() (
     messageSearchCommander: MessageSearchCommander,
     shoebox: ShoeboxServiceClient,
     airbrake: AirbrakeNotifier,
+    clock: Clock,
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val executionContext: ExecutionContext) extends UserActions with ElizaServiceController {
 
@@ -151,10 +152,14 @@ class MobileMessagingController @Inject() (
     val (validUserRecipients, validEmailRecipients, validOrgRecipients) = messagingCommander.parseRecipients((o \ "recipients").as[Seq[JsValue]]) // XXXX
     val url = (o \ "url").as[String]
 
-    val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
-    contextBuilder += ("source", "mobile")
+    val context = {
+      val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
+      contextBuilder += ("source", "mobile")
+      contextBuilder.build
+    }
+    implicit val time = CrossServiceTime(clock.now)
 
-    messagingCommander.sendMessageAction(title, text, source, validUserRecipients, validEmailRecipients, validOrgRecipients, url, request.userId, contextBuilder.build).map {
+    messagingCommander.sendMessageAction(title, text, source, validUserRecipients, validEmailRecipients, validOrgRecipients, url, request.userId, context).map {
       case (message, threadInfo, messages) =>
         Ok(Json.obj(
           "id" -> message.pubId,
@@ -185,9 +190,13 @@ class MobileMessagingController @Inject() (
             log.warn(s"[sendMessageReplyAction] Unknown UA $otherwise")
             None
         }
-        val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
-        contextBuilder += ("source", "mobile")
-        discussionCommander.sendMessage(request.user.id.get, text, keepId, headerSourceOpt.orElse(passedSourceOpt))(contextBuilder.build).map { message =>
+        implicit val context = {
+          val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
+          contextBuilder += ("source", "mobile")
+          contextBuilder.build
+        }
+        implicit val time = CrossServiceTime(clock.now)
+        discussionCommander.sendMessage(request.user.id.get, text, keepId, headerSourceOpt.orElse(passedSourceOpt)).map { message =>
           val tDiff = currentDateTime.getMillis - tStart.getMillis
           statsd.timing(s"messaging.replyMessage", tDiff, ONE_IN_HUNDRED)
           Ok(Json.obj("id" -> message.pubId, "parentId" -> pubKeepId, "createdAt" -> message.sentAt))

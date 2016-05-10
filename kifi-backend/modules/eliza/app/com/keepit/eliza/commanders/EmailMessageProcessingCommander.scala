@@ -1,6 +1,7 @@
 package com.keepit.eliza.commanders
 
 import com.google.inject.Inject
+import com.keepit.common.time.CrossServiceTime
 import com.keepit.discussion.MessageSource
 import com.keepit.eliza.model._
 import com.keepit.common.logging.Logging
@@ -56,22 +57,28 @@ class EmailMessageProcessingCommander @Inject() (
 
   private def sendToNonUserThread(message: MailNotificationReply, nut: NonUserThread) = {
     message.content match {
-      case Some(content: String) => {
-        val contextBuilder = heimdalContextBuilder()
-        contextBuilder += ("source", "email")
-        messagingCommander.sendMessageWithNonUserThread(nut, content, Some(MessageSource.EMAIL), None)(contextBuilder.build)
-      }
+      case Some(content: String) =>
+        implicit val context = {
+          val contextBuilder = heimdalContextBuilder()
+          contextBuilder += ("source", "email")
+          contextBuilder.build
+        }
+        implicit val time = CrossServiceTime(message.timestamp)
+        messagingCommander.sendMessageWithNonUserThread(nut, content, Some(MessageSource.EMAIL), None)
       case None => airbrake.notify(s"Could not extract contents of email: token = ${message.token} and timestamp = ${message.timestamp}")
     }
   }
 
   private def sendToUserThread(message: MailNotificationReply, userThread: UserThread) = {
     message.content match {
-      case Some(content: String) => {
-        val contextBuilder = heimdalContextBuilder()
-        contextBuilder += ("source", "email")
-        messagingCommander.sendMessageWithUserThread(userThread, content, Some(MessageSource.EMAIL), None)(contextBuilder.build)
-      }
+      case Some(content: String) =>
+        implicit val context = {
+          val contextBuilder = heimdalContextBuilder()
+          contextBuilder += ("source", "email")
+          contextBuilder.build
+        }
+        implicit val time = CrossServiceTime(message.timestamp)
+        messagingCommander.sendMessageWithUserThread(userThread, content, Some(MessageSource.EMAIL), None)
       case None => airbrake.notify(s"Could not extract contents of email: token = ${message.token} and timestamp = ${message.timestamp}")
     }
   }
