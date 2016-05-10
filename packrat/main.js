@@ -1535,15 +1535,18 @@ api.port.on({
       trackClick();
     } else {
       var tabs = tabsByUrl[link.nUri];
-      var browserTabs = [];
+      var exactUrls = [];
+      var similarUrls = [];
       api.tabs.each(function (page) {
-        if (verySimilarUrls(link.nUri, page.url) || verySimilarUrls(link.nUri, page.nUri)) {
-          browserTabs.push(page);
+        if ((page.url && link.nUri === page.url) || (page.nUri && link.nUri === page.nUri)) {
+          exactUrls.push(page);
+        } else if (verySimilarUrls(link.nUri, page.url) || verySimilarUrls(link.nUri, page.nUri)) {
+          similarUrls.push(page);
         }
       });
 
       var tabs = tabsByUrl[link.nUri];
-      var existingTab = tabs ? tabs[0] : browserTabs[0];
+      var existingTab = tabs ? tabs[0] : (exactUrls[0] || similarUrls[0]);
       if (existingTab && existingTab.id) {  // page's normalized URI may have changed
         tabIdWithLink = existingTab.id;
         awaitDeepLink(link, existingTab.id);
