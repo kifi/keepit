@@ -299,8 +299,8 @@ k.snap = k.snap || (function () {
     }
     var parRect = parent.getBoundingClientRect();
     var styles = {
-      top: (selRect.top - parRect.top) + selRect.height,
-      left: (selRect.left - parRect.left) + selRect.width
+      top: (selRect.top - parRect.top) + selRect.height + 10,
+      left: (selRect.left - parRect.left) + selRect.width + 6
     };
     var parentPos;
     if (window.getComputedStyle(parent).position === 'static') {
