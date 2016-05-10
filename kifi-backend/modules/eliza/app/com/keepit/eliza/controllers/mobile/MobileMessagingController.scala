@@ -353,7 +353,7 @@ class MobileMessagingController @Inject() (
         }.toSeq.partitionEithers
         for {
           userIds <- shoebox.getUserIdsByExternalIds(extUserIds.toSet).map(_.values.toList)
-          _ <- discussionCommander.editParticipantsOnKeep(keepId, request.userId, userIds, addReq.emails, orgIds, source)(contextBuilder.build)
+          _ <- discussionCommander.editParticipantsOnKeepForOldElizaClients(keepId, request.userId, userIds, addReq.emails, orgIds, source)(contextBuilder.build)
         } yield Ok
       case _ => Future.successful(BadRequest("invalid_keep_id"))
     }
@@ -374,7 +374,7 @@ class MobileMessagingController @Inject() (
         }.partitionEithers
         for {
           userIds <- shoebox.getUserIdsByExternalIds(extUserIds.toSet).map(_.values.toList)
-          _ <- discussionCommander.editParticipantsOnKeep(keepId, request.userId, userIds, validEmails, orgIds, source)(contextBuilder.build)
+          _ <- discussionCommander.editParticipantsOnKeepForOldElizaClients(keepId, request.userId, userIds, validEmails, orgIds, source)(contextBuilder.build)
         } yield Ok("")
       case Failure(_) => Future.successful(BadRequest("invalid_keep_id"))
     }
