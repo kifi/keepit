@@ -125,7 +125,7 @@ class ElizaDiscussionController @Inject() (
     implicit val ctxt = HeimdalContext.empty
     discussionCommander.modifyRecipientsForKeep(input.keepId, input.userAttribution, input.diff, input.source).andThen {
       case Success((thread, diff)) => input.notifEvent.foreach { event =>
-        thread.allParticipantsExcept(input.userAttribution).foreach(userId => notifDeliveryCommander.notifyAddParticipants(userId, diff, thread, event))
+        notifDeliveryCommander.notifyAddParticipants(input.userAttribution, diff, thread, event)
       }
     }.map(_ => NoContent)
   }
