@@ -12,7 +12,7 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
-import com.keepit.common.util.Ord
+import com.keepit.common.util.{ DescriptionElements, Ord }
 import com.keepit.discussion.Message
 import com.keepit.eliza._
 import com.keepit.eliza.commanders.MessageThreadNotificationBuilder.PrecomputedInfo
@@ -129,7 +129,6 @@ class NotificationDeliveryCommanderImpl @Inject() (
   def notifyAddParticipants(adderUserId: Id[User], diff: KeepRecipientsDiff, thread: MessageThread, commonEvent: CommonKeepEvent, basicEvent: BasicKeepEvent, source: Option[KeepEventSource]): Unit = {
     new SafeFuture(shoebox.getRecipientsOnKeep(thread.keepId) map {
       case (basicUsers, basicLibraries, emails) =>
-        val adderUsername = basicUsers.get(adderUserId).map(_.fullName).get
         val theTitle: String = thread.pageTitle.getOrElse("New conversation")
         val participants: Seq[BasicUserLikeEntity] =
           basicUsers.values.toSeq.map(u => BasicUserLikeEntity(u)) ++
@@ -138,7 +137,7 @@ class NotificationDeliveryCommanderImpl @Inject() (
           "id" -> basicEvent.id,
           "time" -> basicEvent.timestamp,
           "thread" -> thread.pubKeepId,
-          "text" -> s"$adderUsername added you to a conversation.",
+          "text" -> DescriptionElements.formatPlain(basicEvent.header),
           "url" -> thread.url,
           "title" -> theTitle,
           "author" -> basicUsers(adderUserId),
@@ -163,6 +162,12 @@ class NotificationDeliveryCommanderImpl @Inject() (
           sendToUser(userId, Json.arr("event", thread.pubKeepId, basicEvent))
           sendToUser(userId, Json.arr("thread_participants", thread.pubKeepId, participants))
         }
+
+        val pushNotifText = {
+          val senderName = basicUsers(adderUserId).fullName
+          s"$senderName sent ${thread.pageTitle.getOrElse("you a page")}"
+        }
+        diff.users.added.foreach(userId => sendPushNotificationForMessageThread(userId, thread.keepId, pushNotifText, lastSeenThread = None))
         sendKeepRecipients(thread.participants.allUsers, thread.pubKeepId, basicUsers.values.toSet, basicLibraries.values.toSet, emails)
         emailCommander.notifyAddedEmailUsers(thread, diff.emails.added.toSeq)
     })
@@ -288,13 +293,7 @@ class NotificationDeliveryCommanderImpl @Inject() (
 
   def sendPushNotificationForMessage(userId: Id[User], message: ElizaMessage, sender: Option[BasicUserLikeEntity], orderedActivityInfo: Seq[UserThreadActivity]): Unit = SafeFuture {
     val lastSeenOpt: Option[DateTime] = orderedActivityInfo.find(_.userId == userId).flatMap(_.lastSeen)
-    val (msgCount, muted, unreadThreads, unreadNotifs) = db.readOnlyMaster { implicit session =>
-      val msgCount = messageRepo.getMessageCounts(message.keepId, lastSeenOpt)
-      val muted = userThreadRepo.isMuted(userId, message.keepId)
-      val unreadThreads = userThreadRepo.getUnreadThreadCounts(userId).unmuted
-      val unreadNotifications = notificationRepo.getUnreadNotificationsCount(Recipient.fromUser(userId))
-      (msgCount, muted, unreadThreads, unreadNotifications)
-    }
+    val muted = db.readOnlyMaster(implicit session => userThreadRepo.isMuted(userId, message.keepId))
     if (!message.from.asUser.contains(userId) && !muted) {
       val senderStr = sender match {
         case Some(BasicUserLikeEntity.user(bu)) => bu.firstName + ": "
@@ -302,10 +301,21 @@ class NotificationDeliveryCommanderImpl @Inject() (
         case _ => ""
       }
       val notifText = senderStr + MessageFormatter.toText(message.messageText)
-      val sound = if (msgCount.total > 1) MobilePushNotifier.MoreMessageNotificationSound else MobilePushNotifier.DefaultNotificationSound
-      val notification = MessageThreadPushNotification(message.pubKeepId, unreadThreads + unreadNotifs, Some(trimAtBytes(notifText, 128, UTF_8)), Some(sound))
-      sendPushNotification(userId, notification)
+      sendPushNotificationForMessageThread(userId, message.keepId, notifText, lastSeenOpt)
     }
+  }
+
+  def sendPushNotificationForMessageThread(userId: Id[User], keepId: Id[Keep], text: String, lastSeenThread: Option[DateTime]): Unit = SafeFuture {
+    val (msgCount, unreadThreads, unreadNotifs) = db.readOnlyMaster { implicit s =>
+      val msgCount = messageRepo.getMessageCounts(keepId, afterOpt = lastSeenThread)
+      val unreadThreads = userThreadRepo.getUnreadThreadCounts(userId).unmuted
+      val unreadNotifs = notificationRepo.getUnreadNotificationsCount(Recipient.fromUser(userId))
+      (msgCount, unreadThreads, unreadNotifs)
+    }
+
+    val sound = if (msgCount.total > 1) MobilePushNotifier.MoreMessageNotificationSound else MobilePushNotifier.DefaultNotificationSound
+    val notification = MessageThreadPushNotification(Keep.publicId(keepId), unreadThreads + unreadNotifs, Some(trimAtBytes(text, 128, UTF_8)), Some(sound))
+    sendPushNotification(userId, notification)
   }
 
   private def trimAtBytes(str: String, len: Int, charset: Charset) = { //Conner's Algorithm
