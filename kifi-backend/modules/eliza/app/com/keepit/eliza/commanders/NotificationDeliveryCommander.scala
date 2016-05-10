@@ -152,7 +152,7 @@ class NotificationDeliveryCommanderImpl @Inject() (
         val threadNotifsByUserFut = threadNotifBuilder.buildForUsersFromEvent(diff.users.added, thread.keepId, basicEvent, author, Some(precomputedInfo))
 
         threadNotifsByUserFut.foreach { threadNotifsByUser =>
-          diff.users.added.foreach { userId =>
+          (diff.users.added - adderUserId).foreach { userId =>
             sendToUser(userId, Json.arr("notification", notificationJson, threadNotifsByUser(userId)))
           }
         }
@@ -166,7 +166,9 @@ class NotificationDeliveryCommanderImpl @Inject() (
           val senderName = basicUsers(adderUserId).fullName
           s"$senderName sent ${thread.pageTitle.getOrElse("you a page")}"
         }
-        diff.users.added.foreach(userId => sendPushNotificationForMessageThread(userId, thread.keepId, pushNotifText, lastSeenThread = None))
+        (diff.users.added - adderUserId).foreach { userId =>
+          sendPushNotificationForMessageThread(userId, thread.keepId, pushNotifText, lastSeenThread = None)
+        }
         sendKeepRecipients(thread.participants.allUsers, thread.pubKeepId, basicUsers.values.toSet, basicLibraries.values.toSet, emails)
         emailCommander.notifyAddedEmailUsers(thread, diff.emails.added.toSeq)
     })
