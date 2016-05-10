@@ -52,6 +52,7 @@ class ExtMessagingController @Inject() (
       contextBuilder += ("guided", true)
     }
 
+    implicit val time = CrossServiceTime(clock.now)
     messagingCommander.sendMessageAction(title, text, source, validUserRecipients, validEmailRecipients, validOrgRecipients, url, request.userId, contextBuilder.build).map {
       case (message, threadInfo, messages) =>
         Ok(Json.obj(
@@ -76,11 +77,15 @@ class ExtMessagingController @Inject() (
           (o \ "text").as[String].trim,
           (o \ "source").asOpt[MessageSource]
         )
-        val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
-        contextBuilder += ("source", "extension")
-        (o \ "extVersion").asOpt[String].foreach { version => contextBuilder += ("extensionVersion", version) }
-        contextBuilder.data.remove("remoteAddress") // To be removed when the extension if fixed to send the client's ip //
-        discussionCommander.sendMessage(request.userId, text, keepId, source)(contextBuilder.build)
+        implicit val context = {
+          val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
+          contextBuilder += ("source", "extension")
+          (o \ "extVersion").asOpt[String].foreach { version => contextBuilder += ("extensionVersion", version) }
+          contextBuilder.data.remove("remoteAddress") // To be removed when the extension if fixed to send the client's ip //
+          contextBuilder.build
+        }
+        implicit val time = CrossServiceTime(clock.now)
+        discussionCommander.sendMessage(request.userId, text, keepId, source)
       }
     } yield {
       Ok(Json.obj("id" -> message.pubId, "parentId" -> pubKeepId, "createdAt" -> message.sentAt))
