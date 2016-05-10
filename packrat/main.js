@@ -1529,13 +1529,24 @@ api.port.on({
   },
   open_deep_link: function(link, _, tab) {
     var tabIdWithLink;
-    if (link.inThisTab || tab.nUri === link.nUri || tab.url === link.nUri) {
+    if (link.inThisTab || verySimilarUrls(tab.nUri, link.nUri) || verySimilarUrls(tab.url, link.nUri)) {
       tabIdWithLink = tab.id;
       awaitDeepLink(link, tab.id);
       trackClick();
     } else {
       var tabs = tabsByUrl[link.nUri];
-      var existingTab = tabs ? tabs[0] : api.tabs.anyAt(link.nUri);
+      var exactUrls = [];
+      var similarUrls = [];
+      api.tabs.each(function (page) {
+        if ((page.url && link.nUri === page.url) || (page.nUri && link.nUri === page.nUri)) {
+          exactUrls.push(page);
+        } else if (verySimilarUrls(link.nUri, page.url) || verySimilarUrls(link.nUri, page.nUri)) {
+          similarUrls.push(page);
+        }
+      });
+
+      var tabs = tabsByUrl[link.nUri];
+      var existingTab = tabs ? tabs[0] : (exactUrls[0] || similarUrls[0]);
       if (existingTab && existingTab.id) {  // page's normalized URI may have changed
         tabIdWithLink = existingTab.id;
         awaitDeepLink(link, existingTab.id);
@@ -1972,7 +1983,10 @@ function awaitDeepLink(link, tabId, retrySec) {
     delete timeouts[tabId];
     var tab = api.tabs.get(tabId);
     var linkUrl = link.url || link.nUri;
-    if (tab && ((tab.nUri && sameOrSimilarBaseDomain(linkUrl, tab.nUri)) || (tab.url && sameOrSimilarBaseDomain(linkUrl, tab.url)))) {
+    var nTabIsSame = tab && tab.nUri && sameOrSimilarBaseDomain(linkUrl, tab.nUri);
+    var uTabIsSame = tab && tab.url && sameOrSimilarBaseDomain(linkUrl, tab.url);
+
+    if (tab && (nTabIsSame || uTabIsSame)) {
       log('[awaitDeepLink]', tabId, link);
       if (loc.lastIndexOf('#guide/', 0) === 0) {
         var step = +loc.substr(7, 1);
@@ -3013,6 +3027,7 @@ function arrayBufferToBase64(buffer) {
 
 //                           |---- IP v4 address ---||- subs -||-- core --|  |----------- suffix -----------| |- name --|    |-- port? --|
 var domainRe = /^https?:\/\/(\d{1,3}(?:\.\d{1,3}){3}|[^:\/?#]*?([^.:\/?#]+)\.(?:[^.:\/?#]{2,}|com?\.[a-z]{2})|[^.:\/?#]+)\.?(?::\d{2,5})?(?:$|\/|\?|#)/;
+// Very loose matching. Allows for equality between completely different pages on the same domain.
 function sameOrSimilarBaseDomain(url1, url2) {
   if (url1 === url2) {
     return true;
@@ -3021,6 +3036,16 @@ function sameOrSimilarBaseDomain(url1, url2) {
   var m2 = url2.match(domainRe);
   // hostnames match exactly or core domain without subdomains and TLDs match (e.g. "google" in docs.google.fr and www.google.co.uk)
   return m1[1] === m2[1] || m1[2] === (m2[2] || 0);
+}
+
+var protoRe = /^(https?:|)\/\//;
+function verySimilarUrls(url1, url2) {
+  if (url1 && url2) {
+    var noHash1 = url1.replace(protoRe, '').split('#')[0];
+    var noHash2 = url2.replace(protoRe, '').split('#')[0];
+    return noHash1 === noHash2;
+  }
+  return false;
 }
 
 // ===== Session management
