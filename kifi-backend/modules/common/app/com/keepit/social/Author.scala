@@ -112,7 +112,6 @@ object BasicAuthor {
         BasicUser.defaultImageForEmail(nonUser.id)
       )
   }
-  def toBasicUserLikeEntity(ba: BasicAuthor): BasicUserLikeEntity = ???
 
   private val kifiFormat = Json.format[KifiUser]
   private val slackFormat = Json.format[SlackUser]

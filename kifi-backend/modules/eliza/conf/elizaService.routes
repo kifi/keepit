@@ -72,7 +72,6 @@ POST    /internal/eliza/getChangedMessagesFromKeeps             @com.keepit.eliz
 POST    /internal/eliza/editMessage                             @com.keepit.eliza.controllers.internal.ElizaDiscussionController.editMessage()
 POST    /internal/eliza/deleteMessage                           @com.keepit.eliza.controllers.internal.ElizaDiscussionController.deleteMessage()
 GET     /internal/eliza/keepHasAccessToken                      @com.keepit.eliza.controllers.internal.ElizaDiscussionController.keepHasAccessToken(keepId: Id[Keep], accessToken: String)
-POST    /internal/eliza/handleKeepEvent                         @com.keepit.eliza.controllers.internal.ElizaDiscussionController.handleKeepEvent()
 POST    /internal/eliza/modifyRecipientsAndSendEvent            @com.keepit.eliza.controllers.internal.ElizaDiscussionController.modifyRecipientsAndSendEvent()
 POST    /internal/eliza/internEmptyThreadsForKeeps              @com.keepit.eliza.controllers.internal.ElizaDiscussionController.internEmptyThreadsForKeeps()
 GET     /internal/eliza/getMessagesChanged                      @com.keepit.eliza.controllers.internal.ElizaDiscussionController.getMessagesChanged(seqNum: SequenceNumber[Message], fetchSize: Int)

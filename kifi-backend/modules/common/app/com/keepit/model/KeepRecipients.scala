@@ -41,6 +41,8 @@ case class KeepRecipients(
     libraries = libraries ++ diff.libraries.added -- diff.libraries.removed
   )
 
+  def toDiff: KeepRecipientsDiff = KeepRecipientsDiff(DeltaSet.addOnly(users), DeltaSet.addOnly(libraries), DeltaSet.addOnly(emails))
+
   def numLibraries: Int = libraries.size
   def numParticipants: Int = users.size + emails.size
 }

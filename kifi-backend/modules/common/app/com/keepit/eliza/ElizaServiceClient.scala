@@ -508,13 +508,6 @@ object ElizaServiceClient {
     implicit val requestFormat: Format[Request] = Json.format[Request]
     implicit val responseFormat: Format[Response] = Json.format[Response]
   }
-
-  object HandleKeepEvent {
-    implicit val commonEventFormat = CommonKeepEvent.format
-    implicit val basicEventFormat = BasicKeepEvent.format
-    case class Request(keepId: Id[Keep], commonEvent: CommonKeepEvent, basicEvent: BasicKeepEvent, source: Option[KeepEventSource])
-    implicit val requestFormat: Format[Request] = Json.format[Request]
-  }
   object InternEmptyThreadsForKeeps {
     case class Request(keeps: Seq[CrossServiceKeep])
     implicit val requestFormat: Format[Request] = Json.format[Request]

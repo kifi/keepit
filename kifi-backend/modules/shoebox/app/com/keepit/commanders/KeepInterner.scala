@@ -7,8 +7,10 @@ import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.{ ReactiveLock, FutureHelpers, ExecutionContext }
 import com.keepit.common.mail.EmailAddress
+import com.keepit.common.store.S3ImageConfig
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.search.SearchServiceClient
+import com.keepit.shoebox.data.assemblers.KeepActivityAssembler
 import com.keepit.social.Author
 import com.keepit.typeahead.{ LibraryResultTypeaheadKey, LibraryResultTypeaheadCache }
 import scala.concurrent.duration._
@@ -87,31 +89,34 @@ trait KeepInterner {
 
 @Singleton
 class KeepInternerImpl @Inject() (
-  db: Database,
-  normalizedURIInterner: NormalizedURIInterner,
-  normalizedURIRepo: NormalizedURIRepo,
-  keepRepo: KeepRepo,
-  ktlRepo: KeepToLibraryRepo,
-  libraryRepo: LibraryRepo,
-  keepMutator: KeepMutator,
-  airbrake: AirbrakeNotifier,
-  libraryAnalytics: LibraryAnalytics,
-  userValueRepo: UserValueRepo,
-  heimdalClient: HeimdalServiceClient,
-  roverClient: RoverServiceClient,
-  eliza: ElizaServiceClient,
-  libraryNewFollowersCommander: LibraryNewKeepsCommander,
-  integrityHelpers: UriIntegrityHelpers,
-  sourceAttrRepo: KeepSourceAttributionRepo,
-  libToSlackProcessor: LibraryToSlackChannelPusher,
-  userInteractionCommander: UserInteractionCommander,
-  normalizationService: NormalizationService,
-  searchClient: SearchServiceClient,
-  libResCache: LibraryResultTypeaheadCache,
-  relevantSuggestedLibrariesCache: RelevantSuggestedLibrariesCache,
-  implicit private val clock: Clock,
-  implicit private val fortyTwoServices: FortyTwoServices)
-    extends KeepInterner with Logging {
+    db: Database,
+    normalizedURIInterner: NormalizedURIInterner,
+    normalizedURIRepo: NormalizedURIRepo,
+    keepRepo: KeepRepo,
+    ktlRepo: KeepToLibraryRepo,
+    ktuRepo: KeepToUserRepo,
+    libraryRepo: LibraryRepo,
+    keepMutator: KeepMutator,
+    airbrake: AirbrakeNotifier,
+    libraryAnalytics: LibraryAnalytics,
+    userValueRepo: UserValueRepo,
+    heimdalClient: HeimdalServiceClient,
+    roverClient: RoverServiceClient,
+    eliza: ElizaServiceClient,
+    libraryNewFollowersCommander: LibraryNewKeepsCommander,
+    integrityHelpers: UriIntegrityHelpers,
+    sourceAttrRepo: KeepSourceAttributionRepo,
+    keepSourceCommander: KeepSourceCommander,
+    keepActivityAssembler: KeepActivityAssembler,
+    libToSlackProcessor: LibraryToSlackChannelPusher,
+    userInteractionCommander: UserInteractionCommander,
+    normalizationService: NormalizationService,
+    searchClient: SearchServiceClient,
+    libResCache: LibraryResultTypeaheadCache,
+    relevantSuggestedLibrariesCache: RelevantSuggestedLibrariesCache,
+    implicit private val clock: Clock,
+    implicit private val fortyTwoServices: FortyTwoServices,
+    implicit private val imageConfig: S3ImageConfig) extends KeepInterner with Logging {
 
   private val httpPrefix = "https?://".r
   implicit private val fj = ExecutionContext.fj
@@ -171,7 +176,7 @@ class KeepInternerImpl @Inject() (
 
           val libs = libraryRepo.getActiveByIds(newKeep.recipients.libraries)
           session.onTransactionSuccess {
-            reportNewKeeps(Seq(newKeep), libs.traverseByKey, context, notifyExternalSources = true)
+            reportNewKeeps(Seq(newKeep), libs.traverseByKey, context)
           }
           Success((newKeep, false))
       }
@@ -185,7 +190,7 @@ class KeepInternerImpl @Inject() (
       case (newKs, existingKs) => (newKs.map(_.keep), existingKs.map(_.keep))
     }
 
-    reportNewKeeps(newKeeps, libraryOpt.toSeq, context, notifyExternalSources = true)
+    reportNewKeeps(newKeeps, libraryOpt.toSeq, context)
 
     KeepInternResponse(newKeeps, existingKeeps, failures)
   }
@@ -313,11 +318,12 @@ class KeepInternerImpl @Inject() (
 
   private val reportingLock = new ReactiveLock(2)
   private val debouncer = new Debouncing.Buffer[Seq[CrossServiceKeep]]
-  private def reportNewKeeps(keeps: Seq[Keep], libraries: Seq[Library], ctx: HeimdalContext, notifyExternalSources: Boolean): Unit = {
+  private def reportNewKeeps(keeps: Seq[Keep], libraries: Seq[Library], ctx: HeimdalContext): Unit = {
     if (keeps.nonEmpty) {
       // Don't block keeping for these
       reportingLock.withLockFuture {
         SafeFuture {
+          val keepIds = keeps.map(_.id.get).toSet
           // Analytics & typeaheads
           libraries.foreach { lib => libraryAnalytics.keptPages(keeps, lib, ctx) }
           keeps.groupBy(_.userId).collect {
@@ -331,33 +337,41 @@ class KeepInternerImpl @Inject() (
           searchClient.updateKeepIndex()
 
           // Make external notifications & fetch
-          if (notifyExternalSources) { // Only report first to not spam
-            libraries.foreach { lib =>
-              libraryNewFollowersCommander.notifyFollowersOfNewKeeps(lib, keeps)
-              libToSlackProcessor.schedule(Set(lib.id.get))
-              if (KeepSource.manual.contains(keeps.head.source)) {
-                keeps.groupBy(_.userId).keySet.flatten.foreach { userId =>
-                  userInteractionCommander.addInteractions(userId, Seq(LibraryInteraction(lib.id.get) -> UserInteraction.KEPT_TO_LIBRARY))
-                }
+          libraries.foreach { lib =>
+            libraryNewFollowersCommander.notifyFollowersOfNewKeeps(lib, keeps)
+            libToSlackProcessor.schedule(Set(lib.id.get))
+            if (KeepSource.manual.contains(keeps.head.source)) {
+              keeps.groupBy(_.userId).keySet.flatten.foreach { userId =>
+                userInteractionCommander.addInteractions(userId, Seq(LibraryInteraction(lib.id.get) -> UserInteraction.KEPT_TO_LIBRARY))
               }
             }
-            FutureHelpers.sequentialExec(keeps) { keep =>
-              val nuri = db.readOnlyMaster { implicit session =>
-                normalizedURIRepo.get(keep.uriId)
-              }
-              roverClient.fetchAsap(nuri.id.get, nuri.url)
+          }
+          val (ktls, ktus, sourceAttrs) = db.readOnlyMaster { implicit s =>
+            val ktls = ktlRepo.getAllByKeepIds(keepIds)
+            val ktus = ktuRepo.getAllByKeepIds(keepIds)
+            val sourceAttrs = keepSourceCommander.getSourceAttributionForKeeps(keepIds)
+            (ktls, ktus, sourceAttrs)
+          }
+          val basicKeeps = { keepActivityAssembler.assembleInitialEventsForKeeps(keeps, sourceAttrs, ktls, ktus) }
+          FutureHelpers.sequentialExec(keeps) { keep =>
+            keep.recipients.users.map { uid =>
+              val basicKeep = basicKeeps.get(keep.id.get)
+              eliza.modifyRecipientsAndSendEvent(keep.id.get, uid, keep.recipients.toDiff, basicKeep.flatMap(_.source.map(_.kind)), basicKeep)
             }
-            val csKeeps = {
-              val ktls = db.readOnlyMaster { implicit s => ktlRepo.getAllByKeepIds(keeps.map(_.id.get).toSet) }
-              keeps.filter(_.recipients.numParticipants > 1).map { k =>
-                CrossServiceKeep.fromKeepAndRecipients(k, k.recipients.users, k.recipients.emails, ktls.getOrElse(k.id.get, Seq.empty).map { ktl =>
-                  CrossServiceKeep.LibraryInfo.fromKTL(ktl)
-                }.toSet)
-              }
+            val nuri = db.readOnlyMaster { implicit session =>
+              normalizedURIRepo.get(keep.uriId)
             }
-            debouncer.debounce("intern_empty_threads", 1 second)(csKeeps) { allCSKeeps =>
-              eliza.internEmptyThreadsForKeeps(allCSKeeps.flatten)
+            roverClient.fetchAsap(nuri.id.get, nuri.url)
+          }
+          val csKeeps = {
+            keeps.filter(_.recipients.numParticipants > 1).map { k =>
+              CrossServiceKeep.fromKeepAndRecipients(k, k.recipients.users, k.recipients.emails, ktls.getOrElse(k.id.get, Seq.empty).map { ktl =>
+                CrossServiceKeep.LibraryInfo.fromKTL(ktl)
+              }.toSet)
             }
+          }
+          debouncer.debounce("intern_empty_threads", 1 second)(csKeeps) { allCSKeeps =>
+            eliza.internEmptyThreadsForKeeps(allCSKeeps.flatten)
           }
 
           // Update data-dependencies

@@ -119,19 +119,13 @@ class ElizaDiscussionController @Inject() (
     discussionCommander.deleteMessage(msgId)
     NoContent
   }
-  def handleKeepEvent() = Action.async(parse.tolerantJson) { request =>
-    import HandleKeepEvent._
-    implicit val context = heimdalContextBuilder().build
-    val input = request.body.as[Request]
-    discussionCommander.handleKeepEvent(input.keepId, input.commonEvent, input.basicEvent, input.source).map { _ => NoContent }
-  }
   def modifyRecipientsAndSendEvent() = Action.async(parse.tolerantJson) { request =>
     import ModifyRecipientsAndSendEvent._
     val input = request.body.as[Request]
     implicit val ctxt = HeimdalContext.empty
     discussionCommander.modifyRecipientsForKeep(input.keepId, input.userAttribution, input.diff, input.source).andThen {
-      case Success(participants) => input.notifEvent.foreach { event =>
-        participants.allUsers.foreach(userId => notifDeliveryCommander.sendKeepEvent(userId, Keep.publicId(input.keepId), event))
+      case Success((thread, diff)) => input.notifEvent.foreach { event =>
+        thread.allParticipantsExcept(input.userAttribution).foreach(userId => notifDeliveryCommander.notifyAddParticipants(userId, diff, thread, event))
       }
     }.map(_ => NoContent)
   }

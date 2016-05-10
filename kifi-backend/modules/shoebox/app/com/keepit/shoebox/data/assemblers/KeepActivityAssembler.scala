@@ -26,6 +26,8 @@ trait KeepActivityAssembler {
   def getActivityForKeeps(keepIds: Set[Id[Keep]], fromTime: Option[DateTime], numEventsPerKeep: Int): Future[Map[Id[Keep], KeepActivity]]
   def getActivityForKeep(keepId: Id[Keep], fromTime: Option[DateTime], limit: Int): Future[KeepActivity]
   def assembleBasicKeepEvent(event: KeepEvent)(implicit session: RSession): BasicKeepEvent
+  def assembleInitialEventsForKeeps(keeps: Seq[Keep], sourceAttrs: Map[Id[Keep], (SourceAttribution, Option[BasicUser])],
+    ktls: Map[Id[Keep], Seq[KeepToLibrary]], ktus: Map[Id[Keep], Seq[KeepToUser]]): Map[Id[Keep], BasicKeepEvent]
 }
 
 class KeepActivityAssemblerImpl @Inject() (
@@ -92,5 +94,17 @@ class KeepActivityAssemblerImpl @Inject() (
 
   def assembleBasicKeepEvent(event: KeepEvent)(implicit session: RSession): BasicKeepEvent = {
     basicULOBatchFetcher.runInPlace(KeepActivityGen.generateKeepEvent(event))
+  }
+
+  def assembleInitialEventsForKeeps(
+    keeps: Seq[Keep], sourceAttrs: Map[Id[Keep], (SourceAttribution, Option[BasicUser])],
+    ktls: Map[Id[Keep], Seq[KeepToLibrary]], ktus: Map[Id[Keep], Seq[KeepToUser]]): Map[Id[Keep], BasicKeepEvent] = {
+
+    basicULOBatchFetcher.run {
+      BatchFetchable.seq(keeps.map { keep =>
+        val keepId = keep.id.get
+        KeepActivityGen.generateInitialEvent(keep, sourceAttrs.get(keepId), ktls.getOrElse(keepId, Seq.empty), ktus.getOrElse(keepId, Seq.empty)).map { keepId -> _ }
+      })
+    }.toMap
   }
 }
