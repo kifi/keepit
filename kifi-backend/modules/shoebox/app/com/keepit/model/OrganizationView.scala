@@ -111,7 +111,7 @@ object OrganizationModifications {
       def isValid = URI.parse(url).isSuccess
     }
 
-    def apply(str: String): SiteModification = str match {
+    def apply(str: String): SiteModification = str.trim match {
       case emptySite if emptySite.isEmpty => SiteModification.Remove
       case validSite if validSite.matches("^https?://.*") => Site(validSite)
       case noProtocolSite => Site("http://" + noProtocolSite)
