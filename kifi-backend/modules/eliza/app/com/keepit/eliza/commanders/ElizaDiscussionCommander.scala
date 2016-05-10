@@ -24,7 +24,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 
 @ImplementedBy(classOf[ElizaDiscussionCommanderImpl])
 trait ElizaDiscussionCommander {
-  def internThreadForKeep(csKeep: CrossServiceKeep, owner: Id[User]): (MessageThread, Boolean)
+  def internThreadForKeep(csKeep: CrossServiceKeep, owner: Id[User])(implicit session: RWSession): (MessageThread, Boolean)
   def getMessagesOnKeep(keepId: Id[Keep], fromIdOpt: Option[Id[ElizaMessage]], limit: Int): Future[Seq[Message]]
   def getCrossServiceDiscussionsForKeeps(keepIds: Set[Id[Keep]], fromTime: Option[DateTime], maxMessagesShown: Int): Map[Id[Keep], CrossServiceDiscussion]
   def syncAddParticipants(keepId: Id[Keep], event: KeepEventData.ModifyRecipients, source: Option[KeepEventSource]): Future[Unit]
@@ -151,7 +151,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
     }.map(mt => Future.successful((mt, false))).getOrElse {
       shoebox.getCrossServiceKeepsByIds(Set(keepId)).imap { csKeeps =>
         val csKeep = csKeeps.getOrElse(keepId, throw DiscussionFail.INVALID_KEEP_ID)
-        internThreadForKeep(csKeep, userId)
+        db.readWrite { implicit s => internThreadForKeep(csKeep, userId) }
       }
     }
     threadFut.map {
@@ -176,24 +176,22 @@ class ElizaDiscussionCommanderImpl @Inject() (
         newThread
     }
   }
-  def internThreadForKeep(csKeep: CrossServiceKeep, owner: Id[User]): (MessageThread, Boolean) = {
+  def internThreadForKeep(csKeep: CrossServiceKeep, owner: Id[User])(implicit session: RWSession): (MessageThread, Boolean) = {
     val users = csKeep.users ++ csKeep.owner
-    db.readWrite { implicit s =>
-      messageThreadRepo.getByKeepId(csKeep.id).map(_ -> false).getOrElse {
-        val mt = messageThreadRepo.intern(MessageThread(
-          uriId = csKeep.uriId,
-          url = csKeep.url,
-          nUrl = csKeep.url,
-          pageTitle = csKeep.title,
-          startedBy = csKeep.owner getOrElse owner,
-          participants = MessageThreadParticipants(users),
-          keepId = csKeep.id,
-          numMessages = 0
-        ))
-        users.foreach(userId => userThreadRepo.intern(UserThread.forMessageThread(mt)(userId)))
-        csKeep.emails.foreach(email => nonUserThreadRepo.intern(NonUserThread.forMessageThread(mt)(NonUserEmailParticipant(email))))
-        (mt, true)
-      }
+    messageThreadRepo.getByKeepId(csKeep.id).map(_ -> false).getOrElse {
+      val mt = messageThreadRepo.intern(MessageThread(
+        uriId = csKeep.uriId,
+        url = csKeep.url,
+        nUrl = csKeep.url,
+        pageTitle = csKeep.title,
+        startedBy = csKeep.owner getOrElse owner,
+        participants = MessageThreadParticipants(users),
+        keepId = csKeep.id,
+        numMessages = 0
+      ))
+      users.foreach(userId => userThreadRepo.intern(UserThread.forMessageThread(mt)(userId)))
+      csKeep.emails.foreach(email => nonUserThreadRepo.intern(NonUserThread.forMessageThread(mt)(NonUserEmailParticipant(email))))
+      (mt, true)
     }
   }
 
