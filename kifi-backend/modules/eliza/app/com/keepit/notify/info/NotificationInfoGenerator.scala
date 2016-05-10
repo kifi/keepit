@@ -1,6 +1,6 @@
 package com.keepit.notify.info
 
-import com.google.inject.Inject
+import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.commanders.ProcessedImageSize
 import com.keepit.common.core._
 import com.keepit.common.crypto.PublicIdConfiguration
@@ -15,14 +15,19 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Success, Failure, Try }
 
-class NotificationInfoGenerator @Inject() (
+@ImplementedBy(classOf[NotificationInfoGeneratorImpl])
+trait NotificationInfoGenerator {
+  def generateInfo(recipient: Recipient, notifs: Seq[NotificationWithItems]): Future[Seq[NotificationWithInfo]]
+}
+
+class NotificationInfoGeneratorImpl @Inject() (
     notifCommander: NotificationCommander,
     shoeboxServiceClient: ShoeboxServiceClient,
     roverServiceClient: RoverServiceClient,
     notificationKindInfoRequests: NotificationKindInfoRequests,
     implicit val airbrake: AirbrakeNotifier,
     implicit val config: PublicIdConfiguration,
-    implicit val ec: ExecutionContext) extends Logging {
+    implicit val ec: ExecutionContext) extends NotificationInfoGenerator with Logging {
 
   def generateInfo(recipient: Recipient, notifs: Seq[NotificationWithItems]): Future[Seq[NotificationWithInfo]] = {
     val userIdOpt = recipient match {
