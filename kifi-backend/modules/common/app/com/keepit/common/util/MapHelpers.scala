@@ -2,13 +2,14 @@ package com.keepit.common.util
 
 object MapHelpers {
   def fromPairs[K, V](xs: Seq[(K, V)]): Map[K, Seq[V]] = xs.groupBy(_._1).mapValues(_.map(_._2))
-  def unionWith[K, V](op: (V, V) => V)(xm: Map[K, V], ym: Map[K, V]): Map[K, V] = {
+  def unionWithKey[K, V](op: (K, (V, V)) => V)(xm: Map[K, V], ym: Map[K, V]): Map[K, V] = {
     // NB: I did a few tests and this is by far the fastest "API-only" (aka. without access to the underlying data structure)
     // way to merge two maps that I've found
     ym ++ xm.map {
-      case (k, vx) => k -> ym.get(k).fold(vx)(vy => op(vx, vy))
+      case (k, vx) => k -> ym.get(k).fold(vx)(vy => op(k, (vx, vy)))
     }
   }
+  def unionWith[K, V](op: (V, V) => V)(xm: Map[K, V], ym: Map[K, V]): Map[K, V] = unionWithKey[K, V] { case (_, (v1, v2)) => op(v1, v2) }(xm, ym)
 
   // Technically, if `op` is not a commutative operator it is wrong to use `fold` here, since it does not guarantee an order
   // of operations (unlike foldLeft or foldRight). `fold` assumes a commutative operation. Use at your own risk.
