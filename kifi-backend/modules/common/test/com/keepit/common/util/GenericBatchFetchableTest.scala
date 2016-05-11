@@ -15,11 +15,7 @@ class GenericBatchFetchableTest extends Specification {
   object IntFetcher extends BatchFetcher[Id[FooInt], Int] {
     def fetch(keys: Set[Id[FooInt]]): Map[Id[FooInt], Int] = keys.flatMap(k => intRepo.get(k).map(k -> _.value)).toMap
   }
-  object IntKind extends BatchFetchKind {
-    type K = Id[FooInt]
-    type V = Int
-    def fetcher = IntFetcher
-  }
+  object IntKind extends BatchFetchKind[Id[FooInt], Int](IntFetcher)
 
   case class FooString(id: Id[FooString], value: String)
   val strRepo: Map[Id[FooString], FooString] = Seq(
@@ -30,11 +26,7 @@ class GenericBatchFetchableTest extends Specification {
   object StrFetcher extends BatchFetcher[Id[FooString], String] {
     def fetch(keys: Set[Id[FooString]]): Map[Id[FooString], String] = keys.flatMap(k => strRepo.get(k).map(k -> _.value)).toMap
   }
-  object StrKind extends BatchFetchKind {
-    type K = Id[FooString]
-    type V = String
-    def fetcher = StrFetcher
-  }
+  object StrKind extends BatchFetchKind[Id[FooString], String](StrFetcher)
 
   "GenericBatchFetchable" should {
     "make Derek's dream come true" in {
