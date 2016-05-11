@@ -324,7 +324,6 @@ class KeepInternerImpl @Inject() (
       // Don't block keeping for these
       reportingLock.withLockFuture {
         SafeFuture {
-          val keepIds = keeps.map(_.id.get).toSet
           // Analytics & typeaheads
           libraries.foreach { lib => libraryAnalytics.keptPages(keeps, lib, ctx) }
           keeps.groupBy(_.userId).collect {
@@ -348,8 +347,8 @@ class KeepInternerImpl @Inject() (
             }
           }
           val keepsToNotifyAbout = keeps.filter(_.recipients.users.size > 1)
+          val keepIdsToNotifyAbout = keepsToNotifyAbout.map(_.id.get).toSet
           val (ktls, ktus, sourceAttrs) = db.readOnlyMaster { implicit s =>
-            val keepIdsToNotifyAbout = keepsToNotifyAbout.map(_.id.get).toSet
             val ktls = ktlRepo.getAllByKeepIds(keepIdsToNotifyAbout)
             val ktus = ktuRepo.getAllByKeepIds(keepIdsToNotifyAbout)
             val sourceAttrs = keepSourceCommander.getSourceAttributionForKeeps(keepIdsToNotifyAbout)

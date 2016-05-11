@@ -151,7 +151,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
     }.map(mt => Future.successful((mt, false))).getOrElse {
       shoebox.getCrossServiceKeepsByIds(Set(keepId)).imap { csKeeps =>
         val csKeep = csKeeps.getOrElse(keepId, throw DiscussionFail.INVALID_KEEP_ID)
-        db.readWrite { implicit s => internThreadForKeep(csKeep, userId) }
+        db.readWrite(attempts = 3) { implicit s => internThreadForKeep(csKeep, userId) }
       }
     }
     threadFut.map {
