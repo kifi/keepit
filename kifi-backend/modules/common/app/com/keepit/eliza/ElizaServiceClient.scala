@@ -407,6 +407,7 @@ class ElizaServiceClientImpl @Inject() (
 
   def modifyRecipientsAndSendEvent(keepId: Id[Keep], user: Id[User], diff: KeepRecipientsDiff, source: Option[KeepEventSource], notifEvent: Option[BasicKeepEvent]): Future[Unit] = {
     import ModifyRecipientsAndSendEvent._
+    log.debug(s"[ESC-MRASE] Sending event for $keepId from $user")
     val request = Request(keepId, user, diff, source, notifEvent)
     call(Eliza.internal.modifyRecipientsAndSendEvent, body = Json.toJson(request)).map(_ => ())
   }
