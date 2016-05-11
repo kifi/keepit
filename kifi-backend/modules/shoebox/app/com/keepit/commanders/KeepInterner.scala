@@ -346,7 +346,7 @@ class KeepInternerImpl @Inject() (
               }
             }
           }
-          val keepsToNotifyAbout = keeps.filter(_.recipients.users.size > 1)
+          val keepsToNotifyAbout = keeps.filter(_.recipients.users.size > 1).distinctBy(_.id.get)
           val keepIdsToNotifyAbout = keepsToNotifyAbout.map(_.id.get).toSet
           val (ktls, ktus, sourceAttrs) = db.readOnlyMaster { implicit s =>
             val ktls = ktlRepo.getAllByKeepIds(keepIdsToNotifyAbout)
