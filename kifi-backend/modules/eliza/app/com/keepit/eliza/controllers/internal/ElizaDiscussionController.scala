@@ -123,6 +123,7 @@ class ElizaDiscussionController @Inject() (
     import ModifyRecipientsAndSendEvent._
     val input = request.body.as[Request]
     implicit val ctxt = HeimdalContext.empty
+    log.debug(s"[EDCtrlr-MRASE] Handling an event for ${input.keepId} from ${input.userAttribution}")
     discussionCommander.modifyRecipientsForKeep(input.keepId, input.userAttribution, input.diff, input.source).andThen {
       case Success((thread, diff)) => input.notifEvent.foreach { event =>
         notifDeliveryCommander.notifyAddParticipants(input.userAttribution, input.diff, thread, event)
