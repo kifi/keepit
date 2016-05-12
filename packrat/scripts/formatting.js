@@ -216,6 +216,7 @@ var formatMessage = (function () {
     if (render) {
       text = render(text);
     }
+
     // Careful... this is raw text with some markdown. Be sure to HTML-escape untrusted portions!
     var html = formatAsHtmlSnippet(text);
     // TODO: avoid truncating inside a multi-code-point emoji sequence or inside an HTML tag or entity
@@ -242,9 +243,9 @@ var formatMessage = (function () {
       var selector = parts[i+1].replace(escapedBackslashOrRightParenRe, '$1');
       var titleAttr = '';
       if (selector.lastIndexOf('r|', 0) === 0) {
-        titleAttr = ' title="' + Mustache.escape(formatKifiSelRangeText(selector)) + '"';
+        titleAttr = ' title="' + DOMPurify.sanitize(formatKifiSelRangeText(selector)) + '"';
       }
-      parts[i] = '<a href="x-kifi-sel:' + Mustache.escape(selector) + '"' + titleAttr + '>' +
+      parts[i] = '<a href="x-kifi-sel:' + DOMPurify.sanitize(selector) + '"' + titleAttr + '>' +
         processInside(parts[i].replace(escapedBackslashOrRightBracketRe, '$1'));
       parts[i+1] = '</a>';
     }
@@ -266,7 +267,7 @@ var formatMessage = (function () {
     if (~text.indexOf('@', 1)) {
       var parts = text.split(emailAddrRe);
       for (var i = 1; i < parts.length; i += 2) {
-        var escapedAddr = Mustache.escape(parts[i]);
+        var escapedAddr = DOMPurify.sanitize(parts[i]);
         parts[i] = '<a href="mailto:' + escapedAddr + '">' + escapedAddr + '</a>';
       }
       for (var i = 0; i < parts.length; i += 2) {
@@ -292,7 +293,7 @@ var formatMessage = (function () {
           continue;
         }
       }
-      var escapedUri = Mustache.escape(uri);
+      var escapedUri = DOMPurify.sanitize(uri);
       var escapedUrl = (scheme ? '' : 'http://') + escapedUri;
       var isTruncated = (escapedUri.length > 40);
       parts[i] = '<a target="_blank" href="' + escapedUrl + '">' +
@@ -306,7 +307,7 @@ var formatMessage = (function () {
   }
 
   function processEmojiThen(process, text) {
-    return process(Mustache.escape(emoji.supported() ? emoji.decode(text) : text));
+    return process(DOMPurify.sanitize(emoji.supported() ? emoji.decode(text) : text));
   }
 
   var hashTagMarkdownRe = /\[#((?:\\.|[^\]])*)\]/g;
@@ -317,7 +318,7 @@ var formatMessage = (function () {
     var parts = text.replace(multipleBlankLinesRe, '\n\n').split(hashTagMarkdownRe);
     var tag;
     for (var i = 1; i < parts.length; i += 2) {
-      tag = Mustache.escape(parts[i].replace(backslashUnescapeRe, '$1'));
+      tag = DOMPurify.sanitize(parts[i].replace(backslashUnescapeRe, '$1'));
       if (doLink) {
         parts[i] = '<a class="kifi-tag" href="' + getTagUrl(tag) + '"target="_blank">#' + tag + '</a>';
       } else {

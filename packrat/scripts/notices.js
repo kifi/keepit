@@ -287,7 +287,7 @@ k.panes.notices = k.panes.notices || function () {
         message = 'New keep in ' + notice.extra.library.name;
       }
       notice.text = message;
-
+      notice.bodyHtmlTree = formatMessage.snippet()(notice.text);
       return k.render('html/keeper/notice_new_keep', notice, { 'kifi_mustache_tags': 'kifi_mustache_tags' });
     } else {
       notice.bodyHtmlTree = formatMessage.snippet()(notice.bodyHtml);
