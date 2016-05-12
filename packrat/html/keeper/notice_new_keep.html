@@ -10,7 +10,7 @@
     <span class="kifi-notice-name">{{extra.keeper.name}}</span>
   </div>
   <div class="kifi-notice-blurb">
-    <span>{{text}}</span>
+    <span>{{#bodyHtmlTree}}{{>kifi_mustache_tags}}{{/bodyHtmlTree}}</span>
   </div>
   <time class="kifi-notice-time" datetime="{{time}}">{{#formatLocalDate}}{{time}}{{/formatLocalDate}}</time>
   <a class="kifi-notice-link" href="{{url}}" target="_blank">{{extra.uriSummary.title}}</a>
