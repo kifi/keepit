@@ -249,7 +249,7 @@ class SlackPushingActor @Inject() (
             }
             ()
           }.recover {
-            case SlackErrorCode(EDIT_WINDOW_CLOSED) | SlackErrorCode(CANT_UPDATE_MESSAGE) | SlackErrorCode(CHANNEL_NOT_FOUND) | SlackErrorCode(MESSAGE_NOT_FOUND) =>
+            case SlackErrorCode(EDIT_WINDOW_CLOSED) | SlackErrorCode(CANT_UPDATE_MESSAGE) | SlackErrorCode(CHANNEL_NOT_FOUND) | SlackErrorCode(MESSAGE_NOT_FOUND) | SlackErrorCode(ACCOUNT_INACTIVE) =>
               slackLog.warn(s"Failed to update keep ${k.id.get} because slack says it's uneditable, removing it from the cache")
               db.readWrite { implicit s => slackPushForKeepRepo.save(oldPush.uneditable) }
               ()
@@ -288,7 +288,11 @@ class SlackPushingActor @Inject() (
             }
             ()
           }.recover {
-            case SlackErrorCode(EDIT_WINDOW_CLOSED) | SlackErrorCode(CANT_UPDATE_MESSAGE) | SlackErrorCode(CHANNEL_NOT_FOUND) | SlackErrorCode(MESSAGE_NOT_FOUND) =>
+            case SlackErrorCode(EDIT_WINDOW_CLOSED)
+              | SlackErrorCode(CANT_UPDATE_MESSAGE)
+              | SlackErrorCode(CHANNEL_NOT_FOUND)
+              | SlackErrorCode(MESSAGE_NOT_FOUND)
+              | SlackErrorCode(ACCOUNT_INACTIVE) =>
               slackLog.warn(s"Failed to update message ${msg.id} because slack says it's uneditable, removing it from the cache")
               db.readWrite { implicit s => slackPushForMessageRepo.save(oldPush.uneditable) }
               ()
