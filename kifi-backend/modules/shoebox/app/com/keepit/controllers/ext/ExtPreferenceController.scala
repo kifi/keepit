@@ -150,7 +150,7 @@ class ExtPreferenceController @Inject() (
 
   def setKeeperHiddenOnSite() = UserAction(parse.tolerantJson) { request =>
     val json = request.body
-    val hostOpt = NormalizedHostname.fromHostname(URI.parse((json \ "url").as[String]).get.host.get.name)
+    val hostOpt = NormalizedHostname.fromHostname(URI.parse((json \ "url").as[String]).get.host.get.name, true)
     hostOpt match {
       case Some(host) => {
         val suppress: Boolean = (json \ "suppress").as[Boolean]
