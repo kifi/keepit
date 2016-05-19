@@ -89,8 +89,8 @@ class PaymentsDashboardCommanderImpl @Inject() (
     }.toMap
     val oldPlanEnrollments = {
       // mutable map logic ahoy
-      val m_planByAccount = mutable.Map(paidAccountRepo.aTonOfRecords.filter(_.isActive).map(a => a.id.get -> Option(a.planId)): _*)
-      val m_usersByAccount = mutable.Map(paidAccountRepo.aTonOfRecords.filter(_.isActive).map(a => a.id.get -> a.activeUsers): _*).withDefaultValue(0)
+      val m_planByAccount = mutable.Map(paidAccountRepo.adminGetPlans.mapValues(Option(_)).toSeq: _*)
+      val m_usersByAccount = mutable.Map(paidAccountRepo.adminGetNumUsers.toSeq: _*)
 
       reverseChronologicalEvents.map(e => (e.accountId, e.action)).foreach {
         case (accountId, AccountEventAction.OrganizationCreated(initialPlan, _)) =>

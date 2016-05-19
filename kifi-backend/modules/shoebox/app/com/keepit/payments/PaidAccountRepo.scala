@@ -30,6 +30,8 @@ trait PaidAccountRepo extends Repo[PaidAccount] {
   def getPayingTeams()(implicit session: RSession): Set[Id[Organization]]
   def getIdSubsetByModulus(modulus: Int, partition: Int)(implicit session: RSession): Set[Id[Organization]]
   def getPlanEnrollments(implicit session: RSession): Map[Id[PaidPlan], PlanEnrollment]
+  def adminGetPlans(implicit session: RSession): Map[Id[PaidAccount], Id[PaidPlan]]
+  def adminGetNumUsers(implicit session: RSession): Map[Id[PaidAccount], Int]
 
   def deactivate(model: PaidAccount)(implicit session: RWSession): Unit
 }
@@ -118,6 +120,12 @@ class PaidAccountRepoImpl @Inject() (
     activeRows.groupBy(_.planId).map { case (planId, accounts) => planId -> (accounts.length, accounts.map(_.activeUsers).sum) }.list.map {
       case (planId, (numAccounts, numUsers)) => planId -> PlanEnrollment(numAccounts = numAccounts, numActiveUsers = numUsers.getOrElse(0))
     }.toMap
+  }
+  def adminGetPlans(implicit session: RSession): Map[Id[PaidAccount], Id[PaidPlan]] = {
+    activeRows.map(r => r.id -> r.planId).list.toMap
+  }
+  def adminGetNumUsers(implicit session: RSession): Map[Id[PaidAccount], Int] = {
+    activeRows.map(r => r.id -> r.activeUsers).list.toMap
   }
 
   def deactivate(model: PaidAccount)(implicit session: RWSession): Unit = {
