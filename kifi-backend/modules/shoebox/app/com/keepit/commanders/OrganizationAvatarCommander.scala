@@ -79,6 +79,7 @@ class OrganizationAvatarUploadCommanderImpl @Inject() (
     implicit val photoshop: Photoshop,
     val webService: WebService,
     creditRewardCommander: Provider[CreditRewardCommander],
+    val cleanup: ImageCleanup,
     private implicit val executionContext: ExecutionContext) extends OrganizationAvatarUploadCommander with ProcessedImageHelper with Logging {
 
   def persistRemoteOrganizationAvatars(orgId: Id[Organization], imageUrl: String): Future[Either[ImageStoreFailure, ImageHash]] = {

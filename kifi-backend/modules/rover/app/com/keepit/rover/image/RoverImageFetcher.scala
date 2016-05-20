@@ -23,6 +23,7 @@ class RoverImageFetcher @Inject() (
     imageStore: RoverImageStore,
     implicit val photoshop: Photoshop,
     val webService: WebService,
+    val cleanup: ImageCleanup,
     private implicit val executionContext: ExecutionContext) extends ProcessedImageHelper with Logging {
 
   def fetchAndStoreRemoteImage(remoteImageUrl: String, imageSource: ImageSource, imagePathPrefix: String, requiredScaleSizes: Set[ScaledImageSize] = Set.empty, requiredCropSizes: Set[CroppedImageSize] = Set.empty): Future[Either[ImageStoreFailure, ImageHash]] = {

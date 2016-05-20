@@ -4,18 +4,22 @@ import java.io._
 import java.math.BigInteger
 import java.net.URLConnection
 import java.security.MessageDigest
+import com.google.inject.{Inject, ImplementedBy, Singleton}
 
 import com.keepit.common.core.File
 import com.keepit.common.images.{ Photoshop, RawImageInfo }
 import com.keepit.common.net.{ URI, WebService }
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.store.{ ImageOffset, ImagePath, ImageSize }
+import com.keepit.common.time._
 import com.keepit.model._
+import org.joda.time.DateTime
 import play.api.Logger
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Iteratee
 
+import scala.collection.mutable
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 import scala.util.{ Failure, Success, Try }
@@ -52,6 +56,7 @@ trait ProcessedImageHelper {
 
   val log: Logger
   val webService: WebService
+  val cleanup: ImageCleanup
 
   def fetchAndHashLocalImage(file: File): Future[Either[ImageStoreFailure, ImageProcessState.ImageLoadedAndHashed]] = {
     log.info(s"[pih] Fetching ${file.getAbsolutePath}")
@@ -322,6 +327,7 @@ trait ProcessedImageHelper {
           } else {
             val tempFile = File.createTempFile("remote-file", "")
             tempFile.deleteOnExit()
+            cleanup.cleanup(tempFile)
             val outputStream = new FileOutputStream(tempFile)
 
             val maxSize = 1024 * 1024 * 16
@@ -493,5 +499,35 @@ object ProcessedImageSize {
   @inline
   private def maxDivergence(s1: ImageSize, s2: ImageSize): Int = {
     Math.max(Math.abs(s1.height - s2.height), Math.abs(s1.width - s2.width))
+  }
+}
+
+@Singleton
+class ImageCleanup @Inject() (
+  clock: Clock
+) {
+  // When temporary files are created, they can be registered with this class, which will
+  // delete them after a certain amount of time has passed.
+  private val images = new mutable.Queue[(DateTime, String)]()
+  private val cleanupAfterMin = 15
+
+  def cleanup(file: File): Unit = Try {
+    images.enqueue((clock.now, file.getAbsolutePath))
+    purge()
+  }
+
+  def purge(): Unit = {
+    synchronized {
+      if (images.headOption.exists(_._1.isBefore(clock.now.minusMinutes(cleanupAfterMin)))) {
+        Some(images.dequeue()._2)
+      } else None
+    }.map { filename =>
+      Try {
+        val file = new File(filename)
+        if (file.exists()) {
+          file.delete()
+        }
+      }
+    }
   }
 }
