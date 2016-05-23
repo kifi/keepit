@@ -61,6 +61,7 @@ class KeepImageCommanderImpl @Inject() (
     keepImageRepo: KeepImageRepo,
     implicit val photoshop: Photoshop,
     implicit val defaultContext: ExecutionContext,
+    val cleanup: ImageCleanup,
     val webService: WebService) extends KeepImageCommander with ProcessedImageHelper with Logging {
 
   def getUrl(keepImage: KeepImage): String = keepImage.imagePath.getUrl

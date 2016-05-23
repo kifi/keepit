@@ -47,6 +47,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
     libraryRepo: LibraryRepo,
     clock: Clock,
     userValueRepo: UserValueRepo,
+    cleanup: ImageCleanup,
     implicit val executionContext: ExecutionContext) extends TwitterWaitlistCommander with Logging {
 
   private val WAITLIST_LENGTH_SHIFT = 1152
@@ -194,6 +195,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
         } else {
           val tempFile = TemporaryFile(prefix = "remote-file")
           tempFile.file.deleteOnExit()
+          cleanup.cleanup(tempFile.file)
           val outputStream = new FileOutputStream(tempFile.file)
 
           val maxSize = 1024 * 1024 * 16

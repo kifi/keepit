@@ -44,6 +44,7 @@ class LibraryImageCommanderImpl @Inject() (
     s3ImageConfig: S3ImageConfig,
     photoshop: Photoshop,
     implicit val executionContext: ExecutionContext,
+    val cleanup: ImageCleanup,
     val webService: WebService) extends LibraryImageCommander with ProcessedImageHelper with Logging {
 
   def getUrl(libraryImage: LibraryImage): String = libraryImage.imagePath.getUrl(s3ImageConfig)
