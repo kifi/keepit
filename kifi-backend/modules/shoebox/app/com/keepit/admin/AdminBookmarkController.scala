@@ -240,58 +240,38 @@ class AdminBookmarksController @Inject() (
 
   }
 
-  def backfillKifiSourceAttribution(startFrom: Option[Long], limit: Int, dryRun: Boolean) = AdminUserAction { implicit request =>
+  def backfillKifiSourceAttribution(dryRun: Boolean) = AdminUserAction(parse.tolerantJson) { implicit request =>
     import com.keepit.common.core._
 
-    var fromId = startFrom.map(Id[Keep])
+    val ids = (request.body \ "keepIds").as[Set[Id[Keep]]]
+
     val chunkSize = 100
-    val numPages = limit / chunkSize
-    val enum = ChunkedResponseHelper.chunkedFuture(1 to numPages) { page =>
-      val keeps = db.readOnlyMaster(implicit s => keepRepo.pageAscendingWithUserExcludingSources(fromId, chunkSize, excludeStates = Set.empty, excludeSources = Set(KeepSource.Slack, KeepSource.TwitterFileImport, KeepSource.TwitterSync)))
-      def mightBeDiscussion(k: Keep) = k.source == KeepSource.Discussion || (k.isActive && k.recipients.libraries.isEmpty && k.recipients.users.exists(uid => !k.userId.contains(uid)))
-      val (discussionKeeps, otherKeeps) = keeps.partition(mightBeDiscussion)
-      val discussionConnectionsFut = eliza.getInitialRecipientsByKeepId(discussionKeeps.map(_.id.get).toSet).map { connectionsByKeep =>
-        discussionKeeps.flatMap { keep =>
-          connectionsByKeep.get(keep.id.get).map { connections =>
-            keep.id.get -> (RawKifiAttribution(keep.userId.get, keep.note, connections, keep.source), keep.state == KeepStates.ACTIVE)
-          }
-        }.toMap
+    val numPages = ids.size / chunkSize
+    val enum = ChunkedResponseHelper.chunked(1 to numPages) { page =>
+      val (keepById, ktls, ktus) = db.readOnlyMaster { implicit s =>
+        val keepById = keepRepo.getByIds(ids.slice(page * chunkSize, page * chunkSize + chunkSize), excludeStates = Set.empty)
+        val ktls = ktlRepo.getAllByKeepIds(keepById.keySet, excludeStateOpt = None)
+        val ktus = ktuRepo.getAllByKeepIds(keepById.keySet, excludeState = None)
+        (keepById, ktls, ktus)
       }
 
-      val nonDiscussionConnectionsFut = db.readOnlyMasterAsync { implicit s =>
-        val ktls = ktlRepo.getAllByKeepIds(otherKeeps.map(_.id.get).toSet, excludeStateOpt = None)
-        val ktus = ktuRepo.getAllByKeepIds(otherKeeps.map(_.id.get).toSet, excludeState = None)
-        otherKeeps.collect {
-          case keep =>
-            val firstLibrary = ktls.getOrElse(keep.id.get, Seq.empty).minByOpt(_.addedAt).map(_.libraryId)
-            val firstUsers = ktus.getOrElse(keep.id.get, Seq.empty).collect { case ktu if keep.keptAt.getMillis > ktu.addedAt.minusSeconds(1).getMillis => ktu.userId } ++ keep.userId.toSeq
-            val rawAttribution = RawKifiAttribution(keptBy = keep.userId.get, keep.note, KeepRecipients(firstLibrary.toSet, Set.empty, firstUsers.toSet), keep.source)
-            keep.id.get -> (rawAttribution, keep.state == KeepStates.ACTIVE)
-        }.toMap
-      }
+      val attributionByKeep = keepById.values.collect {
+        case keep =>
+          val firstLibrary = ktls.getOrElse(keep.id.get, Seq.empty).minByOpt(_.addedAt).map(_.libraryId)
+          val firstUsers = ktus.getOrElse(keep.id.get, Seq.empty).collect { case ktu if keep.keptAt.getMillis > ktu.addedAt.minusSeconds(1).getMillis => ktu.userId } ++ keep.userId.toSeq
+          val rawAttribution = RawKifiAttribution(keptBy = keep.userId.get, keep.note, KeepRecipients(firstLibrary.toSet, Set.empty, firstUsers.toSet), keep.source)
+          keep -> rawAttribution
+      }.toMap
 
-      for {
-        discussionConnections <- discussionConnectionsFut
-        nonDiscussionConnections <- nonDiscussionConnectionsFut
-        (success, fail) <- db.readWriteAsync { implicit s =>
-          val fetchedConnections = discussionConnections ++ nonDiscussionConnections
-          val missingKeeps = keeps.filter(keep => !fetchedConnections.contains(keep.id.get))
-          val allConnections = fetchedConnections ++ missingKeeps.map { k =>
-            val rawAttribution = RawKifiAttribution(keptBy = k.userId.get, k.note, k.recipients.plusUser(k.userId.get), k.source)
-            k.id.get -> (rawAttribution, k.state == KeepStates.ACTIVE)
-          }
-          val internedKeeps = allConnections.map {
-            case (kid, (attr, isActive)) =>
-              val state = if (isActive) KeepSourceAttributionStates.ACTIVE else KeepSourceAttributionStates.INACTIVE
-              if (!dryRun) sourceRepo.intern(kid, attr, state = state) else slackLog.info(s"$kid: ${Json.stringify(Json.toJson(attr))}")
-              kid
-          }
-          (internedKeeps, missingKeeps)
+      val internedKeeps = db.readWrite { implicit s =>
+        attributionByKeep.map {
+          case (keep, attr) =>
+            val attrState = if (keep.state == KeepStates.ACTIVE) KeepSourceAttributionStates.ACTIVE else KeepSourceAttributionStates.INACTIVE
+            if (!dryRun) sourceRepo.intern(keep.id.get, attr, state = attrState) else slackLog.info(s"${keep.id.get}: ${Json.stringify(Json.toJson(attr))}")
+            keep.id.get
         }
-      } yield {
-        fromId = keeps.maxBy(_.id.get).id
-        s"${keeps.map(_.id.get).minMaxOpt}: interned ${success.size}, failed on ${fail.mkString("(", ",", ")")}\n"
       }
+      s"${keepById.values.map(_.id.get).minMaxOpt}: interned ${internedKeeps.size}\n"
     }
     Ok.chunked(enum)
   }
