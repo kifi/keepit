@@ -34,7 +34,7 @@ import play.api.mvc.{ Action, AnyContent, Result }
 import views.html
 
 import scala.collection.mutable
-import scala.concurrent.duration.{ Duration, DurationInt }
+import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future, Promise }
 import scala.util.Try
 
@@ -52,7 +52,7 @@ case class UserStatisticsPage(
     recentUsers: Seq[Id[User]] = Seq.empty,
     invitationInfo: Option[InvitationInfo] = None) {
 
-  def getUserThreadStats(user: User): UserThreadStats = Await.result(userThreadStats(user.id.get), Duration.Inf)
+  def getUserThreadStats(user: User): UserThreadStats = Await.result(userThreadStats(user.id.get), 5 seconds)
 }
 
 sealed trait UserViewType
