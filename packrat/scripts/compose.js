@@ -366,9 +366,11 @@ k.compose = k.compose || (function() {
         sendChooser.reflectPrefs(prefs);
         var alwaysLookHereMode = editor.supportsLinks && prefs.lookHereMode;
         $form.find('.kifi-compose-highlight').toggleClass('kifi-disabled', !alwaysLookHereMode);
-        if (!alwaysLookHereMode && !k.snap.enabled()) {
-          k.snap.enable(); // enable it because it isn't already on
-        }
+        api.port.emit('is_suppressed', function (isSuppressed) {
+          if (isSuppressed || (!alwaysLookHereMode && !k.snap.enabled())) {
+            k.snap.enable(); // enable it because it isn't already on
+          }
+        });
 
         if (window.innerWidth > 688 && prefs.quoteAnywhereFtue) {
           setTimeout(function () {
@@ -441,9 +443,11 @@ k.compose = k.compose || (function() {
           $to.tokenInput('destroy');
         }
         editor.$el.handleLookClicks(false);
-        if (!$forms.length && $form.find('.kifi-compose-highlight').hasClass('kifi-disabled')) {
-          k.snap.disable();
-        }
+        api.port.emit('is_suppressed', function (isSuppressed) {
+          if ((!$forms.length && $form.find('.kifi-compose-highlight').hasClass('kifi-disabled')) || isSuppressed) {
+            k.snap.disable();
+          }
+        })
         api.port.off(handlers);
       }
     };
