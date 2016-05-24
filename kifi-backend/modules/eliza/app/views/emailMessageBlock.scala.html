@@ -35,7 +35,7 @@
                             <td height="16" style="line-height:1px;font-size:1px;">&nbsp;</td>
                           </tr>
                           <tr>
-                            <td><a href="@keepPageUrl" target="_blank" style="font-family:Georgia, 'Times New Roman', Times, serif;font-size:18px;color:#333333;line-height:24px;text-decoration: none;">@segments.map(_.txt).map(MailHelpers.textWithTags).mkString(" ")</a></td>
+                            <td><a href="@keepPageUrl" target="_blank" style="font-family:Georgia, 'Times New Roman', Times, serif;font-size:18px;color:#333333;line-height:24px;text-decoration: none;">@textWithHashtag(segments.map(_.txt).map(MailHelpers.textWithTags).mkString(" "))</a></td>
                           </tr>
                         </table></td>
                       <!-- //Content -->

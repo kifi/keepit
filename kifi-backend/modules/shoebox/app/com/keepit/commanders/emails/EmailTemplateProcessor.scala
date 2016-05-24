@@ -3,7 +3,7 @@ package com.keepit.commanders.emails
 import java.net.URLEncoder
 
 import com.google.inject.{ Provider, ImplementedBy, Inject }
-import com.keepit.commanders.PathCommander
+import com.keepit.commanders.{ Hashtags, PathCommander }
 import com.keepit.commanders.emails.tips.EmailTipProvider
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.crypto.PublicIdConfiguration
@@ -15,6 +15,7 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.common.mail.template.Tag.tagRegex
 import com.keepit.common.net.URI
 import com.keepit.common.store.S3ImageStore
+import com.keepit.common.util.DescriptionElements
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.common.mail.template.{ helpers, EmailLayout, EmailTrackingParam, EmailToSend, TagWrapper, tags, EmailTip }
 import com.keepit.common.mail.template.EmailLayout._
@@ -225,6 +226,7 @@ class EmailTemplateProcessorImpl @Inject() (
       @inline def uri: NormalizedURI = input.uris(uriId)
 
       val resultString = tagWrapper.label match {
+        case tags.textWithHashtag => DescriptionElements.formatAsHtml(Hashtags.format(tagArgs(0).as[String])).body
         case tags.firstName => basicUser.firstName
         case tags.lastName => basicUser.lastName
         case tags.fullName => basicUser.firstName + " " + basicUser.lastName

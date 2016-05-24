@@ -50,6 +50,7 @@ package object template {
     val channel = TagLabel("channel")
     val source = TagLabel("source")
     val title = TagLabel("title")
+    val textWithHashtag = TagLabel("textWithHashtag")
     val baseUrl = TagLabel("baseUrl")
     val trackingParam = TagLabel("trackingParam")
     val footerHtml = TagLabel("footer")
@@ -60,6 +61,7 @@ package object template {
     private val htmlEscape = HtmlEscapers.htmlEscaper().asFunction()
 
     val title = Tag0(tags.title).toHtml
+    def textWithHashtag(text: String) = Tag1(tags.textWithHashtag, text).toHtml
     val baseUrl = Tag0(tags.baseUrl).toHtml
     val iOsAppStoreUrl = "https://itunes.apple.com/us/app/kifi/id740232575?mt=8"
     val googlePlayStoreUrl = "https://play.google.com/store/apps/details?id=com.kifi&hl=en/å"
