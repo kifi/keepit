@@ -68,7 +68,9 @@ k.tile = k.tile || (function () {
       });
 
       api.port.emit('prefs', function (prefs) {
-        configureLookHere(prefs && prefs.lookHereMode);
+        if (!o.hide) {
+          configureLookHere(prefs && prefs.lookHereMode);
+        }
       });
     },
     show_keeper: function(show) {
@@ -110,6 +112,11 @@ k.tile = k.tile || (function () {
     },
     reset: cleanUpDom.bind(null, 'history'),
     silence: cleanUpDom.bind(null, 'silence'),
+    suppressed: function () {
+      if (k && k.snap) {
+        k.snap.disable();
+      }
+    },
     unsilenced: api.require.bind(api, 'scripts/unsilenced.js', function () {
       showUnsilenced();
     }),
