@@ -19,7 +19,6 @@ import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Iteratee
 
-import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
@@ -326,8 +325,7 @@ trait ProcessedImageHelper {
           if (headers.status != 200) {
             Future.failed(new RuntimeException(s"Image returned non-200 code, ${headers.status}, $imageUrl"))
           } else {
-            val urlname = imageUrl.drop(5).replaceAll("""\W""","").take(20)
-            val tempFile = File.createTempFile("rf-" + urlname, "")
+            val tempFile = File.createTempFile("remote-file", "")
             tempFile.deleteOnExit()
             cleanup.cleanup(tempFile)
             val outputStream = new FileOutputStream(tempFile)
@@ -518,8 +516,7 @@ class ImageCleanup @Inject() (
     purge()
   }
 
-  @tailrec
-  private def purge(): Unit = {
+  def purge(): Unit = {
     synchronized {
       if (images.headOption.exists(_._1.isBefore(clock.now.minusMinutes(cleanupAfterMin)))) {
         Some(images.dequeue()._2)
@@ -532,6 +529,5 @@ class ImageCleanup @Inject() (
         }
       }
     }
-    purge()
   }
 }
