@@ -107,7 +107,7 @@ class OrganizationChecker @Inject() (
     if (org.isActive) Future.successful(())
     else {
       // There is some easy stuff that can be done synchronously
-      db.readWrite { implicit session =>
+      db.readWrite(attempts = 2) { implicit session =>
         val zombieMemberships = orgMembershipRepo.getAllByOrgId(org.id.get, excludeState = Some(OrganizationMembershipStates.INACTIVE))
         if (zombieMemberships.nonEmpty) {
           airbrake.notify(s"[ORG-STATE-MATCH] Dead org $orgId has zombie memberships for these users: ${zombieMemberships.map(_.userId)}")
