@@ -16,7 +16,7 @@ import com.typesafe.config.ConfigFactory
 import com.keepit.common.time.{ currentDateTime, DEFAULT_DATE_TIME_ZONE, RichDateTime }
 import play.api.libs.json.Json
 import scala.concurrent.{ ExecutionContext, Future, Await }
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration._
 import scala.collection.JavaConversions._
 import play.api._
 import play.api.mvc.Results._
@@ -110,7 +110,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     }
 
     serviceDiscoveryOpt map { serviceDiscovery =>
-      val selfCheckPassed: Boolean = Await.result(serviceDiscovery.startSelfCheck(), Duration.Inf)
+      val selfCheckPassed: Boolean = Await.result(serviceDiscovery.startSelfCheck(), 1 minutes)
       if (!selfCheckPassed) {
         log.error("STARTUP SELF CHECK FAILED!")
       }

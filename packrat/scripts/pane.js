@@ -5,6 +5,7 @@
 // @require scripts/formatting.js
 // @require scripts/repair_transitionend.js
 // @require scripts/keeper.js
+// @require scripts/snap.js
 // @require scripts/listen.js
 // @require scripts/html/keeper/kifi_mustache_tags.js
 // @require scripts/html/keeper/pane.js
@@ -258,7 +259,9 @@ k.pane = k.pane || function () {  // idempotent for Chrome
         setTimeout(function () {
           if (checked) {
             hidePane();
+            k.snap.disable();
           } else {
+            k.snap.enable();
             $hide.closest('.kifi-pane-top-menu').triggerHandler('kifi:hide');
           }
         }, 150);

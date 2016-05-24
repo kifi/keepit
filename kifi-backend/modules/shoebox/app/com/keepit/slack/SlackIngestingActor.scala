@@ -29,7 +29,6 @@ object SlackIngestionConfig {
   val nextIngestionDelayAfterFailure = Period.minutes(15)
   val nextIngestionDelayWithoutNewMessages = Period.minutes(5)
   val nextIngestionDelayAfterNewMessages = Period.minutes(2)
-  val superLowIngestionDelay = Period.seconds(30)
   val maxIngestionDelayAfterCommand = Period.seconds(15)
 
   val ingestionTimeout = Period.minutes(30)
@@ -138,7 +137,6 @@ class SlackIngestingActor @Inject() (
               slackOnboarder.talkAboutIntegration(integration, channel)
             }
             val delay = lastMsgTimestamp match {
-              case _ if integration.slackTeamId == KifiSlackApp.KineticTeamId => superLowIngestionDelay
               case Some(newTimestamp) if !integration.lastMessageTimestamp.contains(newTimestamp) => nextIngestionDelayAfterNewMessages
               case _ => nextIngestionDelayWithoutNewMessages
             }

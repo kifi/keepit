@@ -100,7 +100,7 @@
 .manage-lib-input-wrapper
   display: flex
   flex-direction: column
-  margin-bottom: 15px
+  margin-bottom: 5px
 
 
   @media (min-width: 480px)
@@ -165,29 +165,31 @@ select.manage-lib-input
   margin-left: 20px
 
 .manage-lib-slug
-  display: table
-  margin-top: 5px
-  margin-left: 5px
+  display: flex
+  align-self: center
+  width: 100%
+  align-items: center
+  margin-bottom: 2px
 
 .manage-lib-slug-1
-  display: table-cell
-  width: 1%
+  flex-shrink: 0
   white-space: nowrap
   color: secondaryTextGray
 
 .manage-lib-slug-2
-  display: table-cell
+  flex-shrink: 0
+  flex-grow: 1
 
-.manage-lib-slug-input
-  border-bottom: 1px dotted #c7c7c7
+.manage-lib-slug-input.manage-lib-slug-input
+  border-bottom: 1px solid #c7c7c7
+  text-decoration: none
   width: 100%
+  color: #444
   placeholder secondaryTextGray
 
-  &.non-empty-slug
-    border-bottom: none
-
-    &:focus
-      color: textBlackColor
+  &:focus
+    color: textBlackColor
+    border-color: blueColor
 
 .manage-lib-description-input
   height: 100px

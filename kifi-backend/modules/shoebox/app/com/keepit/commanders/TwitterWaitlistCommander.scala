@@ -193,7 +193,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
         if (headers.status != 200) {
           Future.failed(new RuntimeException(s"Image returned non-200 code, ${headers.status}, $imageUrl"))
         } else {
-          val tempFile = TemporaryFile(prefix = s"tw-${handle.value}")
+          val tempFile = TemporaryFile(prefix = "remote-file")
           tempFile.file.deleteOnExit()
           cleanup.cleanup(tempFile.file)
           val outputStream = new FileOutputStream(tempFile.file)

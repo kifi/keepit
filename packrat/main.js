@@ -941,6 +941,12 @@ api.port.on({
   suppress_on_site: function(data, _, tab) {
     ajax('POST', '/ext/pref/keeperHidden', {url: tab.url, suppress: data});
     pageData[tab.nUri].neverOnSite = !!data;
+    if (!!data) {
+      api.tabs.emit(tab, 'suppressed');
+    }
+  },
+  is_suppressed: function (data, respond, tab) {
+    respond(pageData[tab.nUri].neverOnSite);
   },
   get_menu_data: function(_, respond, tab) {
     var d = pageData[tab.nUri];
