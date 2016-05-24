@@ -518,7 +518,6 @@ class ImageCleanup @Inject() (
     purge()
   }
 
-  @tailrec
   private def purge(): Unit = {
     synchronized {
       if (images.headOption.exists(_._1.isBefore(clock.now.minusMinutes(cleanupAfterMin)))) {
@@ -530,8 +529,10 @@ class ImageCleanup @Inject() (
         if (file.exists()) {
           file.delete()
         }
+        if (images.nonEmpty) {
+          purge()
+        }
       }
     }
-    purge()
   }
 }
