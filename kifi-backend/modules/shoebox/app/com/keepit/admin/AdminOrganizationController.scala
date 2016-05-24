@@ -255,7 +255,8 @@ class AdminOrganizationController @Inject() (
     val oldOwnerId = org.ownerId
     implicit val context = HeimdalContext.empty
     val updatedOrg = db.readWrite { implicit s =>
-      val admin = request.adminUserId.get
+      assert(request.experiments.contains(UserExperimentType.ADMIN))
+      val admin = request.userId
       orgCommander.unsafeTransferOrganization(OrganizationTransferRequest(requesterId = admin, orgId, newOwnerId), isAdmin = true)
       orgRepo.get(orgId)
     }
