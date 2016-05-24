@@ -1,5 +1,4 @@
 @import com.keepit.common.mail.template.helpers.discussionLink
-@import com.keepit.common.mail.MailHelpers
 @(threadInfo: com.keepit.eliza.model.ThreadEmailInfo, imageUrl: Option[String], shortName: String, fullName: String, segments: Seq[com.keepit.eliza.util.MessageSegment], isUser: Boolean)
 @keepPageUrl = @{discussionLink(threadInfo.uriId, threadInfo.keepId, threadInfo.nonUserAccessToken, shouldDeepLink = isUser)}
   <tr>
@@ -35,7 +34,7 @@
                             <td height="16" style="line-height:1px;font-size:1px;">&nbsp;</td>
                           </tr>
                           <tr>
-                            <td><a href="@keepPageUrl" target="_blank" style="font-family:Georgia, 'Times New Roman', Times, serif;font-size:18px;color:#333333;line-height:24px;text-decoration: none;">@segments.map(_.txt).map(MailHelpers.textWithTags).mkString(" ")</a></td>
+                            <td><a href="@keepPageUrl" target="_blank" style="font-family:Georgia, 'Times New Roman', Times, serif;font-size:18px;color:#333333;line-height:24px;text-decoration: none;">@segments.map(_.txt).mkString(" ")</a></td>
                           </tr>
                         </table></td>
                       <!-- //Content -->
