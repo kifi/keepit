@@ -574,7 +574,7 @@ class MobileLibraryController @Inject() (
     val source = request.userAgentOpt.flatMap(KeepSource.fromUserAgent).getOrElse(KeepSource.Mobile)
 
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
-    val (keep, _) = keepsCommander.keepOne(rawKeep, request.userId, libraryId, source, SocialShare(jsonBody))
+    val (keep, _) = keepsCommander.keepOne(rawKeep, request.userId, libraryId, source)
     imageUrlOpt.map { imageUrl =>
       keepImageCommander.setKeepImageFromUrl(imageUrl, keep.id.get, ImageSource.UserPicked)
     }
