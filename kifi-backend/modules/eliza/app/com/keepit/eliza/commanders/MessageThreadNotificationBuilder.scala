@@ -197,7 +197,7 @@ class MessageThreadNotificationBuilderImpl @Inject() (
       case (keepId, thread) =>
         val thread = threadsById(keepId)
         val messageOpt = lastMsgById.get(keepId)
-        val threadStarter = basicUserByIdMap(thread.startedBy).externalId
+        val threadStarter = basicUserByIdMap(thread.startedBy)
         val threadActivity = threadActivityById(keepId)
         val MessageCount(numMessages, numUnread) = msgCountById(keepId)
         val muted = mutedById(keepId)
@@ -205,9 +205,7 @@ class MessageThreadNotificationBuilderImpl @Inject() (
         val author = messageOpt.map(_.from).collect {
           case MessageSender.User(id) => BasicUserLikeEntity(basicUserByIdMap(id))
           case MessageSender.NonUser(nup) => BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nup))
-        }.getOrElse {
-          BasicUserLikeEntity(BasicUser(ExternalId[User]("42424242-4242-4242-4242-000000000001"), "Kifi", "", "0.jpg", Username("sssss")))
-        }
+        }.getOrElse(BasicUserLikeEntity(threadStarter))
         val authorActivityInfos = threadActivity.filter(_.lastActive.isDefined)
 
         val lastSeenOpt: Option[DateTime] = threadActivity.find(_.userId == userId).flatMap(_.lastSeen)
@@ -220,7 +218,7 @@ class MessageThreadNotificationBuilderImpl @Inject() (
             thread.participants.nonUserParticipants.keySet.map(nup => BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nup)))
           val orderedParticipants = allParticipants.sortBy(x => x.fold(nu => (nu.firstName.getOrElse(""), nu.lastName.getOrElse("")), u => (u.firstName, u.lastName)))
           val indexOfFirstAuthor = orderedParticipants.zipWithIndex.collectFirst {
-            case (Right(user), idx) if user.externalId == threadStarter => idx
+            case (Right(user), idx) if user.externalId == threadStarter.externalId => idx
           }.getOrElse {
             airbrake.notify(s"Thread starter is not one of the participants for keep ${thread.keepId}")
             0
