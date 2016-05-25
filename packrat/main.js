@@ -1204,12 +1204,12 @@ api.port.on({
   activity_event_rendered: function(o, _, tab) {
     whenTabFocused(tab, o.keepId, function (tab) {
       markRead(o.keepId, o.eventId, o.time);
-      socket.send(['set_message_read', o.eventId]);
+      socket.send(['set_message_read', o.eventId, o.keepId]);
     });
   },
   set_message_read: function (o, _, tab) {
     markRead(o.threadId, o.messageId, o.time);
-    socket.send(['set_message_read', o.messageId]);
+    socket.send(['set_message_read', o.messageId, o.threadId]);
     if (o.from === 'toggle') {
       tracker.track('user_clicked_pane', {type: trackingLocatorFor(tab.id), action: 'markedRead', category: trackingCategory(o.category)});
     } else if (o.from === 'notice') {
