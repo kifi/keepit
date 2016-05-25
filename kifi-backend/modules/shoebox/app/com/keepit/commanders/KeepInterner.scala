@@ -356,8 +356,13 @@ class KeepInternerImpl @Inject() (
           }
           val basicKeeps = { keepActivityAssembler.assembleInitialEventsForKeeps(keepsToNotifyAbout, sourceAttrs, ktls, ktus) }
           FutureHelpers.sequentialExec(keepsToNotifyAbout) { keep =>
-            val basicKeep = basicKeeps.get(keep.id.get)
-            keep.userId.map(uid => eliza.modifyRecipientsAndSendEvent(keep.id.get, uid, keep.recipients.toDiff, basicKeep.flatMap(_.source.map(_.kind)), basicKeep)).getOrElse(Future.successful(()))
+            keep.userId.flatMap { uid =>
+              // only create user threads when sending to other users or sending to oneself
+              if (keep.recipients.users.size > 1 || (keep.recipients.users.contains(uid) && keep.recipients.libraries.isEmpty)) {
+                val basicKeep = basicKeeps.get(keep.id.get)
+                Some(eliza.modifyRecipientsAndSendEvent(keep.id.get, uid, keep.recipients.toDiff, basicKeep.flatMap(_.source.map(_.kind)), basicKeep))
+              } else None
+            }.getOrElse(Future.successful(()))
           }
           FutureHelpers.sequentialExec(keeps) { keep =>
             val nuri = db.readOnlyMaster { implicit session =>
