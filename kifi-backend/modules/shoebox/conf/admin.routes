@@ -271,6 +271,7 @@ GET     /admin/graph/statistics                            @com.keepit.controlle
 GET     /admin/graph/wander                                @com.keepit.controllers.admin.WanderingAdminController.wander()
 POST    /admin/graph/wander                                @com.keepit.controllers.admin.WanderingAdminController.wander()
 
+GET     /admin/library/:id/sendTweet                       @com.keepit.controllers.admin.AdminUserController.tweetAtUserLibrary(id: Id[Library])
 GET     /admin/twitter                                     @com.keepit.controllers.admin.AdminTwitterWaitlistController.getWaitlist()
 GET     /admin/twitter/accept                              @com.keepit.controllers.admin.AdminTwitterWaitlistController.acceptUser(userId: Id[User], handle: String)
 GET     /admin/twitter/email                               @com.keepit.controllers.admin.AdminTwitterWaitlistController.sendAcceptEmail(syncStateId: Id[TwitterSyncState], userId: Id[User], safe: Boolean ?= true)

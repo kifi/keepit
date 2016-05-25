@@ -10,8 +10,7 @@ import com.keepit.common.strings._
 
 import scala.concurrent.Future
 
-class TwitterMessages @Inject() (
-    shortner: UriShortener) {
+class TwitterMessages @Inject() (shortner: UriShortener) {
 
   /**
    * 140 is twitter max msg length

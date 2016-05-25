@@ -1,5 +1,6 @@
 package com.keepit.common.social
 
+import twitter4j.Status
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.commanders.{ LibraryImageCommander, PathCommander, ProcessedImageSize }
 import com.keepit.common.akka.SafeFuture
@@ -69,7 +70,7 @@ trait TwitterSocialGraph extends SocialGraph {
   val networkType: SocialNetworkType = SocialNetworks.TWITTER
 
   def sendDM(socialUserInfo: SocialUserInfo, receiverUserId: Long, msg: String): Future[WSResponse]
-  def sendTweet(socialUserInfo: SocialUserInfo, image: Option[File], msg: String): Unit
+  def sendTweet(socialUserInfo: SocialUserInfo, image: Option[File], msg: String): Try[Status]
   def fetchHandleTweets(socialUserInfoOpt: Option[SocialUserInfo], handle: TwitterHandle, lowerBoundId: Option[Long], upperBoundId: Option[Long]): Future[Either[TwitterSyncError, Seq[JsObject]]] //uses app auth if no social user info is given
   def fetchHandleFavourites(socialUserInfoOpt: Option[SocialUserInfo], handle: TwitterHandle, lowerBoundId: Option[Long], upperBoundId: Option[Long]): Future[Either[TwitterSyncError, Seq[JsObject]]]
 }
@@ -322,18 +323,20 @@ class TwitterSocialGraphImpl @Inject() (
     call
   }
 
-  def sendTweet(socialUserInfo: SocialUserInfo, image: Option[File], msg: String): Unit = try {
+  def sendTweet(socialUserInfo: SocialUserInfo, image: Option[File], msg: String): Try[Status] = try {
     log.info(s"tweeting for ${socialUserInfo.profileUrl} ${socialUserInfo.userId} ${socialUserInfo.fullName} with image: ${image.isDefined} message: $msg")
     val status = new StatusUpdate(msg)
     image.foreach(file => status.setMedia(file))
     val res = twitterClient(socialUserInfo).updateStatus(status)
     log.info(s"twitted status id ${res.getId} for message $msg")
+    Success(res)
   } catch {
     case e: Exception =>
       val conf = twitterClient(socialUserInfo).getAPIConfiguration
       val limits = twitterClient(socialUserInfo).getRateLimitStatus
       airbrake.notify(s"error tweeting for ${socialUserInfo.profileUrl} ${socialUserInfo.userId} ${socialUserInfo.fullName} with image: ${image.isDefined} message: $msg " +
         s"PhotoSizeLimit:${conf.getPhotoSizeLimit},ShortURLLength:${conf.getShortURLLength},ShortURLLengthHttps:${conf.getShortURLLengthHttps},CharactersReservedPerMedia:${conf.getCharactersReservedPerMedia},limits:$limits", e)
+      Failure(e)
   }
 
   def fetchHandleTweets(socialUserInfoOpt: Option[SocialUserInfo], handle: TwitterHandle, lowerBoundId: Option[Long], upperBoundId: Option[Long]): Future[Either[TwitterSyncError, Seq[JsObject]]] = {

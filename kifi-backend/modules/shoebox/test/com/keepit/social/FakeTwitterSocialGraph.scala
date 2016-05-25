@@ -2,6 +2,7 @@ package com.keepit.social
 
 import java.io.File
 
+import akka.actor.Status.Success
 import com.google.inject.Inject
 import com.keepit.commanders.{ PathCommander, LibraryImageCommander, KifiInstallationCommander }
 import com.keepit.common.concurrent.WatchableExecutionContext
@@ -20,9 +21,10 @@ import com.keepit.social.twitter.{ TwitterHandle, TwitterUserId }
 import play.api.libs.json.{ JsNull, JsArray, JsValue, JsObject }
 import play.api.libs.ws.WSResponse
 import securesocial.core.{ IdentityId, OAuth2Settings }
+import twitter4j.Status
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.Try
+import scala.util.{ Failure, Try }
 
 class FakeTwitterSocialGraph @Inject() (
     airbrake: AirbrakeNotifier,
@@ -86,7 +88,7 @@ class FakeTwitterSocialGraph @Inject() (
       new FakeWSResponse()
     }
 
-    override def sendTweet(socialUserInfo: SocialUserInfo, image: Option[File], msg: String): Unit = {}
+    override def sendTweet(socialUserInfo: SocialUserInfo, image: Option[File], msg: String): Try[Status] = Failure(new Exception("got it?!"))
 
   }
 
@@ -105,6 +107,8 @@ class FakeTwitterSocialGraph @Inject() (
   def revokePermissions(socialUserInfo: SocialUserInfo): Future[Unit] = twtrGraph.revokePermissions(socialUserInfo)
   def extractUserValues(json: JsValue): Map[UserValueName, String] = twtrGraph.extractUserValues(json)
   def fetchSocialUserRawInfo(socialUserInfo: SocialUserInfo): Option[SocialUserRawInfo] = twtrGraph.fetchSocialUserRawInfo(socialUserInfo)
-  def sendTweet(socialUserInfo: SocialUserInfo, image: Option[File], msg: String): Unit = twtrGraph.sendTweet(socialUserInfo, image, msg)
+  def sendTweet(socialUserInfo: SocialUserInfo, image: Option[File], msg: String): Try[Status] = {
+    twtrGraph.sendTweet(socialUserInfo, image, msg)
+  }
   def sendDM(socialUserInfo: SocialUserInfo, receiverUserId: Long, msg: String): Future[WSResponse] = twtrGraph.sendDM(socialUserInfo, receiverUserId, msg)
 }
