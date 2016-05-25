@@ -59,7 +59,7 @@ trait KeepCommander {
 
   // Creating
   def internKeep(internReq: KeepInternRequest)(implicit context: HeimdalContext): Future[(Keep, Boolean, Option[Message])]
-  def keepOne(rawBookmark: RawBookmarkRepresentation, userId: Id[User], libraryId: Id[Library], source: KeepSource, socialShare: SocialShare)(implicit context: HeimdalContext): (Keep, Boolean)
+  def keepOne(rawBookmark: RawBookmarkRepresentation, userId: Id[User], libraryId: Id[Library], source: KeepSource)(implicit context: HeimdalContext): (Keep, Boolean)
   def keepMultiple(rawBookmarks: Seq[RawBookmarkRepresentation], libraryId: Id[Library], userId: Id[User], source: KeepSource)(implicit context: HeimdalContext): (Seq[PartialKeepInfo], Seq[String])
 
   // Tagging
@@ -105,7 +105,6 @@ class KeepCommanderImpl @Inject() (
     hashtagTypeahead: HashtagTypeahead,
     keepDecorator: KeepDecorator,
     twitterPublishingCommander: TwitterPublishingCommander,
-    facebookPublishingCommander: FacebookPublishingCommander,
     permissionCommander: PermissionCommander,
     uriHelpers: UriIntegrityHelpers,
     userExperimentRepo: UserExperimentRepo,
@@ -268,13 +267,13 @@ class KeepCommanderImpl @Inject() (
     } yield (keep, isNew, msgOpt)
   }
   // TODO: if keep is already in library, return it and indicate whether userId is the user who originally kept it
-  def keepOne(rawBookmark: RawBookmarkRepresentation, userId: Id[User], libraryId: Id[Library], source: KeepSource, socialShare: SocialShare)(implicit context: HeimdalContext): (Keep, Boolean) = {
+  def keepOne(rawBookmark: RawBookmarkRepresentation, userId: Id[User], libraryId: Id[Library], source: KeepSource)(implicit context: HeimdalContext): (Keep, Boolean) = {
     log.info(s"[keep] $rawBookmark")
     val library = db.readOnlyReplica { implicit session =>
       libraryRepo.get(libraryId)
     }
     val (keep, isNewKeep) = keepInterner.internRawBookmark(rawBookmark, userId, library, source).get
-    postSingleKeepReporting(keep, isNewKeep, library, socialShare)
+    searchClient.updateKeepIndex()
     (keep, isNewKeep)
   }
 
@@ -385,13 +384,6 @@ class KeepCommanderImpl @Inject() (
       slackPusher.schedule(newKeep.recipients.libraries)
     }
     result
-  }
-
-  private def postSingleKeepReporting(keep: Keep, isNewKeep: Boolean, library: Library, socialShare: SocialShare): Unit = SafeFuture {
-    log.info(s"postSingleKeepReporting for user ${keep.userId} with $socialShare keep ${keep.title}")
-    if (socialShare.twitter) keep.userId.foreach { userId => twitterPublishingCommander.publishKeep(userId, keep, library) }
-    if (socialShare.facebook) keep.userId.foreach { userId => facebookPublishingCommander.publishKeep(userId, keep, library) }
-    searchClient.updateKeepIndex()
   }
 
   def searchTags(userId: Id[User], query: String, limit: Option[Int]): Future[Seq[HashtagHit]] = {

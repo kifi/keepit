@@ -26,37 +26,7 @@ class TwitterPublishingCommander @Inject() (
     implicit val executionContext: ExecutionContext,
     twitterSocialGraph: TwitterSocialGraph) extends SocialPublishingCommander with Logging {
 
-  def publishKeep(userId: Id[User], keep: Keep, library: Library): Unit = {
-    require(keep.userId == userId, s"User $userId cannot publish to Twitter a keep by user ${keep.userId}")
-    if (library.visibility == LibraryVisibility.PUBLISHED && hasExplicitShareExperiment(userId)) {
-      log.info(s"trying to tweet about a keep ${keep.id.get} of user ${keep.userId} and lib ${library.id.get}")
-      db.readOnlyMaster { implicit session => socialUserInfoRepo.getByUser(userId).find(u => u.networkType == SocialNetworks.TWITTER) } match {
-        case None =>
-          log.info(s"user $userId is not connected to twitter!")
-        case Some(sui) =>
-          val libraryUrl = s"""https://www.kifi.com${libPathCommander.getPathForLibrary(library)}"""
-          val title = keep.title.getOrElse("interesting link")
-          twitterMessages.keepMessage(title.trim, keep.url.trim, library.name.trim, libraryUrl.trim) map { msg =>
-            log.info(s"twitting about user $userId keeping $title with msg = $msg of size ${msg.size}")
-            val imageOpt: Option[Future[TemporaryFile]] = {
-              val imagePath = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(1024, 512)).flatten.map(_.imagePath) orElse {
-                db.readOnlyMaster(implicit s => libraryImageCommander.getBestImageForLibrary(library.id.get, ImageSize(1024, 512))).map(_.imagePath)
-              }
-              imagePath.map(imageStore.get)
-            }
-            imageOpt match {
-              case None => twitterSocialGraph.sendTweet(sui, None, msg)
-              case Some(imageFuture) => imageFuture.map { imageFile =>
-                twitterSocialGraph.sendTweet(sui, Some(imageFile.file), msg)
-                imageFile.file.delete()
-              }
-            }
-          }
-      }
-    } else {
-      log.info(s"did not tweet a keep ${keep.id.get} of user ${keep.userId} and lib ${library.id.get} since lib is not published or lack of experiment")
-    }
-  }
+  def announceNewTwitterLibrary(libraryId: Id[Library]): Unit = ???
 
   private def twitterHandle(libOwner: Id[User]): Option[String] = {
     val suiOpt = db.readOnlyMaster { implicit s =>

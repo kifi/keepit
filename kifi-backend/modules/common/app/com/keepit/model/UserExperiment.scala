@@ -67,6 +67,7 @@ object UserExperimentType {
 
   val ACTIVITY_EMAIL = UserExperimentType("activity_email")
   val EXPLICIT_SOCIAL_POSTING = UserExperimentType("explicit_social_posting")
+  val ANNOUNCE_NEW_TWITTER_LIBRARY = UserExperimentType("announce_new_twitter_lib")
   val RELATED_PAGE_INFO = UserExperimentType("related_page_info")
   val NEXT_GEN_RECOS = UserExperimentType("next_gen_recos")
   val RECO_FASTLANE = UserExperimentType("reco_fastlane")
@@ -89,7 +90,7 @@ object UserExperimentType {
     ACTIVITY_EMAIL :: EXPLICIT_SOCIAL_POSTING :: RELATED_PAGE_INFO :: NEXT_GEN_RECOS ::
     RECO_FASTLANE :: RECO_SUBSAMPLE :: APPLY_RECO_FEEDBACK :: PLAIN_EMAIL :: SEARCH_LAB ::
     NEW_NOTIFS_SYSTEM :: CREATE_TEAM :: SLACK :: CUSTOM_LIBRARY_ORDERING ::
-    DISCUSSION_FEED_FILTERS :: KEEP_PAGE_RHR :: RHR_ALPHA_SORTING :: Nil
+    DISCUSSION_FEED_FILTERS :: KEEP_PAGE_RHR :: RHR_ALPHA_SORTING :: ANNOUNCE_NEW_TWITTER_LIBRARY :: Nil
 
   // only the ExperimentTypes in this list will be tracked as user properties in analytics
   val _TRACK_FOR_ANALYTICS = Set(EXPLICIT_SOCIAL_POSTING, RELATED_PAGE_INFO, ACTIVITY_EMAIL)
