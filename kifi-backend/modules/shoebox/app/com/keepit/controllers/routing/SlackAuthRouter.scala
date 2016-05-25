@@ -194,7 +194,7 @@ class SlackAuthRouter @Inject() (
     }
   }
 
-  private def redirectThroughSlackAuth(org: Organization, slackTeamId: SlackTeamId, url: String, keepId: Option[PublicId[Keep]] = None, libraryId: Option[PublicId[Library]] = None, userId: Option[ExternalId[User]] = None)(implicit request: MaybeUserRequest[_]): Result = {
+  def redirectThroughSlackAuth(org: Organization, slackTeamId: SlackTeamId, url: String, keepId: Option[PublicId[Keep]] = None, libraryId: Option[PublicId[Library]] = None, userId: Option[ExternalId[User]] = None)(implicit request: MaybeUserRequest[_]): Result = {
     val modelParams = (keepId, libraryId, userId) match {
       case (Some(keepId), _, _) => s"signUpWithSlack=keep&keepId=${keepId.id}"
       case (_, Some(libraryId), _) => s"signUpWithSlack=library&libraryId=${libraryId.id}"
