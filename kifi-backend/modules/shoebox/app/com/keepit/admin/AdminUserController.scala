@@ -36,7 +36,7 @@ import views.html
 import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future, Promise }
-import scala.util.Try
+import scala.util.{ Failure, Success, Try }
 
 case class InvitationInfo(activeInvites: Seq[Invitation], acceptedInvites: Seq[Invitation])
 
@@ -125,6 +125,7 @@ class AdminUserController @Inject() (
     slackTeamMembershipRepo: SlackTeamMembershipRepo,
     slackTeamRepo: SlackTeamRepo,
     tagCommander: TagCommander,
+    twitterPublishingCommander: TwitterPublishingCommander,
     airbrake: AirbrakeNotifier) extends AdminUserActions with PaginationActions {
 
   def merge = AdminUserPage { implicit request =>
@@ -1076,4 +1077,12 @@ class AdminUserController @Inject() (
 
     Ok("going!")
   }
+
+  def tweetAtUserLibrary(libraryId: Id[Library]) = AdminUserAction { implicit request =>
+    twitterPublishingCommander.announceNewTwitterLibrary(libraryId) match {
+      case Success(status) => Ok(status.toString)
+      case Failure(e) => InternalServerError(e.toString)
+    }
+  }
+
 }
