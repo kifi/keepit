@@ -298,19 +298,27 @@ class SharedWsMessagingController @Inject() (
     // end of inbox notification/thread handlers
 
     "set_message_unread" -> {
-      case JsString(messageIdStr) +: _ =>
+      case JsString(messageIdStr) +: opts =>
         implicit val context = authenticatedWebSocketsContextBuilder(socket).build
         legacyNotificationCheck.ifNotifItemExists(messageIdStr) {
           case (notif, item) =>
             notificationMessagingCommander.changeNotificationUnread(socket.userId, notif, item, unread = true)
         } {
-          Message.decodePublicIdStr(messageIdStr).map(ElizaMessage.fromCommonId).foreach { messageId =>
+          Message.decodePublicIdStr(messageIdStr).map(ElizaMessage.fromCommonId).map { messageId =>
             messagingCommander.setUnread(socket.userId, messageId)
+          }.getOrElse {
+            opts match {
+              case JsString(threadId) +: _ =>
+                Keep.decodePublicIdStr(threadId).foreach { keepId =>
+                  messagingCommander.setUserThreadUnread(socket.userId, keepId)
+                }
+              case _ =>
+            }
           }
         }
     },
     "set_message_read" -> {
-      case JsString(messageIdStr) +: _ =>
+      case JsString(messageIdStr) +: opts =>
         val contextBuilder = authenticatedWebSocketsContextBuilder(socket)
         contextBuilder += ("global", false)
         contextBuilder += ("category", NotificationCategory.User.MESSAGE.category) // TODO: Get category from json
@@ -319,9 +327,18 @@ class SharedWsMessagingController @Inject() (
           case (notif, item) =>
             notificationMessagingCommander.changeNotificationUnread(socket.userId, notif, item, unread = false)
         } {
-          Message.decodePublicIdStr(messageIdStr).map(ElizaMessage.fromCommonId).foreach { messageId =>
+          Message.decodePublicIdStr(messageIdStr).map(ElizaMessage.fromCommonId).map { messageId =>
             messagingCommander.setRead(socket.userId, messageId)
             messagingCommander.setLastSeen(socket.userId, messageId)
+          }.getOrElse {
+            opts match {
+              case JsString(threadId) +: _ =>
+                Keep.decodePublicIdStr(threadId).foreach { keepId =>
+                  messagingCommander.setUserThreadRead(socket.userId, keepId)
+                  messagingCommander.setLastSeen(socket.userId, keepId)
+                }
+              case _ =>
+            }
           }
         }
     },
