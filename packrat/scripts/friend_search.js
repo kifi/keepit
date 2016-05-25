@@ -123,7 +123,7 @@ var initFriendSearch = (function () {
       }
       res.keep = res.keep || {};
       res.keep.isSearchResult = true;
-
+      res.extraInfo = 'Kifi library';
       html = $(k.render('html/keeper/keep_box_lib', res, {'name_parts': 'name_parts'}));
       html.addClass('kifi-ti-dropdown-item-token')
       return html.prop('outerHTML');

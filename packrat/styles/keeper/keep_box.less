@@ -283,7 +283,9 @@
   }
 }
 .kifi-keep-box-lib.kifi-keep-box-lib {
-  display: block;
+  display: flex;
+  flex-flow: column nowrap;
+  justify-content: center;
   border-bottom: 1px solid @lib-border-color;
   height: @lib-height;
   line-height: @lib-height;
@@ -330,7 +332,6 @@
 }
 .kifi-keep-box-lib-1 {
   display: block;
-  padding-top: 5px;
   line-height: 20px;
   .kifi-query>& {
     font-weight: bold;
@@ -388,10 +389,12 @@
 
 .kifi-keep-box-lib-card {
   position: absolute;
-  top: 8px;
+  top: 0;
+  bottom: 0;
   left: 13px;
   width: 27px;
   height: 28px;
+  margin: auto;
   border-radius: 4px;
   box-shadow: 1px 1px #fff, 2px 2px #d3d3d3;
   background-size: cover;
