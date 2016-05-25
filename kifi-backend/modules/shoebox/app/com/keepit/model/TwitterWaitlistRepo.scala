@@ -33,7 +33,7 @@ class TwitterWaitlistRepoImpl @Inject() (
 
   class TwitterWaitlistRepoTable(tag: Tag) extends RepoTable[TwitterWaitlistEntry](db, tag, "twitter_waitlist") {
     def userId = column[Id[User]]("user_id")
-    def twitterHandle = column[TwitterHandle]("twitter_handle")
+    def twitterHandle = column[Option[TwitterHandle]]("twitter_handle", O.Nullable)
 
     def * = (id.?, createdAt, updatedAt, userId, twitterHandle, state) <> ((TwitterWaitlistEntry.apply _).tupled, TwitterWaitlistEntry.unapply _)
   }

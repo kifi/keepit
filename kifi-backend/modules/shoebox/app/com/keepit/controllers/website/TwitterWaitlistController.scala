@@ -176,13 +176,13 @@ class TwitterWaitlistController @Inject() (
           pollDbForTwitterHandle(ur.userId, iterations = 75).map { twRes =>
             twRes match {
               case Some(handle) =>
-                commander.addEntry(ur.userId, handle)
+                commander.addUserToWaitlist(ur.userId, Some(handle))
               case None => // we failed :(
                 log.warn(s"Couldn't get twitter handle in time, we'll try again. userId: ${ur.userId.id}. They want to be waitlisted.")
                 socialGraphPlugin.asyncFetch(twitterSui.get).onComplete { _ =>
                   pollDbForTwitterHandle(ur.userId, iterations = 75).onComplete {
                     case Success(Some(handle)) =>
-                      commander.addEntry(ur.userId, handle)
+                      commander.addUserToWaitlist(ur.userId, Some(handle))
                     case fail => // we failed :(
                       airbrakeNotifier.notify(s"Couldn't get twitter handle in time, failed retry. userId: ${ur.userId.id}. They want to be waitlisted. $fail")
                   }
