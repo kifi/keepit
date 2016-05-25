@@ -195,6 +195,11 @@ k.keepBox = k.keepBox || (function () {
     }
   }
 
+  function getClassSelector($element) {
+    // add a dot in the beginning and replace spaces with dots
+    return $element.attr('class').replace(/(^.)|\s/g, '.$1');
+  }
+
   function swipeTo($new, back) {
     var $vp = $box.find('.kifi-keep-box-viewport');
     var $cart = $vp.find('.kifi-keep-box-cart');
@@ -205,11 +210,13 @@ k.keepBox = k.keepBox || (function () {
     $vp.css('height', vpHeightOld);
 
     $cart.addClass(back ? 'kifi-back' : 'kifi-forward');
+    if ($old.parent().find(getClassSelector($new)).length > 0) {
+      return;
+    }
     $new[back ? 'prependTo' : 'appendTo']($cart);
     makeScrollable($new);
 
     var isLibList = $new.hasClass('kifi-keep-box-view-libs');
-    var isKeep = $new.hasClass('kifi-keep-box-view-keep');
     $box.find('.kifi-keep-box-back').toggleClass('kifi-hidden', isLibList);
     var $title = $box.find('.kifi-keep-box-title').first().on('transitionend', removeThis);
     $title.clone().text($new.data('boxTitle')).css('opacity', 0).insertAfter($title).layout().css('opacity', '');
