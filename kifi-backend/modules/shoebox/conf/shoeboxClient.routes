@@ -19,7 +19,7 @@ DELETE  /api/1/keeps/:id/messages/:msgId          @com.keepit.controllers.client
 POST    /api/1/keeps/:id/messages/:msgId/edit     @com.keepit.controllers.client.KeepMutationController.editMessageOnKeep(id: PublicId[Keep], msgId: PublicId[Message])
 
 # Info
-GET    /api/1/keeps/stream           @com.keepit.controllers.client.KeepInfoController.getKeepStream(fromId: Option[String] ?= None, limit: Int ?= 10, config: KeepViewAssemblyOptions)
+GET    /api/1/keeps/stream           @com.keepit.controllers.client.KeepInfoController.getKeepStream(fromId: Option[String] ?= None, limit: Option[Int], config: KeepViewAssemblyOptions)
 GET    /api/1/keeps/suggestRecipients @com.keepit.controllers.client.KeepInfoController.suggestRecipient(query: Option[String], limit: Option[Int], offset: Option[Int], requested: Option[String])
 GET    /api/1/keeps/suggestTags     @com.keepit.controllers.client.KeepInfoController.suggestTags(keepId: Option[String], query: Option[String], limit: Option[Int])
 

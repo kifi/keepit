@@ -1,4 +1,4 @@
-<main class="kf-feed-items kf-main-pane" smart-scroll scroll-distance="scrollDistance" scroll-disabled="isLoading() || !hasMoreKeeps()" scroll-next="fetchKeeps()">
+<main class="kf-feed-items kf-main-pane" smart-scroll scroll-distance="scrollDistance" scroll-disabled="!hasMoreKeeps()" scroll-next="fetchKeeps()">
   <div class="kf-feed-header-container">
     <div kf-feed-filter filter="feedFilter" update-callback="updateFeedFilter()"></div>
     <div kf-card-style-selector ></div>
@@ -49,7 +49,7 @@
            click-callback="keepClick(keep, event)"
            is-first-item="::feedItem === feed[0]"></div>
   </section>
-  <div ng-if="feed.length > 0" class="kf-feed-get-more-container" ng-click="!isLoading() && hasMoreKeeps() && fetchKeeps()">
+  <div ng-if="feed.length > 0" class="kf-feed-get-more-container" ng-click="hasMoreKeeps() && fetchKeeps()">
     <span ng-if="!isLoading() && hasMoreKeeps()" class="kf-feed-get-more">See more</span>
     <span ng-if="!isLoading() && !hasMoreKeeps()" class="kf-feed-no-more">There is no more activity to show.</span>
     <span ng-if="isLoading()" class="kf-feed-get-more-loading">Loading...</span>
