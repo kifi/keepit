@@ -273,11 +273,16 @@ textarea.kifi-compose-draft::-moz-placeholder {
     }
   }
 }
+.kifi-ti-dropdown-parent {
+  position: relative;
+}
 .kifi-ti-dropdown {
+  max-height: calc(55px * 4);
   margin: 0 !important;
   padding: 0 !important;
   background-color: #fff;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: scroll;
   cursor: default;
   transition-property: height, opacity;
   transition-timing-function: ease;
@@ -298,6 +303,7 @@ textarea.kifi-compose-draft::-moz-placeholder {
 }
 .kifi-ti-dropdown-item.kifi-keep-box-lib {
   height: 55px;
+  border-bottom: 0;
 }
 .kifi-ti-dropdown-item {
   position: relative;

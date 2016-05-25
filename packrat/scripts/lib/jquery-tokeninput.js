@@ -334,9 +334,11 @@
       .append($tokenInput);
 
     // The list to store the dropdown items in
+    var $dropdownWrapper = $('<div/>');
     var $dropdown = $('<ul/>')
       .addClass(classes.dropdown)
-      [settings.suggestAbove ? 'insertBefore' : 'insertAfter']($tokenList);
+    $dropdownWrapper.append($dropdown);
+    $dropdownWrapper[settings.suggestAbove ? 'insertBefore' : 'insertAfter']($tokenList);
     $dropdown
       .on('mouseover', 'li', function () {
         if ($dropdown.data('mouseMoved')) {  // FF immediately triggers mouseover on element inserted under mouse cursor

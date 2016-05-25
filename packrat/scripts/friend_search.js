@@ -1,4 +1,5 @@
 // @require scripts/lib/jquery-tokeninput.js
+// @require scripts/lib/antiscroll.min.js
 // @require scripts/lib/mustache.js
 // @require scripts/lib/q.min.js
 // @require scripts/render.js
@@ -83,8 +84,44 @@ var initFriendSearch = (function () {
       onSelect: onSelect.bind(null, source),
       onRemove: onRemove
     }, options));
+
+    $in.parent()
+    .find('.kifi-ti-dropdown')
+    .addClass('kifi-scroll-inner')
+    .preventAncestorScroll()
+    .parent()
+    .addClass('kifi-ti-dropdown-parent');
+
     $in.prev().find('.kifi-ti-token-for-input').repairInputs();
   };
+
+  function makeScrollable($view) {
+    $view.find('.kifi-scroll-inner').each(function () {
+      var $this = $(this);
+      $this.parent().antiscroll({x: false});
+      if (!$this.data('wheelListener')) {
+        $this.data('wheelListener', onScrollInnerWheel.bind(this));
+      }
+      $this.on('wheel', $this.data('wheelListener'));
+    });
+  }
+
+  function unMakeScrollable($view) {
+    $view.find('.kifi-scroll-inner').each(function () {
+      var $this = $(this);
+      $this.parent().data('antiscroll').destroy();
+      $this.off('wheel', $this.data('wheelListener'));
+    });
+  }
+
+  function onScrollInnerWheel(e) {
+    var dY = e.originalEvent.deltaY;
+    var sT = this.scrollTop;
+    if (dY > 0 && sT + this.clientHeight < this.scrollHeight ||
+        dY < 0 && sT > 0) {
+      e.originalEvent.didScroll = true; // crbug.com/151734
+    }
+  }
 
   function search(getExcludeIds, includeSelf, searchFor, ids, query, withResults) {
     searchFor = searchFor || { user: true, email: true, library: false };
@@ -202,6 +239,7 @@ var initFriendSearch = (function () {
         $dropdown.off('transitionend').on('transitionend', function (e) {
           if (e.target === this && e.originalEvent.propertyName === 'height') {
             $dropdown.off('transitionend').safariHeight('');
+            makeScrollable($dropdown.parent());
             done();
           }
         }).safariHeight(measureCloneHeight($dropdown[0], 'clientHeight'));
@@ -222,6 +260,7 @@ var initFriendSearch = (function () {
         $dropdown.empty();
         done();
       }
+      unMakeScrollable($dropdown.parent());
     } else {  // list is changing
       // fade in overlaid as height adjusts and old fades out
       var heightInitial = $dropdown[0].clientHeight;
@@ -250,6 +289,7 @@ var initFriendSearch = (function () {
               .layout()
               .css('transition', '');
             $clone.remove();
+            makeScrollable($dropdown.parent());
             done();
           }
         })
@@ -260,6 +300,7 @@ var initFriendSearch = (function () {
         .css({opacity: 0})
         .safariHeight(heightFinal);
     }
+
   }
 
   function measureCloneHeight(el, heightProp) {
