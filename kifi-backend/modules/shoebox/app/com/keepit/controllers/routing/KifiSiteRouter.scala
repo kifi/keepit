@@ -17,7 +17,7 @@ import com.keepit.controllers.website.{ AngularApp, DeepLinkRouter }
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal.{ TrackingNonUserKind, ContextStringData, HeimdalContextBuilderFactory, EventType, HeimdalContext, HeimdalContextBuilder, UserEvent, NonUserEvent, HeimdalServiceClient }
 import com.keepit.model._
-import com.keepit.slack.models.{ SlackUserId, SlackTeamId }
+import com.keepit.slack.models.{ SlackTeamRepo, SlackUserId, SlackTeamId }
 import com.keepit.social.{ IdentityHelpers, NonUserKinds }
 import play.api.libs.json.{ Json, JsObject }
 import play.api.mvc.{ ActionFilter, Result }
@@ -35,13 +35,16 @@ class KifiSiteRouter @Inject() (
   libraryRepo: LibraryRepo,
   libraryMembershipRepo: LibraryMembershipRepo,
   keepRepo: KeepRepo,
+  ktlRepo: KeepToLibraryRepo,
+  slackTeamRepo: SlackTeamRepo,
+  slackAuthRouter: SlackAuthRouter,
   orgMembershipRepo: OrganizationMembershipRepo,
   handleCommander: HandleCommander,
   val userIpAddressCommander: UserIpAddressCommander,
   pageMetaTagsCommander: PageMetaTagsCommander,
   libraryInfoCommander: LibraryInfoCommander,
   permissionCommander: PermissionCommander,
-  libPathCommander: PathCommander,
+  pathCommander: PathCommander,
   libraryMetadataCache: LibraryMetadataCache,
   userMetadataCache: UserMetadataCache,
   orgMetadataCache: OrgMetadataCache,
@@ -248,7 +251,7 @@ class KifiSiteRouter @Inject() (
             val wasHandleNormalized = spaceRedirectStatusOpt.contains(SEE_OTHER)
 
             if (libraryHasBeenMoved || handleOwnerChangedTheirHandle || wasLibrarySlugNormalized || wasHandleNormalized) {
-              val uri = libPathCommander.getPathForLibraryUrlEncoded(library) + dropPathSegment(dropPathSegment(request.uri))
+              val uri = pathCommander.getPathForLibraryUrlEncoded(library) + dropPathSegment(dropPathSegment(request.uri))
 
               val status = if (handleOwnerChangedTheirHandle || libraryHasBeenMoved) {
                 MOVED_PERMANENTLY
@@ -265,15 +268,22 @@ class KifiSiteRouter @Inject() (
   }
 
   def serveWebAppIfKeepFound(title: String, pubId: PublicId[Keep], authTokenOpt: Option[String]) = WebAppPage.async { implicit request =>
-    import UserExperimentType._
-    val experiments = request match {
-      case ur: UserRequest[_] => ur.experiments
-      case _ => Set.empty[UserExperimentType]
-    }
     Keep.decodePublicId(pubId) match {
       case Failure(ex) => Future.successful(notFound(request))
       case Success(keepId) => {
-        val hasShoeboxPermission = db.readOnlyReplica(implicit s => permissionCommander.getKeepPermissions(keepId, request.userIdOpt).contains(KeepPermission.VIEW_KEEP))
+
+        // show keep if user has permission, else if the keep is connected to a library -> org -> slack team, show the slack team signup page, else 404
+        val (hasShoeboxPermission, slackTeamByOrgId) = db.readOnlyMaster { implicit s =>
+
+          val hasShoeboxPermission = permissionCommander.getKeepPermissions(keepId, request.userIdOpt).contains(KeepPermission.VIEW_KEEP)
+
+          val connectedOrgs = ktlRepo.getAllByKeepId(keepId).collect {
+            case ktl if ktl.organizationId.isDefined => ktl.organizationId.get
+          }.toSet
+          val slackTeamByOrgId = slackTeamRepo.getByOrganizationIds(connectedOrgs).collect { case (orgId, Some(team)) => orgId -> team }
+
+          (hasShoeboxPermission, slackTeamByOrgId)
+        }
 
         val canSeeKeepFut = {
           if (!hasShoeboxPermission && authTokenOpt.isDefined) {
@@ -282,11 +292,20 @@ class KifiSiteRouter @Inject() (
         }
 
         canSeeKeepFut.map { canSeeKeep =>
-          val keepOpt = {
-            if (canSeeKeep) db.readOnlyReplica { implicit s => keepRepo.getActive(keepId) }
-            else None
+          if (canSeeKeep || slackTeamByOrgId.nonEmpty) {
+            val keepOpt = db.readOnlyMaster(implicit s => keepRepo.getActive(keepId))
+            keepOpt.map { keep =>
+              if (canSeeKeep) {
+                app(() => keepMetadata(keep))
+              } else {
+                val (orgId, slackTeam) = slackTeamByOrgId.head
+                val org = db.readOnlyMaster(implicit s => orgRepo.get(orgId))
+                slackAuthRouter.redirectThroughSlackAuth(org, slackTeam.slackTeamId, url = pathCommander.pathForKeep(keep).absolute, keepId = Some(pubId))
+              }
+            }.getOrElse(notFound(request))
+          } else {
+            notFound(request)
           }
-          keepOpt.map(keep => app(() => keepMetadata(keep))).getOrElse(notFound(request))
         }
       }
     }
