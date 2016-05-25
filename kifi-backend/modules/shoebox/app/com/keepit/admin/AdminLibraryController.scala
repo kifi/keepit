@@ -13,7 +13,7 @@ import com.keepit.common.queue.messages.SuggestedSearchTerms
 import com.keepit.common.time._
 import com.keepit.common.util.Paginator
 import com.keepit.cortex.CortexServiceClient
-import com.keepit.heimdal.HeimdalContext
+import com.keepit.heimdal.{ HeimdalContextBuilderFactory, HeimdalContextBuilder, HeimdalContext }
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
 import org.apache.commons.lang3.RandomStringUtils
@@ -61,6 +61,7 @@ class AdminLibraryController @Inject() (
     suggestedSearchCommander: LibrarySuggestedSearchCommander,
     slackChannelToLibraryRepo: SlackChannelToLibraryRepo,
     tagCommander: TagCommander,
+    builder: HeimdalContextBuilderFactory,
     implicit val publicIdConfig: PublicIdConfiguration) extends AdminUserActions {
 
   def updateLibraryOwner(libraryId: Id[Library], fromUserId: Id[User], toUserId: Id[User]) = AdminUserPage { implicit request =>
@@ -307,7 +308,7 @@ class AdminLibraryController @Inject() (
       case Some(orgId) => LibraryModifications(space = Some(LibrarySpace.fromOrganizationId(orgId)), visibility = Some(LibraryVisibility.ORGANIZATION))
       case None => LibraryModifications(space = Some(LibrarySpace.fromUserId(newOwner)), visibility = Some(LibraryVisibility.PUBLISHED))
     }
-    implicit val context = HeimdalContext.empty // TODO(ryan): ask someone that cares to make a HeimdalContext.admin(request) method
+    implicit val context = builder.withRequestInfo(request).build
     libraryCommander.modifyLibrary(libId, newOwner, modifyRequest)
     Redirect(com.keepit.controllers.admin.routes.AdminLibraryController.libraryView(libId))
   }
@@ -320,7 +321,7 @@ class AdminLibraryController @Inject() (
       require(fromLib.ownerId == toLib.ownerId)
       fromLib.ownerId
     }
-    implicit val context = HeimdalContext.empty
+    implicit val context = builder.withRequestInfo(request).build
     Future {
       val (successes, fails) = libraryCommander.moveAllKeepsFromLibrary(userId, fromLibraryId, toLibraryId)
       Ok(Json.obj("moved" -> successes, "failures" -> fails.map(_._1)))

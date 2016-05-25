@@ -255,7 +255,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
   }
   private def cancelOrganizationInvitesHelper(request: OrganizationInviteCancelRequest)(implicit session: RWSession): Either[OrganizationFail, OrganizationInviteCancelResponse] = {
     getValidationError(request) match {
-      case Some(fail) => Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+      case Some(fail) => Left(fail)
       case None =>
         val existingInvites = organizationInviteRepo.getAllByOrgId(request.orgId)
         val emailInvitesToCancel = existingInvites.filter { inv =>

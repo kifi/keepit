@@ -16,8 +16,8 @@ import scala.concurrent.{ Future, ExecutionContext }
 
 @ImplementedBy(classOf[KeepEventCommanderImpl])
 trait KeepEventCommander {
-  def persistKeepEventAndUpdateEliza(keepId: Id[Keep], event: KeepEventData, source: Option[KeepEventSource], eventTime: Option[DateTime])(implicit session: RWSession): Option[KeepEvent]
-  def persistKeepEvent(keepId: Id[Keep], eventData: KeepEventData, source: Option[KeepEventSource], eventTime: Option[DateTime])(implicit session: RWSession): Option[KeepEvent]
+  def persistKeepEventAndUpdateEliza(keepId: Id[Keep], event: KeepEventData, source: Option[KeepEventSource], eventTime: Option[DateTime])(implicit session: RWSession): Future[Unit]
+  def persistAndAssembleKeepEvent(keepId: Id[Keep], event: KeepEventData, source: Option[KeepEventSource], eventTime: Option[DateTime])(implicit session: RWSession): Option[CommonAndBasicKeepEvent]
 }
 
 @Singleton
@@ -33,23 +33,20 @@ class KeepEventCommanderImpl @Inject() (
   implicit val publicIdConfig: PublicIdConfiguration)
     extends KeepEventCommander {
 
-  def persistKeepEventAndUpdateEliza(keepId: Id[Keep], eventData: KeepEventData, source: Option[KeepEventSource], eventTime: Option[DateTime])(implicit session: RWSession): Option[KeepEvent] = {
-    val eventOpt = persistKeepEvent(keepId, eventData, source, eventTime)
-
-    eventOpt.map { event =>
-      val usersToSendTo = ktuRepo.getAllByKeepId(keepId).map(_.userId)
-      val basicEvent = keepActivityAssembler.assembleBasicKeepEvent(keepId, event)
-      session.onTransactionSuccess {
-        eventData match {
-          case mr: ModifyRecipients if mr.diff.users.added.nonEmpty || mr.diff.emails.added.nonEmpty || mr.diff.libraries.added.nonEmpty => eliza.editParticipantsOnKeep(keepId, mr.addedBy, mr.diff, source)
-          case _ =>
-        }
-        broadcastKeepEvent(keepId, usersToSendTo.toSet, basicEvent)
+  def persistKeepEventAndUpdateEliza(keepId: Id[Keep], event: KeepEventData, source: Option[KeepEventSource], eventTime: Option[DateTime])(implicit session: RWSession): Future[Unit] = {
+    persistAndAssembleKeepEvent(keepId, event, source, eventTime).map {
+      case CommonAndBasicKeepEvent(commonEvent, basicEvent) => event match {
+        case et: EditTitle => eliza.modifyRecipientsAndSendEvent(keepId, et.editedBy, KeepRecipientsDiff.addUser(et.editedBy), source, Some(basicEvent))
+        case mr: ModifyRecipients => eliza.modifyRecipientsAndSendEvent(keepId, mr.addedBy, mr.diff, source, Some(basicEvent))
+        case _ => Future.successful(())
       }
-      basicEvent
-    }
+    }.getOrElse(Future.successful(None))
+  }
 
-    eventOpt
+  def persistAndAssembleKeepEvent(keepId: Id[Keep], event: KeepEventData, source: Option[KeepEventSource], eventTime: Option[DateTime])(implicit session: RWSession): Option[CommonAndBasicKeepEvent] = {
+    persistKeepEvent(keepId, event, source, eventTime).map { event =>
+      CommonAndBasicKeepEvent(KeepEvent.toCommonKeepEvent(event), keepActivityAssembler.assembleBasicKeepEvent(event))
+    }
   }
 
   def persistKeepEvent(keepId: Id[Keep], eventData: KeepEventData, source: Option[KeepEventSource], eventTime: Option[DateTime])(implicit session: RWSession): Option[KeepEvent] = {

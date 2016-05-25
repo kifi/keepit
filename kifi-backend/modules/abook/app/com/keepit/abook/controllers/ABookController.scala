@@ -119,7 +119,7 @@ class ABookController @Inject() (
 
   def getAllABookInfos() = Action { request =>
     val abookInfos = db.readOnlyReplica(attempts = 2) { implicit session =>
-      abookInfoRepo.all()
+      abookInfoRepo.aTonOfRecords()
     }
     Ok(Json.toJson(abookInfos))
   }

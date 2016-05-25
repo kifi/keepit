@@ -1,17 +1,15 @@
 package com.keepit.eliza.commanders
 
-import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.{ FakeActorSystemModule, TestKitSupport }
 import com.keepit.common.cache.ElizaCacheModule
-import com.keepit.common.concurrent.{ WatchableExecutionContext, FakeExecutionContextModule }
-import com.keepit.common.crypto.{ PublicIdConfiguration, FakeCryptoModule }
+import com.keepit.common.concurrent.{ FakeExecutionContextModule, WatchableExecutionContext }
+import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.common.db.Id
 import com.keepit.common.store.FakeElizaStoreModule
 import com.keepit.common.time._
-import com.keepit.eliza.model.MessageSender
-import com.keepit.eliza.model._
 import com.keepit.eliza.FakeElizaServiceClientModule
+import com.keepit.eliza.model.{ MessageSender, _ }
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
 import com.keepit.model.{ Keep, MessageFactory, MessageThreadFactory, _ }
 import com.keepit.rover.FakeRoverServiceModule
@@ -23,6 +21,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
 class ElizaDiscussionCommanderTest extends TestKitSupport with SpecificationLike with ElizaTestInjector with ElizaInjectionHelpers {
+  implicit def time: CrossServiceTime = CrossServiceTime(currentDateTime)
   implicit val context = HeimdalContext.empty
   val modules = Seq(
     FakeExecutionContextModule(),
@@ -79,7 +78,7 @@ class ElizaDiscussionCommanderTest extends TestKitSupport with SpecificationLike
 
           ans(keep).numMessages === 1
           ans(keep).messages must haveLength(1)
-          db.readOnlyMaster { implicit s => messageRepo.all must haveLength(2) }
+          db.readOnlyMaster { implicit s => messageRepo.aTonOfRecords must haveLength(2) }
 
           1 === 1
         }
@@ -129,7 +128,7 @@ class ElizaDiscussionCommanderTest extends TestKitSupport with SpecificationLike
             _ <- discussionCommander.sendMessage(user2, "My first post too!", keep)
             _ <- discussionCommander.sendMessage(user2, "And another post!", keep)
           } yield Unit, Duration.Inf)
-          val msgs = db.readOnlyMaster { implicit s => messageRepo.all }
+          val msgs = db.readOnlyMaster { implicit s => messageRepo.aTonOfRecords }
 
           inject[WatchableExecutionContext].drain()
 

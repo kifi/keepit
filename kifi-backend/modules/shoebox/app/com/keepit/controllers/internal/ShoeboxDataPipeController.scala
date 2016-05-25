@@ -231,8 +231,6 @@ class ShoeboxDataPipeController @Inject() (
           val tagsFromNote = Hashtags.findAllHashtagNames(keep.note.getOrElse("")).map(Hashtag.apply)
           val allTags = (tags ++ tagsFromNote).distinctBy(_.normalized)
 
-          log.info(s"[getCrossServiceKeepsAndTagsChanged] ${keep.id.get}: $tags vs $tagsFromNote")
-
           val source = attributionById.get(keep.id.get)
           CrossServiceKeepAndTags(csKeep, source, allTags)
         }

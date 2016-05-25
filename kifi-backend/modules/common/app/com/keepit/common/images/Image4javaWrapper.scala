@@ -4,6 +4,7 @@ import java.io.{ File, ByteArrayOutputStream, PrintWriter }
 import java.util
 
 import com.google.inject.{ Inject, Singleton }
+import com.keepit.commanders.{ ImageCleanup }
 import com.keepit.common.logging.Logging
 import com.keepit.common.strings.UTF8
 import com.keepit.model.ImageFormat
@@ -21,7 +22,8 @@ import scala.util.{ Failure, Try }
  */
 @Singleton
 class Image4javaWrapper @Inject() (
-    playMode: Mode) extends Photoshop with Logging {
+    playMode: Mode,
+    cleanup: ImageCleanup) extends Photoshop with Logging {
   if (playMode == Mode.Prod) {
     checkToolsAvailable() //call on constructor in production to get a fast fail
   }
@@ -97,6 +99,7 @@ class Image4javaWrapper @Inject() (
   private def generateTempFile(suffix: String) = {
     val outputFile = File.createTempFile("im-", suffix)
     outputFile.deleteOnExit()
+    cleanup.cleanup(outputFile)
     outputFile
   }
 

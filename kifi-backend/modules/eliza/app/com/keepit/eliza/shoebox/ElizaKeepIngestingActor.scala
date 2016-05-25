@@ -47,11 +47,11 @@ class ElizaKeepIngestingActor @Inject() (
       val (liveKeeps, deadKeeps) = keeps.partition(_.isActive)
       discussionCommander.deleteThreadsForKeeps(deadKeeps.map(_.id).toSet)
 
-      val threadsThatNeedFixing = {
+      val (keepsWithoutThreads, threadsThatNeedFixing) = {
         val threadsByKeep = threadRepo.getByKeepIds(liveKeeps.map(_.id).toSet)
-        liveKeeps.flatAugmentWith(k => threadsByKeep.get(k.id)).filter {
-          case (keep, thread) => keep.users != thread.participants.allUsers || keep.emails != thread.participants.allEmails || keep.uriId != thread.uriId
-        }
+        liveKeeps.map { keep =>
+          threadsByKeep.get(keep.id).fold[Either[CrossServiceKeep, (CrossServiceKeep, MessageThread)]](Left(keep))(thread => Right(keep -> thread))
+        }.partitionEithers
       }
       threadsThatNeedFixing.foreach {
         case (keep, thread) =>

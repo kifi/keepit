@@ -95,7 +95,7 @@ class LDARelatedLibraryCommanderImpl @Inject() (
 
   def cleanFewKeepsLibraries(version: ModelVersion[DenseLDA], readOnly: Boolean): Unit = {
     val thresh = 2
-    val libs = db.readOnlyReplica { implicit s => libTopicRepo.all() }
+    val libs = db.readOnlyReplica { implicit s => libTopicRepo.aTonOfRecords() }
       .filter(x => x.numOfEvidence < thresh && x.version == version && x.state == LDARelatedLibraryStates.ACTIVE)
       .map { _.libraryId } // admin operation. not optimized for performance.
 

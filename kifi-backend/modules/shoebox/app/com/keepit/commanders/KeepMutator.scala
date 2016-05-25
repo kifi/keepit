@@ -217,18 +217,9 @@ class KeepMutatorImpl @Inject() (
   }
 
   def moveKeep(k: Keep, toLibrary: Library, userId: Id[User])(implicit session: RWSession): Either[LibraryError, Keep] = {
-    ktlRepo.getByUriAndLibrary(k.uriId, toLibrary.id.get) match {
-      case None =>
-        ktlCommander.removeKeepFromAllLibraries(k.id.get)
-        ktlCommander.internKeepInLibrary(k, toLibrary, addedBy = Some(userId))
-        Right(keepRepo.save(k.withLibraries(Set(toLibrary.id.get))))
-      case Some(obstacle) =>
-        // TODO(ryan): surely this is insane behavior...why did I write tests that assume this happens?
-        if (obstacle.keepId != k.id.get) {
-          deactivateKeep(k)
-        }
-        Left(LibraryError.AlreadyExistsInDest)
-    }
+    ktlCommander.removeKeepFromAllLibraries(k.id.get)
+    ktlCommander.internKeepInLibrary(k, toLibrary, addedBy = Some(userId))
+    Right(keepRepo.save(k.withLibraries(Set(toLibrary.id.get))))
   }
   def copyKeep(k: Keep, toLibrary: Library, userId: Id[User], withSource: Option[KeepSource] = None)(implicit session: RWSession): Either[LibraryError, Keep] = {
     val currentKeeps = keepRepo.getByUriAndLibrariesHash(k.uriId, Set(toLibrary.id.get))

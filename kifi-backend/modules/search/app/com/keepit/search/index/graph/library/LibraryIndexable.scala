@@ -69,7 +69,7 @@ object LibraryFields {
       case `USER_CREATED` => LibraryKind.USER_CREATED
       case `SYSTEM_ORG_GENERAL` => LibraryKind.SYSTEM_ORG_GENERAL
       case `SLACK_CHANNEL` => LibraryKind.SLACK_CHANNEL
-      case _ => LibraryKind.USER_CREATED // TODO(ryan): this is a temporary measure, old data is causing match errors
+      case _ => LibraryKind.USER_CREATED // TODO(léo): is this still necessary? it was originally here to handle a LibraryKind migration
     }
   }
 

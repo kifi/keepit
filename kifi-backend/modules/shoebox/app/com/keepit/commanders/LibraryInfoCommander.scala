@@ -307,7 +307,7 @@ class LibraryInfoCommanderImpl @Inject() (
           whoCanInvite = whoCanInvite,
           whoCanComment = lib.whoCanComment,
           modifiedAt = lib.updatedAt,
-          path = LibraryPathHelper.formatLibraryPath(owner = owner, orgHandleOpt = orgViewOpt.map(_.basicOrganization.handle), slug = lib.slug),
+          path = LibraryPathHelper.formatLibraryPath(owner = owner.username, orgHandleOpt = orgViewOpt.map(_.basicOrganization.handle), slug = lib.slug),
           org = orgViewOpt,
           orgMemberAccess = if (lib.organizationId.isDefined) Some(lib.organizationMemberAccess.getOrElse(LibraryAccess.READ_WRITE)) else None,
           membership = membershipByLibraryId.flatMap(_.get(libId)),

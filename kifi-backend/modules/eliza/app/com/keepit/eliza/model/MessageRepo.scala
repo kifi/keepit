@@ -133,8 +133,6 @@ class MessageRepoImpl @Inject() (
     updates.foreach {
       case (oldId, newId) =>
         rows.filter(row => row.sentOnUriId === oldId).map(_.sentOnUriId).update(Some(newId))
-      //todo(stephen): do you invalidate cache here? do you?
-      // TODO(ryan): dammit Stephen :/
     }
   }
 

@@ -62,7 +62,7 @@ class SlickStandaloneTest extends Specification with SqlDbTestInjector {
         }
 
         db.readWrite { implicit session =>
-          repo.all().size === 2
+          repo.aTonOfRecords().size === 2
           repo.count(session) === 2
           val a = repo.getByName("A")
           a.size === 1

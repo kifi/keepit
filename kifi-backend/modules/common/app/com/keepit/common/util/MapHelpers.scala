@@ -1,6 +1,7 @@
 package com.keepit.common.util
 
 object MapHelpers {
+  def fromPairs[K, V](xs: Seq[(K, V)]): Map[K, Seq[V]] = xs.groupBy(_._1).mapValues(_.map(_._2))
   def unionWith[K, V](op: (V, V) => V)(xm: Map[K, V], ym: Map[K, V]): Map[K, V] = {
     // NB: I did a few tests and this is by far the fastest "API-only" (aka. without access to the underlying data structure)
     // way to merge two maps that I've found

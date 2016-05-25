@@ -33,13 +33,13 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
           }
           val code = creditRewardCommander.getOrCreateReferralCode(org.id.get)
           db.readOnlyMaster { implicit session =>
-            creditCodeInfoRepo.all.map(_.code) === Seq(code)
+            creditCodeInfoRepo.aTonOfRecords.map(_.code) === Seq(code)
           }
 
           // calling it should be idempotent
           creditRewardCommander.getOrCreateReferralCode(org.id.get) === code
           db.readOnlyMaster { implicit session =>
-            creditCodeInfoRepo.all.map(_.code) === Seq(code)
+            creditCodeInfoRepo.aTonOfRecords.map(_.code) === Seq(code)
           }
         }
       }
@@ -54,7 +54,7 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
           }
 
           val code = creditRewardCommander.getOrCreateReferralCode(org1.id.get)
-          db.readOnlyMaster { implicit session => creditCodeInfoRepo.all.map(_.code) === Seq(code) }
+          db.readOnlyMaster { implicit session => creditCodeInfoRepo.aTonOfRecords.map(_.code) === Seq(code) }
 
           val badRequestsAndTheirFailures = Seq(
             CreditCodeApplyRequest(code, org1.ownerId, None) -> CreditRewardFail.NoPaidAccountException(org1.ownerId, None),
@@ -78,7 +78,7 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
           }
 
           val code = creditRewardCommander.getOrCreateReferralCode(org1.id.get)
-          db.readOnlyMaster { implicit session => creditCodeInfoRepo.all.map(_.code) === Seq(code) }
+          db.readOnlyMaster { implicit session => creditCodeInfoRepo.aTonOfRecords.map(_.code) === Seq(code) }
 
           val initialCredit = db.readOnlyMaster { implicit session => paidAccountRepo.getByOrgId(org2.id.get).credit }
           val rewards = creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(code, org2.ownerId, Some(org2.id.get))).get
@@ -86,8 +86,8 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
           finalCredit - initialCredit === rewards.target.credit
 
           db.readOnlyMaster { implicit session =>
-            creditRewardRepo.all must containAllOf(Seq(rewards.target, rewards.referrer.get))
-            val rewardCreditEvents = accountEventRepo.all.filter(_.action.eventType == AccountEventKind.RewardCredit)
+            creditRewardRepo.aTonOfRecords must containAllOf(Seq(rewards.target, rewards.referrer.get))
+            val rewardCreditEvents = accountEventRepo.aTonOfRecords.filter(_.action.eventType == AccountEventKind.RewardCredit)
             rewardCreditEvents.size must beGreaterThanOrEqualTo(1)
             rewardCreditEvents.map(_.creditChange) must contain(rewards.target.credit)
             //            inject[ElectronicMailRepo].all().count(email => // TODO(cam): uncomment when the FAKE exp guard is off
@@ -147,8 +147,8 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
           finalCredit - initialCredit === rewards.target.credit
 
           db.readOnlyMaster { implicit session =>
-            creditRewardRepo.all must containAllOf(Seq(rewards.target))
-            val rewardCreditEvents = accountEventRepo.all.filter(_.action.eventType == AccountEventKind.RewardCredit)
+            creditRewardRepo.aTonOfRecords must containAllOf(Seq(rewards.target))
+            val rewardCreditEvents = accountEventRepo.aTonOfRecords.filter(_.action.eventType == AccountEventKind.RewardCredit)
             rewardCreditEvents.size must beGreaterThanOrEqualTo(1)
             rewardCreditEvents.map(_.creditChange) must contain(rewards.target.credit)
           }
@@ -178,7 +178,7 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
 
           db.readOnlyMaster { implicit session =>
             creditRewardRepo.count must beGreaterThanOrEqualTo(1)
-            val rewardCreditEvents = accountEventRepo.all.filter(_.action.eventType == AccountEventKind.RewardCredit)
+            val rewardCreditEvents = accountEventRepo.aTonOfRecords.filter(_.action.eventType == AccountEventKind.RewardCredit)
             rewardCreditEvents.length must beGreaterThanOrEqualTo(1)
             rewardCreditEvents.map(_.creditChange) must contain(coupon.credit)
           }
@@ -213,7 +213,7 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
 
           db.readOnlyMaster { implicit session =>
             creditRewardRepo.count must beGreaterThanOrEqualTo(2)
-            val rewardCreditEvents = accountEventRepo.all.filter(_.action.eventType == AccountEventKind.RewardCredit)
+            val rewardCreditEvents = accountEventRepo.aTonOfRecords.filter(_.action.eventType == AccountEventKind.RewardCredit)
             rewardCreditEvents.size must beGreaterThanOrEqualTo(2)
             rewardCreditEvents.map(e => paidAccountRepo.get(e.accountId).orgId) must containAllOf(Seq(org1.id.get, org2.id.get))
           }

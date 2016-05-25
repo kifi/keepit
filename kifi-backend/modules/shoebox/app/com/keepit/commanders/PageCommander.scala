@@ -64,7 +64,6 @@ class PageCommander @Inject() (
   }
 
   def getPageInfo(uri: URI, userId: Id[User], experiments: Set[UserExperimentType]): Future[KeeperPageInfo] = {
-    val useMultilibLogic = experiments.contains(UserExperimentType.KEEP_MULTILIB)
     val host: Option[NormalizedHostname] = uri.host.flatMap(host => NormalizedHostname.fromHostname(host.name, allowInvalid = true))
     val domainF = db.readOnlyMasterAsync { implicit session =>
       val domainOpt = host.flatMap(domainRepo.get(_))
@@ -92,7 +91,7 @@ class PageCommander @Inject() (
       }
 
       nUriOpt.map { normUri =>
-        augmentUriInfo(normUri, userId, useMultilibLogic).map { info =>
+        augmentUriInfo(normUri, userId).map { info =>
           if (filteredPage(normUri.url)) {
             KeeperPageInfo(nUriStr, position, neverOnSite, shown, Seq.empty[BasicUser], 0, Seq.empty[JsObject], Seq.empty[SourceAttribution], info.keeps)
           } else {
@@ -157,7 +156,7 @@ class PageCommander @Inject() (
     val allowedLibraryKinds: Set[LibraryKind] = Set(LibraryKind.USER_CREATED, LibraryKind.SLACK_CHANNEL, LibraryKind.SYSTEM_ORG_GENERAL)
     val relevantLibraries = for {
       (libraryId, keeperId, keptAt) <- libraries if keeperId != viewerId
-      library <- libraryById.get(libraryId) if allowedLibraryKinds.contains(library.kind)
+      library <- libraryById.get(libraryId) if allowedLibraryKinds.contains(library.kind) //&& library.keepCount >= 10 && !LibraryQualityHelper.isBadLibraryName(library.name)
     } yield (library, keeperId, keptAt)
     CollectionHelpers.dedupBy(relevantLibraries)(_._1.id.get)
   }
@@ -170,27 +169,11 @@ class PageCommander @Inject() (
     libraryIds.flatMap(libraryMap.get)
   }
 
-  def firstQualityFilterAndSort(libraries: Seq[Library]): Seq[Library] = {
-    val allowedLibraryKinds: Set[LibraryKind] = Set(LibraryKind.USER_CREATED)
-    libraries.filter { lib =>
-      allowedLibraryKinds.contains(lib.kind) && !libraryQualityHelper.isBadLibraryName(lib.name)
-    }.sortBy(lib => (-lib.memberCount, lib.name))
-  }
-
-  def secondQualityFilter(libraries: Seq[Library]): Seq[Library] = libraries.filter { lib =>
-    val count = lib.keepCount
-    val followers = lib.memberCount
-    val descriptionCredit = lib.description.map(d => (d.length / 10).max(2)).getOrElse(0)
-    val credit = followers + descriptionCredit
-    //must have at least five keeps, if have some followers or description can do with a bit less
-    //also, must not have more then 30 keeps unless has some followers or description and then we'll scale by that
-    (count >= (5 - credit).min(2)) && (count < (30 + credit * 50))
-  }
-
   private def getWriteableKeepDatasForUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Seq[KeepData] = {
     val keepIds = keepRepo.getPersonalKeepsOnUris(userId, Set(uriId), excludeAccess = Some(LibraryAccess.READ_ONLY)).getOrElse(uriId, Set.empty)
-    val keepsById = keepRepo.getActiveByIds(keepIds)
-    val ktlsByKeep = ktlRepo.getAllByKeepIds(keepIds)
+    val keepIdsToUse = keepIds.toSeq.sorted(implicitly[Ordering[Id[Keep]]].reverse).take(50).toSet // 50 most recent. You don't get more.
+    val keepsById = keepRepo.getActiveByIds(keepIdsToUse)
+    val ktlsByKeep = ktlRepo.getAllByKeepIds(keepIdsToUse)
     keepsById.traverseByKey.map { k =>
       val bestKtl = ktlsByKeep.getOrElse(k.id.get, Seq.empty).maxByOpt(_.visibility)
       KeepData(
@@ -203,7 +186,7 @@ class PageCommander @Inject() (
       )
     }
   }
-  private def augmentUriInfo(normUri: NormalizedURI, userId: Id[User], useMultilibLogic: Boolean = false): Future[KeeperPagePartialInfo] = {
+  private def augmentUriInfo(normUri: NormalizedURI, userId: Id[User]): Future[KeeperPagePartialInfo] = {
     val augmentFuture = searchClient.augment(
       userId = Some(userId),
       hideOtherPublishedKeeps = false,
@@ -217,7 +200,7 @@ class PageCommander @Inject() (
       case Seq(info) =>
         val userIdSet = info.keepers.map(_._1).toSet
         val (basicUserMap, libraries, sources, followerCounts, paths, keepDatas) = db.readOnlyMaster { implicit session =>
-          val relevantLibraries = getRelevantLibraries(userId, info.libraries)
+          val relevantLibraries = Seq.empty[(Library, Id[User], DateTime)] //getRelevantLibraries(userId, info.libraries)
           val basicUserMap = basicUserRepo.loadAll(userIdSet ++ relevantLibraries.map(_._1.ownerId) ++ relevantLibraries.map(_._2))
           val keepDatas = getWriteableKeepDatasForUri(userId, normUri.id.get)
 

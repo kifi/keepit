@@ -13,6 +13,7 @@ import com.keepit.common.store.ImageSize
 import com.keepit.model._
 import com.keepit.payments._
 import com.keepit.slack.SlackInfoCommander
+import com.keepit.slack.models.SlackAuthScope
 import com.keepit.social.BasicUser
 
 import scala.concurrent.ExecutionContext
@@ -126,7 +127,6 @@ class OrganizationInfoCommanderImpl @Inject() (
     val description = org.description
     val site = org.site
     val ownerId = userRepo.get(org.ownerId).externalId
-    val experiments = orgExperimentRepo.getOrganizationExperiments(org.id.get).toSeq
 
     val memberIds = {
       if (!viewerPermissions.contains(OrganizationPermission.VIEW_MEMBERS)) Seq.empty
@@ -143,6 +143,9 @@ class OrganizationInfoCommanderImpl @Inject() (
         airbrake.notify(s"Failed to generate SlackInfo for org $orgId", fail)
         None
     }.get
+
+    val experiments = orgExperimentRepo.getOrganizationExperiments(org.id.get).toSeq ++
+      Some(OrganizationExperimentType.SIGN_IN_WITH_SLACK).filter(_ => slackTeamOpt.exists(team => SlackAuthScope.Identity.areAvailableForTeam(team.id)))
 
     OrganizationInfo(
       orgId = Organization.publicId(orgId),

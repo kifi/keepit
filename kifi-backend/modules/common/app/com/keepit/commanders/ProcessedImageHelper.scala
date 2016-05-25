@@ -4,18 +4,23 @@ import java.io._
 import java.math.BigInteger
 import java.net.URLConnection
 import java.security.MessageDigest
+import com.google.inject.{Inject, ImplementedBy, Singleton}
 
 import com.keepit.common.core.File
 import com.keepit.common.images.{ Photoshop, RawImageInfo }
 import com.keepit.common.net.{ URI, WebService }
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.store.{ ImageOffset, ImagePath, ImageSize }
+import com.keepit.common.time._
 import com.keepit.model._
+import org.joda.time.DateTime
 import play.api.Logger
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Iteratee
 
+import scala.annotation.tailrec
+import scala.collection.mutable
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 import scala.util.{ Failure, Success, Try }
@@ -52,6 +57,7 @@ trait ProcessedImageHelper {
 
   val log: Logger
   val webService: WebService
+  val cleanup: ImageCleanup
 
   def fetchAndHashLocalImage(file: File): Future[Either[ImageStoreFailure, ImageProcessState.ImageLoadedAndHashed]] = {
     log.info(s"[pih] Fetching ${file.getAbsolutePath}")
@@ -80,9 +86,9 @@ trait ProcessedImageHelper {
       log.info(s"[pih] Fetching $imageUrl")
       val loadedF: Future[Either[ImageStoreFailure, ImageProcessState.ImageLoadedAndHashed]] = fetchRemoteImage(imageUrl).map {
         case (format, file) =>
-          hashImageFile(file.file) match {
+          hashImageFile(file) match {
             case Success(hash) if !ProcessedImageHelper.blacklistedHash.contains(hash.hash) =>
-              Right(ImageProcessState.ImageLoadedAndHashed(file.file, format, hash, Some(imageUrl)))
+              Right(ImageProcessState.ImageLoadedAndHashed(file, format, hash, Some(imageUrl)))
             case Success(hash) => // blacklisted hash
               Left(ImageProcessState.BlacklistedImage)
             case Failure(ex) =>
@@ -247,13 +253,10 @@ trait ProcessedImageHelper {
 
   protected val inputFormatToOutputFormat: ImageFormat => ImageFormat = {
     case ImageFormat.JPG => ImageFormat.JPG
+    case ImageFormat.GIF => ImageFormat.GIF
     case _ => ImageFormat.PNG
   }
 
-  protected val imageFormatToJavaFormatName: ImageFormat => String = {
-    case ImageFormat.JPG | ImageFormat("jpeg") => "jpeg"
-    case _ => "png"
-  }
 
   protected val imageFormatToMimeType: ImageFormat => String = {
     case ImageFormat.JPG | ImageFormat("jpeg") => "image/jpeg"
@@ -261,52 +264,73 @@ trait ProcessedImageHelper {
     case ImageFormat("gif") => "image/gif"
   }
 
-  protected val mimeTypeToImageFormat: String => Option[ImageFormat] = {
-    case t if t.startsWith("image/jpeg") || t.startsWith("image/jpg") => Some(ImageFormat.JPG)
-    case t if t.startsWith("image/png") => Some(ImageFormat.PNG)
-    case t if t.startsWith("image/tiff") => Some(ImageFormat("tiff"))
-    case t if t.startsWith("image/bmp") => Some(ImageFormat("bmp"))
-    case t if t.startsWith("image/gif") => Some(ImageFormat("gif"))
-    case _ => None
-  }
-
-  protected val imageFilenameToFormat: String => Option[ImageFormat] = {
-    case "jpeg" | "jpg" => Some(ImageFormat.JPG)
-    case "png" => Some(ImageFormat.PNG)
-    case "tiff" => Some(ImageFormat("tiff"))
-    case "bmp" => Some(ImageFormat("bmp"))
-    case "gif" => Some(ImageFormat("gif"))
-    case _ => None
-  }
-
   protected def detectImageType(file: File): Option[ImageFormat] = {
-    val is = new BufferedInputStream(new FileInputStream(file))
-    val formatOpt = Option(URLConnection.guessContentTypeFromStream(is)).flatMap { mimeType =>
-      mimeTypeToImageFormat(mimeType)
-    }.orElse {
-      imageFilenameToFormat(file.getName)
-    }
-    is.close()
-    formatOpt
+    Try {
+      val is = new BufferedInputStream(new FileInputStream(file))
+
+      is.mark(16)
+      val c1 = is.read()
+      val c2 = is.read()
+      val c3 = is.read()
+      val c4 = is.read()
+      val c5 = is.read()
+      val c6 = is.read()
+      val c7 = is.read()
+      val c8 = is.read()
+      val c9 = is.read()
+      val c10 = is.read()
+      val c11 = is.read()
+      val c12 = is.read()
+      val c13 = is.read()
+      val c14 = is.read()
+      val c15 = is.read()
+      val c16 = is.read()
+      is.reset()
+      is.close()
+
+      val formatOpt = if (c1 == 'G' && c2 == 'I' && c3 == 'F' && c4 == '8') {
+        Some(ImageFormat.GIF)
+      } else if (c1 == '#' && c2 == 'd' && c3 == 'e' && c4 == 'f') {
+        Some(ImageFormat("bmp"))
+      } else if (c1 == 137 && c2 == 80 && c3 == 78 && c4 == 71 && c5 == 13 && c6 == 10 && c7 == 26 && c8 == 10) {
+        Some(ImageFormat.PNG)
+      } else if (c1 == 0xFF && c2 == 0xD8 && c3 == 0xFF) {
+        Some(ImageFormat.JPG)
+      } else if ((c1 == 0x49 && c2 == 0x49 && c3 == 0x2A && c4 == 0x00) || (c1 == 0x4D && c2 == 0x4D && c3 == 0x00 && c4 == 0x2A)) {
+        Some(ImageFormat("tiff"))
+      } else if ((c1 == '<' && c2 == '?' && c3 == 'x' && c4 == 'm' && c5 == 'l' && c6 == ' ') ||
+        (c1 == 0xef && c2 == 0xbb && c3 == 0xbf && c4 == '<' && c5 == '?' && c6 == 'x') ||
+        (c1 == 0xfe && c2 == 0xff && c3 == 0 && c4 == '<' && c5 == 0 && c6 == '?' && c7 == 0 && c8 == 'x') ||
+        (c1 == 0xff && c2 == 0xfe && c3 == '<' && c4 == 0 && c5 == '?' && c6 == 0 && c7 == 'x' && c8 == 0) ||
+        (c1 == 0x00 && c2 == 0x00 && c3 == 0xfe && c4 == 0xff && c5 == 0 && c6 == 0 && c7 == 0 && c8 == '<' && c9 == 0 && c10 == 0 && c11 == 0 && c12 == '?' && c13 == 0 && c14 == 0 && c15 == 0 && c16 == 'x') ||
+        (c1 == 0xff && c2 == 0xfe && c3 == 0x00 && c4 == 0x00 && c5 == '<' && c6 == 0 && c7 == 0 && c8 == 0 && c9 == '?' && c10 == 0 && c11 == 0 && c12 == 0 && c13 == 'x' && c14 == 0 && c15 == 0 && c16 == 0)
+      ) {
+        Some(ImageFormat("svg"))
+      } else if (c1 == 'W' && c2 == 'E' && c3 == 'B' && c4 == 'P') {
+        Some(ImageFormat("webp"))
+      } else {
+        None
+      }
+
+      formatOpt
+    }.toOption.flatten
   }
 
-  private val remoteFetchConsolidater = new RequestConsolidator[String, (ImageFormat, TemporaryFile)](2.minutes)
+  private val remoteFetchConsolidater = new RequestConsolidator[String, (ImageFormat, File)](2.minutes)
 
-  protected def fetchRemoteImage(imageUrl: String, timeoutMs: Int = 20000): Future[(ImageFormat, TemporaryFile)] = {
+  protected def fetchRemoteImage(imageUrl: String, timeoutMs: Int = 20000): Future[(ImageFormat, File)] = {
     remoteFetchConsolidater(imageUrl) { imageUrl =>
       webService.url(imageUrl).withRequestTimeout(20000).withFollowRedirects(true).getStream().flatMap {
         case (headers, streamBody) =>
-          val formatOpt = headers.headers.get("Content-Type").flatMap(_.headOption)
-            .flatMap(mimeTypeToImageFormat).orElse {
-              val path = URI.parse(imageUrl).toOption.flatMap(_.path).getOrElse(imageUrl)
-              imageFilenameToFormat(path.substring(path.lastIndexOf('.') + 1))
-            }
 
           if (headers.status != 200) {
             Future.failed(new RuntimeException(s"Image returned non-200 code, ${headers.status}, $imageUrl"))
           } else {
-            val tempFile = TemporaryFile("remote-file")
-            val outputStream = new FileOutputStream(tempFile.file)
+            val urlname = imageUrl.drop(5).replaceAll("""\W""","").take(20)
+            val tempFile = File.createTempFile("rf-" + urlname, "")
+            tempFile.deleteOnExit()
+            cleanup.cleanup(tempFile)
+            val outputStream = new FileOutputStream(tempFile)
 
             val maxSize = 1024 * 1024 * 16
 
@@ -325,7 +349,7 @@ trait ProcessedImageHelper {
               case _ =>
                 outputStream.close()
             } flatMap { _ =>
-              formatOpt.orElse(detectImageType(tempFile.file)) map { format =>
+              detectImageType(tempFile) map { format =>
                 Future.successful((format, tempFile))
               } getOrElse {
                 Future.failed(new Exception(s"Unknown image type, ${headers.headers.get("Content-Type")}, $imageUrl"))
@@ -477,5 +501,38 @@ object ProcessedImageSize {
   @inline
   private def maxDivergence(s1: ImageSize, s2: ImageSize): Int = {
     Math.max(Math.abs(s1.height - s2.height), Math.abs(s1.width - s2.width))
+  }
+}
+
+@Singleton
+class ImageCleanup @Inject() (
+  clock: Clock
+) {
+  // When temporary files are created, they can be registered with this class, which will
+  // delete them after a certain amount of time has passed.
+  private val images = new mutable.Queue[(DateTime, String)]()
+  private val cleanupAfterMin = 15
+
+  def cleanup(file: File): Unit = Try {
+    images.enqueue((clock.now, file.getAbsolutePath))
+    purge()
+  }
+
+  private def purge(): Unit = {
+    synchronized {
+      if (images.headOption.exists(_._1.isBefore(clock.now.minusMinutes(cleanupAfterMin)))) {
+        Some(images.dequeue()._2)
+      } else None
+    }.map { filename =>
+      Try {
+        val file = new File(filename)
+        if (file.exists()) {
+          file.delete()
+        }
+        if (images.nonEmpty) {
+          purge()
+        }
+      }
+    }
   }
 }

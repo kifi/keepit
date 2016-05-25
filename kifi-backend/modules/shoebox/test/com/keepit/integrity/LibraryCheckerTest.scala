@@ -91,7 +91,7 @@ class LibraryCheckerTest extends TestKitSupport with SpecificationLike with Shoe
         val systemValueRepo = inject[SystemValueRepo]
         val (seqNum, memberSeqNum) = db.readOnlyMaster { implicit session =>
           val seqNum = systemValueRepo.getSequenceNumber(libraryChecker.MEMBER_COUNT_NAME).get
-          val memberSeqNum = libraryMembershipRepo.all.map(_.seq).max
+          val memberSeqNum = libraryMembershipRepo.aTonOfRecords.map(_.seq).max
           (seqNum, memberSeqNum)
         }
         // The last membership seq num is equal to the seqnum we set into libraryChecker.MEMBER_COUNT_NAME systemValueRepo sequence number.
@@ -143,9 +143,9 @@ class LibraryCheckerTest extends TestKitSupport with SpecificationLike with Shoe
         // Make sure they're fixed
         db.readOnlyMaster { implicit session =>
           libraryRepo.get(lib.id.get).state === LibraryStates.INACTIVE
-          keepRepo.getActiveByIds(keeps.map(_.id.get).toSet).values.foreach { k => k.state === KeepStates.INACTIVE }
-          ktlRepo.getAllByLibraryId(lib.id.get).foreach { ktl => ktl.state === KeepToLibraryStates.INACTIVE }
-          ktuRepo.getAllByUserId(owner.id.get).foreach { ktu => ktu.state === KeepToUserStates.INACTIVE } // TODO(ryan): keepscussions should make this part fail
+          keepRepo.getActiveByIds(keeps.map(_.id.get).toSet).values.foreach { k => k.state === KeepStates.ACTIVE } // keeps stay alive
+          ktuRepo.getAllByUserId(owner.id.get).foreach { ktu => ktu.state === KeepToUserStates.ACTIVE } // ktus stay alive
+          ktlRepo.getAllByLibraryId(lib.id.get).foreach { ktl => ktl.state === KeepToLibraryStates.INACTIVE } // but ktls die because the library is dead
         }
         1 === 1
       }

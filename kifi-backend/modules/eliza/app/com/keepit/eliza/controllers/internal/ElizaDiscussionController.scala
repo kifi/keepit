@@ -6,11 +6,12 @@ import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.logging.Logging
+import com.keepit.common.core.iterableExtensionOps
 import com.keepit.common.mail.BasicContact
 import com.keepit.eliza.ElizaServiceClient._
 import com.keepit.model.{ KeepRecipientsDiff, KeepRecipients, ElizaFeedFilter, User, Keep }
 import com.keepit.discussion.Message
-import com.keepit.eliza.commanders.ElizaDiscussionCommander
+import com.keepit.eliza.commanders.{ NotificationDeliveryCommander, ElizaDiscussionCommander }
 import com.keepit.eliza.model._
 import com.keepit.heimdal._
 import org.joda.time.DateTime
@@ -18,10 +19,11 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import play.api.mvc.Action
 
-import scala.util.Try
+import scala.util.{ Success, Try }
 
 class ElizaDiscussionController @Inject() (
   discussionCommander: ElizaDiscussionCommander,
+  notifDeliveryCommander: NotificationDeliveryCommander,
   db: Database,
   messageRepo: MessageRepo,
   threadRepo: MessageThreadRepo,
@@ -52,13 +54,6 @@ class ElizaDiscussionController @Inject() (
     Ok(Json.toJson(output))
   }
 
-  // deprecated, use editParticipantsOnKeep instead
-  def syncAddParticipants = Action.async(parse.tolerantJson) { request =>
-    import SyncAddParticipants._
-    val input = request.body.as[Request]
-    discussionCommander.syncAddParticipants(input.keepId, input.event, input.source).map(_ => NoContent)
-  }
-
   def getMessagesOnKeep = Action.async(parse.tolerantJson) { request =>
     import GetMessagesOnKeep._
     val input = request.body.as[Request]
@@ -86,9 +81,13 @@ class ElizaDiscussionController @Inject() (
   def sendMessageOnKeep() = Action.async(parse.tolerantJson) { request =>
     import SendMessageOnKeep._
     val input = request.body.as[Request]
-    val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
-    input.source.foreach { src => contextBuilder += ("source", src.value) }
-    discussionCommander.sendMessage(input.userId, input.text, input.keepId, source = input.source)(contextBuilder.build).map { msg =>
+    implicit val context = {
+      val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
+      input.source.foreach { src => contextBuilder += ("source", src.value) }
+      contextBuilder.build
+    }
+    implicit val time = input.time
+    discussionCommander.sendMessage(input.userId, input.text, input.keepId, source = input.source).map { msg =>
       val output = Response(msg)
       Ok(Json.toJson(output))
     }
@@ -120,16 +119,42 @@ class ElizaDiscussionController @Inject() (
     discussionCommander.deleteMessage(msgId)
     NoContent
   }
-  def editParticipantsOnKeep() = Action.async(parse.tolerantJson) { request =>
-    import EditParticipantsOnKeep._
-    implicit val context = heimdalContextBuilder().build
+  def modifyRecipientsAndSendEvent() = Action.async(parse.tolerantJson) { request =>
+    import ModifyRecipientsAndSendEvent._
     val input = request.body.as[Request]
-    val KeepRecipientsDiff(users, libraries, emails) = input.diff
-    discussionCommander.editParticipantsOnKeep(input.keepId, input.editor, users.added.toSeq, emails.added.map(BasicContact(_)).toSeq, libraries.added.toSeq, orgs = Seq.empty, input.source, updateShoebox = false).map { success =>
-      val output = Response(success)
-      Ok(Json.toJson(output))
-    }
+    implicit val ctxt = HeimdalContext.empty
+    log.info(s"[EDCtrlr-MRASE] Handling an event for ${input.keepId} from ${input.userAttribution}")
+    discussionCommander.modifyRecipientsForKeep(input.keepId, input.userAttribution, input.diff, input.source).andThen {
+      case Success((thread, diff)) => input.notifEvent.foreach { event =>
+        notifDeliveryCommander.notifyAddParticipants(input.userAttribution, input.diff, thread, event)
+      }
+    }.map(_ => NoContent)
   }
+  def internEmptyThreadsForKeeps() = Action(parse.tolerantJson) { request =>
+    import InternEmptyThreadsForKeeps._
+    implicit val context = heimdalContextBuilder().build
+    val keeps = request.body.as[Request].keeps
+    require(keeps.forall(_.isActive), "internEmptyThreads called with a dead keep")
+    val existingThreads = db.readOnlyMaster { implicit s =>
+      threadRepo.getByKeepIds(keeps.map(_.id).toSet)
+    }
+    val (oldKeeps, newKeeps) = keeps.partition(k => existingThreads.contains(k.id))
+    val existingKeepsWithThreads = oldKeeps.flatAugmentWith(k => existingThreads.get(k.id))
+    db.readWrite { implicit s =>
+      existingKeepsWithThreads.foreach {
+        case (keep, thread) => (keep.users -- thread.participants.allUsers).foreach { u =>
+          userThreadRepo.intern(UserThread.forMessageThread(thread)(u))
+        }
+      }
+      newKeeps.foreach { k =>
+        k.owner.foreach { owner =>
+          discussionCommander.internThreadForKeep(k, owner)
+        }
+      }
+    }
+    NoContent
+  }
+
   def keepHasAccessToken(keepId: Id[Keep], accessToken: String) = Action { request =>
     val hasToken = Try(ThreadAccessToken(accessToken)).map { token =>
       discussionCommander.keepHasAccessToken(keepId, token)

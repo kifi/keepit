@@ -117,7 +117,9 @@ class SlackClientImpl(
   }
 
   def postToChannel(token: SlackAccessToken, channelId: SlackChannelId, msg: SlackMessageRequest): Future[SlackMessageResponse] = {
-    slackCall[SlackMessageResponse](SlackAPI.PostMessage(token, channelId, msg)).andThen {
+    slackCall[SlackMessageResponse](SlackAPI.PostMessage(token, channelId, msg)).recoverWith {
+      case f: NonOKResponseException => Future.failed(SlackAPIErrorResponse(f.response.status, f.response.body, JsString(f.response.body)))
+    }.andThen {
       case Success(_) => log.info(s"[SLACK-CLIENT] Succeeded in pushing to $channelId via token $token")
       case Failure(f) => log.error(s"[SLACK-CLIENT] Failed to post to $channelId via token $token because of ${f.getMessage}")
     }

@@ -98,20 +98,4 @@ class DiscussionController @Inject() (
       case fail: DiscussionFail => fail.asErrorResponse
     }
   }
-
-  def editParticipantsOnKeep(pubId: PublicId[Keep]) = UserAction.async(parse.tolerantJson) { request =>
-    import com.keepit.common.http._
-    val source = request.userAgentOpt.flatMap(KeepEventSource.fromUserAgent)
-    (for {
-      keepId <- Keep.decodePublicId(pubId).map(Future.successful).getOrElse(Future.failed(DiscussionFail.INVALID_KEEP_ID))
-      extUsersToAdd <- (request.body \ "add").validate[Set[ExternalId[User]]].map(Future.successful).getOrElse(Future.failed(DiscussionFail.COULD_NOT_PARSE))
-      idMap <- db.readOnlyReplicaAsync { implicit s => userRepo.convertExternalIds(extUsersToAdd) }
-      usersToAdd = extUsersToAdd.flatMap(idMap.get)
-      _ <- discussionCommander.editParticipantsOnKeep(request.userId, keepId, usersToAdd, source)
-    } yield {
-      NoContent
-    }).recover {
-      case fail: DiscussionFail => fail.asErrorResponse
-    }
-  }
 }

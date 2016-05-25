@@ -18,12 +18,13 @@ import com.keepit.common.store.ImageSize
 import com.keepit.common.usersegment.{ UserSegment, UserSegmentCache, UserSegmentFactory, UserSegmentKey }
 import com.keepit.common.zookeeper._
 import com.keepit.discussion.{ CrossServiceMessage, DiscussionKeep }
+import com.keepit.model.KeepEventData.ModifyRecipients
 import com.keepit.model._
 import com.keepit.model.cache.{ UserSessionViewExternalIdCache, UserSessionViewExternalIdKey }
 import com.keepit.model.view.{ LibraryMembershipView, UserSessionView }
 import com.keepit.rover.model.BasicImages
 import com.keepit.search.{ ActiveExperimentsCache, ActiveExperimentsKey, SearchConfigExperiment }
-import com.keepit.shoebox.ShoeboxServiceClient.{ RegisterMessageOnKeep, InternKeep, GetPersonalKeepRecipientsOnUris, GetSlackTeamInfo }
+import com.keepit.shoebox.ShoeboxServiceClient.{ PersistModifyRecipients, RegisterMessageOnKeep, InternKeep, GetPersonalKeepRecipientsOnUris, GetSlackTeamInfo }
 import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.shoebox.model.{ IngestableUserIpAddress, KeepImagesCache, KeepImagesKey }
 import com.keepit.slack.models._
@@ -138,9 +139,11 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getPersonalKeepRecipientsOnUris(userId: Id[User], uriIds: Set[Id[NormalizedURI]], excludeAccess: Option[LibraryAccess] = None): Future[Map[Id[NormalizedURI], Set[CrossServiceKeepRecipients]]]
   def getSlackTeamIds(orgIds: Set[Id[Organization]]): Future[Map[Id[Organization], SlackTeamId]]
   def getSlackTeamInfo(slackTeamId: SlackTeamId): Future[Option[InternalSlackTeamInfo]]
-  // TODO(ryan): kill this once clients stop trying to create discussions through Eliza
+
+  // TODO[keepscussions]: kill these methods once Eliza endpoints are deprecated
   def internKeep(creator: Id[User], users: Set[Id[User]], emails: Set[EmailAddress], uriId: Id[NormalizedURI], url: String, title: Option[String], note: Option[String], source: Option[KeepSource]): Future[CrossServiceKeep]
-  def editRecipientsOnKeep(editorId: Id[User], keepId: Id[Keep], diff: KeepRecipientsDiff, persistKeepEvent: Boolean, source: Option[KeepEventSource]): Future[Unit]
+  def editRecipientsOnKeep(editorId: Id[User], keepId: Id[Keep], diff: KeepRecipientsDiff): Future[Unit]
+  def persistModifyRecipients(keepId: Id[Keep], eventData: ModifyRecipients, source: Option[KeepEventSource]): Future[Option[CommonAndBasicKeepEvent]]
   def registerMessageOnKeep(keepId: Id[Keep], msg: CrossServiceMessage): Future[Unit]
 }
 
@@ -911,15 +914,24 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def editRecipientsOnKeep(editorId: Id[User], keepId: Id[Keep], diff: KeepRecipientsDiff, persistKeepEvent: Boolean, source: Option[KeepEventSource]): Future[Unit] = {
+  def editRecipientsOnKeep(editorId: Id[User], keepId: Id[Keep], diff: KeepRecipientsDiff): Future[Unit] = {
     val jsRecipients = Json.toJson(diff)(KeepRecipientsDiff.internalFormat)
-    call(Shoebox.internal.editRecipientsOnKeep(editorId, keepId, persistKeepEvent, source), body = Json.obj("diff" -> jsRecipients)).map(_ => ())
+    call(Shoebox.internal.editRecipientsOnKeep(editorId, keepId), body = Json.obj("diff" -> jsRecipients)).map(_ => ())
   }
 
   def registerMessageOnKeep(keepId: Id[Keep], msg: CrossServiceMessage): Future[Unit] = {
     import RegisterMessageOnKeep._
     val request = Request(keepId, msg)
     call(Shoebox.internal.registerMessageOnKeep(), body = Json.toJson(request)).map(_ => ())
+  }
+
+  def persistModifyRecipients(keepId: Id[Keep], eventData: ModifyRecipients, source: Option[KeepEventSource]): Future[Option[CommonAndBasicKeepEvent]] = {
+    import PersistModifyRecipients._
+    if (!eventData.isValid) Future.successful(None)
+    else {
+      val request = Request(keepId, eventData, source)
+      call(Shoebox.internal.persistModifyRecipients(), body = Json.toJson(request)).map { _.json.as[Response].internalAndExternalEvent }
+    }
   }
 }
 
@@ -947,6 +959,13 @@ object ShoeboxServiceClient {
 
   object GetRecipientsOnKeep {
     case class Response(users: Map[Id[User], BasicUser], libraries: Map[Id[Library], BasicLibrary], emails: Set[EmailAddress])
+    implicit val responseFormat: Format[Response] = Json.format[Response]
+  }
+
+  object PersistModifyRecipients {
+    case class Request(keepId: Id[Keep], eventData: ModifyRecipients, source: Option[KeepEventSource])
+    case class Response(internalAndExternalEvent: Option[CommonAndBasicKeepEvent]) // None if event was not created
+    implicit val requestFormat: Format[Request] = Json.format[Request]
     implicit val responseFormat: Format[Response] = Json.format[Response]
   }
 }

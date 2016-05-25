@@ -11,6 +11,7 @@ import com.keepit.common.time._
 import com.keepit.discussion.MessageSource
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
+import com.keepit.model.BasicKeepEvent.BasicKeepEventId.MessageId
 import com.keepit.model._
 import com.keepit.rover.FakeRoverServiceModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
@@ -21,6 +22,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
 class NotificationDeliveryCommanderTest extends TestKitSupport with SpecificationLike with ElizaTestInjector with ElizaInjectionHelpers {
+  implicit def time: CrossServiceTime = CrossServiceTime(currentDateTime)
   implicit val context = HeimdalContext.empty
   val modules = Seq(
     FakeExecutionContextModule(),
@@ -55,7 +57,7 @@ class NotificationDeliveryCommanderTest extends TestKitSupport with Specificatio
           inject[WatchableExecutionContext].drain()
 
           val notif = Await.result(inject[MessageThreadNotificationBuilder].buildForKeep(user1, thread.keepId), Duration.Inf).get
-          notif.id === Some(msg.pubId)
+          notif.id === Some(MessageId(msg.pubId))
           notif.time === msg.createdAt
           notif.threadId === thread.pubKeepId
           notif.text === "I need this to work"
@@ -93,9 +95,9 @@ class NotificationDeliveryCommanderTest extends TestKitSupport with Specificatio
             Await.result(inject[MessageThreadNotificationBuilder].buildForKeep(user1, thread.keepId), Duration.Inf).get
           }
 
-          val msg = db.readOnlyMaster { implicit s => messageRepo.all.last }
+          val msg = db.readOnlyMaster { implicit s => messageRepo.aTonOfRecords.last }
           val notif = notifs.last
-          notif.id === Some(msg.pubId)
+          notif.id === Some(MessageId(msg.pubId))
           notif.time === msg.createdAt
           notif.threadId === initThread.pubKeepId
           notif.text === s"Ruining Ryan's life! Yeah! ${uniqueTokens.last}"

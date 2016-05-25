@@ -1,8 +1,12 @@
 package com.keepit.commanders
 
+import java.io.File
+
+import com.keepit.common.core
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ WebService, FakeWebService }
 import com.keepit.model.ImageFormat
+import com.keepit.common.time.SystemClock
 import net.codingwell.scalaguice.ScalaModule
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.iteratee.Enumerator
@@ -13,6 +17,7 @@ import scala.concurrent.Future
 
 class FakeProcessedImageHelper extends ProcessedImageHelper with Logging {
   val webService = new FakeWebService()
+  val cleanup = new ImageCleanup(new SystemClock())
 
   private[commanders] def respondWith(contentType: Option[String], content: Array[Byte]): Unit = {
     webService.setGlobalStreamResponse { _ =>
@@ -28,8 +33,8 @@ class FakeProcessedImageHelper extends ProcessedImageHelper with Logging {
     }
   }
 
-  val fakeRemoteImages = mutable.Map[String, (ImageFormat, TemporaryFile)]()
-  protected override def fetchRemoteImage(imageUrl: String, timeoutMs: Int = 20000): Future[(ImageFormat, TemporaryFile)] = {
+  val fakeRemoteImages = mutable.Map[String, (ImageFormat, File)]()
+  protected override def fetchRemoteImage(imageUrl: String, timeoutMs: Int = 20000): Future[(ImageFormat, File)] = {
     fakeRemoteImages.get(imageUrl).map(Future.successful).getOrElse { super.fetchRemoteImage(imageUrl, timeoutMs) }
   }
 }

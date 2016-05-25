@@ -54,12 +54,6 @@ class ElizaEmailCommander @Inject() (
 
   case class ProtoEmail(digestHtml: Html, initialHtml: Html, addedHtml: Html, starterName: String, pageTitle: String)
 
-  def getUriSummary(thread: MessageThread): Future[Option[RoverUriSummary]] = {
-    val uriId = thread.uriId
-    val normalizedUrl = thread.nUrl
-    rover.getOrElseFetchUriSummary(uriId, normalizedUrl)
-  }
-
   def getThreadEmailInfo(
     thread: MessageThread,
     uriSummary: Option[RoverUriSummary],
@@ -136,7 +130,7 @@ class ElizaEmailCommander @Inject() (
     val allUserIds: Set[Id[User]] = thread.participants.allUsers
     val allUsersFuture: Future[Map[Id[User], User]] = new SafeFuture(shoebox.getUsers(allUserIds.toSeq).map(s => s.map(u => u.id.get -> u).toMap))
     val allUserImageUrlsFuture: Future[Map[Id[User], String]] = new SafeFuture(FutureHelpers.map(allUserIds.map(u => u -> shoebox.getUserImageUrl(u, 73)).toMap))
-    val uriSummaryFuture = getUriSummary(thread)
+    val uriSummaryFuture = rover.getOrElseFetchUriSummaryForKeeps(Set(thread.keepId)).map(_.get(thread.keepId))
 
     for {
       allUsers <- allUsersFuture
@@ -179,16 +173,15 @@ class ElizaEmailCommander @Inject() (
     }
   }
 
-  def notifyAddedEmailUsers(thread: MessageThread, addedNonUsers: Seq[NonUserParticipant]): Unit = if (thread.participants.allNonUsers.nonEmpty) {
+  def notifyAddedEmailUsers(thread: MessageThread, addedNonUsers: Seq[EmailAddress]): Unit = if (thread.participants.allNonUsers.nonEmpty) {
     getThreadEmailData(thread) map { threadEmailData =>
-      val nuts = db.readOnlyMaster { implicit session => //redundant right now but I assume we will want to let everyone in the thread know that someone was added?
+      val nuts = db.readOnlyMaster { implicit session =>
         nonUserThreadRepo.getByKeepId(thread.keepId).map { nut =>
           nut.participant.identifier -> nut
         }.toMap
       }
-      addedNonUsers.map { nup =>
-        require(nup.kind == NonUserKinds.email)
-        val nut = nuts(nup.identifier)
+      addedNonUsers.map { email =>
+        val nut = nuts(email.address)
         if (!nut.muted) {
           safeProcessEmail(threadEmailData, nut, _.addedHtml, NotificationCategory.NonUser.ADDED_TO_DISCUSSION)
         } else Future.successful(())

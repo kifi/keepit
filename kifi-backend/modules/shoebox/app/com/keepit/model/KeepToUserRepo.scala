@@ -10,22 +10,11 @@ import org.joda.time.DateTime
 
 @ImplementedBy(classOf[KeepToUserRepoImpl])
 trait KeepToUserRepo extends Repo[KeepToUser] {
-  def countByKeepId(keepId: Id[Keep], excludeStateOpt: Option[State[KeepToUser]] = Some(KeepToUserStates.INACTIVE))(implicit session: RSession): Int
   def getAllByKeepId(keepId: Id[Keep], excludeStateOpt: Option[State[KeepToUser]] = Some(KeepToUserStates.INACTIVE))(implicit session: RSession): Seq[KeepToUser]
-
-  def countByKeepIds(keepIds: Set[Id[Keep]], excludeState: Option[State[KeepToUser]] = Some(KeepToUserStates.INACTIVE))(implicit session: RSession): Map[Id[Keep], Int]
   def getAllByKeepIds(keepIds: Set[Id[Keep]], excludeState: Option[State[KeepToUser]] = Some(KeepToUserStates.INACTIVE))(implicit session: RSession): Map[Id[Keep], Seq[KeepToUser]]
-
-  def getCountByUserId(userId: Id[User], excludeStateOpt: Option[State[KeepToUser]] = Some(KeepToUserStates.INACTIVE))(implicit session: RSession): Int
-  def getCountsByUserIds(userIds: Set[Id[User]], excludeStateOpt: Option[State[KeepToUser]] = Some(KeepToUserStates.INACTIVE))(implicit session: RSession): Map[Id[User], Int]
   def getAllByUserId(userId: Id[User], excludeStateOpt: Option[State[KeepToUser]] = Some(KeepToUserStates.INACTIVE))(implicit session: RSession): Seq[KeepToUser]
-  def getAllByUserIds(userIds: Set[Id[User]], excludeStateOpt: Option[State[KeepToUser]] = Some(KeepToUserStates.INACTIVE))(implicit session: RSession): Map[Id[User], Seq[KeepToUser]]
-
   def getByKeepIdAndUserId(keepId: Id[Keep], userId: Id[User], excludeStateOpt: Option[State[KeepToUser]] = Some(KeepToUserStates.INACTIVE))(implicit session: RSession): Option[KeepToUser]
-
   def getByUserIdAndUriIds(userId: Id[User], uriIds: Set[Id[NormalizedURI]], excludeStateOpt: Option[State[KeepToUser]] = Some(KeepToUserStates.INACTIVE))(implicit session: RSession): Set[KeepToUser]
-
-  def allActive(implicit session: RSession): Seq[KeepToUser]
   def deactivate(model: KeepToUser)(implicit session: RWSession): Unit
 }
 
@@ -74,23 +63,15 @@ class KeepToUserRepoImpl @Inject() (
 
   def activeRows = rows.filter(_.state === KeepToUserStates.ACTIVE)
 
-  def allActive(implicit session: RSession): Seq[KeepToUser] = activeRows.list
-
   private def getByKeepIdHelper(keepId: Id[Keep], excludeStateOpt: Option[State[KeepToUser]])(implicit session: RSession) = {
     for (row <- rows if row.keepId === keepId && row.state =!= excludeStateOpt.orNull) yield row
   }
 
   private def getByKeepIdsHelper(keepIds: Set[Id[Keep]], excludeState: Option[State[KeepToUser]])(implicit session: RSession) = rows.filter(r => r.keepId.inSet(keepIds) && r.state =!= excludeState.orNull)
-  def countByKeepIds(keepIds: Set[Id[Keep]], excludeState: Option[State[KeepToUser]])(implicit session: RSession): Map[Id[Keep], Int] = {
-    getByKeepIdsHelper(keepIds, excludeState).groupBy(_.keepId).map { case (keepId, ktus) => keepId -> ktus.length }.list.toMap
-  }
   def getAllByKeepIds(keepIds: Set[Id[Keep]], excludeState: Option[State[KeepToUser]])(implicit session: RSession): Map[Id[Keep], Seq[KeepToUser]] = {
     getByKeepIdsHelper(keepIds, excludeState).list.groupBy(_.keepId)
   }
 
-  def countByKeepId(keepId: Id[Keep], excludeStateOpt: Option[State[KeepToUser]] = Option(KeepToUserStates.INACTIVE))(implicit session: RSession): Int = {
-    getByKeepIdHelper(keepId, excludeStateOpt).run.length
-  }
   def getAllByKeepId(keepId: Id[Keep], excludeStateOpt: Option[State[KeepToUser]] = Option(KeepToUserStates.INACTIVE))(implicit session: RSession): Seq[KeepToUser] = {
     getByKeepIdHelper(keepId, excludeStateOpt).list
   }
@@ -101,18 +82,8 @@ class KeepToUserRepoImpl @Inject() (
   private def getByUserIdHelper(userId: Id[User], excludeStateOpt: Option[State[KeepToUser]])(implicit session: RSession) = {
     getByUserIdsHelper(Set(userId), excludeStateOpt)
   }
-  def getCountByUserId(userId: Id[User], excludeStateOpt: Option[State[KeepToUser]] = Option(KeepToUserStates.INACTIVE))(implicit session: RSession): Int = {
-    getByUserIdHelper(userId, excludeStateOpt).run.length
-  }
-  def getCountsByUserIds(userIds: Set[Id[User]], excludeStateOpt: Option[State[KeepToUser]] = Option(KeepToUserStates.INACTIVE))(implicit session: RSession): Map[Id[User], Int] = {
-    // TODO(ryan): This needs to use a cache, and fall back on a single monster query, not a bunch of tiny queries
-    userIds.map(libId => libId -> getCountByUserId(libId, excludeStateOpt)).toMap
-  }
   def getAllByUserId(userId: Id[User], excludeStateOpt: Option[State[KeepToUser]] = Option(KeepToUserStates.INACTIVE))(implicit session: RSession): Seq[KeepToUser] = {
     getByUserIdHelper(userId, excludeStateOpt).list
-  }
-  def getAllByUserIds(userIds: Set[Id[User]], excludeStateOpt: Option[State[KeepToUser]] = Option(KeepToUserStates.INACTIVE))(implicit session: RSession): Map[Id[User], Seq[KeepToUser]] = {
-    getByUserIdsHelper(userIds, excludeStateOpt).list.groupBy(_.userId)
   }
 
   private def getByKeepIdAndUserIdHelper(keepId: Id[Keep], userId: Id[User], excludeStateOpt: Option[State[KeepToUser]])(implicit session: RSession) = {

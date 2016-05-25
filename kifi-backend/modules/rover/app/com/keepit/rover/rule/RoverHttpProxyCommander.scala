@@ -13,7 +13,7 @@ class RoverHttpProxyCommander @Inject() (
     val httpProxyRepo: RoverHttpProxyRepo) {
 
   def all: Future[Seq[HttpProxy]] = db.readOnlyMaster { implicit session =>
-    Future.successful(httpProxyRepo.all.map(roverHttpProxyToHttpProxy))
+    Future.successful(httpProxyRepo.aTonOfRecords.map(roverHttpProxyToHttpProxy))
   }
 
   def save(that: HttpProxy): Future[HttpProxy] = {

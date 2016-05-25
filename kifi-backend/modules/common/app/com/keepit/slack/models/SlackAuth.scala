@@ -35,10 +35,11 @@ object SlackAuthScope {
       "T0F5KKU3T", // Kinetic Inc.
       "T0GKSNJKW", // Purple
       "T0FUL04N4", // Brewstercorp
-      "T06NHNNJW" // JRuff
+      "T06NHNNJW", // JRuff
+      "T0BM8GQDA" // Slack Platform Test Team
     ).map(SlackTeamId(_))
 
-    def areAvailableForTeam(slackTeamId: SlackTeamId): Boolean = pilotTeams.contains(slackTeamId)
+    def areAvailableForTeam(slackTeamId: SlackTeamId): Boolean = true
   }
 
   val Identify = SlackAuthScope("identify")

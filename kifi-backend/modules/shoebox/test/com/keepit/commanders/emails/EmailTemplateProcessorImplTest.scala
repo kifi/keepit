@@ -69,6 +69,7 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
             |<img src="${avatarUrl(id2)}" alt="${fullName(id2)}"/>
             |<img src="${avatarUrl(id3)}" alt="${fullName(id3)}"/>
             |<img src="${avatarUrl(id4)}" alt="${fullName(id4)}"/>
+            |${textWithHashtag("this is a [#test] tag!")}
             |Join my library: ${libraryName(library.id.get)}
             |liburl: ${libraryUrl(library.id.get, "")}
             |Look at this keep: ${keepName(keep.id.get)}
@@ -122,6 +123,7 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
           output must contain("""<img src="https://cloudfront/users/2/pics/100/0.jpg" alt="Steve Rogers"/>""")
           output must contain("""<img src="https://cloudfront/users/3/pics/100/0.jpg" alt="Nick Fury"/>""")
           output must contain("""<img src="https://cloudfront/users/4/pics/100/0.jpg" alt="Bruce Banner"/>""")
+          output must contain("""<span title="">this is a </span><a href="https://www.kifi.com/find?q=tag:%22test%22" title="">#test</a><span title=""> tag!</span>""")
 
           val text = processed.textBody.get.value
           text must contain("Steve Rogers and Tony Stark joined!")

@@ -116,10 +116,12 @@ object SystemMessageData {
       Some(KeepEventData.EditTitle(editedBy, original, updated))
   }
 
-  def fromKeepEvent(event: KeepEventData.ModifyRecipients): Option[SystemMessageData] = {
-    val KeepRecipientsDiff(usersDelta, _, emailsDelta) = event.diff
-    val (usersAdded, emailsAdded) = (usersDelta.added.toSeq, emailsDelta.added.map(NonUserEmailParticipant).toSeq)
-    Some(AddParticipants(event.addedBy, usersAdded, emailsAdded))
+  def fromKeepEvent(event: KeepEventData): Option[SystemMessageData] = event match {
+    case _: KeepEventData.EditTitle => None
+    case mr: ModifyRecipients =>
+      val KeepRecipientsDiff(usersDelta, _, emailsDelta) = mr.diff
+      val (usersAdded, emailsAdded) = (usersDelta.added.toSeq, emailsDelta.added.map(NonUserEmailParticipant).toSeq)
+      Some(AddParticipants(mr.addedBy, usersAdded, emailsAdded))
   }
 
   def isFullySupported(data: SystemMessageData): Boolean = data match {
@@ -198,7 +200,7 @@ object SystemMessageData {
     }
   }
 
-  case class AddLibraries(addedBy: Id[User], libraries: Set[Id[Library]]) extends SystemMessageData(AddLibraries.kind)
+  case class AddLibraries(addedBy: Id[User], libraries: Set[Id[Library]]) extends SystemMessageData(AddLibraries.kind) //todo(cam): kill
   object AddLibraries {
     val kind = "add_libraries"
     val internalFormat: Format[AddLibraries] = Format(
@@ -207,7 +209,7 @@ object SystemMessageData {
     )
   }
 
-  case class EditTitle(editedBy: Id[User], original: Option[String], updated: Option[String]) extends SystemMessageData(EditTitle.kind)
+  case class EditTitle(editedBy: Id[User], original: Option[String], updated: Option[String]) extends SystemMessageData(EditTitle.kind) //todo(cam): kill
   object EditTitle {
     val kind = "edit_title"
     val internalFormat: Format[EditTitle] = Format(

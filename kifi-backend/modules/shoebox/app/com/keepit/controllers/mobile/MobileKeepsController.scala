@@ -111,7 +111,7 @@ class MobileKeepsController @Inject() (
   def editKeepInfoV2(id: ExternalId[Keep]) = UserAction(parse.tolerantJson) { request =>
     val source = KeepEventSource.fromUserAgent(UserAgent(request))
     val resultIfEverythingWentWell = for {
-      keepId <- db.readOnlyMaster { implicit s => Try(keepRepo.convertExternalId(id)).toOption }.withLeft(KeepFail.INVALID_KEEP_ID: KeepFail)
+      keepId <- db.readOnlyMaster { implicit s => Try(keepRepo.convertExternalId(id)).toOption }.withLeft(KeepFail.INVALID_KEEP_ID)
       _ <- (request.body \ "note").asOpt[String].fold[RightBias[KeepFail, Unit]](RightBias.unit) { note =>
         keepsCommander.updateKeepNote(keepId, request.userId, note).map(_ => ())
       }

@@ -117,7 +117,7 @@ class EmailTemplateSenderTest extends Specification with ShoeboxTestInjector {
         event.context.get[EmailTip]("emailTip").get === EmailTip.FriendRecommendations
 
         db.readOnlyMaster { implicit s =>
-          val email = inject[ElectronicMailRepo].all().head
+          val email = inject[ElectronicMailRepo].aTonOfRecords().head
           val html = email.htmlBody.value
           html must contain("https://cloudfront/users/1/pics/100/0.jpg")
           html must contain("alt=\"Tony Stark\"")

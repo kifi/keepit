@@ -46,6 +46,9 @@ class ExtKeepImageController @Inject() (
           case fail: ImageStoreFailure =>
             InternalServerError(Json.obj("error" -> fail.reason))
           case success: ImageProcessSuccess =>
+            // This should already happen, but is done again so a reference exists after the future completes.
+            // This prevents GC of the TemporaryFile, which prevents the file from being deleted.
+            Try(request.body.file.deleteOnExit())
             Ok(JsString("success"))
         }
     }

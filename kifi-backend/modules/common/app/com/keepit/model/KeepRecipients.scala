@@ -40,6 +40,11 @@ case class KeepRecipients(
     emails = emails ++ diff.emails.added -- diff.emails.removed,
     libraries = libraries ++ diff.libraries.added -- diff.libraries.removed
   )
+
+  def toDiff: KeepRecipientsDiff = KeepRecipientsDiff(DeltaSet.addOnly(users), DeltaSet.addOnly(libraries), DeltaSet.addOnly(emails))
+
+  def numLibraries: Int = libraries.size
+  def numParticipants: Int = users.size + emails.size
 }
 object KeepRecipients {
   val EMPTY: KeepRecipients = KeepRecipients(libraries = Set.empty, users = Set.empty, emails = Set.empty)
@@ -98,6 +103,7 @@ object KeepRecipientsDiff {
   def addUsers(users: Set[Id[User]]) = KeepRecipientsDiff(users = DeltaSet.empty.addAll(users), libraries = DeltaSet.empty, emails = DeltaSet.empty)
   def addLibrary(library: Id[Library]) = KeepRecipientsDiff(users = DeltaSet.empty, libraries = DeltaSet.empty.add(library), emails = DeltaSet.empty)
   def addLibraries(libraries: Set[Id[Library]]) = KeepRecipientsDiff(users = DeltaSet.empty, libraries = DeltaSet.addOnly(libraries), emails = DeltaSet.empty)
+  def empty = KeepRecipientsDiff(DeltaSet.empty, DeltaSet.empty, DeltaSet.empty)
 
   val internalFormat: Format[KeepRecipientsDiff] = (
     (__ \ 'users).formatNullable[DeltaSet[Id[User]]].inmap[DeltaSet[Id[User]]](_.getOrElse(DeltaSet.empty), Some(_).filter(users => users.added.nonEmpty || users.removed.nonEmpty)) and

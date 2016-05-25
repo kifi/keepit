@@ -108,7 +108,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
       (libShield, libMurica, libScience)
     }
     db.readOnlyMaster { implicit s =>
-      val allLibs = libraryRepo.all
+      val allLibs = libraryRepo.aTonOfRecords
       allLibs.length === 3
       allLibs.map(_.name) === Seq("Avengers Missions", "MURICA", "Science & Stuff")
       allLibs.map(_.slug.value) === Seq("avengers", "murica", "science")
@@ -229,12 +229,12 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           libraryCommander.createLibrary(lib4Request, userIron.id.get) must beLeft
 
           db.readOnlyMaster { implicit s =>
-            val allLibs = libraryRepo.all
+            val allLibs = libraryRepo.aTonOfRecords
             allLibs.length === 3
             allLibs.map(_.slug.value) === Seq("avengers", "murica", "science")
             allLibs.map(_.whoCanInvite).flatten === Seq(LibraryInvitePermissions.COLLABORATOR, LibraryInvitePermissions.COLLABORATOR, LibraryInvitePermissions.OWNER)
 
-            val allMemberships = libraryMembershipRepo.all
+            val allMemberships = libraryMembershipRepo.aTonOfRecords
             allMemberships.length === 3
             allMemberships.map(_.userId) === Seq(userAgent.id.get, userCaptain.id.get, userIron.id.get)
             allMemberships.map(_.access) === Seq(LibraryAccess.OWNER, LibraryAccess.OWNER, LibraryAccess.OWNER)
@@ -247,7 +247,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           }
           libraryCommander.createLibrary(lib3Request, userIron.id.get) must beRight
           db.readOnlyMaster { implicit s =>
-            val allLibs = libraryRepo.all
+            val allLibs = libraryRepo.aTonOfRecords
             allLibs.length === 3
             allLibs.map(_.slug.value) === Seq("avengers", "murica", "science")
             allLibs.foreach(_.color.nonEmpty === true)
@@ -491,7 +491,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           mod7.right.get.modifiedLibrary.whoCanComment === LibraryCommentPermissions.ANYONE
 
           db.readOnlyMaster { implicit s =>
-            val allLibs = libraryRepo.all
+            val allLibs = libraryRepo.aTonOfRecords
             allLibs.length === 3
             allLibs.map(_.name) === Seq("Avengers Missions", "MURICA #1!!!!!", "Science & Stuff")
             allLibs.map(_.slug.value) === Seq("avengers", "murica_#1", "science")
@@ -638,7 +638,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         implicit val config = inject[PublicIdConfiguration]
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupKeeps()
         db.readOnlyMaster { implicit s =>
-          val allLibs = libraryRepo.all
+          val allLibs = libraryRepo.aTonOfRecords
           allLibs.length === 3
           allLibs.map(_.slug.value) === Seq("avengers", "murica", "science")
           libraryMembershipRepo.count === 6
@@ -653,11 +653,11 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         libraryCommander.deleteLibrary(libMurica.id.get, userCaptain.id.get)
         db.readOnlyMaster { implicit s =>
-          val allLibs = libraryRepo.all.filter(_.state == LibraryStates.ACTIVE)
+          val allLibs = libraryRepo.aTonOfRecords.filter(_.state == LibraryStates.ACTIVE)
           allLibs.length === 2
           allLibs.map(_.slug.value) === Seq("avengers", "science")
-          libraryMembershipRepo.all.filter(_.state == LibraryMembershipStates.INACTIVE).length === 3
-          libraryInviteRepo.all.filter(_.state == LibraryInviteStates.INACTIVE).length === 3
+          libraryMembershipRepo.aTonOfRecords.filter(_.state == LibraryMembershipStates.INACTIVE).length === 3
+          libraryInviteRepo.aTonOfRecords.filter(_.state == LibraryInviteStates.INACTIVE).length === 3
         }
 
         db.readWrite { implicit s =>
@@ -676,11 +676,11 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         libraryCommander.deleteLibrary(libScience.id.get, userIron.id.get)
         libraryCommander.deleteLibrary(libShield.id.get, userAgent.id.get)
         db.readOnlyMaster { implicit s =>
-          val allLibs = libraryRepo.all.filter(_.state == LibraryStates.ACTIVE)
+          val allLibs = libraryRepo.aTonOfRecords.filter(_.state == LibraryStates.ACTIVE)
           allLibs.length === 0
           allLibs.map(_.slug.value) === Seq.empty
-          libraryMembershipRepo.all.filter(_.state == LibraryMembershipStates.INACTIVE).length === 6
-          libraryInviteRepo.all.filter(_.state == LibraryInviteStates.INACTIVE).length === 4
+          libraryMembershipRepo.aTonOfRecords.filter(_.state == LibraryMembershipStates.INACTIVE).length === 6
+          libraryInviteRepo.aTonOfRecords.filter(_.state == LibraryInviteStates.INACTIVE).length === 4
         }
       }
     }
@@ -849,7 +849,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupLibraries
 
         db.readOnlyMaster { implicit session =>
-          val all = libraryRepo.all()
+          val all = libraryRepo.aTonOfRecords()
           all.size === 3
 
           libraryRepo.getByUser(userIron.id.get).map(_._2).count(_.ownerId == userIron.id.get) === 1
@@ -861,7 +861,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         // System libraries are created
         db.readOnlyMaster { implicit session =>
-          libraryRepo.all().size === 7
+          libraryRepo.aTonOfRecords().size === 7
           libraryRepo.getByUser(userIron.id.get).map(_._2).count(_.ownerId == userIron.id.get) === 3
           libraryRepo.getByUser(userCaptain.id.get).map(_._2).count(_.ownerId == userCaptain.id.get) === 3
           libraryRepo.getByUser(userHulk.id.get).map(_._2).count(_.ownerId == userCaptain.id.get) === 0
@@ -871,7 +871,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         libraryCommander.internSystemGeneratedLibraries(userIron.id.get)
         libraryCommander.internSystemGeneratedLibraries(userHulk.id.get)
         db.readWrite { implicit session =>
-          libraryRepo.all().size === 9
+          libraryRepo.aTonOfRecords().size === 9
           libraryRepo.getByUser(userIron.id.get).map(_._2).count(_.ownerId == userIron.id.get) === 3
           libraryRepo.getByUser(userCaptain.id.get).map(_._2).count(_.ownerId == userCaptain.id.get) === 3
           libraryRepo.getByUser(userHulk.id.get).map(_._2).count(_.ownerId == userHulk.id.get) === 2
@@ -911,7 +911,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val ironMains = libraryRepo.getByUser(userIron.id.get, None).map(_._2).filter(_.ownerId == userIron.id.get).filter(_.kind == LibraryKind.SYSTEM_MAIN)
           ironMains.size === 1
           ironMains.count(l => l.state == LibraryStates.ACTIVE) === 1
-          libraryRepo.all.count(l => l.ownerId == userIron.id.get && l.state == LibraryStates.INACTIVE) === 1
+          libraryRepo.aTonOfRecords.count(l => l.ownerId == userIron.id.get && l.state == LibraryStates.INACTIVE) === 1
         }
 
       }
@@ -945,7 +945,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         db.readOnlyMaster { implicit s =>
           libraryInviteRepo.count === 4
-          val allInvites = libraryInviteRepo.all
+          val allInvites = libraryInviteRepo.aTonOfRecords
           allInvites.count(_.access == LibraryAccess.READ_ONLY) === 4
           allInvites.count(_.userId.isDefined) === 3
           allInvites.count(_.emailAddress.isDefined) === 1
@@ -1033,7 +1033,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
           db.readOnlyMaster { implicit s =>
             libraryInviteRepo.count === 6
-            val res = for (inv <- libraryInviteRepo.all) yield {
+            val res = for (inv <- libraryInviteRepo.aTonOfRecords) yield {
               (inv.libraryId, inv.userId.get, inv.access, inv.state)
             }
             res === Seq(
@@ -1142,7 +1142,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val libraryMembershipCommander = inject[LibraryMembershipCommander]
 
           db.readOnlyMaster { implicit s =>
-            libraryMembershipRepo.all.count(x => x.state == LibraryMembershipStates.INACTIVE) === 0
+            libraryMembershipRepo.aTonOfRecords.count(x => x.state == LibraryMembershipStates.INACTIVE) === 0
             libraryRepo.get(libMurica.id.get).memberCount === 3
           }
 
@@ -1150,7 +1150,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
           db.readOnlyMaster { implicit s =>
             libraryMembershipRepo.count === 6
-            libraryMembershipRepo.all.count(x => x.state == LibraryMembershipStates.INACTIVE) === 1
+            libraryMembershipRepo.aTonOfRecords.count(x => x.state == LibraryMembershipStates.INACTIVE) === 1
             libraryRepo.get(libMurica.id.get).memberCount === 2
           }
         }
@@ -1203,40 +1203,6 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           }
         }
       }
-      "handle obstacle keeps in the target lib" in {
-        withDb(modules: _*) { implicit injector =>
-          implicit val config = inject[PublicIdConfiguration]
-          val (user, sourceLib, targetLib, keeps, obstacleKeeps) = db.readWrite { implicit session =>
-            val user = UserFactory.user().saved
-            val sourceLib = LibraryFactory.library().withOwner(user).saved
-            val keeps = KeepFactory.keeps(50).map(_.withUser(user).withLibrary(sourceLib).withRandomTitle()).saved
-
-            val targetLib = LibraryFactory.library().withOwner(user).saved
-            val obstacleKeeps = for (uriId <- Random.shuffle(keeps).take(keeps.length / 2).map(_.uriId)) yield {
-              KeepFactory.keep().withUser(user).withLibrary(targetLib).withURIId(uriId).withRandomTitle().saved
-            }
-
-            (user, sourceLib, targetLib, keeps, obstacleKeeps)
-          }
-
-          db.readOnlyMaster { implicit session =>
-            inject[KeepRepo].pageByLibrary(targetLib.id.get, 0, 1000).length === obstacleKeeps.length
-            inject[KeepRepo].pageByLibrary(sourceLib.id.get, 0, 1000).length === keeps.length
-          }
-          val (yay, nay) = inject[LibraryCommander].copyKeeps(user.id.get, targetLib.id.get, keeps.toSet, withSource = None)
-          (yay.length, nay.length) === (keeps.length - obstacleKeeps.length, obstacleKeeps.length)
-
-          db.readOnlyMaster { implicit session =>
-            inject[KeepRepo].pageByLibrary(sourceLib.id.get, 0, 1000).length === keeps.length
-            val newKeeps = inject[KeepRepo].pageByLibrary(targetLib.id.get, 0, 1000)
-            val expectedKeeps = (obstacleKeeps ++ yay).sortBy(k => (k.keptAt, k.id.get)).reverse // they come out in reverse chronological order
-            newKeeps.length === keeps.length
-            newKeeps.map(_.title) === expectedKeeps.map(_.title)
-            newKeeps.map(_.keptAt) === expectedKeeps.map(_.keptAt)
-            newKeeps.map(_.note) === expectedKeeps.map(_.note)
-          }
-        }
-      }
     }
 
     "move keeps to another library" in {
@@ -1265,41 +1231,6 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
             newKeeps.length === keeps.length
             newKeeps.map(_.id.get) === expectedKeeps.map(_.id.get)
             newKeeps.map(_.title) === expectedKeeps.map(_.title)
-            newKeeps.map(_.keptAt) === expectedKeeps.map(_.keptAt)
-            newKeeps.map(_.note) === expectedKeeps.map(_.note)
-          }
-        }
-      }
-      "handle obstacle keeps in the target lib" in {
-        withDb(modules: _*) { implicit injector =>
-          implicit val config = inject[PublicIdConfiguration]
-          val (user, sourceLib, targetLib, keeps, obstacleKeeps) = db.readWrite { implicit session =>
-            val user = UserFactory.user().saved
-            val sourceLib = LibraryFactory.library().withOwner(user).saved
-            val keeps = KeepFactory.keeps(50).map(_.withUser(user).withLibrary(sourceLib).withRandomTitle()).saved
-
-            val targetLib = LibraryFactory.library().withOwner(user).saved
-            val obstacleKeeps = for (uriId <- Random.shuffle(keeps).take(keeps.length / 2).map(_.uriId)) yield {
-              KeepFactory.keep().withUser(user).withLibrary(targetLib).withURIId(uriId).withRandomTitle().saved
-            }
-
-            (user, sourceLib, targetLib, keeps, obstacleKeeps)
-          }
-
-          db.readOnlyMaster { implicit session =>
-            inject[KeepRepo].pageByLibrary(targetLib.id.get, 0, 1000).length === obstacleKeeps.length
-            inject[KeepRepo].pageByLibrary(sourceLib.id.get, 0, 1000).length === keeps.length
-          }
-          val (yay, nay) = inject[LibraryCommander].moveKeeps(user.id.get, targetLib.id.get, keeps)
-          (yay.length, nay.length) === (keeps.length - obstacleKeeps.length, obstacleKeeps.length)
-
-          db.readOnlyMaster { implicit session =>
-            inject[KeepRepo].pageByLibrary(sourceLib.id.get, 0, 1000).length === 0
-            val newKeeps = inject[KeepRepo].pageByLibrary(targetLib.id.get, 0, 1000)
-            val expectedKeeps = (obstacleKeeps ++ yay).sortBy(k => (k.keptAt, k.id.get)).reverse // they come out in reverse chronological order
-            newKeeps.length === keeps.length
-            newKeeps.map(_.id.get) === expectedKeeps.map(_.id.get)
-            newKeeps.map(_.title.get) === expectedKeeps.map(_.title.get)
             newKeeps.map(_.keptAt) === expectedKeeps.map(_.keptAt)
             newKeeps.map(_.note) === expectedKeeps.map(_.note)
           }
@@ -1369,89 +1300,6 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           keepRepo.count === 4
           keepRepo.pageByLibrary(libUSA.id.get, 0, 10).length === 1
           keepRepo.pageByLibrary(libMurica.id.get, 0, 10).length === 2
-        }
-      }
-    }
-
-    "move keeps between libraries from tag" in {
-      withDb(modules: _*) { implicit injector =>
-        implicit val config = inject[PublicIdConfiguration]
-        val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupLibraries
-
-        val t1 = new DateTime(2014, 8, 1, 4, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
-        val site1 = "http://www.reddit.com/r/murica"
-        val site2 = "http://www.freedom.org/"
-        val site3 = "http://www.mcdonalds.com/"
-
-        val (libUSA, k2) = db.readWrite { implicit s =>
-          val libUSA = libraryRepo.save(Library(name = "USA", slug = LibrarySlug("usa"), ownerId = userCaptain.id.get, visibility = LibraryVisibility.DISCOVERABLE, kind = LibraryKind.USER_CREATED, memberCount = 1))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = libUSA.id.get, userId = userCaptain.id.get, access = LibraryAccess.OWNER))
-
-          val uri1 = uriRepo.save(NormalizedURI.withHash(site1, Some("Reddit")))
-          val uri2 = uriRepo.save(NormalizedURI.withHash(site2, Some("Freedom")))
-          val uri3 = uriRepo.save(NormalizedURI.withHash(site3, Some("McDonalds")))
-
-          // libMurica has 3 keeps
-          val keep1 = KeepFactory.keep().withTitle("Reddit").withUser(userCaptain).withUri(uri1).withLibrary(libMurica).saved
-          val keep2 = KeepFactory.keep().withTitle("Freedom").withUser(userCaptain).withUri(uri2).withLibrary(libMurica).saved
-          val keep3 = KeepFactory.keep().withTitle("McDonalds").withUser(userCaptain).withUri(uri3).withLibrary(libMurica).saved
-
-          tagCommander.addTagsToKeep(keep1.id.get, Seq(Hashtag("tag1")), userCaptain.id, None)
-          tagCommander.addTagsToKeep(keep1.id.get, Seq(Hashtag("tag2")), userCaptain.id, None)
-          tagCommander.addTagsToKeep(keep2.id.get, Seq(Hashtag("tag2")), userCaptain.id, None)
-          tagCommander.addTagsToKeep(keep3.id.get, Seq(Hashtag("tag2")), userCaptain.id, None)
-
-          keepRepo.count === 3
-          (libUSA, keep2)
-        }
-
-        val libraryCommander = inject[LibraryCommander]
-
-        //move 1 keep to libUSA - libUSA has no keeps
-        val res1 = libraryCommander.moveKeepsFromCollectionToLibrary(userCaptain.id.get, libUSA.id.get, Hashtag("tag1"))
-        res1.right.get._1.length === 1 // all successes
-        res1.right.get._2.length === 0
-        db.readOnlyMaster { implicit s =>
-          keepRepo.pageByLibrary(libUSA.id.get, 0, 10).length === 1
-          keepRepo.pageByLibrary(libMurica.id.get, 0, 10).length === 2
-        }
-
-        //move 1 keep to libUSA - libUSA has no keeps
-        val res2 = libraryCommander.moveKeepsFromCollectionToLibrary(userCaptain.id.get, libMurica.id.get, Hashtag("tag1"))
-        res2.right.get._1.length === 1 // all successes
-        res2.right.get._2.length === 0
-        db.readOnlyMaster { implicit s =>
-          keepRepo.pageByLibrary(libUSA.id.get, 0, 10).length === 0
-          keepRepo.pageByLibrary(libMurica.id.get, 0, 10).length === 3
-        }
-
-        // move duplicate keeps to its own library
-        val res3 = libraryCommander.moveKeepsFromCollectionToLibrary(userCaptain.id.get, libMurica.id.get, Hashtag("tag1"))
-        res3.right.get._1.length === 0
-        res3.right.get._2.length === 1 // already kept
-        db.readOnlyMaster { implicit s =>
-          keepRepo.pageByLibrary(libUSA.id.get, 0, 10).length === 0
-          keepRepo.pageByLibrary(libMurica.id.get, 0, 10).length === 3
-        }
-
-        // move in bulk
-        val res4 = libraryCommander.moveKeepsFromCollectionToLibrary(userCaptain.id.get, libUSA.id.get, Hashtag("tag2"))
-        res4.right.get._1.length === 3
-        res4.right.get._2.length === 0
-        db.readOnlyMaster { implicit s =>
-          keepRepo.pageByLibrary(libUSA.id.get, 0, 10).length === 3
-          keepRepo.pageByLibrary(libMurica.id.get, 0, 10).length === 0
-        }
-
-        // keep URI in libMurica to test for duplicates -> now 4 keeps with 'tag2'
-        libraryCommander.copyKeeps(userCaptain.id.get, libMurica.id.get, Set(k2), None)
-
-        val res5 = libraryCommander.moveKeepsFromCollectionToLibrary(userCaptain.id.get, libMurica.id.get, Hashtag("tag2"))
-        res5.right.get._1.length === 2
-        res5.right.get._2.length === 1 // already kept
-        db.readOnlyMaster { implicit s =>
-          keepRepo.pageByLibrary(libUSA.id.get, 0, 10).length === 0
-          keepRepo.pageByLibrary(libMurica.id.get, 0, 10).length === 3
         }
       }
     }

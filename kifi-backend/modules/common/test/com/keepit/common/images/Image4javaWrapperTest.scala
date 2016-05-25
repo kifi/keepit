@@ -6,6 +6,8 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.{ LinkOption, Paths }
 import javax.imageio.ImageIO
 
+import com.keepit.commanders.ImageCleanup
+import com.keepit.common.time.{ SystemClock, Clock }
 import com.keepit.model.ImageFormat
 import com.keepit.test.CommonTestInjector
 import org.specs2.execute.{ Failure, FailureException, Result }
@@ -35,14 +37,14 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
   "ImageMagic4javaWrapper" should {
 
     "checkToolsAvailable" in {
-      val im = new Image4javaWrapper(Mode.Test)
+      val im = new Image4javaWrapper(Mode.Test, new ImageCleanup(new SystemClock()))
       im.checkToolsAvailable() //should not throw an exception
       1 === 1
     }
 
     "get image info from imagemagick (png)" in {
       val image = getPngImage()
-      val im = new Image4javaWrapper(Mode.Test)
+      val im = new Image4javaWrapper(Mode.Test, new ImageCleanup(new SystemClock()))
       val info = im.imageInfo(image).get
       info.width === 66
       info.height === 38
@@ -52,7 +54,7 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
     "box resize png" in {
       val image = getPngImage()
       imageByteSize(image) === 612
-      val im = new Image4javaWrapper(Mode.Test)
+      val im = new Image4javaWrapper(Mode.Test, new ImageCleanup(new SystemClock()))
 
       val resized = im.resizeImage(image, ImageFormat.PNG, 20, 20).get
       val resizedInfo = im.imageInfo(resized).get
@@ -63,7 +65,7 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
 
     "box resize jpg" in {
       val image = getJpgImage()
-      val im = new Image4javaWrapper(Mode.Test)
+      val im = new Image4javaWrapper(Mode.Test, new ImageCleanup(new SystemClock()))
 
       val imageInfo = im.imageInfo(image).get
       imageInfo.width === 316
@@ -81,7 +83,7 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
     "box resize gif to png" in {
       val image = getGifImage()
       imageByteSize(image) === 3168406
-      val im = new Image4javaWrapper(Mode.Test)
+      val im = new Image4javaWrapper(Mode.Test, new ImageCleanup(new SystemClock()))
 
       val resized = im.resizeImage(image, ImageFormat.GIF, 500, 500).get
       val resizedInfo = im.imageInfo(resized).get
@@ -94,7 +96,7 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
     "non box resize png" in {
       val image = getPngImage()
       imageByteSize(image) === 612
-      val im = new Image4javaWrapper(Mode.Test)
+      val im = new Image4javaWrapper(Mode.Test, new ImageCleanup(new SystemClock()))
 
       val imageInfo = im.imageInfo(image).get
       imageInfo.width === 66
@@ -110,7 +112,7 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
 
     "non box resize jpg" in {
       val image = getJpgImage()
-      val im = new Image4javaWrapper(Mode.Test)
+      val im = new Image4javaWrapper(Mode.Test, new ImageCleanup(new SystemClock()))
 
       val resized = im.resizeImage(image, ImageFormat.JPG, 200, 150).get
       val resizedInfo = im.imageInfo(resized).get
@@ -123,7 +125,7 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
     "box crop png" in {
       // the perfect crop of this image is to show only the red Xzibit
       val image = getPngImage("wide_image_3x1")
-      val im = new Image4javaWrapper(Mode.Test)
+      val im = new Image4javaWrapper(Mode.Test, new ImageCleanup(new SystemClock()))
 
       val imageInfo = im.imageInfo(image).get
       imageInfo.width === 1173
@@ -139,7 +141,7 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
     "box crop jpg" in {
       // the perfect crop of this image is to show only the red Xzibit
       val image = getJpgImage("wide_image_3x1")
-      val im = new Image4javaWrapper(Mode.Test)
+      val im = new Image4javaWrapper(Mode.Test, new ImageCleanup(new SystemClock()))
 
       val imageInfo = im.imageInfo(image).get
       imageInfo.width === 1173
@@ -155,7 +157,7 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
     "box crop gif" in {
       // the perfect crop of this image is to show only the red Xzibit
       val image = getGifImage("wide_image_3x1")
-      val im = new Image4javaWrapper(Mode.Test)
+      val im = new Image4javaWrapper(Mode.Test, new ImageCleanup(new SystemClock()))
 
       val imageInfo = im.imageInfo(image).get
       imageInfo.width === 1173
@@ -170,7 +172,7 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
     "non box crop png" in {
       // the perfect crop of this image is to show 2 Xzibits
       val image = getPngImage("wide_image_4x1")
-      val im = new Image4javaWrapper(Mode.Test)
+      val im = new Image4javaWrapper(Mode.Test, new ImageCleanup(new SystemClock()))
 
       val imageInfo = im.imageInfo(image).get
       imageInfo.width === 1564
@@ -185,7 +187,7 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
 
     "cropscale png" in {
       val image = getPngImage("wide_image_4x1")
-      val im = new Image4javaWrapper(Mode.Test)
+      val im = new Image4javaWrapper(Mode.Test, new ImageCleanup(new SystemClock()))
 
       val imageInfo = im.imageInfo(image).get
       imageInfo.width === 1564
@@ -199,7 +201,7 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
     }
     "cropscale a square png" in {
       val image = getPngImage("wide_image_4x1")
-      val im = new Image4javaWrapper(Mode.Test)
+      val im = new Image4javaWrapper(Mode.Test, new ImageCleanup(new SystemClock()))
 
       val imageInfo = im.imageInfo(image).get
       imageInfo.width === 1564
@@ -215,7 +217,7 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
     "optimize jpg" in {
       val image = getJpgImage("unoptimized1")
       imageByteSize(image) === 79257
-      val im = new Image4javaWrapper(Mode.Test)
+      val im = new Image4javaWrapper(Mode.Test, new ImageCleanup(new SystemClock()))
 
       val imageInfo = im.imageInfo(image).get
       imageInfo.width === 1200
@@ -232,7 +234,7 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
     "optimize png" in {
       val image = getPngImage("unoptimized3")
       imageByteSize(image) === 274642
-      val im = new Image4javaWrapper(Mode.Test)
+      val im = new Image4javaWrapper(Mode.Test, new ImageCleanup(new SystemClock()))
 
       val imageInfo = im.imageInfo(image).get
       imageInfo.width === 500

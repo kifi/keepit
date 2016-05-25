@@ -77,10 +77,10 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
         val result = extMessagingController.sendMessageAction()(request)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
-        val messages = db.readOnlyMaster { implicit s => inject[MessageRepo].all }
+        val messages = db.readOnlyMaster { implicit s => inject[MessageRepo].aTonOfRecords }
         messages.size === 1
         val message = messages.head
-        val threads = db.readOnlyMaster { implicit s => inject[MessageThreadRepo].all }
+        val threads = db.readOnlyMaster { implicit s => inject[MessageThreadRepo].aTonOfRecords }
         threads.size === 1
         val thread = threads.head
         val actual = contentAsJson(result)
@@ -114,8 +114,8 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
         val result1 = extMessagingController.sendMessageAction()(request1)
         status(result1) must equalTo(OK)
 
-        val message = db.readOnlyMaster { implicit s => inject[MessageRepo].all } head
-        val thread = db.readOnlyMaster { implicit s => inject[MessageThreadRepo].all } head
+        val message = db.readOnlyMaster { implicit s => inject[MessageRepo].aTonOfRecords } head
+        val thread = db.readOnlyMaster { implicit s => inject[MessageThreadRepo].aTonOfRecords } head
 
         val path2 = com.keepit.eliza.controllers.ext.routes.ExtMessagingController.sendMessageReplyAction(thread.pubKeepId).toString
         path2 === s"/eliza/messages/${thread.pubKeepId.id}"
@@ -134,7 +134,7 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
 
-        val messages = db.readOnlyMaster { implicit s => inject[MessageRepo].all }
+        val messages = db.readOnlyMaster { implicit s => inject[MessageRepo].aTonOfRecords }
         messages.size === 2
         val replys = messages filter { m => m.id != message.id }
         replys.size === 1

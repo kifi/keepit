@@ -1,6 +1,9 @@
 package com.keepit.model
 
+import com.keepit.common.cache.{ ImmutableJsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.crypto.PublicId
+import com.keepit.common.db.Id
+import com.keepit.common.logging.AccessLog
 import com.keepit.common.path.Path
 import com.keepit.slack.models.SlackChannelName
 import com.keepit.social.BasicUser
@@ -9,8 +12,19 @@ import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
+import scala.concurrent.duration.Duration
+
 @jsonstrict case class BasicSlackChannel(slackChannelName: SlackChannelName)
 @jsonstrict case class LiteLibrarySlackInfo(toSlackChannels: Seq[BasicSlackChannel]) // everything needed for slack UI on libraries
+
+case class LiteLibrarySlackInfoKey(libraryId: Id[Library]) extends Key[LiteLibrarySlackInfo] {
+  override val version = 1
+  val namespace = "lite_library_slack_info_by_library"
+  def toKey(): String = libraryId.id.toString
+}
+
+class LiteLibrarySlackInfoCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends ImmutableJsonCacheImpl[LiteLibrarySlackInfoKey, LiteLibrarySlackInfo](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class LibraryCardInfo(
   id: PublicId[Library],
@@ -41,8 +55,7 @@ case class LibraryCardInfo(
   slack: Option[LiteLibrarySlackInfo])
 
 object LibraryCardInfo {
-  // Ugh...what choices did I make in my life that have led me here, to this point?
-  // TODO(ryan): pray for forgiveness
+  // This nested-tupley-goodness is because of the 22-field limit on tuples in Scala
   private type LibraryCardInfoFirstArguments = (PublicId[Library], String, Option[String], Option[LibraryColor], Option[LibraryImageInfo], LibrarySlug, LibraryVisibility, BasicUser, Int, Int, Seq[BasicUser], Int, Seq[BasicUser])
   private type LibraryCardInfoSecondArguments = (DateTime, Option[Boolean], Option[LibraryMembershipInfo], Option[LibraryInviteInfo], Set[LibraryPermission], Option[String], DateTime, LibraryKind, Path, Option[BasicOrganizationView], Option[LibraryAccess], LibraryCommentPermissions, Option[LiteLibrarySlackInfo])
   private def fromSadnessTuples(firsts: LibraryCardInfoFirstArguments, seconds: LibraryCardInfoSecondArguments): LibraryCardInfo = (firsts, seconds) match {

@@ -38,6 +38,7 @@ k.panes.settings = k.panes.settings || function () {
       updateCheckbox('kifi-sounds', o.sounds);
       updateCheckbox('kifi-popups', o.popups);
       updateCheckbox('kifi-emails', o.emails);
+      updateCheckbox('kifi-social', o.social);
       updateCheckbox('kifi-keeper', o.keeper);
       updateCheckbox('kifi-search', o.search);
       var sel = box.querySelector('select[name=kifi-max-results]');

@@ -14,6 +14,7 @@ import com.keepit.common.time._
 import com.keepit.discussion._
 import com.keepit.eliza.model._
 import com.keepit.heimdal.HeimdalContext
+import com.keepit.model.KeepEventData.{ EditTitle, ModifyRecipients }
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.BasicUserLikeEntity
@@ -23,12 +24,14 @@ import scala.concurrent.{ ExecutionContext, Future }
 
 @ImplementedBy(classOf[ElizaDiscussionCommanderImpl])
 trait ElizaDiscussionCommander {
+  def internThreadForKeep(csKeep: CrossServiceKeep, owner: Id[User])(implicit session: RWSession): (MessageThread, Boolean)
   def getMessagesOnKeep(keepId: Id[Keep], fromIdOpt: Option[Id[ElizaMessage]], limit: Int): Future[Seq[Message]]
   def getCrossServiceDiscussionsForKeeps(keepIds: Set[Id[Keep]], fromTime: Option[DateTime], maxMessagesShown: Int): Map[Id[Keep], CrossServiceDiscussion]
   def syncAddParticipants(keepId: Id[Keep], event: KeepEventData.ModifyRecipients, source: Option[KeepEventSource]): Future[Unit]
   def getEmailParticipantsForKeeps(keepIds: Set[Id[Keep]]): Map[Id[Keep], Map[EmailAddress, (Id[User], DateTime)]]
-  def sendMessage(userId: Id[User], txt: String, keepId: Id[Keep], source: Option[MessageSource])(implicit context: HeimdalContext): Future[Message]
-  def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], newUsers: Seq[Id[User]], newNonUsers: Seq[BasicContact], libraries: Seq[Id[Library]], orgs: Seq[Id[Organization]], source: Option[KeepEventSource], updateShoebox: Boolean)(implicit context: HeimdalContext): Future[Boolean]
+  def sendMessage(userId: Id[User], txt: String, keepId: Id[Keep], source: Option[MessageSource])(implicit time: CrossServiceTime, context: HeimdalContext): Future[Message]
+  def editParticipantsOnKeepForOldElizaClients(keepId: Id[Keep], editor: Id[User], newUsers: Seq[Id[User]], newNonUsers: Seq[BasicContact], orgs: Seq[Id[Organization]], source: Option[KeepEventSource])(implicit context: HeimdalContext): Future[Boolean]
+  def modifyRecipientsForKeep(keepId: Id[Keep], userAttribution: Id[User], diff: KeepRecipientsDiff, source: Option[KeepEventSource])(implicit ctxt: HeimdalContext): Future[(MessageThread, KeepRecipientsDiff)]
   def muteThread(userId: Id[User], keepId: Id[Keep])(implicit context: HeimdalContext): Future[Boolean]
   def unmuteThread(userId: Id[User], keepId: Id[Keep])(implicit context: HeimdalContext): Future[Boolean]
   def markAsRead(userId: Id[User], keepId: Id[Keep], msgId: Id[ElizaMessage]): Option[Int]
@@ -148,44 +151,18 @@ class ElizaDiscussionCommanderImpl @Inject() (
     }.map(mt => Future.successful((mt, false))).getOrElse {
       shoebox.getCrossServiceKeepsByIds(Set(keepId)).imap { csKeeps =>
         val csKeep = csKeeps.getOrElse(keepId, throw DiscussionFail.INVALID_KEEP_ID)
-        val users = csKeep.users ++ csKeep.owner + userId
-        val emails = csKeep.emails
-        val mt = db.readWrite { implicit s =>
-          // If someone created the message thread while we were messing around in Shoebox,
-          // sigh, shrug, and use that message thread. Sad waste of effort, but cést la vie
-          messageThreadRepo.getByKeepId(keepId).getOrElse {
-            val mt = messageThreadRepo.intern(MessageThread(
-              uriId = csKeep.uriId,
-              url = csKeep.url,
-              nUrl = csKeep.url,
-              pageTitle = csKeep.title,
-              startedBy = csKeep.owner getOrElse userId,
-              participants = MessageThreadParticipants(users),
-              keepId = csKeep.id,
-              numMessages = 0
-            ))
-            users.foreach(userId => userThreadRepo.intern(UserThread.forMessageThread(mt)(userId)))
-            emails.foreach(email => nonUserThreadRepo.intern(NonUserThread.forMessageThread(mt)(NonUserEmailParticipant(email))))
-            mt
-          }
-        }
-
-        (mt, true)
+        db.readWrite(attempts = 3) { implicit s => internThreadForKeep(csKeep, userId) }
       }
     }
     threadFut.map {
       case (oldThread, isNew) =>
-        val newThread = {
-          if (!oldThread.containsUser(userId)) {
-            val newThread = db.readWrite { implicit s =>
-              messageThreadRepo.save(oldThread.withParticipants(clock.now, Set(userId))) tap { updatedThread =>
-                val ut = userThreadRepo.intern(UserThread.forMessageThread(updatedThread)(userId))
-              }
+        val newThread = if (oldThread.containsUser(userId)) {
+          oldThread
+        } else {
+          db.readWrite { implicit s =>
+            messageThreadRepo.save(oldThread.withParticipants(clock.now, Set(userId))) tap { updatedThread =>
+              userThreadRepo.intern(UserThread.forMessageThread(updatedThread)(userId))
             }
-
-            newThread
-          } else {
-            oldThread
           }
         }
 
@@ -199,8 +176,26 @@ class ElizaDiscussionCommanderImpl @Inject() (
         newThread
     }
   }
+  def internThreadForKeep(csKeep: CrossServiceKeep, owner: Id[User])(implicit session: RWSession): (MessageThread, Boolean) = {
+    val users = csKeep.users ++ csKeep.owner
+    messageThreadRepo.getByKeepId(csKeep.id).map(_ -> false).getOrElse {
+      val mt = messageThreadRepo.intern(MessageThread(
+        uriId = csKeep.uriId,
+        url = csKeep.url,
+        nUrl = csKeep.url,
+        pageTitle = csKeep.title,
+        startedBy = csKeep.owner getOrElse owner,
+        participants = MessageThreadParticipants(users),
+        keepId = csKeep.id,
+        numMessages = 0
+      ))
+      users.foreach(userId => userThreadRepo.intern(UserThread.forMessageThread(mt)(userId)))
+      csKeep.emails.foreach(email => nonUserThreadRepo.intern(NonUserThread.forMessageThread(mt)(NonUserEmailParticipant(email))))
+      (mt, true)
+    }
+  }
 
-  def sendMessage(userId: Id[User], txt: String, keepId: Id[Keep], source: Option[MessageSource] = None)(implicit context: HeimdalContext): Future[Message] = {
+  def sendMessage(userId: Id[User], txt: String, keepId: Id[Keep], source: Option[MessageSource] = None)(implicit time: CrossServiceTime, context: HeimdalContext): Future[Message] = {
     getOrCreateMessageThreadWithUser(keepId, userId).flatMap { thread =>
       val (_, message) = messagingCommander.sendMessage(userId, thread, txt, source, None)
       externalizeMessage(message)
@@ -219,14 +214,11 @@ class ElizaDiscussionCommanderImpl @Inject() (
     }
   }
 
-  // TODO(ryan): make this do batch processing...
   def markAsRead(userId: Id[User], keepId: Id[Keep], msgId: Id[ElizaMessage]): Option[Int] = db.readWrite { implicit s =>
     for {
       ut <- userThreadRepo.getUserThread(userId, keepId)
     } yield {
       messageRepo.countByKeep(keepId, Some(msgId), SortDirection.ASCENDING).unread tap { unreadCount =>
-        // TODO(ryan): drop UserThread.unread and instead have a `UserThread.lastSeenMessageId` and compare to `messageRepo.getLatest(threadId)`
-        // Then you can just set it and forget it
         if (unreadCount == 0) userThreadRepo.markRead(userId, messageRepo.get(msgId))
       }
     }
@@ -255,13 +247,37 @@ class ElizaDiscussionCommanderImpl @Inject() (
     nonUserThreadRepo.getByAccessToken(accessToken).exists(_.keepId == keepId)
   }
 
-  def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], newUsers: Seq[Id[User]], newNonUsers: Seq[BasicContact], newLibraries: Seq[Id[Library]], orgs: Seq[Id[Organization]], source: Option[KeepEventSource], updateShoebox: Boolean)(implicit context: HeimdalContext): Future[Boolean] = {
+  // path for modifying participants from old clients: client --> eliza (thread updates) -> shoebox (keep event updates) -> eliza (event notifications)
+  def editParticipantsOnKeepForOldElizaClients(keepId: Id[Keep], editor: Id[User], newUsers: Seq[Id[User]], newNonUsers: Seq[BasicContact], orgs: Seq[Id[Organization]], source: Option[KeepEventSource])(implicit context: HeimdalContext): Future[Boolean] = {
     implicit val context = HeimdalContext.empty
     for {
       thread <- getOrCreateMessageThreadWithUser(keepId, editor)
-      success <- messagingCommander.addParticipantsToThread(editor, keepId, newUsers, newNonUsers, newLibraries, orgs.toSeq, source, updateShoebox)
+      (updatedThread, realDiff) <- messagingCommander.addParticipantsToThread(editor, keepId, newUsers, newNonUsers, orgs.toSeq, source)
+      success <- if (realDiff.nonEmpty) {
+        shoebox.persistModifyRecipients(keepId, ModifyRecipients(editor, realDiff), source).map {
+          case None => false
+          case Some(CommonAndBasicKeepEvent(_, basicEvent)) =>
+            notifDeliveryCommander.notifyAddParticipants(editor, realDiff, updatedThread, basicEvent)
+            true
+        }
+      } else Future.successful(false)
     } yield success
   }
+
+  def modifyRecipientsForKeep(keepId: Id[Keep], userAttribution: Id[User], diff: KeepRecipientsDiff, source: Option[KeepEventSource])(implicit ctxt: HeimdalContext): Future[(MessageThread, KeepRecipientsDiff)] = {
+    for {
+      _ <- getOrCreateMessageThreadWithUser(keepId, userAttribution)
+      (thread, realDiff) <- messagingCommander.addParticipantsToThread(
+        adderUserId = userAttribution,
+        keepId = keepId,
+        newUsers = diff.users.added.toList,
+        emailContacts = diff.emails.added.toList.map(BasicContact(_)),
+        orgIds = Seq.empty,
+        source = source
+      )
+    } yield (thread, realDiff)
+  }
+
   def deleteThreadsForKeeps(keepIds: Set[Id[Keep]])(implicit session: RWSession): Unit = {
     keepIds.foreach { keepId =>
       val uts = userThreadRepo.getByKeep(keepId)

@@ -2,6 +2,7 @@ package com.keepit.slack.models
 
 import com.keepit.common.cache.{ CacheStatistics, FortyTwoCachePlugin, JsonCacheImpl, Key }
 import com.keepit.common.db.Id
+import com.keepit.common.strings.AbbreviateString
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.strings.StringWithReplacements
@@ -23,8 +24,6 @@ object KifiSlackApp {
 
   val BrewstercorpTeamId = SlackTeamId("T0FUL04N4")
   val KifiSlackTeamId = SlackTeamId("T02A81H50")
-  val Dev4SlackTeamId = SlackTeamId("T04SM6T1Z")
-  val specialTeamIds = Set(BrewstercorpTeamId, KifiSlackTeamId, Dev4SlackTeamId)
 }
 
 @json case class SlackTimestamp(value: String) extends Ordered[SlackTimestamp] { // channel-specific timestamp
@@ -64,7 +63,7 @@ object SlackAttachment {
   def simple(text: DescriptionElements): SlackAttachment = {
     SlackAttachment(
       text = Some(DescriptionElements.formatForSlack(text)),
-      fallback = Some(DescriptionElements.formatPlain(text))
+      fallback = Some(DescriptionElements.formatPlain(text).abbreviate(40))
     ).withFullMarkdown
   }
 
@@ -138,7 +137,7 @@ case class SlackMessage(
     permalink: String,
     originalJson: JsValue) {
   def text: String = rawText.replaceAllLiterally("&amp;" -> "&")
-  // TODO(ryan): the below line is technically more correct, but our ingestion relies on "dumb" regular expressions that may break
+  // NB: the below line is technically more correct, but our ingestion relies on "dumb" regular expressions that may break
   // if we unescape the angle-brackets. If we decide that this is a relevant concern, fix the regexs and switch to that line
   // def text: String = rawText.replaceAllLiterally("&lt;" -> "<", "&gt;" -> ">", "&amp;" -> "&")
 }

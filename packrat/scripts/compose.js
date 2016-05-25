@@ -53,6 +53,11 @@ k.compose = k.compose || (function() {
   function newRichEditor($d, notifyInput, notifyEmpty) {
     var defaultText = $d.data('default');
     $d.focus(function () {
+      if (this.hasAttribute('disabled')) {
+        this.blur();
+        return;
+      }
+
       var r;
       if (defaultText && $d.text() === defaultText) {
         // select default text for easy replacement
@@ -361,9 +366,11 @@ k.compose = k.compose || (function() {
         sendChooser.reflectPrefs(prefs);
         var alwaysLookHereMode = editor.supportsLinks && prefs.lookHereMode;
         $form.find('.kifi-compose-highlight').toggleClass('kifi-disabled', !alwaysLookHereMode);
-        if (!alwaysLookHereMode && !k.snap.enabled()) {
-          k.snap.enable(); // enable it because it isn't already on
-        }
+        api.port.emit('is_suppressed', function (isSuppressed) {
+          if (isSuppressed || (!alwaysLookHereMode && !k.snap.enabled())) {
+            k.snap.enable(); // enable it because it isn't already on
+          }
+        });
 
         if (window.innerWidth > 688 && prefs.quoteAnywhereFtue) {
           setTimeout(function () {
@@ -382,21 +389,53 @@ k.compose = k.compose || (function() {
       },
       focus: function () {
         log('[compose.focus]');
-        if ($to.length && !$to.tokenInput('get').length) {
-          $form.find('.kifi-ti-token-for-input>input').focus();
-        } else {
-          editor.$el.focus();
+        if (!this.isDisabled()) {
+          if ($to.length && !$to.tokenInput('get').length) {
+            $form.find('.kifi-ti-token-for-input>input').focus();
+          } else {
+            editor.$el.focus();
+          }
         }
       },
       isBlank: function () {
         return $form.hasClass('kifi-empty') && !($to.length && $to.tokenInput('get').length);
       },
       save: saveDraft.bind(null, $form, $to, editor),
-      lookHere: k.snap.createLookHere(getDraft),
+      lookHere: function () {
+        var form;
+        var lookHereFn;
+        if (!this.isDisabled()) {
+          lookHereFn = k.snap.createLookHere(getDraft);
+          lookHereFn.apply(this, arguments);
+        } else {
+          form = this.form();
+          form.addEventListener('animationend', function endShake() {
+            form.removeEventListener('animationend', endShake);
+            form.classList.remove('kifi-shake');
+          });
+          form.classList.add('kifi-shake');
+        }
+      },
       initTagSuggest: function (keepId) {
         var $d = getDraft();
         k.keepNote.init($d, $container, keepId, editor.getRaw());
         $d.attr('data-kifi-note', true);
+      },
+      toggle: function (enable) {
+        var form = this.form();
+        enable = enable || form.classList.contains('kifi-disabled');
+        var draft = form.querySelector('.kifi-compose-draft');
+
+        form.classList.toggle('kifi-disabled', !enable);
+        draft[enable ? 'removeAttribute' : 'setAttribute']('disabled', '');
+
+        if (!enable) {
+          editor.clear();
+          document.activeElement.blur();
+        }
+      },
+      isDisabled: function () {
+        return this.form().classList.contains('kifi-disabled');
       },
       destroy: function () {
         $forms = $forms.not($form);
@@ -404,9 +443,11 @@ k.compose = k.compose || (function() {
           $to.tokenInput('destroy');
         }
         editor.$el.handleLookClicks(false);
-        if (!$forms.length && $form.find('.kifi-compose-highlight').hasClass('kifi-disabled')) {
-          k.snap.disable();
-        }
+        api.port.emit('is_suppressed', function (isSuppressed) {
+          if ((!$forms.length && $form.find('.kifi-compose-highlight').hasClass('kifi-disabled')) || isSuppressed) {
+            k.snap.disable();
+          }
+        })
         api.port.off(handlers);
       }
     };

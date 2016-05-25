@@ -255,7 +255,9 @@ class AdminOrganizationController @Inject() (
     val oldOwnerId = org.ownerId
     implicit val context = HeimdalContext.empty
     val updatedOrg = db.readWrite { implicit s =>
-      orgCommander.unsafeTransferOrganization(OrganizationTransferRequest(requesterId = request.adminUserId.get, orgId, newOwnerId), isAdmin = true)
+      assert(request.experiments.contains(UserExperimentType.ADMIN))
+      val admin = request.userId
+      orgCommander.unsafeTransferOrganization(OrganizationTransferRequest(requesterId = admin, orgId, newOwnerId), isAdmin = true)
       orgRepo.get(orgId)
     }
     //next line checks that the impossible does not happen
@@ -395,7 +397,7 @@ class AdminOrganizationController @Inject() (
     val setting = (request.body \ "setting").as[FeatureSetting](feature.settingReads)
 
     val newPlans = db.readWrite { implicit s =>
-      paidPlanRepo.all.map { plan =>
+      paidPlanRepo.aTonOfRecords.map { plan =>
         paidPlanRepo.save(plan.withNewEditableFeature(feature).withNewDefaultSetting(feature -> setting))
       }
     }

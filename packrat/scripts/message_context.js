@@ -142,6 +142,7 @@ k.messageContext = k.messageContext || (function ($) {
 
       return {
         image: (keep.image && keep.image.url) || alternateImage,
+        editPermission: keep.viewer && keep.viewer.permissions && ~keep.viewer.permissions.indexOf('edit_keep'),
         title: keep.title,
         location: this.getUrlParts(keep.url).hostname
       };

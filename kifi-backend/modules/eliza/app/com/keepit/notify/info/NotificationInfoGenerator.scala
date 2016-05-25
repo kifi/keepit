@@ -1,6 +1,6 @@
 package com.keepit.notify.info
 
-import com.google.inject.Inject
+import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.commanders.ProcessedImageSize
 import com.keepit.common.core._
 import com.keepit.common.crypto.PublicIdConfiguration
@@ -15,14 +15,19 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Success, Failure, Try }
 
-class NotificationInfoGenerator @Inject() (
+@ImplementedBy(classOf[NotificationInfoGeneratorImpl])
+trait NotificationInfoGenerator {
+  def generateInfo(recipient: Recipient, notifs: Seq[NotificationWithItems]): Future[Seq[NotificationWithInfo]]
+}
+
+class NotificationInfoGeneratorImpl @Inject() (
     notifCommander: NotificationCommander,
     shoeboxServiceClient: ShoeboxServiceClient,
     roverServiceClient: RoverServiceClient,
     notificationKindInfoRequests: NotificationKindInfoRequests,
     implicit val airbrake: AirbrakeNotifier,
     implicit val config: PublicIdConfiguration,
-    implicit val ec: ExecutionContext) extends Logging {
+    implicit val ec: ExecutionContext) extends NotificationInfoGenerator with Logging {
 
   def generateInfo(recipient: Recipient, notifs: Seq[NotificationWithItems]): Future[Seq[NotificationWithInfo]] = {
     val userIdOpt = recipient match {
@@ -113,15 +118,17 @@ class NotificationInfoGenerator @Inject() (
       notifs.flatMap {
         case NotificationWithItems(notif, items) =>
           val infoRequest = notifInfoRequests(notif)
-          // TODO(ryan): can you write code that handles missing info elegantly instead of catching the inevitable KeyNotFoundException?
+
+          // NB: it is possible that a notification cannot be serialized because the underlying models
+          // it references are gone (i.e., a LibraryNewKeep notification for a keep that has been deleted).
+          // The NotificationInfoRequests are not written with this in mind, so they throw exceptions (usually KeyNotFoundException)
+          // When this happens, we mark it as unread to avoid situations where a user's "unread" count is non-zero
+          // but they cannot see any unread notifs. A better strategy is to actually maintain notification integrity
+          // by ingesting the appropriate models from Shoebox and deactivating notifications when they
+          // are no longer valid. Léo knows how to do this.
           Try(infoRequest.fn(batchedInfos)) match {
             case Failure(fail) =>
-              // TODO(ryan): if we throw an exception while serializing a notification, we mark it as unread
-              // this is to avoid situations where the "unread" count is non-zero but the user cannot see any unread notifs
-              // A better strategy is to actually maintain notification integrity by ingesting the appropriate models
-              // from Shoebox and deactivating notifications when they are no longer valid. Léo knows how to do this.
               notifCommander.setNotificationUnreadTo(notif.id.get, unread = false)
-              log.error(fail.toString)
               None
             case Success(info) => Some(NotificationWithInfo(notif, items, info))
           }

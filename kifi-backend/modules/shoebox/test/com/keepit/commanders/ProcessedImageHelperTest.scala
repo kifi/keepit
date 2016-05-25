@@ -51,32 +51,6 @@ class ProcessedImageHelperTest extends Specification with ShoeboxTestInjector wi
       }
     }
 
-    "convert format types in several ways" in {
-      withInjector(modules: _*) { implicit injector =>
-        new FakeProcessedImageHelper {
-          ImageFormat.JPG !== ImageFormat.PNG
-
-          inputFormatToOutputFormat(ImageFormat.JPG) === ImageFormat.JPG
-          inputFormatToOutputFormat(ImageFormat.UNKNOWN) === ImageFormat.PNG
-
-          imageFormatToJavaFormatName(ImageFormat.JPG) === "jpeg"
-          imageFormatToJavaFormatName(ImageFormat("gif")) === "png"
-
-          imageFormatToMimeType(ImageFormat.JPG) === "image/jpeg"
-          imageFormatToMimeType(ImageFormat.PNG) === "image/png"
-
-          mimeTypeToImageFormat("image/jpeg") === Some(ImageFormat.JPG)
-          mimeTypeToImageFormat("image/jpeg;charset=utf-8") === Some(ImageFormat.JPG)
-          mimeTypeToImageFormat("image/png") === Some(ImageFormat.PNG)
-          mimeTypeToImageFormat("image/bmp") === Some(ImageFormat("bmp"))
-
-          imageFilenameToFormat("jpeg") === imageFilenameToFormat("jpg")
-          imageFilenameToFormat("png") === Some(ImageFormat.PNG)
-        }
-        1 === 1
-      }
-    }
-
     "hash files with MD5" in {
       def testFile(name: String): File = new File("test/data/" + name)
 

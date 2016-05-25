@@ -5,7 +5,7 @@ import com.keepit.common.time.Clock
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.common.net.HttpClient
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.model.NormalizedURI
+import com.keepit.model.{Keep, NormalizedURI}
 import com.keepit.rover.article.{ ArticleKind, Article }
 import com.keepit.rover.document.utils.Signature
 import com.keepit.rover.model._
@@ -48,7 +48,7 @@ class FakeRoverServiceClientImpl(
   def getUriSummaryByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], RoverUriSummary]] = Future.successful {
     uriIds.map(uriId => uriId -> articleSummariesByUri.get(uriId)).toMap.collect { case (uriId, Some(article)) => uriId -> article }
   }
-  def getOrElseFetchUriSummary(uriId: Id[NormalizedURI], url: String): Future[Option[RoverUriSummary]] = Future.successful(articleSummariesByUri.get(uriId))
+  def getOrElseFetchUriSummaryForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], RoverUriSummary]] = Future.successful(Map.empty)
   def getOrElseFetchRecentArticle[A <: Article](url: String, recency: Duration)(implicit kind: ArticleKind[A]): Future[Option[A]] = Future.successful {
     articlesByUrl(url).collectFirst {
       case article if (article.kind == kind) && (article.createdAt isAfter clock.now().minusSeconds(recency.toSeconds.toInt)) =>

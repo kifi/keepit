@@ -2,7 +2,7 @@ package com.keepit.model
 
 import javax.crypto.spec.IvParameterSpec
 
-import com.keepit.common.crypto.{ PublicIdGenerator, PublicId }
+import com.keepit.common.crypto.{ PublicIdConfiguration, PublicIdGenerator, PublicId }
 import com.keepit.common.db.Id
 import com.keepit.common.json.{ SchemaReads, EitherFormat, EnumFormat }
 import com.keepit.common.net.UserAgent
@@ -119,32 +119,50 @@ object KeepEventSource extends Enumerator[KeepEventSource] {
   }
 }
 
-sealed abstract class KeepEventData(val kind: KeepEventKind)
+sealed abstract class KeepEventData(val kind: KeepEventKind) {
+  def isValid: Boolean
+}
 object KeepEventData {
   implicit val diffFormat = KeepRecipientsDiff.internalFormat
-  @json case class ModifyRecipients(addedBy: Id[User], diff: KeepRecipientsDiff) extends KeepEventData(KeepEventKind.ModifyRecipients)
-  @json case class EditTitle(editedBy: Id[User], original: Option[String], updated: Option[String]) extends KeepEventData(KeepEventKind.EditTitle)
+  @json case class ModifyRecipients(addedBy: Id[User], diff: KeepRecipientsDiff) extends KeepEventData(KeepEventKind.ModifyRecipients) {
+    def isValid = diff.nonEmpty
+  }
+  @json case class EditTitle(editedBy: Id[User], original: Option[String], updated: Option[String]) extends KeepEventData(KeepEventKind.EditTitle) {
+    def isValid = original != updated
+  }
   implicit val format = Format[KeepEventData](
     Reads {
       js =>
         (js \ "kind").validate[KeepEventKind].flatMap {
-          case KeepEventKind.EditTitle => Json.reads[EditTitle].reads(js)
-          case KeepEventKind.ModifyRecipients => Json.reads[ModifyRecipients].reads(js)
+          case KeepEventKind.EditTitle => Json.fromJson[EditTitle](js)
+          case KeepEventKind.ModifyRecipients => Json.fromJson[ModifyRecipients](js)
           case KeepEventKind.Initial | KeepEventKind.Note | KeepEventKind.Comment => throw new Exception(s"unsupported reads for activity event kind, js $js}")
         }
     },
     Writes {
-      case et: EditTitle => Json.writes[EditTitle].writes(et).as[JsObject] ++ Json.obj("kind" -> KeepEventKind.EditTitle.value)
-      case ar: ModifyRecipients => Json.writes[ModifyRecipients].writes(ar).as[JsObject] ++ Json.obj("kind" -> KeepEventKind.ModifyRecipients.value)
+      case et: EditTitle => Json.toJson[EditTitle](et).as[JsObject] ++ Json.obj("kind" -> KeepEventKind.EditTitle.value)
+      case ar: ModifyRecipients => Json.toJson[ModifyRecipients](ar).as[JsObject] ++ Json.obj("kind" -> KeepEventKind.ModifyRecipients.value)
       case o => throw new Exception(s"unsupported writes for ActivityEventData $o")
     }
   )
 }
 
-case class CommonKeepEvent()
+case class CommonKeepEvent(
+  id: Id[CommonKeepEvent],
+  keepId: Id[Keep],
+  timestamp: DateTime,
+  eventData: KeepEventData,
+  source: Option[KeepEventSource])
 object CommonKeepEvent extends PublicIdGenerator[CommonKeepEvent] {
   val publicIdIvSpec: IvParameterSpec = new IvParameterSpec(Array(125, 15, 73, -1, 17, -36, 81, -84, -126, 92, 65, -97, 127, 47, -113, 58))
   val publicIdPrefix = "kev"
+  val format: Format[CommonKeepEvent] = (
+    (__ \ 'id).format[Id[CommonKeepEvent]] and
+    (__ \ 'keepId).format[Id[Keep]] and
+    (__ \ 'timestamp).format[DateTime] and
+    (__ \ 'eventData).format[KeepEventData] and
+    (__ \ 'source).formatNullable[KeepEventSource]
+  )(CommonKeepEvent.apply, unlift(CommonKeepEvent.unapply))
 }
 
 //case class BasicKeepEventId(id: Option[Either[PublicId[Message], PublicId[CommonKeepEvent]]])
@@ -171,7 +189,7 @@ object BasicKeepEvent {
     final case class EventId(id: PublicId[CommonKeepEvent]) extends BasicKeepEventId
     final case class InitialId(id: PublicId[Keep]) extends BasicKeepEventId
     final case class NoteId(id: PublicId[Keep]) extends BasicKeepEventId
-    implicit val writes: Writes[BasicKeepEventId] = Writes {
+    private val writes: Writes[BasicKeepEventId] = Writes {
       case InitialId(kId) => JsString(s"init_${kId.id}")
       case NoteId(kId) => JsString(s"note_${kId.id}")
       case MessageId(msgId) => JsString(msgId.id)
@@ -184,11 +202,16 @@ object BasicKeepEvent {
       js.validate[String].filter(_.startsWith("note_")).flatMap(s => Keep.readsPublicId.reads(JsString(s.stripPrefix("note_"))).map(NoteId(_)))
     ).reduce(_ orElse _))
 
-    def fromMsg(id: PublicId[Message]) = MessageId(id)
-    def fromEvent(id: PublicId[CommonKeepEvent]) = EventId(id)
+    implicit val format: Format[BasicKeepEventId] = Format(reads, writes)
+
+    def fromMsg(id: Id[Message])(implicit config: PublicIdConfiguration) = MessageId(Message.publicId(id))
+    def fromEvent(id: Id[CommonKeepEvent])(implicit config: PublicIdConfiguration) = EventId(CommonKeepEvent.publicId(id))
+    def fromPubMsg(id: PublicId[Message]) = MessageId(id)
+    def fromPubEvent(id: PublicId[CommonKeepEvent]) = EventId(id)
   }
 
   implicit val idFormat = EitherFormat(Message.formatPublicId, CommonKeepEvent.formatPublicId)
+
   private val bareWrites: OWrites[BasicKeepEvent] = (
     (__ \ 'id).write[BasicKeepEventId] and
     (__ \ 'author).write[BasicAuthor] and
@@ -207,6 +230,16 @@ object BasicKeepEvent {
 
   implicit val writes: OWrites[BasicKeepEvent] = OWrites { o => bareWrites.writes(o) ++ extraWrites.writes(o) }
 
+  val format: Format[BasicKeepEvent] = (
+    (__ \ 'id).format[BasicKeepEventId](BasicKeepEventId.format) and
+    (__ \ 'author).format[BasicAuthor] and
+    (__ \ 'kind).format[KeepEventKind] and
+    (__ \ 'header).format[DescriptionElements](DescriptionElements.format) and
+    (__ \ 'body).format[DescriptionElements](DescriptionElements.format) and
+    (__ \ 'timestamp).format[DateTime] and
+    (__ \ 'source).formatNullable[BasicKeepEventSource]
+  )(BasicKeepEvent.apply, unlift(BasicKeepEvent.unapply))
+
   def fromMessage(message: Message)(implicit imageConfig: S3ImageConfig): BasicKeepEvent = {
     val author = message.sentBy.fold(BasicAuthor.fromNonUser, BasicAuthor.fromUser)
     generateCommentEvent(message.pubId, author, message.text, message.sentAt, message.source)
@@ -214,7 +247,7 @@ object BasicKeepEvent {
 
   def generateCommentEvent(id: PublicId[Message], author: BasicAuthor, text: String, sentAt: DateTime, source: Option[MessageSource]): BasicKeepEvent = {
     BasicKeepEvent(
-      id = BasicKeepEventId.fromMsg(id),
+      id = BasicKeepEventId.fromPubMsg(id),
       author = author,
       kind = KeepEventKind.Comment,
       header = DescriptionElements(author),
@@ -223,6 +256,12 @@ object BasicKeepEvent {
       source = source.flatMap(KeepEventSource.fromMessageSource).map(BasicKeepEventSource(_, url = None))
     )
   }
+}
+
+@json case class CommonAndBasicKeepEvent(commonEvent: CommonKeepEvent, basicEvent: BasicKeepEvent)
+object CommonAndBasicKeepEvent {
+  implicit val basicEventFormat = BasicKeepEvent.format
+  implicit val commonEventFormat = CommonKeepEvent.format
 }
 
 case class KeepActivity(latestEvent: BasicKeepEvent, events: Seq[BasicKeepEvent], numComments: Int)

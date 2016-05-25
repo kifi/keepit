@@ -10,6 +10,7 @@ import com.keepit.common.logging.AccessLog
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
 import com.keepit.discussion.Message
+import com.keepit.model.BasicKeepEvent.BasicKeepEventId
 import com.keepit.model.KeepEventData.{ EditTitle, ModifyRecipients }
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
@@ -48,6 +49,16 @@ object KeepEvent extends CommonClassLinker[KeepEvent, CommonKeepEvent] {
 
         (users ++ newUsers, libs ++ newLibs)
     }
+  }
+
+  def toCommonKeepEvent(event: KeepEvent) = {
+    CommonKeepEvent(
+      toCommonId(event.id.get),
+      event.keepId,
+      event.eventTime,
+      event.eventData,
+      event.source
+    )
   }
 
   def publicId(id: Id[KeepEvent])(implicit config: PublicIdConfiguration): PublicId[CommonKeepEvent] = CommonKeepEvent.publicId(KeepEvent.toCommonId(id))

@@ -3,6 +3,7 @@ package com.keepit.slack
 import com.google.inject.Inject
 import com.keepit.commanders._
 import com.keepit.common.akka.FortyTwoActor
+import play.api.http.Status
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.core._
 import com.keepit.common.db.Id
@@ -40,6 +41,7 @@ class SlackPushingActor @Inject() (
   slackTeamMembershipRepo: SlackTeamMembershipRepo,
   slackChannelRepo: SlackChannelRepo,
   integrationRepo: LibraryToSlackChannelRepo,
+  liteLibrarySlackInfoCache: LiteLibrarySlackInfoCache,
   permissionCommander: PermissionCommander,
   clock: Clock,
   airbrake: AirbrakeNotifier,
@@ -133,6 +135,7 @@ class SlackPushingActor @Inject() (
 
         db.readWrite { implicit session =>
           integrationRepo.updateAfterPush(integration.id.get, nextPushAt, updatedStatus getOrElse integration.status)
+          updatedStatus.foreach(_ => liteLibrarySlackInfoCache.remove(LiteLibrarySlackInfoKey(integration.libraryId)))
         }
     }
   }
@@ -159,6 +162,8 @@ class SlackPushingActor @Inject() (
           userPush.getOrElse(Future.failed(SlackFail.NoValidToken)).recoverWith {
             case SlackFail.NoValidToken | SlackErrorCode(_) =>
               slackClient.sendToSlackHoweverPossible(integration.slackTeamId, integration.slackChannelId, itemMsg.asBot).map(_.map(resp => (resp, itemMsg.asBot))).recoverWith {
+                case SlackAPIErrorResponse(Status.REQUEST_ENTITY_TOO_LARGE, _, _)
+                  | SlackAPIErrorResponse(Status.REQUEST_URI_TOO_LONG, _, _) => Future.successful(None) // pretend we succeeded
                 case SlackFail.NoValidPushMethod => Future.failed(BrokenSlackIntegration(integration, None, Some(SlackFail.NoValidPushMethod)))
               }
           }
@@ -244,7 +249,7 @@ class SlackPushingActor @Inject() (
             }
             ()
           }.recover {
-            case SlackErrorCode(EDIT_WINDOW_CLOSED) | SlackErrorCode(CANT_UPDATE_MESSAGE) | SlackErrorCode(CHANNEL_NOT_FOUND) | SlackErrorCode(MESSAGE_NOT_FOUND) =>
+            case SlackErrorCode(EDIT_WINDOW_CLOSED) | SlackErrorCode(CANT_UPDATE_MESSAGE) | SlackErrorCode(CHANNEL_NOT_FOUND) | SlackErrorCode(MESSAGE_NOT_FOUND) | SlackErrorCode(ACCOUNT_INACTIVE) =>
               slackLog.warn(s"Failed to update keep ${k.id.get} because slack says it's uneditable, removing it from the cache")
               db.readWrite { implicit s => slackPushForKeepRepo.save(oldPush.uneditable) }
               ()
@@ -283,7 +288,11 @@ class SlackPushingActor @Inject() (
             }
             ()
           }.recover {
-            case SlackErrorCode(EDIT_WINDOW_CLOSED) | SlackErrorCode(CANT_UPDATE_MESSAGE) | SlackErrorCode(CHANNEL_NOT_FOUND) | SlackErrorCode(MESSAGE_NOT_FOUND) =>
+            case SlackErrorCode(EDIT_WINDOW_CLOSED)
+              | SlackErrorCode(CANT_UPDATE_MESSAGE)
+              | SlackErrorCode(CHANNEL_NOT_FOUND)
+              | SlackErrorCode(MESSAGE_NOT_FOUND)
+              | SlackErrorCode(ACCOUNT_INACTIVE) =>
               slackLog.warn(s"Failed to update message ${msg.id} because slack says it's uneditable, removing it from the cache")
               db.readWrite { implicit s => slackPushForMessageRepo.save(oldPush.uneditable) }
               ()

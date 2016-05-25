@@ -168,7 +168,6 @@ class SlackClientWrapperImpl @Inject() (
     val workingToken = db.readOnlyMaster { implicit s =>
       slackTeamMembershipRepo.getBySlackTeamAndUser(slackTeamId, slackUserId).flatMap(_.getTokenIncludingScopes(Set(SlackAuthScope.ChatWriteBot)))
     }
-    log.info(s"[SLACK-CLIENT-WRAPPER] Pushing to $slackChannelId in $slackTeamId from $slackUserId and using $workingToken")
     workingToken match {
       case None => Future.failed(SlackFail.NoValidToken)
       case Some(token) =>
@@ -335,7 +334,7 @@ class SlackClientWrapperImpl @Inject() (
       slackClient.getUserInfo(token, userId) andThen {
         case Success(user) => db.readWrite { implicit s =>
           slackTeamRepo.getBySlackTeamId(slackTeamId).foreach { slackTeam =>
-            saveUserInfo(slackTeam, user)
+            saveUserInfo(slackTeam.slackTeamId, user)
           }
         }
       }
@@ -345,13 +344,13 @@ class SlackClientWrapperImpl @Inject() (
   def getUsers(slackTeamId: SlackTeamId, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[Seq[FullSlackUserInfo]] = {
     withFirstValidToken(slackTeamId, preferredTokens, Set(SlackAuthScope.UsersRead)) { token =>
       slackClient.getUsers(token) andThen {
-        case Success(users) => db.readWrite { implicit s =>
-          slackTeamRepo.getBySlackTeamId(slackTeamId).foreach { slackTeam =>
-            users.foreach { user =>
-              saveUserInfo(slackTeam, user)
+        case Success(users) =>
+          db.readOnlyMaster { implicit s => slackTeamRepo.getBySlackTeamId(slackTeamId) }.map(_.slackTeamId).foreach { teamId =>
+            // There can be a TON of users here, so don't block the request trying to intern them all
+            FutureHelpers.sequentialExec(users) { user =>
+              db.readWriteAsync { implicit s => saveUserInfo(teamId, user) }
             }
           }
-        }
       }
     }
   }
@@ -363,11 +362,11 @@ class SlackClientWrapperImpl @Inject() (
     slackClient.getIMHistory(token, channelId, fromTimestamp, limit, inclusive = false)
   }
 
-  private def saveUserInfo(slackTeam: SlackTeam, user: FullSlackUserInfo)(implicit session: RWSession): SlackTeamMembership = {
+  private def saveUserInfo(slackTeamId: SlackTeamId, user: FullSlackUserInfo)(implicit session: RWSession): SlackTeamMembership = {
     slackTeamMembershipRepo.internMembership(SlackTeamMembershipInternRequest(
       userId = None,
       slackUserId = user.id,
-      slackTeamId = slackTeam.slackTeamId,
+      slackTeamId = slackTeamId,
       tokenWithScopes = None,
       slackUser = Some(user)
     ))._1

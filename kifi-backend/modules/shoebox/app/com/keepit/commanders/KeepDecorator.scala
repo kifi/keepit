@@ -150,13 +150,13 @@ class KeepDecoratorImpl @Inject() (
           db.readOnlyMaster { implicit s => basicUserRepo.loadAll(keepersShown ++ libraryContributorsShown ++ libraryOwners ++ keepers ++ ktuUsers ++ msgUsers ++ emailParticipantsAddedBy ++ usersFromEvents) } //cached
         }
 
-        val idToLibrarySlackInfo = slackInfoCommander.getLiteSlackInfoForLibraries(idToLibrary.keySet)
+        val idToLibrarySlackInfo = db.readOnlyMaster { implicit s => slackInfoCommander.getLiteSlackInfoForLibraries(idToLibrary.keySet) }
 
         val idToBasicLibrary = idToLibrary.map {
           case (libId, library) =>
             val orgOpt = basicOrgByLibId.get(libId)
             val user = idToBasicUser(library.ownerId)
-            libId -> BasicLibrary(library, user, orgOpt.map(_.handle), idToLibrarySlackInfo.get(libId))
+            libId -> BasicLibrary(library, user.username, orgOpt.map(_.handle), idToLibrarySlackInfo.get(libId))
         }
         val libraryCardByLibId = {
           val libraries = idToLibrary.values.toSeq
@@ -217,12 +217,8 @@ class KeepDecoratorImpl @Inject() (
 
               KeepMembers(libraries, users, emails)
             }
-            val keepActivity = {
-              if (viewerIdOpt.exists(uid => db.readOnlyMaster(implicit s => userExperimentRepo.hasExperiment(uid, UserExperimentType.ACTIVITY_LOG)))) {
-                Some(basicULOBatchFetcher.run(KeepActivityGen.generateKeepActivity(keep, sourceAttrs.get(keepId), eventsByKeep.getOrElse(keepId, Seq.empty), discussionsByKeep.get(keepId),
-                  ktlsByKeep.getOrElse(keepId, Seq.empty), ktusByKeep.getOrElse(keepId, Seq.empty), maxMessagesShown)))
-              } else None
-            }
+            val keepActivity = basicULOBatchFetcher.run(KeepActivityGen.generateKeepActivity(keep, sourceAttrs.get(keepId), eventsByKeep.getOrElse(keepId, Seq.empty), discussionsByKeep.get(keepId),
+              ktlsByKeep.getOrElse(keepId, Seq.empty), ktusByKeep.getOrElse(keepId, Seq.empty), maxMessagesShown))
 
             val normalDiscussion = discussionsByKeep.get(keepId).map { csDisc =>
               Discussion(startedAt = csDisc.startedAt, numMessages = csDisc.numMessages, locator = csDisc.locator,

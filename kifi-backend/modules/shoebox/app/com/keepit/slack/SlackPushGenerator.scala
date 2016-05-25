@@ -98,8 +98,7 @@ class SlackPushGenerator @Inject() (
     }.map {
       case (attributionByKeepId, lastPushedKtl) =>
         def shouldKeepBePushed(keep: Keep, ktl: KeepToLibrary): Boolean = {
-          // TODO(ryan): temporarily making this more aggressive, something bad is happening in prod
-          keep.source != KeepSource.Slack && ktl.addedAt.isAfter(lts.changedStatusAt)
+          keep.source != KeepSource.Slack && (ktl.addedAt isAfter lts.changedStatusAt.minusSeconds(5))
         }
 
         def hasAlreadyBeenPushed(ktl: KeepToLibrary) = lastPushedKtl.exists { last =>
@@ -112,8 +111,8 @@ class SlackPushGenerator @Inject() (
       def hasAlreadyBeenPushed(msg: CrossServiceMessage) = lts.lastProcessedMsg.exists(msg.id.id <= _.id)
       def shouldMessageBePushed(msg: CrossServiceMessage) = keepAndKtlByKeep.get(msg.keep).exists {
         case (k, ktl) =>
-          def messageWasSentAfterKeepWasAddedToThisLibrary = ktl.addedAt isBefore msg.sentAt
-          def messageWasSentAfterIntegrationWasActivated = lts.changedStatusAt isBefore msg.sentAt
+          def messageWasSentAfterKeepWasAddedToThisLibrary = msg.sentAt isAfter ktl.addedAt.minusSeconds(5)
+          def messageWasSentAfterIntegrationWasActivated = msg.sentAt isAfter lts.changedStatusAt.minusSeconds(5)
           messageWasSentAfterKeepWasAddedToThisLibrary && messageWasSentAfterIntegrationWasActivated
       }
       val msgsWithKeep = changedMsgs.flatAugmentWith(msg => keepAndKtlByKeep.get(msg.keep).map(_._1)).map(_.swap)
@@ -212,7 +211,8 @@ class SlackPushGenerator @Inject() (
     val userColor = user.map(u => if (u.externalId == jenUserId) LibraryColor.PURPLE else LibraryColor.byHash(Seq(keep.externalId.id, u.externalId.id)))
 
     val category = NotificationCategory.NonUser.NEW_COMMENT
-    def keepLink(subaction: String) = LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(items.slackChannelId, category, Some(subaction))))
+    def keepWebLink(subaction: String) = LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(items.slackChannelId, category, Some(subaction))))
+    def keepKifiLink(subaction: String) = LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(items.slackChannelId, category, Some(subaction))))
     def msgLink(subaction: String) = LinkElement(pathCommander.keepPageOnMessageViaSlack(keep, slackTeamId, msg.id).withQuery(SlackAnalytics.generateTrackingParams(items.slackChannelId, category, Some(subaction))))
 
     val keepElement = {
@@ -221,9 +221,9 @@ class SlackPushGenerator @Inject() (
       DescriptionElements(
         s"_${keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH)}_",
         "  ",
-        "View" --> keepLink("viewArticle"),
+        "View" --> keepWebLink("viewArticle"),
         "|",
-        ("Reply" + numComments.map(n => s" ($n)").getOrElse("")) --> keepLink("reply")
+        ("Reply" + numComments.map(n => s" ($n)").getOrElse("")) --> keepKifiLink("reply")
       )
     }
 

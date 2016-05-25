@@ -6,7 +6,6 @@ import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick._
 import com.keepit.common.time._
 import com.keepit.model.{ NormalizedURI, User }
-import com.keepit.notify.model.event.LegacyNotification
 import com.keepit.notify.model.{ Recipient, NKind }
 import org.joda.time.DateTime
 

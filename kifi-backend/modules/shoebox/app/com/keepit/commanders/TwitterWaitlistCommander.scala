@@ -47,6 +47,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
     libraryRepo: LibraryRepo,
     clock: Clock,
     userValueRepo: UserValueRepo,
+    cleanup: ImageCleanup,
     implicit val executionContext: ExecutionContext) extends TwitterWaitlistCommander with Logging {
 
   private val WAITLIST_LENGTH_SHIFT = 1152
@@ -192,8 +193,9 @@ class TwitterWaitlistCommanderImpl @Inject() (
         if (headers.status != 200) {
           Future.failed(new RuntimeException(s"Image returned non-200 code, ${headers.status}, $imageUrl"))
         } else {
-          val tempFile = TemporaryFile(prefix = "remote-file")
+          val tempFile = TemporaryFile(prefix = s"tw-${handle.value}")
           tempFile.file.deleteOnExit()
+          cleanup.cleanup(tempFile.file)
           val outputStream = new FileOutputStream(tempFile.file)
 
           val maxSize = 1024 * 1024 * 16

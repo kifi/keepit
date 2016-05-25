@@ -31,9 +31,9 @@ class LibraryKeepsInfoController @Inject() (
 
   def getKeepsInLibrary(libPubId: PublicId[Library], order: Option[KeepOrdering], dir: Option[SortDirection], from: Option[String], offset: Int, limit: Int) = MaybeUserAction.async { implicit request =>
     val resultIfEverythingWentWell = for {
-      libId <- Library.decodePublicId(libPubId).toOption.withLeft(LibraryFail.INVALID_LIBRARY_ID: LibraryFail)
+      libId <- Library.decodePublicId(libPubId).toOption.withLeft(LibraryFail.INVALID_LIBRARY_ID)
       fromId <- from.filter(_.nonEmpty).fold[RightBias[LibraryFail, Option[Id[Keep]]]](RightBias.right(None)) { pubKeepId =>
-        Keep.decodePublicIdStr(pubKeepId).toOption.withLeft(LibraryFail.INVALID_KEEP_ID: LibraryFail).map(Some(_))
+        Keep.decodePublicIdStr(pubKeepId).toOption.withLeft(LibraryFail.INVALID_KEEP_ID).map(Some(_))
       }
       _ <- RightBias.unit.filter(_ => limit < 30, LibraryFail.LIMIT_TOO_LARGE: LibraryFail)
       permissions = db.readOnlyMaster { implicit s =>

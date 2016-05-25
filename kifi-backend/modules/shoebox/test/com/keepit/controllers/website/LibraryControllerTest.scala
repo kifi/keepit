@@ -728,11 +728,11 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         val expected1 = Json.parse(
           s"""
-            |[
-            | {"user":"${user2.externalId}","access":"${LibraryAccess.READ_WRITE.value}"},
-            | {"user":"${user3.externalId}","access":"${LibraryAccess.READ_ONLY.value}"},
-            | {"email":"squirtle@gmail.com","access":"${LibraryAccess.READ_ONLY.value}"}
-            |]
+            [
+             {"user":"${user2.externalId}","access":"${LibraryAccess.READ_WRITE.value}"},
+             {"user":"${user3.externalId}","access":"${LibraryAccess.READ_ONLY.value}"},
+             {"email":"squirtle@gmail.com","access":"${LibraryAccess.READ_ONLY.value}"}
+            ]
            """.stripMargin)
         Json.parse(contentAsString(result1)) must equalTo(expected1)
 
@@ -999,10 +999,11 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val result1 = libraryController.getKeeps(pubId1, 0, 10, false, 8)(request1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
+        val actual = contentAsJson(result1)
 
         def keepPermissions(keepId: Id[Keep]) = db.readOnlyMaster { implicit s => permissionCommander.getKeepPermissions(keepId, Some(user1.id.get)) }
         val author = BasicAuthor.fromUser(BasicUser.fromUser(user1))
-        val expected1 = Json.parse(
+        val expected1Str =
           s"""
           {
             "keeps": [
@@ -1029,7 +1030,65 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "library": ${Json.toJson(libraryCard(lib1.id.get))},
                 "participants": ${Json.toJson(Seq(BasicUser.fromUser(user1)))},
                 "members": ${Json.toJson(toSimpleKeepMembers(keep2, BasicUser.fromUser(user1), libraryCard(lib1.id.get)))},
-                "permissions": ${Json.toJson(keepPermissions(keep2.id.get))}
+                "permissions": ${Json.toJson(keepPermissions(keep2.id.get))},
+                "activity": {
+                  "latestEvent" : {
+                   "id" : "init_kJ6zWrsOcZcf",
+                   "author" : {
+                     "id" : "${user1.externalId}",
+                     "name" : "Aaron Hsu",
+                     "picture" : "http://localhost/users/${user1.externalId}/pics/200/0.jpg",
+                     "url" : "https://www.kifi.com/test",
+                     "kind" : "kifi"
+                   },
+                   "kind" : "initial",
+                   "header" : [ {
+                     "id" : "${user1.externalId}",
+                     "text" : "Aaron Hsu",
+                     "image" : "http://localhost/users/${user1.externalId}/pics/200/0.jpg",
+                     "url" : "https://www.kifi.com/test",
+                     "kind" : "author",
+                     "subtype": "kifi"
+                   }, {
+                     "text" : " sent this",
+                     "kind" : "text"
+                   } ],
+                   "body" : [ ],
+                   "timestamp" : ${keep2.keptAt.getMillis},
+                   "displayStyle" : "greyed_out"
+                  },
+                  "events" : [ {
+                   "id" : "init_kJ6zWrsOcZcf",
+                   "author" : {
+                     "id" : "${user1.externalId}",
+                     "name" : "Aaron Hsu",
+                     "picture" : "http://localhost/users/${user1.externalId}/pics/200/0.jpg",
+                     "url" : "https://www.kifi.com/test",
+                     "kind" : "kifi"
+                   },
+                   "kind" : "initial",
+                   "header" : [ {
+                     "id" : "${user1.externalId}",
+                     "text" : "Aaron Hsu",
+                     "image" : "http://localhost/users/${user1.externalId}/pics/200/0.jpg",
+                     "url" : "https://www.kifi.com/test",
+                     "kind" : "author",
+                     "subtype": "kifi"
+                   }, {
+                     "text" : " sent this to ",
+                     "kind" : "text"
+                   }, {
+                     "id" : "l7jlKlnA36Su",
+                     "text" : "${lib1.name}",
+                     "url" : "https://www.kifi.com/test/${lib1.slug.value}",
+                     "kind" : "library"
+                   } ],
+                   "body" : [ ],
+                   "timestamp" : ${keep2.keptAt.getMillis},
+                   "displayStyle" : "greyed_out"
+                 } ],
+                 "numComments" : 0
+                }
               },
               {
                 "author":${Json.toJson(author)},
@@ -1054,13 +1113,71 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "library": ${Json.toJson(libraryCard(lib1.id.get))},
                 "participants": ${Json.toJson(Seq(BasicUser.fromUser(user1)))},
                 "members": ${Json.toJson(toSimpleKeepMembers(keep1, BasicUser.fromUser(user1), libraryCard(lib1.id.get)))},
-                "permissions": ${Json.toJson(keepPermissions(keep1.id.get))}
-              }
+                "permissions": ${Json.toJson(keepPermissions(keep1.id.get))},
+                "activity": {
+                   "latestEvent" : {
+                     "id" : "init_kE60nEJLzzVu",
+                     "author" : {
+                       "id" : "${user1.externalId}",
+                       "name" : "Aaron Hsu",
+                       "picture" : "http://localhost/users/${user1.externalId}/pics/200/0.jpg",
+                       "url" : "https://www.kifi.com/test",
+                       "kind" : "kifi"
+                     },
+                     "kind" : "initial",
+                     "header" : [ {
+                       "id" : "${user1.externalId}",
+                       "text" : "Aaron Hsu",
+                       "image" : "http://localhost/users/${user1.externalId}/pics/200/0.jpg",
+                       "url" : "https://www.kifi.com/test",
+                       "kind" : "author",
+                       "subtype": "kifi"
+                     }, {
+                       "text" : " sent this",
+                       "kind" : "text"
+                     } ],
+                     "body" : [ ],
+                     "timestamp" : ${keep1.keptAt.getMillis},
+                     "displayStyle" : "greyed_out"
+                   },
+                   "events" : [ {
+                     "id" : "init_kE60nEJLzzVu",
+                     "author" : {
+                       "id" : "${user1.externalId}",
+                       "name" : "Aaron Hsu",
+                       "picture" : "http://localhost/users/${user1.externalId}/pics/200/0.jpg",
+                       "url" : "https://www.kifi.com/test",
+                       "kind" : "kifi"
+                     },
+                     "kind" : "initial",
+                     "header" : [ {
+                       "id" : "${user1.externalId}",
+                       "text" : "Aaron Hsu",
+                       "image" : "http://localhost/users/${user1.externalId}/pics/200/0.jpg",
+                       "url" : "https://www.kifi.com/test",
+                       "kind" : "author",
+                       "subtype": "kifi"
+                     }, {
+                       "text" : " sent this to ",
+                       "kind" : "text"
+                     }, {
+                       "id" : "l7jlKlnA36Su",
+                       "text" : "${lib1.name}",
+                       "url" : "https://www.kifi.com/test/${lib1.slug.value}",
+                       "kind" : "library"
+                     } ],
+                     "body" : [ ],
+                     "timestamp" : ${keep1.keptAt.getMillis},
+                     "displayStyle" : "greyed_out"
+                   } ],
+                   "numComments" : 0
+                 }
+               }
             ],
             "numKeeps": 2
            }
-           """.stripMargin)
-        val actual = contentAsJson(result1)
+           """.stripMargin
+        val expected1 = Json.parse(expected1Str)
         actual must matchJson(expected1)
         1 === 1
       }
@@ -1117,14 +1234,14 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         contentType(result2) must beSome("application/json")
         Json.parse(contentAsString(result2)) must equalTo(Json.parse(
           s"""
-            |{
-            | "successes":[
-            |   {
-            |     "library":"${pubId2}",
-            |     "numMoved": 2
-            |   }
-            | ]
-            |}
+            {
+             "successes":[
+               {
+                 "library":"${pubId2}",
+                 "numMoved": 2
+               }
+             ]
+            }
           """.stripMargin))
 
         inject[FakeUserActionsHelper].setUser(userA)
@@ -1155,7 +1272,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val success4 = (jsonRes4 \\ "id").map(_.as[ExternalId[Keep]]).toSet === copiedKeeps.map(_.externalId).toSet
         (jsonRes4 \\ "keep").length === 0
 
-        // move duplicate active keeps 1 & 2 from Lib1 to Lib2 as user 2 (error: already exists in dst)
         val inputJson3 = Json.obj(
           "to" -> Library.publicId(lib1.id.get),
           "keeps" -> Seq(keep1.externalId, keep2.externalId)
@@ -1165,8 +1281,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         status(result5) must equalTo(OK)
         contentType(result5) must beSome("application/json")
         val jsonRes5 = Json.parse(contentAsString(result5))
-        (jsonRes5 \ "successes").as[Seq[JsObject]].length === 0
-        (contentAsJson(result5) \\ "error").map(_.as[String]).toSet === Set("already_exists_in_dest")
+        (jsonRes5 \ "successes").as[Seq[JsObject]].length === 1
+        (contentAsJson(result5) \\ "error") must beEmpty
       }
     }
 
@@ -1201,15 +1317,15 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         Json.parse(contentAsString(result1)) must equalTo(Json.parse(
           s"""
-             |{
-               |"members":[
-               |  {"id":"${user2.externalId}",
-               |  "firstName":"Luigi",
-               |  "lastName":"Plumber",
-               |  "pictureName":"0.jpg","username":"test",
-               |  "membership":"read_write"}
-               |]
-             |}""".stripMargin))
+             {
+               "members":[
+                 {"id":"${user2.externalId}",
+                 "firstName":"Luigi",
+                 "lastName":"Plumber",
+                 "pictureName":"0.jpg","username":"test",
+                 "membership":"read_write"}
+               ]
+             }""".stripMargin))
 
         val testPath2 = com.keepit.controllers.website.routes.LibraryController.getLibraryMembers(pubId1, 1, 4).url
         val request2 = FakeRequest("POST", testPath2)
@@ -1219,24 +1335,24 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         Json.parse(contentAsString(result2)) must equalTo(Json.parse(
           s"""
-             |{
-               |"members":[
-               |  {"id":"${user3.externalId}",
-               |  "firstName":"Bowser",
-               |  "lastName":"Koopa",
-               |  "pictureName":"0.jpg","username":"test",
-               |  "membership":"read_only"},
-               |  {"id":"${user4.externalId}",
-               |  "firstName":"Peach",
-               |  "lastName":"Princess",
-               |  "pictureName":"0.jpg","username":"test",
-               |  "membership":"read_only",
-               |  "lastInvitedAt":${Json.toJson(t1.plusHours(3))(internalTime.DateTimeJsonLongFormat)}},
-               |  {"email":"sonic@sega.co.jp",
-               |  "membership":"read_only",
-               |  "lastInvitedAt":${Json.toJson(t1.plusHours(3))(internalTime.DateTimeJsonLongFormat)}}
-               |]
-             |}""".stripMargin))
+             {
+               "members":[
+                 {"id":"${user3.externalId}",
+                 "firstName":"Bowser",
+                 "lastName":"Koopa",
+                 "pictureName":"0.jpg","username":"test",
+                 "membership":"read_only"},
+                 {"id":"${user4.externalId}",
+                 "firstName":"Peach",
+                 "lastName":"Princess",
+                 "pictureName":"0.jpg","username":"test",
+                 "membership":"read_only",
+                 "lastInvitedAt":${Json.toJson(t1.plusHours(3))(internalTime.DateTimeJsonLongFormat)}},
+                 {"email":"sonic@sega.co.jp",
+                 "membership":"read_only",
+                 "lastInvitedAt":${Json.toJson(t1.plusHours(3))(internalTime.DateTimeJsonLongFormat)}}
+               ]
+             }""".stripMargin))
 
         inject[FakeUserActionsHelper].setUser(user2)
         val testPath3 = com.keepit.controllers.website.routes.LibraryController.getLibraryMembers(pubId1, 1, 4).url
@@ -1247,15 +1363,15 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         Json.parse(contentAsString(result3)) must equalTo(Json.parse(
           s"""
-             |{
-               |"members":[
-               |  {"id":"${user3.externalId}",
-               |  "firstName":"Bowser",
-               |  "lastName":"Koopa",
-               |  "pictureName":"0.jpg","username":"test",
-               |  "membership":"read_only"}
-               |]
-             |}""".stripMargin))
+             {
+               "members":[
+                 {"id":"${user3.externalId}",
+                 "firstName":"Bowser",
+                 "lastName":"Koopa",
+                 "pictureName":"0.jpg","username":"test",
+                 "membership":"read_only"}
+               ]
+             }""".stripMargin))
 
       }
     }
@@ -1453,7 +1569,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
             // test that private libraries are not returned in the response
             val lib3 = library().withName("Private").withOwner(user1).saved
 
-            inject[KeepRepo].all() // force slick to create the table
+            inject[KeepRepo].aTonOfRecords() // force slick to create the table
 
             membership().withLibraryOwner(lib1).saved
             membership().withLibraryFollower(lib1, user2).saved
@@ -1464,12 +1580,12 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
             inject[SystemValueRepo].save(SystemValue(
               name = MarketingSuggestedLibrarySystemValue.systemValueName,
               value = s"""
-                   |[
-                   |  { "id": 424242, "caption": "does not exist" },
-                   |  { "id": ${lib2.id.get}, "color": "${LibraryColor.BLUE.hex}" },
-                   |  { "id": ${lib1.id.get}, "caption": "yo dawg", "color": "${LibraryColor.RED.hex}" },
-                   |  { "id": ${lib3.id.get} }
-                   |]
+                   [
+                     { "id": 424242, "caption": "does not exist" },
+                     { "id": ${lib2.id.get}, "color": "${LibraryColor.BLUE.hex}" },
+                     { "id": ${lib1.id.get}, "caption": "yo dawg", "color": "${LibraryColor.RED.hex}" },
+                     { "id": ${lib3.id.get} }
+                   ]
                  """.stripMargin))
           }
 

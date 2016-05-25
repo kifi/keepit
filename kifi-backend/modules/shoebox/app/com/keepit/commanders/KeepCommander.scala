@@ -261,6 +261,7 @@ class KeepCommanderImpl @Inject() (
       (keep, isNew) <- Future.fromTry(db.readWrite { implicit s => keepInterner.internKeepByRequest(internReq) })
       msgOpt <- Author.kifiUserId(internReq.author).fold(Future.successful(Option.empty[Message])) { user =>
         internReq.note.fold(Future.successful(Option.empty[Message])) { note =>
+          implicit val time = CrossServiceTime(clock.now)
           eliza.sendMessageOnKeep(user, note, keep.id.get, source = MessageSource.fromKeepSource(internReq.source)).imap(Some(_))
         }
       }
@@ -316,7 +317,7 @@ class KeepCommanderImpl @Inject() (
           val invalidKeepIds = invalidKeepIdsE.map(_.right.get)
 
           keeps.foreach { k =>
-            // TODO(ryan): stop deactivating keeps and instead just detach them from libraries
+            // TODO[keepscussions]: stop deactivating keeps and instead just detach them from libraries
             // just uncomment the line below this and rework some of this
             // ktlCommander.removeKeepFromLibrary(k.id.get, libId)
             keepMutator.deactivateKeep(k)
@@ -353,8 +354,8 @@ class KeepCommanderImpl @Inject() (
     val result = db.readWrite { implicit s =>
       def canEdit(keepId: Id[Keep]) = permissionCommander.getKeepPermissions(keepId, Some(userId)).contains(KeepPermission.EDIT_KEEP)
       for {
-        oldKeep <- keepRepo.getActive(keepId).withLeft(KeepFail.KEEP_NOT_FOUND: KeepFail)
-        _ <- RightBias.unit.filter(_ => canEdit(oldKeep.id.get), KeepFail.INSUFFICIENT_PERMISSIONS: KeepFail)
+        oldKeep <- keepRepo.getActive(keepId).withLeft(KeepFail.KEEP_NOT_FOUND)
+        _ <- RightBias.unit.filter(_ => canEdit(oldKeep.id.get), KeepFail.INSUFFICIENT_PERMISSIONS)
       } yield {
         (oldKeep, keepMutator.updateKeepTitle(oldKeep, title.trim))
       }
@@ -373,7 +374,7 @@ class KeepCommanderImpl @Inject() (
   def updateKeepNote(keepId: Id[Keep], userId: Id[User], newNote: String): RightBias[KeepFail, Keep] = {
     val result = db.readWrite { implicit s =>
       for {
-        keep <- keepRepo.getActive(keepId).withLeft(KeepFail.KEEP_NOT_FOUND: KeepFail)
+        keep <- keepRepo.getActive(keepId).withLeft(KeepFail.KEEP_NOT_FOUND)
         _ <- RightBias.unit.filter(_ => permissionCommander.getKeepPermissions(keepId, Some(userId)).contains(KeepPermission.EDIT_KEEP), KeepFail.INSUFFICIENT_PERMISSIONS: KeepFail)
       } yield keepMutator.updateKeepNote(userId, keep, newNote)
     }

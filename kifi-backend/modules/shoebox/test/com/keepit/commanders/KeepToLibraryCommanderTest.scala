@@ -172,7 +172,7 @@ class KeepToLibraryCommanderTest extends TestKitSupport with SpecificationLike w
 
           // Make sure the KTLs did the right thing
           db.readOnlyMaster { implicit session =>
-            val keeps = inject[KeepRepo].all
+            val keeps = inject[KeepRepo].aTonOfRecords
             keeps.map(_.uriId).toSet === origUris.map(_.id.get).toSet
             keeps.foreach { keep =>
               val Seq(ktl) = ktlRepo.getAllByKeepId(keep.id.get, excludeStateOpt = None)

@@ -1,7 +1,9 @@
 package com.keepit.social
 
 import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.json.EnumFormat
 import com.keepit.common.path.Path
+import com.keepit.common.reflection.Enumerator
 import com.keepit.common.store.{ StaticImageUrls, S3ImageConfig }
 import com.keepit.common.strings.ValidLong
 import com.keepit.model._
@@ -46,11 +48,16 @@ object Author {
 }
 
 sealed abstract class AuthorKind(val value: String)
-object AuthorKind {
+object AuthorKind extends Enumerator[AuthorKind] {
   case object Kifi extends AuthorKind("kifi")
   case object Slack extends AuthorKind("slack")
   case object Twitter extends AuthorKind("twitter")
   case object Email extends AuthorKind("email")
+
+  val all = _all
+  def fromStr(str: String) = all.find(_.value == str)
+
+  implicit val format: Format[AuthorKind] = EnumFormat.format(fromStr, _.value)
 }
 
 sealed abstract class BasicAuthor(val kind: AuthorKind) {

@@ -3,19 +3,40 @@ package com.keepit.common.util
 import com.keepit.common.core.jsObjectExtensionOps
 import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.json.EnumFormat
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.path.Path
+import com.keepit.common.reflection.Enumerator
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.strings.StringWithReplacements
 import com.keepit.macros.Location
 import com.keepit.model.{ BasicLibrary, BasicOrganization, Library, LibraryColor, Organization, OrganizationRole, User }
 import com.keepit.slack.models.{ SlackEmoji, SlackUsername }
 import com.keepit.social.BasicAuthor.{ EmailUser, KifiUser, SlackUser, TwitterUser }
-import com.keepit.social.{ BasicAuthor, BasicNonUser, BasicUser }
+import com.keepit.social.{ AuthorKind, BasicAuthor, BasicNonUser, BasicUser }
 import org.joda.time.{ DateTime, Duration }
 import org.ocpsoft.prettytime.PrettyTime
 import play.api.libs.json._
+import play.api.libs.functional.syntax._
 import play.twirl.api.Html
+
+sealed abstract class DescriptionElementKind(val value: String)
+object DescriptionElementKind extends Enumerator[DescriptionElementKind] {
+  case object Text extends DescriptionElementKind("text")
+  case object Image extends DescriptionElementKind("image")
+  case object ShowOriginal extends DescriptionElementKind("showOriginal")
+  case object User extends DescriptionElementKind("user")
+  case object NonUser extends DescriptionElementKind("nonUser")
+  case object Author extends DescriptionElementKind("author")
+  case object Library extends DescriptionElementKind("library")
+  case object Organization extends DescriptionElementKind("organization")
+
+  val all = _all
+  def apply(str: String): DescriptionElementKind = all.find(_.value == str).get
+  def fromStr(str: String): Option[DescriptionElementKind] = all.find(_.value == str)
+
+  implicit val format: Format[DescriptionElementKind] = EnumFormat.format(fromStr, _.value, domain = all.map(_.value).toSet)
+}
 
 sealed trait DescriptionElements {
   def flatten: Seq[DescriptionElement]
@@ -26,25 +47,61 @@ final case class SequenceOfElements(elements: Seq[DescriptionElements]) extends 
 object SequenceOfElements {
   val empty = SequenceOfElements(Seq.empty)
 }
-sealed abstract class DescriptionElement(val kind: String) extends DescriptionElements {
+sealed abstract class DescriptionElement(val kind: DescriptionElementKind) extends DescriptionElements {
   def flatten = Seq(this).filterNot(_.isNull)
-  val text: String
-  val url: Option[String]
-  protected def isNull: Boolean = text.isEmpty // NB(ryan): named `isNull` because of scalac issues resolving str.isEmpty vs fromText(str).isEmpty when fromText is implicit
-  def asJson: JsObject
+  def text: String
+  def url: Option[String]
+  def isNull: Boolean = text.isEmpty // NB(ryan): named `isNull` because of scalac issues resolving str.isEmpty vs fromText(str).isEmpty when fromText is implicit
 }
 object DescriptionElement {
-  implicit val writes: OWrites[DescriptionElement] = OWrites { de => de.asJson.nonNullFields + ("kind" -> JsString(de.kind)) }
+  implicit val format: Format[DescriptionElement] = Format(
+    Reads { js =>
+      (js \ "kind").validate[DescriptionElementKind].flatMap {
+        case DescriptionElementKind.Text => TextElementHelper.format.reads(js)
+        case DescriptionElementKind.Image => ImageElementHelper.format.reads(js)
+        case DescriptionElementKind.ShowOriginal => ShowOriginalElementHelper.format.reads(js)
+        case DescriptionElementKind.User => UserElementHelper.format.reads(js)
+        case DescriptionElementKind.NonUser => NonUserElementHelper.format.reads(js)
+        case DescriptionElementKind.Author => AuthorElementHelper.format.reads(js)
+        case DescriptionElementKind.Library => LibraryElementHelper.format.reads(js)
+        case DescriptionElementKind.Organization => OrganizationElementHelper.format.reads(js)
+      }
+    },
+    Writes { de =>
+      val specificFields = de match {
+        case v: TextElement => TextElementHelper.format.writes(v)
+        case v: ImageElement => ImageElementHelper.format.writes(v)
+        case v: ShowOriginalElement => ShowOriginalElementHelper.format.writes(v)
+        case v: UserElement => UserElementHelper.format.writes(v)
+        case v: NonUserElement => NonUserElementHelper.format.writes(v)
+        case v: AuthorElement => AuthorElementHelper.format.writes(v)
+        case v: LibraryElement => LibraryElementHelper.format.writes(v)
+        case v: OrganizationElement => OrganizationElementHelper.format.writes(v)
+      }
+      (Json.obj("kind" -> de.kind, "text" -> de.text, "url" -> de.url) ++ specificFields).nonNullFields
+    }
+  )
 }
 
-final case class TextElement(text: String, url: Option[String], hover: Option[DescriptionElements]) extends DescriptionElement("text") {
+sealed abstract class DescriptionElementHelper[A <: DescriptionElement] {
+  protected implicit val pathFormat: Format[Path] = Format(Path.format, Writes { o => JsString(o.absolute) })
+  val format: OFormat[A]
+}
+
+case class TextElement(text: String, url: Option[String], hover: Option[DescriptionElements]) extends DescriptionElement(DescriptionElementKind.Text) {
   override def flatten = Seq(simplify)
   private def simplify = this.copy(url = url.filter(_.nonEmpty), hover = hover.filter(_.flatten.nonEmpty))
 
   def -->(link: LinkElement): TextElement = this.copy(url = Some(link.url))
   def -->(hover: Hover): TextElement = this.copy(hover = Some(hover.elements))
-
-  def asJson = Json.obj("text" -> text, "url" -> url, "hover" -> hover)
+}
+object TextElementHelper extends DescriptionElementHelper[TextElement] {
+  private implicit val hoverFormat = DescriptionElements.format
+  val format: OFormat[TextElement] = (
+    (__ \ 'text).format[String] and
+    (__ \ 'url).formatNullable[String] and
+    (__ \ 'hover).formatNullable[DescriptionElements]
+  )(TextElement.apply, unlift(TextElement.unapply))
 }
 
 final case class LinkElement(url: String)
@@ -53,63 +110,102 @@ object LinkElement {
 }
 final case class Hover(elements: DescriptionElements*)
 
-final case class ImageElement(override val url: Option[String], image: String) extends DescriptionElement("image") {
-  override protected def isNull = image.isEmpty
-
-  val text = ""
-  def asJson = Json.obj("text" -> text, "image" -> image, "url" -> url)
+case class ImageElement(override val url: Option[String], image: String) extends DescriptionElement(DescriptionElementKind.Image) {
+  override def isNull = image.isEmpty
+  def text = ""
+}
+object ImageElementHelper extends DescriptionElementHelper[ImageElement] {
+  val format: OFormat[ImageElement] = (
+    (__ \ 'url).formatNullable[String] and
+    (__ \ 'image).format[String]
+  )(ImageElement.apply, unlift(ImageElement.unapply))
 }
 
-final case class ShowOriginalElement(original: String, updated: String) extends DescriptionElement("showOriginal") {
+final case class ShowOriginalElement(original: String, updated: String) extends DescriptionElement(DescriptionElementKind.ShowOriginal) {
   val text = s"“$original” --> “$updated”"
   val url = None
-
-  def asJson = Json.obj("text" -> text, "original" -> original, "updated" -> updated)
+}
+object ShowOriginalElementHelper extends DescriptionElementHelper[ShowOriginalElement] {
+  val format: OFormat[ShowOriginalElement] = (
+    (__ \ 'original).format[String] and
+    (__ \ 'updated).format[String]
+  )(ShowOriginalElement.apply, unlift(ShowOriginalElement.unapply))
 }
 
-final case class UserElement(
-    id: ExternalId[User],
-    name: String,
-    image: String,
-    path: Path) extends DescriptionElement("user") {
+final case class UserElement(id: ExternalId[User], name: String, image: String, path: Path) extends DescriptionElement(DescriptionElementKind.User) {
   val text = name
   val url = Some(path.absolute)
-  def asJson = Json.obj("id" -> id, "text" -> text, "image" -> image, "url" -> url)
+}
+object UserElementHelper extends DescriptionElementHelper[UserElement] {
+  val format: OFormat[UserElement] = (
+    (__ \ 'id).format[ExternalId[User]] and
+    (__ \ 'text).format[String] and
+    (__ \ 'image).format[String] and
+    (__ \ 'url).format[Path]
+  )(UserElement.apply, unlift(UserElement.unapply))
 }
 
-final case class NonUserElement(id: String) extends DescriptionElement("nonUser") {
+final case class NonUserElement(id: String) extends DescriptionElement(DescriptionElementKind.NonUser) {
   val text = id
-  val url = None
-  def asJson = Json.obj("text" -> text)
+  val url: Option[String] = None
+}
+object NonUserElementHelper extends DescriptionElementHelper[NonUserElement] {
+  val format: OFormat[NonUserElement] = OFormat(
+    Reads { js => (js \ "id").validate[String].map(NonUserElement) },
+    OWrites[NonUserElement](o => Json.obj("id" -> o.id))
+  )
 }
 
 final case class AuthorElement(
     id: String,
     name: String,
     image: String,
-    override val url: Option[String]) extends DescriptionElement("author") {
+    override val url: Option[String],
+    subtype: AuthorKind) extends DescriptionElement(DescriptionElementKind.Author) {
   val text = name
-  def asJson = Json.obj("id" -> id, "text" -> text, "image" -> image, "url" -> url)
+}
+object AuthorElementHelper extends DescriptionElementHelper[AuthorElement] {
+  val format: OFormat[AuthorElement] = (
+    (__ \ 'id).format[String] and
+    (__ \ 'text).format[String] and
+    (__ \ 'image).format[String] and
+    (__ \ 'url).formatNullable[String] and
+    (__ \ 'subtype).format[AuthorKind]
+  )(AuthorElement.apply, unlift(AuthorElement.unapply))
 }
 
 final case class LibraryElement(
     id: PublicId[Library],
     name: String,
     color: Option[LibraryColor],
-    path: Path) extends DescriptionElement("library") {
+    path: Path) extends DescriptionElement(DescriptionElementKind.Library) {
   val text = name
   val url = Some(path.absolute)
-  def asJson = Json.obj("id" -> id, "text" -> text, "color" -> color, "url" -> url)
+}
+object LibraryElementHelper extends DescriptionElementHelper[LibraryElement] {
+  val format: OFormat[LibraryElement] = (
+    (__ \ 'id).format[PublicId[Library]] and
+    (__ \ 'text).format[String] and
+    (__ \ 'color).formatNullable[LibraryColor] and
+    (__ \ 'url).format[Path]
+  )(LibraryElement.apply, unlift(LibraryElement.unapply))
 }
 
 final case class OrganizationElement(
     id: PublicId[Organization],
     name: String,
     image: String,
-    path: Path) extends DescriptionElement("organization") {
+    path: Path) extends DescriptionElement(DescriptionElementKind.Organization) {
   val text = name
   val url = Some(path.absolute)
-  def asJson = Json.obj("id" -> id, "text" -> text, "image" -> image, "url" -> url)
+}
+object OrganizationElementHelper extends DescriptionElementHelper[OrganizationElement] {
+  val format: OFormat[OrganizationElement] = (
+    (__ \ 'id).format[PublicId[Organization]] and
+    (__ \ 'text).format[String] and
+    (__ \ 'image).format[String] and
+    (__ \ 'url).format[Path]
+  )(OrganizationElement.apply _, unlift(OrganizationElement.unapply))
 }
 
 object DescriptionElements {
@@ -138,10 +234,10 @@ object DescriptionElements {
   implicit def fromBasicOrg(bo: BasicOrganization): OrganizationElement = OrganizationElement(bo.orgId, bo.name, bo.avatarPath.path, bo.path)
   implicit def fromNonUser(bnu: BasicNonUser): NonUserElement = NonUserElement(bnu.id)
   implicit def fromBasicAuthor(ba: BasicAuthor): AuthorElement = ba match {
-    case KifiUser(id, name, picture, url) => AuthorElement(id, name, picture, Some(url))
-    case SlackUser(id, name, picture, url) => AuthorElement(id, name, picture, Some(url))
-    case TwitterUser(id, name, picture, url) => AuthorElement(id, name, picture, Some(url))
-    case EmailUser(id, name, picture) => AuthorElement(id, name, picture, None)
+    case KifiUser(id, name, picture, url) => AuthorElement(id, name, picture, Some(url), ba.kind)
+    case SlackUser(id, name, picture, url) => AuthorElement(id, name, picture, Some(url), ba.kind)
+    case TwitterUser(id, name, picture, url) => AuthorElement(id, name, picture, Some(url), ba.kind)
+    case EmailUser(id, name, picture) => AuthorElement(id, name, picture, None, ba.kind)
   }
   implicit def fromBasicLibrary(bl: BasicLibrary): LibraryElement = LibraryElement(bl.id, bl.name, bl.color, Path(bl.path))
 
@@ -188,7 +284,7 @@ object DescriptionElements {
         case (l, r) if leftEnds.exists(l.endsWith) || rightStarts.exists(r.startsWith) => ""
         case _ => " "
       }.map(TextElement(_, None, None))
-      intersperse(els, interpolatedPunctuation).filterNot(_.text.isEmpty)
+      intersperse(els, interpolatedPunctuation).filterNot(_.isNull)
     }
   }
   def formatPlain(description: DescriptionElements): String = interpolatePunctuation(description.flatten).map(_.text).mkString
@@ -228,7 +324,11 @@ object DescriptionElements {
       case _ => x +: simplifyElements(y +: rs)
     }
   }
-  implicit val flatWrites: Writes[DescriptionElements] = Writes { dsc =>
-    JsArray(simplifyElements(interpolatePunctuation(dsc.flatten)).map(DescriptionElement.writes.writes))
-  }
+
+  implicit val format: Format[DescriptionElements] = Format(
+    Reads { js => js.validate[Seq[DescriptionElement]].map(SequenceOfElements(_)) },
+    Writes { dsc =>
+      JsArray(simplifyElements(interpolatePunctuation(dsc.flatten)).map(DescriptionElement.format.writes))
+    }
+  )
 }

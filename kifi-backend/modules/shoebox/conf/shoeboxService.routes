@@ -130,6 +130,7 @@ POST    /ext/pref/showExtMsgIntro   @com.keepit.controllers.ext.ExtPreferenceCon
 POST    /ext/pref/showLibraryIntro  @com.keepit.controllers.ext.ExtPreferenceController.setShowLibraryIntro(show: Boolean)
 POST    /ext/pref/showExtMoveIntro  @com.keepit.controllers.ext.ExtPreferenceController.setShowExtMoveIntro(show: Boolean)
 POST    /ext/pref/quoteAnywhereFtue @com.keepit.controllers.ext.ExtPreferenceController.setQuoteAnywhereFtue(show: Boolean)
+POST    /ext/pref/hideSocialTooltip @com.keepit.controllers.ext.ExtPreferenceController.setHideSocialTooltip(hideTooltips: Boolean)
 POST    /ext/pref/email/:kind/:send @com.keepit.controllers.ext.ExtPreferenceController.setEmailNotifyPreference(kind: com.keepit.common.mail.ElectronicMailCategory, send: Boolean)
 
 GET     /ext/contacts/search        @com.keepit.controllers.ext.ExtUserController.searchForContacts(query:Option[String], limit: Option[Int])
@@ -401,7 +402,6 @@ GET     /site/keeps/:keepId/messages          @com.keepit.controllers.website.Di
 GET     /site/keeps/:keepId/activity          @com.keepit.controllers.website.KeepsController.getActivityForKeep(keepId: PublicId[Keep], eventsBefore: Option[DateTime] ?= None, maxEvents: Int ?= 10)
 POST    /site/keeps/:keepId/messages/edit     @com.keepit.controllers.website.DiscussionController.editMessageOnKeep(keepId: PublicId[Keep])
 POST    /site/keeps/:keepId/messages/delete   @com.keepit.controllers.website.DiscussionController.deleteMessageOnKeep(keepId: PublicId[Keep])
-POST    /site/keeps/:keepId/participants/edit @com.keepit.controllers.website.DiscussionController.editParticipantsOnKeep(keepId: PublicId[Keep])
 POST    /site/keeps/:keepId/title             @com.keepit.controllers.website.KeepsController.updateKeepTitle(keepId: PublicId[Keep])
 POST    /site/keeps/:keepId/note              @com.keepit.controllers.website.KeepsController.editKeepNote(keepId: PublicId[Keep])
 GET     /site/keeps/:id                       @com.keepit.controllers.website.KeepsController.getKeepInfo(id: InternalOrExternalId[Keep], maxMessagesShown: Int ?= 8, authToken: Option[String] ?= None)
@@ -720,7 +720,8 @@ POST     /internal/shoebox/database/getSlackTeamIds                @com.keepit.c
 GET      /internal/shoebox/database/getSlackTeamInfo               @com.keepit.controllers.internal.ShoeboxController.getSlackTeamInfo(slackTeamId: SlackTeamId)
 
 POST     /internal/shoebox/database/internKeep              @com.keepit.controllers.internal.ShoeboxController.internKeep()
-POST     /internal/shoebox/database/editRecipientsOnKeep    @com.keepit.controllers.internal.ShoeboxController.editRecipientsOnKeep(editorId: Id[User], keepId: Id[Keep], persistKeepEvent: Boolean, source: Option[KeepEventSource] ?= None)
+POST     /internal/shoebox/database/editRecipientsOnKeep    @com.keepit.controllers.internal.ShoeboxController.editRecipientsOnKeep(editorId: Id[User], keepId: Id[Keep])
+POST     /internal/shoebox/database/persistModifyRecipients @com.keepit.controllers.internal.ShoeboxController.persistModifyRecipients()
 POST     /internal/shoebox/database/registerMessageOnKeep   @com.keepit.controllers.internal.ShoeboxController.registerMessageOnKeep()
 
 GET      /internal/shoebox/email/getUnsubscribeUrlForEmail @com.keepit.controllers.website.EmailOptOutController.getUnsubscribeUrlForEmail(email: EmailAddress)

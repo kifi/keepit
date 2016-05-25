@@ -10,6 +10,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.SlackLog
 import com.keepit.common.mail.{ BasicContact, EmailAddress }
+import com.keepit.common.net.QsFormat
 import com.keepit.common.performance.Stopwatch
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ ImageSize, S3ImageConfig }
@@ -24,6 +25,7 @@ import com.keepit.shoebox.data.keep._
 import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
 import com.keepit.social.BasicAuthor
 import org.apache.commons.lang3.RandomStringUtils
+import play.api.libs.functional.syntax._
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.Try
@@ -37,20 +39,14 @@ trait KeepInfoAssembler {
 
 object KeepInfoAssemblerConfig {
   final case class KeepViewAssemblyOptions(
-      idealImageSize: ImageSize,
-      numEventsPerKeep: Int,
-      hideOtherPublishedLibraries: Boolean,
-      numContextualKeeps: Int,
-      numContextualKeepers: Int,
-      numContextualLibraries: Int,
-      numContextualTags: Int,
-      sanitizeUrls: Boolean) {
-    def withQueryString(qs: Map[String, Seq[String]]): KeepViewAssemblyOptions = {
-      val qsNumEventsPerKeep = qs.get("numEventsPerKeep").flatMap(_.headOption.flatMap(str => Try(str.toInt).toOption))
-
-      qsNumEventsPerKeep.fold(this)(n => this.copy(numEventsPerKeep = n))
-    }
-  }
+    idealImageSize: ImageSize,
+    numEventsPerKeep: Int,
+    hideOtherPublishedLibraries: Boolean,
+    numContextualKeeps: Int,
+    numContextualKeepers: Int,
+    numContextualLibraries: Int,
+    numContextualTags: Int,
+    sanitizeUrls: Boolean)
 
   val default = KeepViewAssemblyOptions(
     idealImageSize = ProcessedImageSize.Large.idealSize,
@@ -62,6 +58,25 @@ object KeepInfoAssemblerConfig {
     numContextualTags = 1,
     sanitizeUrls = true
   )
+
+  import com.keepit.common.net.QsPath._
+  private implicit val qsfImageSize: QsFormat[ImageSize] = (
+    (q__ \ "width").qsf[Int] and
+    (q__ \ "height").qsf[Int]
+  )(ImageSize.apply, unlift(ImageSize.unapply))
+
+  val qsf: QsFormat[KeepViewAssemblyOptions] = (
+    (q__ \ "idealImageSize").qsfOpt[ImageSize].withDefault(default.idealImageSize) and
+    (q__ \ "numEventsPerKeep").qsfOpt[Int].withDefault(default.numEventsPerKeep) and
+    (q__ \ "hideOtherPublishedLibraries").qsfOpt[Boolean].withDefault(default.hideOtherPublishedLibraries) and
+    (q__ \ "numContextualKeeps").qsfOpt[Int].withDefault(default.numContextualKeeps) and
+    (q__ \ "numContextualKeepers").qsfOpt[Int].withDefault(default.numContextualKeepers) and
+    (q__ \ "numContextualLibraries").qsfOpt[Int].withDefault(default.numContextualLibraries) and
+    (q__ \ "numContextualTags").qsfOpt[Int].withDefault(default.numContextualTags) and
+    (q__ \ "sanitizeUrls").qsfOpt[Boolean].withDefault(default.sanitizeUrls)
+  )(KeepViewAssemblyOptions.apply, unlift(KeepViewAssemblyOptions.unapply))
+
+  implicit val qsBinder = QsFormat.binder(qsf)
 }
 
 class KeepInfoAssemblerImpl @Inject() (
@@ -82,7 +97,7 @@ class KeepInfoAssemblerImpl @Inject() (
   rover: RoverServiceClient,
   search: SearchServiceClient,
   userExperimentRepo: UserExperimentRepo,
-  userCommander: UserCommander, // TODO(ryan): used only to filter out fake users, can replace with user experiment repo?
+  userCommander: UserCommander,
   private implicit val airbrake: AirbrakeNotifier,
   private implicit val imageConfig: S3ImageConfig,
   private implicit val executionContext: ExecutionContext,
@@ -164,12 +179,7 @@ class KeepInfoAssemblerImpl @Inject() (
     stopwatch.logTimeWith("launched_permission")
 
     val activityFut = {
-      val viewerHasActivityLogExperiment = viewer.exists { viewerId =>
-        db.readOnlyMaster { implicit s =>
-          userExperimentRepo.hasExperiment(viewerId, UserExperimentType.ACTIVITY_LOG)
-        }
-      }
-      if (!viewerHasActivityLogExperiment || config.numEventsPerKeep <= 0) Future.successful(Map.empty[Id[Keep], KeepActivity])
+      if (config.numEventsPerKeep <= 0) Future.successful(Map.empty[Id[Keep], KeepActivity])
       else activityAssembler.getActivityForKeeps(keepSet, fromTime = None, numEventsPerKeep = config.numEventsPerKeep)
     } andThen { case _ => stopwatch.logTimeWith("complete_activity") }
     stopwatch.logTimeWith("launched_activity")
@@ -189,11 +199,11 @@ class KeepInfoAssemblerImpl @Inject() (
       stopwatch.logTimeWith("assembling_infos")
       keepSet.toSeq.augmentWith { keepId =>
         for {
-          keep <- keepsById.get(keepId).withLeft(KeepFail.KEEP_NOT_FOUND: KeepFail)
-          permissions <- RightBias.right(permissionsByKeep.getOrElse(keepId, Set.empty)).filter(_.contains(KeepPermission.VIEW_KEEP), KeepFail.INSUFFICIENT_PERMISSIONS: KeepFail)
+          keep <- keepsById.get(keepId).withLeft(KeepFail.KEEP_NOT_FOUND)
+          permissions <- RightBias.right(permissionsByKeep.getOrElse(keepId, Set.empty)).filter(_.contains(KeepPermission.VIEW_KEEP), KeepFail.INSUFFICIENT_PERMISSIONS)
           author <- sourceByKeep.get(keepId).map {
             case (attr, userOpt) => BasicAuthor(attr, userOpt)
-          }.orElse(keep.userId.flatMap(keeper => usersById.get(keeper).map(BasicAuthor.fromUser))).withLeft(KeepFail.INVALID_KEEP_ID: KeepFail)
+          }.orElse(keep.userId.flatMap(keeper => usersById.get(keeper).map(BasicAuthor.fromUser))).withLeft(KeepFail.INVALID_KEEP_ID)
         } yield {
           val viewerInfo = NewKeepViewerInfo(
             permissions = permissions
@@ -213,7 +223,7 @@ class KeepInfoAssemblerImpl @Inject() (
             keptAt = keep.keptAt,
             source = sourceByKeep.get(keepId).map(_._1),
             recipients = recipients,
-            activity = activityByKeep.get(keepId),
+            activity = activityByKeep(keepId),
             viewer = viewerInfo
           )
 
