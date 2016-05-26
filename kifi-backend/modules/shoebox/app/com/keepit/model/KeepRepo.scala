@@ -19,6 +19,7 @@ import scala.slick.jdbc.{ GetResult, PositionedResult }
 trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNumberFunction[Keep] {
   def saveAndIncrementSequenceNumber(model: Keep)(implicit session: RWSession): Keep // more expensive and deadlock-prone than `save`
   def getActive(id: Id[Keep])(implicit session: RSession): Option[Keep]
+  def getByIds(ids: Set[Id[Keep]], excludeStates: Set[State[Keep]])(implicit session: RSession): Map[Id[Keep], Keep]
   def getActiveByIds(ids: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Keep]
   def getByExtId(extId: ExternalId[Keep], excludeStates: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep]
   def getByExtIds(extIds: Set[ExternalId[Keep]])(implicit session: RSession): Map[ExternalId[Keep], Option[Keep]]
@@ -288,6 +289,13 @@ class KeepRepoImpl @Inject() (
     }
   }
 
+  def getByIds(ids: Set[Id[Keep]], excludeStates: Set[State[Keep]])(implicit session: RSession): Map[Id[Keep], Keep] = {
+    keepByIdCache.bulkGetOrElse(ids.map(KeepIdKey)) { missingKeys =>
+      val missingIds = missingKeys.map(_.id)
+      rows.filter(r => r.id.inSet(missingIds) && !r.state.inSet(excludeStates)).list.map { k => KeepIdKey(k.id.get) -> k }.toMap
+    }.collect { case (k, v) if v.isActive => k.id -> v }
+  }
+
   def getActive(id: Id[Keep])(implicit session: RSession): Option[Keep] = {
     keepByIdCache.getOrElseOpt(KeepIdKey(id)) {
       getCompiled(id).firstOption.filter(_.isActive)
@@ -295,10 +303,7 @@ class KeepRepoImpl @Inject() (
   }
 
   def getActiveByIds(ids: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Keep] = {
-    keepByIdCache.bulkGetOrElse(ids.map(KeepIdKey)) { missingKeys =>
-      val missingIds = missingKeys.map(_.id)
-      activeRows.filter(_.id.inSet(missingIds)).list.map { k => KeepIdKey(k.id.get) -> k }.toMap
-    }.collect { case (k, v) if v.isActive => k.id -> v }
+    getByIds(ids, excludeStates = Set(KeepStates.INACTIVE))
   }
 
   def getByExtId(extId: ExternalId[Keep], excludeStates: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep] = {
