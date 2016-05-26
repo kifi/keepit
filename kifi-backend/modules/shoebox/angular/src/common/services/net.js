@@ -75,7 +75,9 @@ angular.module('kifi')
       removeOrgDomain: post(shoebox, '/organizations/:id/removeDomain'),
       sendMemberConfirmationEmail: post(shoebox, '/organizations/:id/sendMemberConfirmationEmail'),
 
-      getKeepStream: get(shoebox, '/keeps/stream?limit=:limit&beforeId=:beforeId&afterId=:afterId&filterKind=:filterKind&filterId=:filterId', 60),
+      // pass in limit={int} optionally in the separate query params object, since constructPath converts null param values into empty strings
+      getKeepStream: get(shoebox, '/keeps/stream?beforeId=:beforeId&afterId=:afterId&filterKind=:filterKind&filterId=:filterId', 60),
+
 
       getKeep: get(shoebox, '/keeps/:id?authToken=:authToken'),
       getActivityForKeepId: get(shoebox, '/keeps/:keepId/activity'),
