@@ -67,11 +67,13 @@ k.tile = k.tile || (function () {
         tileCard.classList.remove('kifi-0s');
       });
 
-      api.port.emit('prefs', function (prefs) {
-        if (!o.hide) {
-          configureLookHere(prefs && prefs.lookHereMode);
-        }
-      });
+      if (k.me) {
+        api.port.emit('prefs', function (prefs) {
+          if (!o.hide) {
+            configureLookHere(prefs && prefs.lookHereMode);
+          }
+        });
+      }
     },
     show_keeper: function(show) {
       tile.style.display = show ? '' : 'none';
