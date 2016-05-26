@@ -54,8 +54,7 @@ class TwitterSyncCommander @Inject() (
     }
   }
 
-  def syncOne(socialUserInfo: Option[SocialUserInfo], state: TwitterSyncState, libraryOwner: Id[User]): Unit = throttle.withLockFuture {
-
+  def syncOne(socialUserInfo: Option[SocialUserInfo], state: TwitterSyncState, keeperUserId: Id[User]): Unit = throttle.withLockFuture {
     val fetcher = {
       state.target match {
         case Favorites => twitter.fetchHandleFavourites _
@@ -77,7 +76,7 @@ class TwitterSyncCommander @Inject() (
         case _ =>
           fetcher(socialUserInfo, syncState.twitterHandle, syncState.maxTweetIdSeen, upperBound)
             .map(errorHandler)
-            .map(persistTweets(syncState, libraryOwner, _))
+            .map(persistTweets(syncState, keeperUserId, _))
             .flatMap {
               case (newSyncState, Some(batchMin), _) =>
                 fetchAllNewerThanState(newSyncState, Some(batchMin))
@@ -92,12 +91,15 @@ class TwitterSyncCommander @Inject() (
         case (Some(min), Some(batchUb)) if batchUb > min => // Batch upper bound greater than existing min id
           Future.successful(syncState)
         case _ =>
-          fetcher(socialUserInfo, syncState.twitterHandle, None, upperBound).map(errorHandler).map(persistTweets(syncState, libraryOwner, _)).flatMap {
-            case (newSyncState, Some(batchMin), _) =>
-              fetchAllOlderThanState(newSyncState, Some(batchMin))
-            case (newSyncState, _, _) =>
-              Future.successful(newSyncState)
-          }
+          fetcher(socialUserInfo, syncState.twitterHandle, None, upperBound)
+            .map(errorHandler)
+            .map(persistTweets(syncState, keeperUserId, _))
+            .flatMap {
+              case (newSyncState, Some(batchMin), _) =>
+                fetchAllOlderThanState(newSyncState, Some(batchMin))
+              case (newSyncState, _, _) =>
+                Future.successful(newSyncState)
+            }
       }
     }
 
@@ -123,11 +125,11 @@ class TwitterSyncCommander @Inject() (
     }
   }
 
-  private def persistTweets(syncState: TwitterSyncState, libraryOwner: Id[User], tweets: Seq[JsObject]) = {
-    log.debug(s"[TweetSync] Got ${tweets.length} tweets from ${syncState.twitterHandle}")
+  private def persistTweets(syncState: TwitterSyncState, keeperUserId: Id[User], tweets: Seq[JsObject]) = {
     if (tweets.nonEmpty) {
+      log.debug(s"[TweetSync] Got ${tweets.length} tweets from ${syncState.twitterHandle}")
 
-      processDirectTwitterData(libraryOwner, syncState.libraryId, tweets)
+      processDirectTwitterData(keeperUserId, syncState.libraryId, tweets)
 
       val tweetIds = tweets.map(tweet => (tweet \ "id").as[Long])
       val batchMinTweetId = tweetIds.min
@@ -158,9 +160,10 @@ class TwitterSyncCommander @Inject() (
   }
 
   private val safeBacklogBuffer = 10
+  private val fetchEveryMins = 15
   def syncAll(): Unit = {
     val states = db.readOnlyReplica { implicit session =>
-      syncStateRepo.getSyncsToUpdate(clock.now.minusMinutes(15))
+      syncStateRepo.getSyncsToUpdate(clock.now.minusMinutes(fetchEveryMins))
     }
 
     if (states.length + safeBacklogBuffer < throttle.waiting) { // it's backed up more than what we're trying to bring in, so is getting worse.
@@ -169,7 +172,7 @@ class TwitterSyncCommander @Inject() (
       states.foreach { state =>
         if (throttle.waiting < states.length + 1) {
           val (socialUserInfo, library) = db.readOnlyReplica { implicit session =>
-            val socialUserInfo: Option[SocialUserInfo] = state.userId.flatMap { userId =>
+            val socialUserInfo = state.userId.map { userId =>
               // Grab Twitter SUIs, prefer ones that are "fetched_using_self", which is the state for active, working records
               socialRepo.getByUser(userId).filter(s => s.networkType == SocialNetworks.TWITTER).sortBy(sui => sui.state == SocialUserInfoStates.FETCHED_USING_SELF).reverse.headOption
             }
@@ -178,14 +181,19 @@ class TwitterSyncCommander @Inject() (
             (socialUserInfo, library)
           }
 
-          if (socialUserInfo.exists(_.state == SocialUserInfoStates.TOKEN_EXPIRED)) {
-            // Skip for now. This leaves their sync active, but doesn't attempt to update it. If they update their SUI record later, we'll begin refetching.
-          } else if (library.state == LibraryStates.ACTIVE) {
-            syncOne(socialUserInfo, state, library.ownerId)
-          } else {
-            db.readWrite { implicit session =>
-              syncStateRepo.save(state.copy(state = TwitterSyncStateStates.INACTIVE))
-            }
+          socialUserInfo match {
+            case Some(suiOpt) if suiOpt.isEmpty || suiOpt.exists(_.state == SocialUserInfoStates.TOKEN_EXPIRED) =>
+              // We are using a user's SUI, but it's not valid. Queue to try again later.
+              db.readWrite { implicit session =>
+                syncStateRepo.save(state.copy(lastFetchedAt = Some(clock.now)))
+              }
+            case _ if library.state == LibraryStates.ACTIVE =>
+              // We're using a user's SUI (and it's ready) or are explicitly not using a SUI (so using Kifi's token)
+              syncOne(socialUserInfo.flatten, state, library.ownerId)
+            case _ =>
+              db.readWrite { implicit session =>
+                syncStateRepo.save(state.copy(state = TwitterSyncStateStates.INACTIVE))
+              }
           }
         }
       }
