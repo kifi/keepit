@@ -254,7 +254,7 @@ class AdminBookmarksController @Inject() (
       var lastProcessed = 0
       do {
         db.readWrite { implicit session =>
-          val rawKeeps = rawKeepRepo.page(page = page, size = pageSize)
+          val rawKeeps = rawKeepRepo.pageAscending(page = page, size = pageSize)
           val rawKeepsFromTwitter = rawKeeps.filter(r => isFromTwitter(r.source))
           rawKeepsFromTwitter.foreach { rawKeep =>
             rawKeep.originalJson.foreach { sourceJson =>
