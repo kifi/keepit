@@ -22,6 +22,7 @@ GET     /admin/bookmarks/checkLibraryKeepVisibility             @com.keepit.cont
 POST    /admin/bookmarks/reattributeKeeps             @com.keepit.controllers.admin.AdminBookmarksController.reattributeKeeps(author: String, userId: Option[Long] ?= None, overwriteExistingOwner: Boolean ?= false, doIt: Boolean ?= false)
 POST    /admin/bookmarks/backfillKifiAttribution      @com.keepit.controllers.admin.AdminBookmarksController.backfillKifiSourceAttribution(startFrom: Option[Long] ?= None, limit: Int, dryRun: Boolean ?= true)
 POST    /admin/bookmarks/backfillKeepEventRepo        @com.keepit.controllers.admin.AdminBookmarksController.backfillKeepEventRepo(fromId: Id[Message], pageSize: Int, dryRun: Boolean ?= true)
+GET     /admin/bookmarks/backfillTwitterAttribution             @com.keepit.controllers.admin.AdminBookmarksController.backfillTwitterAttribution(page: Int ?= 0, pageSize: Int ?= 1000)
 
 GET     /admin/uri/:uriId           @com.keepit.controllers.admin.UrlController.getURIInfo(uriId: Id[NormalizedURI])
 #GET     /admin/uri/article/        @com.keepit.controllers.admin.UrlController.getArticle(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article], version: ArticleVersion)

@@ -50,6 +50,7 @@ class AdminBookmarksController @Inject() (
   sourceRepo: KeepSourceAttributionRepo,
   keepSourceCommander: KeepSourceCommander,
   keepEventRepo: KeepEventRepo,
+  rawKeepRepo: RawKeepRepo,
   userIdentityHelper: UserIdentityHelper,
   uriInterner: NormalizedURIInterner,
   eliza: ElizaServiceClient,
@@ -238,6 +239,46 @@ class AdminBookmarksController @Inject() (
       case None => BadRequest("invalid_author")
     }
 
+  }
+
+  def backfillTwitterAttribution(fromPage: Int, pageSize: Int) = AdminUserAction { implicit request =>
+    SafeFuture {
+      def isFromTwitter(source: KeepSource) = source == KeepSource.TwitterSync || source == KeepSource.TwitterFileImport
+      def shouldBackFillWith(keep: Keep, rawKeep: RawKeep, twitterAttribution: RawTwitterAttribution): Boolean = {
+        keep.source == rawKeep.source &&
+          keep.url == rawKeep.url &&
+          keep.userId.contains(rawKeep.userId) &&
+          keep.keptAt == twitterAttribution.tweet.createdAt
+      }
+      var page = fromPage
+      var lastProcessed = 0
+      do {
+        db.readWrite { implicit session =>
+          val rawKeeps = rawKeepRepo.pageAscending(page = page, size = pageSize)
+          val rawKeepsFromTwitter = rawKeeps.filter(r => isFromTwitter(r.source))
+          rawKeepsFromTwitter.foreach { rawKeep =>
+            rawKeep.originalJson.foreach { sourceJson =>
+              RawTwitterAttribution.format.reads(sourceJson).foreach { twitterAttribution =>
+                uriInterner.getByUri(rawKeep.url).foreach { uri =>
+                  val twitterKeeps = keepRepo.getByUri(uri.id.get, excludeState = None).filter(k => isFromTwitter(k.source))
+                  val sourceByKeepId = sourceRepo.getByKeepIds(twitterKeeps.flatMap(_.id).toSet)
+                  twitterKeeps.foreach { keep =>
+                    val isMissingAttribution = !sourceByKeepId.contains(keep.id.get)
+                    if (isMissingAttribution && shouldBackFillWith(keep, rawKeep, twitterAttribution)) {
+                      sourceRepo.intern(keep.id.get, twitterAttribution)
+                    }
+                  }
+                }
+              }
+            }
+          }
+          if (page % 10 == 0) log.info(s"[backfillTwitterAttribution] Done processing page $page of size $pageSize.")
+          page += 1
+          lastProcessed = rawKeeps.length
+        }
+      } while (lastProcessed > 0)
+    }
+    Ok(s"Starting from page $fromPage by batch of $pageSize. It's gonna take a while.")
   }
 
   def backfillKifiSourceAttribution(startFrom: Option[Long], limit: Int, dryRun: Boolean) = AdminUserAction { implicit request =>
