@@ -125,6 +125,9 @@
     getItems: function () {
       return this.data('tokenInput').getItems();
     },
+    findMoreResults: function () {
+      this.data('tokenInput').findMoreResults();
+    },
     deselectDropdownItem: function () {
       this.data('tokenInput').deselectDropdownItem();
       return this;
@@ -473,6 +476,10 @@
       }).toArray();
     };
 
+    this.findMoreResults = function () {
+      searchMore();
+    };
+
     this.deselectDropdownItem = function () {
       selectDropdownItem(null);
     };
@@ -707,22 +714,36 @@
       $(selectedDropdownItem = item).not('.' + classes.dropdownItemWaiting).addClass(classes.dropdownItemSelected);
     }
 
-    function search() {
+    function search(previousItems) {
+      previousItems = previousItems || [];
+      var previousIds = previousItems.map(function (o) { return o.id; });
       var query = $tokenInput.val().trim();
-      var data = $dropdown.data()
-      if (data.issuedQuery !== query) {
+      var data = $dropdown.data();
+      if (data.issuedQuery !== query || previousItems.length > 0) {
         data.issuedQuery = query;
         $dropdown.add($tokenList).addClass(classes.searching);
         var queryTime = Date.now();
-        findItems(tokens.map(valueOfToken), query, function (items) {
+        var offset = previousItems.length;
+        findItems(tokens.map(valueOfToken), query, offset, function (items) {
           if (query && settings.allowFreeTagging && !items.some(tokenValueIs(query))) {
             var item = {freeTag: true};
             item[settings.tokenValue] = query;
             items.push(item);
           }
+          items = items.filter(function (item) {
+            return previousIds.indexOf(item.id) === -1;
+          });
+          items = previousItems.concat(items);
           renderDropdown(query, queryTime, items);
         });
       }
+    }
+
+    function searchMore() {
+      var items = $dropdown.children().map(function () {
+        return $(this).data('tokenInput');
+      }).toArray();
+      search(items);
     }
 
     function replaceDropdownItemWith(heightAfterAnimationPromise, item) {

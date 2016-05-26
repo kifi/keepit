@@ -186,6 +186,12 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
             }
           }.bind(this)
         }, { user: true, email: true, library: canAddLibrary });
+
+        $input.parent().find('.kifi-scroll-inner').on('scroll', function () {
+          if (this.scrollTop + this.clientHeight > this.scrollHeight - 3) {
+            $input.tokenInput('findMoreResults');
+          }
+        });
       }
 
       setTimeout(function () {

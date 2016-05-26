@@ -123,20 +123,17 @@ var initFriendSearch = (function () {
     }
   }
 
-  function search(getExcludeIds, includeSelf, searchFor, ids, query, withResults) {
+  function search(getExcludeIds, includeSelf, searchFor, ids, query, offset, withResults) {
     searchFor = searchFor || { user: true, email: true, library: false };
     var n = Math.max(3, Math.min(8, Math.floor((window.innerHeight - 365) / 55)));  // quick rule of thumb
-    api.port.emit('search_recipients', {q: query, n: n, exclude: getExcludeIds().map(getIdOrEmail).concat(ids), searchFor: searchFor }, function (recipients) {
+
+    api.port.emit('search_recipients', {q: query, n: n, offset: offset, exclude: getExcludeIds().map(getIdOrEmail).concat(ids), searchFor: searchFor }, function (recipients) {
       recipients = recipients || [];
-      var contacts = recipients.filter(function (r) { return r.id[0] !== 'l'; });
+
       var libraries = recipients.filter(function (r) { return r.id && r.id[0] === 'l' && r.id.indexOf('@') === -1; });
       libraries.forEach(k.formatting.formatLibraryResult);
 
-      var percentContacts = contacts.length / (libraries.length + contacts.length); // keep it a good mix of users + libs
-      var contactsCount = Math.floor(n * percentContacts);
-      contacts = contacts.slice(0, contactsCount);
-      libraries = libraries.slice(0, n - contactsCount);
-      withResults(contacts.concat(libraries));
+      withResults(recipients);
     });
   }
 
@@ -233,7 +230,8 @@ var initFriendSearch = (function () {
   }
 
   function showResults($dropdown, els, done) {
-    if ($dropdown[0].childElementCount === 0) {  // bringing entire list into view
+    var $dropdownElement = $dropdown[0];
+    if ($dropdownElement.childElementCount === 0) {  // bringing entire list into view
       if (els.length) {
         $dropdown.safariHeight(0).append(els);
         $dropdown.off('transitionend').on('transitionend', function (e) {
@@ -242,12 +240,12 @@ var initFriendSearch = (function () {
             makeScrollable($dropdown.parent());
             done();
           }
-        }).safariHeight(measureCloneHeight($dropdown[0], 'clientHeight'));
+        }).safariHeight(measureCloneHeight($dropdownElement, 'clientHeight'));
       } else {
         done();
       }
     } else if (els.length === 0) {  // hiding entire list
-      var height = $dropdown[0].clientHeight;
+      var height = $dropdownElement.clientHeight;
       if (height > 0) {
         $dropdown.safariHeight(height).layout();
         $dropdown.off('transitionend').on('transitionend', function (e) {
@@ -263,18 +261,21 @@ var initFriendSearch = (function () {
       unMakeScrollable($dropdown.parent());
     } else {  // list is changing
       // fade in overlaid as height adjusts and old fades out
-      var heightInitial = $dropdown[0].clientHeight;
-      var width = $dropdown[0].clientWidth;
+      var heightInitial = $dropdownElement.clientHeight;
+      var scrollTop = $dropdownElement.scrollTop;
+      var width = $dropdownElement.clientWidth;
       $dropdown.safariHeight(heightInitial);
-      var $clone = $($dropdown[0].cloneNode(false))
+      var $clone = $($dropdownElement.cloneNode(false))
         .addClass('kifi-ti-dropdown-clone kifi-instant')
         .css('width', width)
         .append(els)
         .css({visibility: 'hidden', opacity: 0})
         .safariHeight('')
+        .preventAncestorScroll()
         .insertBefore($dropdown);
       var heightFinal = $clone[0].clientHeight;
       $dropdown.layout();
+      $clone[0].scrollTop = scrollTop;
       $clone
         .css({visibility: 'visible'})
         .safariHeight(heightInitial)

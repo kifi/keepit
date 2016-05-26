@@ -256,7 +256,14 @@ k.compose = k.compose || (function() {
           throttledSaveDraft();
         }
       }, { user: true, email: true, library: true });
+
+      $to.parent().find('.kifi-scroll-inner').on('scroll', function () {
+        if (this.scrollTop + this.clientHeight > this.scrollHeight - 1) {
+          $to.tokenInput('findMoreResults');
+        }
+      });
     }
+
 
     $form.keydown(function (e) {
       if (e.which === 13 && !e.shiftKey && !e.altKey && !sendChooser.enterToSend === (e.metaKey || e.ctrlKey) && e.originalEvent.isTrusted !== false) {
