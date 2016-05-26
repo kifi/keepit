@@ -30,17 +30,23 @@ class TwitterPublishingCommander @Inject() (
     twitterSocialGraph: TwitterSocialGraph) extends Logging {
 
   def announceNewTwitterLibrary(libraryId: Id[Library]): Try[Status] = {
-    val (library, socialInfo) = db.readOnlyMaster { implicit session =>
+    val (library, kifiTwitterAccount, userTwitterAccount) = db.readOnlyMaster { implicit session =>
       val library = libraryRepo.get(libraryId)
-      val socialInfo = socialUserInfoRepo.getByUser(library.ownerId).find(u => u.networkType == SocialNetworks.TWITTER).get
-      (library, socialInfo)
+      val kifiTwitterAccount = socialUserInfoRepo.get(Id[SocialUserInfo](6934770)) //kifi sui id. i.e. this is kifi's twitter account and credentials
+      val userTwitterAccount = socialUserInfoRepo.getByUser(library.ownerId).find(u => u.networkType == SocialNetworks.TWITTER).get
+      (library, kifiTwitterAccount, userTwitterAccount)
     }
-    val userHasExperiment = experimentCommander.userHasExperiment(library.ownerId, UserExperimentType.EXPLICIT_SOCIAL_POSTING)
-    if (library.visibility == LibraryVisibility.PUBLISHED && userHasExperiment) {
+    val userHasExperiment = experimentCommander.userHasExperiment(library.ownerId, UserExperimentType.ANNOUNCE_NEW_TWITTER_LIBRARY)
+    if (!userHasExperiment) {
+      Failure(new Exception(s"User does not has the ${UserExperimentType.ANNOUNCE_NEW_TWITTER_LIBRARY} experiment"))
+    } else if (library.visibility == LibraryVisibility.PUBLISHED) {
       val libraryUrl = s"""https://www.kifi.com${libPathCommander.getPathForLibrary(library)}"""
-      val handle = socialInfo.profileUrl.map(twitterMessages.parseHandleFromUrl)
-      val message = s"@$handle Your #twitterdeepsearch fully searchable @kifi library is ready! $libraryUrl?&kcid=na-kp_social_jr-twitter-dsw"
-      twitterSocialGraph.sendTweet(socialInfo, None, message)
+      userTwitterAccount.profileUrl.map(twitterMessages.parseHandleFromUrl) match {
+        case Some(handle) =>
+          val message = s"@$handle Your #twitterdeepsearch fully searchable @kifi library is ready! $libraryUrl?&kcid=na-kp_social_jr-twitter-dsw"
+          twitterSocialGraph.sendTweet(kifiTwitterAccount, None, message)
+        case None => Failure(new Exception(s"can't get user profile handle for $userTwitterAccount"))
+      }
     } else Failure(new Exception(s"library is private"))
   }
 
