@@ -244,7 +244,7 @@ class AdminBookmarksController @Inject() (
   def backfillTwitterAttribution(fromPage: Int, pageSize: Int) = AdminUserAction { implicit request =>
     SafeFuture {
       def isFromTwitter(source: KeepSource) = source == KeepSource.TwitterSync || source == KeepSource.TwitterFileImport
-      def shouldBackFillWith(keep: Keep, rawKeep: RawKeep, twitterAttribution: RawTwitterAttribution): Boolean = {
+      def matchesRawKeep(keep: Keep, rawKeep: RawKeep, twitterAttribution: RawTwitterAttribution): Boolean = {
         keep.source == rawKeep.source &&
           keep.url == rawKeep.url &&
           keep.userId.contains(rawKeep.userId) &&
@@ -260,13 +260,11 @@ class AdminBookmarksController @Inject() (
             rawKeep.originalJson.foreach { sourceJson =>
               RawTwitterAttribution.format.reads(sourceJson).foreach { twitterAttribution =>
                 uriInterner.getByUri(rawKeep.url).foreach { uri =>
-                  val twitterKeeps = keepRepo.getByUri(uri.id.get, excludeState = None).filter(k => isFromTwitter(k.source))
-                  val sourceByKeepId = sourceRepo.getByKeepIds(twitterKeeps.flatMap(_.id).toSet)
-                  twitterKeeps.foreach { keep =>
+                  val keeps = keepRepo.getByUri(uri.id.get, excludeState = None).filter(matchesRawKeep(_, rawKeep, twitterAttribution))
+                  val sourceByKeepId = sourceRepo.getRawByKeepIds(keeps.flatMap(_.id).toSet)
+                  keeps.foreach { keep =>
                     val isMissingAttribution = !sourceByKeepId.contains(keep.id.get)
-                    if (isMissingAttribution && shouldBackFillWith(keep, rawKeep, twitterAttribution)) {
-                      sourceRepo.intern(keep.id.get, twitterAttribution)
-                    }
+                    if (isMissingAttribution) { sourceRepo.intern(keep.id.get, twitterAttribution) }
                   }
                 }
               }
