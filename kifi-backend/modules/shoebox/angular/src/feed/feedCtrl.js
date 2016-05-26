@@ -31,9 +31,8 @@ angular.module('kifi')
       return tryGetFullPage(pageSize, lastKeep);
     }
 
-    var FIRST_FETCH_SIZE = 3;
-    var SUBSEQUENT_FETCH_SIZE = 10;
-    var feedLazyLoader = new Paginator(feedSource, SUBSEQUENT_FETCH_SIZE, Paginator.DONE_WHEN_RESPONSE_IS_EMPTY);
+    var FETCH_PAGE_SIZE = 10;
+    var feedLazyLoader = new Paginator(feedSource, FETCH_PAGE_SIZE, Paginator.DONE_WHEN_RESPONSE_IS_EMPTY);
 
     $scope.feed = [];
 
@@ -72,9 +71,18 @@ angular.module('kifi')
     $scope.isLoading = function () {
       return !feedLazyLoader.hasLoaded();
     };
-    $scope.fetchKeeps = function (fetchSize) {
+    $scope.fetchKeeps = function () {
+
+      if (feedLazyLoader.init && feedLazyLoader.fetchPageSize === null) {
+        feedLazyLoader.fetchPageSize = FETCH_PAGE_SIZE;
+      } else {
+        // tells the server to choose page size based on user prefs.use_minimal_keep_card,
+        // the initial fetch should get the minimum number of keeps that fill the screen
+        feedLazyLoader.fetchPageSize = null;
+      }
+
       return feedLazyLoader
-      .fetch(null, null, fetchSize)
+      .fetch()
       .then(function (keeps) {
         $scope.feed = keeps;
       })
@@ -161,7 +169,7 @@ angular.module('kifi')
 
     // Initialize
     $window.document.title = 'Kifi • Your stream';
-    $scope.fetchKeeps(FIRST_FETCH_SIZE).then(function() { // populate the visible keeps fast, then fetch the rest of the page
+    $scope.fetchKeeps().then(function() { // fetch the initially visible keeps asap, then load the rest
       $scope.fetchKeeps();
     });
   }

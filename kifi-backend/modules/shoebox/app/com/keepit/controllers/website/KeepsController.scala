@@ -11,6 +11,7 @@ import com.keepit.common.json.TupleFormat
 import com.keepit.common.time._
 import com.keepit.common.util.RightBias.FromOption
 import com.keepit.heimdal._
+import com.keepit.model.UserValues.UserValueBooleanHandler
 import com.keepit.model._
 import com.keepit.shoebox.data.assemblers.{ KeepActivityAssembler, KeepInfoAssembler }
 import org.joda.time.DateTime
@@ -35,6 +36,7 @@ class KeepsController @Inject() (
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   airbrake: AirbrakeNotifier,
   bulkTagCommander: BulkTagCommander,
+  userValueRepo: UserValueRepo,
   implicit val publicIdConfig: PublicIdConfiguration)
     extends UserActions with ShoeboxServiceController {
 
@@ -171,12 +173,15 @@ class KeepsController @Inject() (
     }
   }
 
-  def getKeepStream(limit: Int, beforeId: Option[String], afterId: Option[String], filterKind: Option[String], filterId: Option[String], maxMessagesShown: Int) = UserAction.async { request =>
+  def getKeepStream(limit: Option[Int], beforeId: Option[String], afterId: Option[String], filterKind: Option[String], filterId: Option[String], maxMessagesShown: Int) = UserAction.async { request =>
     val beforeExtId = beforeId.flatMap(id => ExternalId.asOpt[Keep](id))
     val afterExtId = afterId.flatMap(id => ExternalId.asOpt[Keep](id))
-
+    val numKeepsToShow = limit.getOrElse {
+      val usesCompactCards = db.readOnlyMaster(implicit s => userValueRepo.getValue(request.userId, UserValueBooleanHandler(UserValueName.USE_MINIMAL_KEEP_CARD, default = false)))
+      if (usesCompactCards) 6 else 3
+    }
     val filter = filterKind.flatMap(FeedFilter(_, filterId))
-    keepsCommander.getKeepStream(request.userId, limit, beforeExtId, afterExtId, maxMessagesShown = maxMessagesShown, sanitizeUrls = false, filterOpt = filter).map { keeps =>
+    keepsCommander.getKeepStream(request.userId, numKeepsToShow, beforeExtId, afterExtId, maxMessagesShown = maxMessagesShown, sanitizeUrls = false, filterOpt = filter).map { keeps =>
       Ok(Json.obj("keeps" -> keeps))
     }
   }
