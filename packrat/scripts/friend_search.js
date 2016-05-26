@@ -125,9 +125,7 @@ var initFriendSearch = (function () {
 
   function search(getExcludeIds, includeSelf, searchFor, ids, query, offset, withResults) {
     searchFor = searchFor || { user: true, email: true, library: false };
-    var n = Math.max(3, Math.min(8, Math.floor((window.innerHeight - 365) / 55)));  // quick rule of thumb
-
-    api.port.emit('search_recipients', {q: query, n: n, offset: offset, exclude: getExcludeIds().map(getIdOrEmail).concat(ids), searchFor: searchFor }, function (recipients) {
+    api.port.emit('search_recipients', {q: query, n: 10, offset: offset, exclude: getExcludeIds().map(getIdOrEmail).concat(ids), searchFor: searchFor}, function (recipients) {
       recipients = recipients || [];
 
       var libraries = recipients.filter(function (r) { return r.id && r.id[0] === 'l' && r.id.indexOf('@') === -1; });
@@ -230,6 +228,7 @@ var initFriendSearch = (function () {
   }
 
   function showResults($dropdown, els, done) {
+    var n = Math.max(3, Math.min(8, Math.floor((window.innerHeight - 365) / 55)));  // quick rule of thumb
     var $dropdownElement = $dropdown[0];
     if ($dropdownElement.childElementCount === 0) {  // bringing entire list into view
       if (els.length) {
