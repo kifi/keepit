@@ -188,7 +188,7 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
         }, { user: true, email: true, library: canAddLibrary });
 
         $input.parent().find('.kifi-scroll-inner').on('scroll', function () {
-          if (this.scrollTop + this.clientHeight > this.scrollHeight - 3) {
+          if (this.clientHeight > 0 && this.scrollTop + this.clientHeight > this.scrollHeight - 3) {
             $input.tokenInput('findMoreResults');
           }
         });

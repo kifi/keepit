@@ -258,7 +258,7 @@ k.compose = k.compose || (function() {
       }, { user: true, email: true, library: true });
 
       $to.parent().find('.kifi-scroll-inner').on('scroll', function () {
-        if (this.scrollTop + this.clientHeight > this.scrollHeight - 1) {
+        if (this.clientHeight > 0 && this.scrollTop + this.clientHeight > this.scrollHeight - 1) {
           $to.tokenInput('findMoreResults');
         }
       });
