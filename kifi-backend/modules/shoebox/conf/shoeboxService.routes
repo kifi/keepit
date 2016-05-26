@@ -392,7 +392,7 @@ GET     /assets/sitemap.xml                     @com.keepit.controllers.website.
 GET     /assets/sitemap-libraries-0.xml         @com.keepit.controllers.website.SiteMapController.librariesSitemap()
 GET     /assets/sitemap-users-0.xml             @com.keepit.controllers.website.SiteMapController.usersSitemap()
 
-GET     /site/keeps/stream                    @com.keepit.controllers.website.KeepsController.getKeepStream(limit: Option[Int], beforeId: Option[String], afterId: Option[String], filterKind: Option[String] ?= None, filterId: Option[String] ?= None, maxMessagesShown: Int ?= 8)
+GET     /site/keeps/stream                    @com.keepit.controllers.website.KeepsController.getKeepStream(limit: Option[Int] ?= None, beforeId: Option[String], afterId: Option[String], filterKind: Option[String] ?= None, filterId: Option[String] ?= None, maxMessagesShown: Int ?= 8)
 POST    /site/keeps/personalExport            @com.keepit.controllers.website.KeepsController.exportPersonalKeeps()
 POST    /site/keeps/organizationExport        @com.keepit.controllers.website.KeepsController.exportOrganizationKeeps()
 POST    /site/keeps/markAsRead                @com.keepit.controllers.website.DiscussionController.markKeepsAsRead()
