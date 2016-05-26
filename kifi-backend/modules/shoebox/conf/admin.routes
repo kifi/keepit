@@ -274,6 +274,8 @@ POST    /admin/graph/wander                                @com.keepit.controlle
 GET     /admin/twitter                                     @com.keepit.controllers.admin.AdminTwitterWaitlistController.getWaitlist()
 GET     /admin/twitter/accept                              @com.keepit.controllers.admin.AdminTwitterWaitlistController.acceptUser(userId: Id[User], handle: String)
 GET     /admin/twitter/email                               @com.keepit.controllers.admin.AdminTwitterWaitlistController.sendAcceptEmail(syncStateId: Id[TwitterSyncState], userId: Id[User], safe: Boolean ?= true)
+POST    /admin/twitter/processQueue                        @com.keepit.controllers.admin.AdminTwitterWaitlistController.processWaitlist()
+
 
 GET           /admin/rover/searchUrl                                                 @com.keepit.controllers.admin.AdminRoverController.searchUrl()
 POST          /admin/rover/searchUrl                                                 @com.keepit.controllers.admin.AdminRoverController.findUrl()
