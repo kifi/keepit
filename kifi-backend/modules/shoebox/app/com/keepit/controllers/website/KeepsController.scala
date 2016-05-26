@@ -37,6 +37,7 @@ class KeepsController @Inject() (
   airbrake: AirbrakeNotifier,
   bulkTagCommander: BulkTagCommander,
   userValueRepo: UserValueRepo,
+  userValueCache: UserValueCache,
   implicit val publicIdConfig: PublicIdConfiguration)
     extends UserActions with ShoeboxServiceController {
 
@@ -177,7 +178,12 @@ class KeepsController @Inject() (
     val beforeExtId = beforeId.flatMap(id => ExternalId.asOpt[Keep](id))
     val afterExtId = afterId.flatMap(id => ExternalId.asOpt[Keep](id))
     val numKeepsToShow = limit.getOrElse {
-      val usesCompactCards = db.readOnlyMaster(implicit s => userValueRepo.getValue(request.userId, UserValueBooleanHandler(UserValueName.USE_MINIMAL_KEEP_CARD, default = false)))
+      val valueOpt = userValueCache.direct.get(UserValueKey(request.userId, UserValueName.USE_MINIMAL_KEEP_CARD))
+      val usesCompactCards = UserValueBooleanHandler(UserValueName.USE_MINIMAL_KEEP_CARD, default = false).parse(valueOpt)
+
+      // update cache
+      Future { if (valueOpt.isEmpty) db.readOnlyMaster(implicit s => userValueRepo.getValueStringOpt(request.userId, UserValueName.USE_MINIMAL_KEEP_CARD)) }
+
       if (usesCompactCards) 6 else 3
     }
     val filter = filterKind.flatMap(FeedFilter(_, filterId))
