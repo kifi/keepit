@@ -285,7 +285,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
       val (nUrlOpt, lastMsgOpt) = (messageThreadRepo.getByKeepId(keepId).map(_.nUrl), messageRepo.getLatest(keepId))
       session.onTransactionSuccess {
         uts.foreach { ut =>
-          for { nUrl <- nUrlOpt; lastMsg <- lastMsgOpt } notifDeliveryCommander.notifyRead(ut.user, ut.keepId, lastMsg.id.get, nUrl, lastMsg.createdAt)
+          for { nUrl <- nUrlOpt; lastMsg <- lastMsgOpt } notifDeliveryCommander.notifyRead(ut.user, ut.keepId, Some(lastMsg.id.get), nUrl, lastMsg.createdAt)
           notifDeliveryCommander.notifyRemoveThread(ut.user, ut.keepId)
         }
       }

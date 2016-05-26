@@ -113,22 +113,22 @@ object MessageThreadNotificationBuilder {
   object PrecomputedInfo {
     case class BuildForKeeps(
       threadById: Option[Map[Id[Keep], MessageThread]] = None,
+      userThreadById: Option[Map[Id[Keep], UserThread]] = None,
       lastMsgById: Option[Map[Id[Keep], ElizaMessage]] = None,
-      mutedById: Option[Map[Id[Keep], Boolean]] = None,
       threadActivityById: Option[Map[Id[Keep], Seq[UserThreadActivity]]] = None,
       msgCountById: Option[Map[Id[Keep], MessageCount]] = None,
       basicUserMap: Option[Map[Id[User], BasicUser]] = None)
     case class BuildForKeep(
         thread: Option[MessageThread] = None,
+        userThread: Option[UserThread] = None,
         lastMsg: Option[Option[ElizaMessage]] = None,
-        muted: Option[Boolean] = None,
         threadActivity: Option[Seq[UserThreadActivity]] = None,
         msgCount: Option[MessageCount] = None,
         basicUserMap: Option[Map[Id[User], BasicUser]] = None) {
       def pluralize(keepId: Id[Keep]) = BuildForKeeps(
         thread.map(x => Map(keepId -> x)),
+        userThread.map(x => Map(keepId -> x)),
         lastMsg.map(x => x.map(keepId -> _).toMap),
-        muted.map(x => Map(keepId -> x)),
         threadActivity.map(x => Map(keepId -> x)),
         msgCount.map(x => Map(keepId -> x)),
         basicUserMap
@@ -168,8 +168,8 @@ class MessageThreadNotificationBuilderImpl @Inject() (
         keepIds.flatAugmentWith(messageRepo.getLatest).toMap
       }.filterValues(_.auxData.forall(SystemMessageData.isFullySupported))
 
-      val mutedById = precomputed.flatMap(_.mutedById).getOrElse {
-        keepIds.map { keepId => keepId -> userThreadRepo.isMuted(userId, keepId) }.toMap
+      val userThreadById = precomputed.flatMap(_.userThreadById).getOrElse {
+        userThreadRepo.getAllForUserByKeepId(userId, keepIds)
       }
       val threadActivityById = precomputed.flatMap(_.threadActivityById).getOrElse {
         keepIds.map { keepId =>
@@ -185,10 +185,10 @@ class MessageThreadNotificationBuilderImpl @Inject() (
             keepId -> messageRepo.getMessageCounts(keepId, lastSeenOpt)
         }
       }
-      (threadsById, lastMsgById, mutedById, threadActivityById, msgCountById)
+      (threadsById, lastMsgById, userThreadById, threadActivityById, msgCountById)
     }
     for {
-      (threadsById, lastMsgById, mutedById, threadActivityById, msgCountById) <- infoFut
+      (threadsById, lastMsgById, userThreadById, threadActivityById, msgCountById) <- infoFut
       basicUserByIdMap <- precomputed.flatMap(_.basicUserMap).map(Future.successful).getOrElse {
         val allUsers = threadsById.values.flatMap(_.allParticipants).toSet
         shoebox.getBasicUsers(allUsers.toSeq)
@@ -196,11 +196,13 @@ class MessageThreadNotificationBuilderImpl @Inject() (
     } yield threadsById.map {
       case (keepId, thread) =>
         val thread = threadsById(keepId)
+        val userThreadOpt = userThreadById.get(keepId)
         val messageOpt = lastMsgById.get(keepId)
         val threadStarter = basicUserByIdMap(thread.startedBy)
         val threadActivity = threadActivityById(keepId)
         val MessageCount(numMessages, numUnread) = msgCountById(keepId)
-        val muted = mutedById(keepId)
+        val muted = userThreadOpt.exists(_.muted)
+        val unread = userThreadOpt.map(_.unread).getOrElse(!messageOpt.exists(_.from.asUser.safely.contains(userId)))
 
         val author = messageOpt.map(_.from).collect {
           case MessageSender.User(id) => BasicUserLikeEntity(basicUserByIdMap(id))
@@ -229,13 +231,13 @@ class MessageThreadNotificationBuilderImpl @Inject() (
             author = Some(author),
             text = messageOpt.map { message =>
               message.auxData.map(SystemMessageData.generateMessageText(_, basicUserByIdMap)).getOrElse(message.messageText)
-            }.getOrElse(thread.url),
+            }.getOrElse(thread.pageTitle.getOrElse(thread.url)),
             threadId = thread.pubKeepId,
             locator = thread.deepLocator,
             url = messageOpt.flatMap(_.sentOnUrl).getOrElse(thread.url),
             title = thread.pageTitle,
             participants = orderedParticipants,
-            unread = !messageOpt.exists(_.from.asUser.safely.contains(userId)),
+            unread = unread,
             muted = muted,
             category = NotificationCategory.User.MESSAGE,
             firstAuthor = indexOfFirstAuthor,
@@ -255,7 +257,7 @@ class MessageThreadNotificationBuilderImpl @Inject() (
       val threadActivity = userThreadRepo.getThreadActivity(keepId).sortBy { uta => (-uta.lastActive.getOrElse(START_OF_TIME).getMillis, uta.id.id) }
       val messageCountByUser = userIds.map { userId =>
         val lastSeenOpt = threadActivity.find(_.userId == userId).flatMap(_.lastSeen)
-        userId -> messageRepo.getMessageCounts(keepId, lastSeenOpt) // todo(cam): optimize this
+        userId -> messageRepo.getMessageCounts(keepId, lastSeenOpt)
       }.toMap
       val mutedByUser = userThreadRepo.isMutedByUser(userIds, keepId)
 

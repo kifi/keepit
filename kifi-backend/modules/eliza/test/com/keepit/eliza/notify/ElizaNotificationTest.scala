@@ -125,8 +125,9 @@ class ElizaNotificationTest extends Specification with ElizaApplicationInjector 
         (notif \ "unreadMessages").as[Int] === 1
 
         val externalId = (notif \ "id").as[String]
+        val threadId = (notif \ "thread").as[String]
 
-        socket.in(Json.arr("set_message_read", externalId))
+        socket.in(Json.arr("set_message_read", externalId, threadId))
 
         val out = socket.out
         out(0).as[String] === "message_read"

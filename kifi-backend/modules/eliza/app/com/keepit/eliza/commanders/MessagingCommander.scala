@@ -63,7 +63,9 @@ trait MessagingCommander {
   def getUserThreadOptByAccessToken(token: ThreadAccessToken): Option[UserThread]
 
   def setRead(userId: Id[User], messageId: Id[ElizaMessage])(implicit context: HeimdalContext): Unit
+  def setUserThreadRead(userId: Id[User], keepId: Id[Keep])(implicit context: HeimdalContext): Unit
   def setUnread(userId: Id[User], messageId: Id[ElizaMessage]): Unit
+  def setUserThreadUnread(userId: Id[User], keepId: Id[Keep]): Unit
   def setLastSeen(userId: Id[User], keepId: Id[Keep], timestampOpt: Option[DateTime] = None): Unit
   def setLastSeen(userId: Id[User], messageId: Id[ElizaMessage]): Unit
   def getUnreadUnmutedThreadCount(userId: Id[User]): Int
@@ -536,7 +538,15 @@ class MessagingCommanderImpl @Inject() (
     }
     messagingAnalytics.clearedNotification(userId, Right(message.pubKeepId), Right(message.pubId), context)
 
-    notificationDeliveryCommander.notifyRead(userId, message.keepId, message.id.get, thread.nUrl, message.createdAt)
+    notificationDeliveryCommander.notifyRead(userId, message.keepId, Some(message.id.get), thread.nUrl, message.createdAt)
+  }
+
+  def setUserThreadRead(userId: Id[User], keepId: Id[Keep])(implicit context: HeimdalContext): Unit = {
+    val changed = db.readWrite(attempts = 2)(implicit session => userThreadRepo.markUserThreadRead(userId, keepId))
+    if (changed) {
+      val thread = db.readOnlyMaster(implicit s => threadRepo.getByKeepId(keepId)).get
+      notificationDeliveryCommander.notifyRead(userId, keepId, messageIdOpt = None, thread.nUrl, clock.now())
+    }
   }
 
   def setUnread(userId: Id[User], messageId: Id[ElizaMessage]): Unit = {
@@ -548,7 +558,17 @@ class MessagingCommanderImpl @Inject() (
       userThreadRepo.markUnread(userId, message.keepId)
     }
     if (changed) {
-      notificationDeliveryCommander.notifyUnread(userId, message.keepId, message.id.get, thread.nUrl, message.createdAt)
+      notificationDeliveryCommander.notifyUnread(userId, message.keepId, Some(message.id.get), thread.nUrl, message.createdAt)
+    }
+  }
+
+  def setUserThreadUnread(userId: Id[User], keepId: Id[Keep]): Unit = {
+    val changed: Boolean = db.readWrite(attempts = 2) { implicit session =>
+      userThreadRepo.markUnread(userId, keepId)
+    }
+    if (changed) {
+      val thread = db.readOnlyMaster(implicit s => threadRepo.getByKeepId(keepId)).get
+      notificationDeliveryCommander.notifyUnread(userId, keepId, messageIdOpt = None, thread.nUrl, clock.now())
     }
   }
 
