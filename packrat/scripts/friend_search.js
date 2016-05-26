@@ -276,7 +276,11 @@ var initFriendSearch = (function () {
       $dropdown.layout();
       $clone[0].scrollTop = scrollTop;
       $clone
-        .css({visibility: 'visible'})
+        .css({
+          visibility: function () {
+            return $clone.children().length > 10 ? null : 'visible';
+          }
+        })
         .safariHeight(heightInitial)
         .layout()
         .on('transitionend', function (e) {
@@ -297,7 +301,11 @@ var initFriendSearch = (function () {
         .css({opacity: 1})
         .safariHeight(heightFinal);
       $dropdown
-        .css({opacity: 0})
+        .css({
+          opacity: function () {
+            return $clone.children().length > 10 ? 1 : 0;
+          }
+        })
         .safariHeight(heightFinal);
     }
 
