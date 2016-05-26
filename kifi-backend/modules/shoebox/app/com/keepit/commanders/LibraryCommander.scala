@@ -78,6 +78,7 @@ class LibraryCommanderImpl @Inject() (
   userRepo: UserRepo,
   keepRepo: KeepRepo,
   keepCommander: KeepCommander,
+  keepSourceRepo: KeepSourceAttributionRepo,
   keepMutator: KeepMutator,
   ktlRepo: KeepToLibraryRepo,
   ktlCommander: KeepToLibraryCommander,
@@ -638,9 +639,11 @@ class LibraryCommanderImpl @Inject() (
             libraryMembershipRepo.getWithLibraryIdsAndUserId(allKeepLibraries, userId).keySet
           }
 
+          val attrByKeep = keepSourceRepo.getRawByKeepIds(keeps.map(_.id.get))
+
           val (failures, successes) = sortedKeeps.map {
             case keep if keep.recipients.libraries.exists(validSourceLibraryIds.contains) =>
-              keepMutator.copyKeep(keep, toLibrary, userId, withSource)(s) match {
+              keepMutator.copyKeep(keep, toLibrary, userId, withSource, attrByKeep.get(keep.id.get))(s) match {
                 case Right(copied) => Right(copied)
                 case Left(error) => Left(keep -> error)
               }
