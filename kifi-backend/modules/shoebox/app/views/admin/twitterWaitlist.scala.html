@@ -24,7 +24,11 @@
                 <td>@{entry._1.state}</td>
                 <td><a href="https://twitter.com/@{entry._1.twitterHandle}">@{entry._1.twitterHandle}</a></td>
                 <td><a href="/admin/user/@{entry._1.userId.id}">@{entry._1.userId.id}</a></td>
-                <td><a href="/admin/twitter/accept?handle=@{entry._1.twitterHandle}&userId=@{entry._1.userId.id}" target="_blank">Accept</a></td>
+                <td>@if(entry._1.state.toString == "accepted"){
+                    <a href="/admin/twitter/accepted?userId=@{entry._1.userId.id}" target="_blank">View</a>
+                }else{
+                    <a href="/admin/twitter/accept?handle=@{entry._1.twitterHandle}&userId=@{entry._1.userId.id}" target="_blank">Accept</a>
+                }</td>
                 <td>@{entry._2.map(_.lastFetchedAt).flatten.map(_.toString).getOrElse("Never")}</td>
             </tr>
         }
