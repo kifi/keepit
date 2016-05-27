@@ -246,12 +246,6 @@ class AdminBookmarksController @Inject() (
     val userIds = userIdsString.split(",").map(idStr => Id[User](idStr.trim.toLong)).toSet
     SafeFuture {
       def isFromTwitter(source: KeepSource) = source == KeepSource.TwitterSync || source == KeepSource.TwitterFileImport
-      def matchesRawKeep(keep: Keep, rawKeep: RawKeep, twitterAttribution: RawTwitterAttribution): Boolean = {
-        keep.source == rawKeep.source &&
-          keep.url == rawKeep.url &&
-          keep.userId.contains(rawKeep.userId) &&
-          keep.keptAt == twitterAttribution.tweet.createdAt
-      }
       userIds.foreach { userId =>
         db.readWrite { implicit session =>
           log.info(s"[backfillTwitterAttribution] Processing user $userId.")
@@ -263,15 +257,23 @@ class AdminBookmarksController @Inject() (
             rawKeep.originalJson.foreach { sourceJson =>
               RawTweet.format.reads(sourceJson).foreach { rawTweet =>
                 uriInterner.getByUri(rawKeep.url).foreach { uri =>
-                  val twitterAttribution = RawTwitterAttribution(rawTweet)
-                  val keeps = keepRepo.getByUri(uri.id.get, excludeState = None).filter(matchesRawKeep(_, rawKeep, twitterAttribution))
-                  val sourceByKeepId = sourceRepo.getRawByKeepIds(keeps.flatMap(_.id).toSet)
-                  keeps.foreach { keep =>
-                    val isMissingAttribution = !sourceByKeepId.contains(keep.id.get)
-                    if (isMissingAttribution) {
+                  val keepsForRawKeep = keepRepo.getByUri(uri.id.get, excludeState = None).filter { keep =>
+                    keep.source == rawKeep.source &&
+                      keep.userId.contains(rawKeep.userId) &&
+                      rawKeep.libraryId.toSet == keep.recipients.libraries &&
+                      rawKeep.createdDate.contains(keep.keptAt)
+                  }
+                  val sourceByKeepId = sourceRepo.getRawByKeepIds(keepsForRawKeep.flatMap(_.id).toSet)
+                  def isMissingAttribution(keep: Keep) = !sourceByKeepId.contains(keep.id.get)
+                  keepsForRawKeep match {
+                    // Unambiguous fix
+                    case Seq(keep) if isMissingAttribution(keep) =>
                       fixed += 1
-                      sourceRepo.intern(keep.id.get, twitterAttribution)
-                    }
+                      sourceRepo.intern(keep.id.get, RawTwitterAttribution(rawTweet))
+                    case multipleKeeps =>
+                      if (multipleKeeps.exists(isMissingAttribution)) {
+                        log.info(s"[backfillTwitterAttribution] RawKeep ${rawKeep.id} matches several keeps including one problematic: $keepsForRawKeep.")
+                      }
                   }
                 }
               }
