@@ -10,7 +10,7 @@ case class TwitterWaitlistEntry(
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     userId: Id[User],
-    twitterHandle: TwitterHandle,
+    twitterHandle: Option[TwitterHandle],
     state: State[TwitterWaitlistEntry] = TwitterWaitlistEntryStates.ACTIVE) extends ModelWithState[TwitterWaitlistEntry] {
   def withId(id: Id[TwitterWaitlistEntry]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)

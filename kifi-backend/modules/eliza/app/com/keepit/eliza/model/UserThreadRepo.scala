@@ -20,6 +20,7 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
   // Simple lookup queries
   def getByKeep(keepId: Id[Keep])(implicit session: RSession): Seq[UserThread]
   def getUserThread(userId: Id[User], keepId: Id[Keep])(implicit session: RSession): Option[UserThread]
+  def getAllForUserByKeepId(userId: Id[User], keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], UserThread] // keepIds is a superset of the returnedMap.keys, use returnedMap.get
   def getByAccessToken(token: ThreadAccessToken)(implicit session: RSession): Option[UserThread]
 
   // Complex lookup queries
@@ -50,6 +51,7 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
   def setMuteState(userThreadId: Id[UserThread], muted: Boolean)(implicit session: RWSession): Boolean
   def markAllReadAtOrBefore(user: Id[User], timeCutoff: DateTime)(implicit session: RWSession): Unit
   def markRead(userId: Id[User], msg: ElizaMessage)(implicit session: RWSession): Unit
+  def markUserThreadRead(userId: Id[User], keepId: Id[Keep])(implicit session: RWSession): Boolean
   def markAllRead(user: Id[User])(implicit session: RWSession): Unit
   def markUnread(userId: Id[User], keepId: Id[Keep])(implicit session: RWSession): Boolean
 
@@ -207,6 +209,10 @@ class UserThreadRepoImpl @Inject() (
     activeRows.filter(row => row.user === userId && row.keepId === keepId).firstOption
   }
 
+  def getAllForUserByKeepId(userId: Id[User], keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], UserThread] = {
+    activeRows.filter(row => row.user === userId && row.keepId.inSet(keepIds)).list.groupBy(_.keepId).map { case (keepId, Seq(userThread)) => keepId -> userThread }
+  }
+
   def markRead(userId: Id[User], message: ElizaMessage)(implicit session: RWSession): Unit = {
     // Potentially updating lastMsgFromOther (and notificationUpdatedAt for consistency) b/c notification JSON may not have been persisted yet.
     // Note that this method works properly even if the message is from this user. TODO: Rename lastMsgFromOther => lastMsgId ?
@@ -215,6 +221,14 @@ class UserThreadRepoImpl @Inject() (
       .filter(row => (row.user === userId && row.keepId === message.keepId) && (row.latestMessageId.isEmpty || row.latestMessageId <= message.id.get))
       .map(row => (row.latestMessageId, row.unread, row.notificationUpdatedAt, row.updatedAt))
       .update((Some(message.id.get), false, message.createdAt, now))
+  }
+
+  def markUserThreadRead(userId: Id[User], keepId: Id[Keep])(implicit session: RWSession): Boolean = {
+    val now = clock.now
+    activeRows
+      .filter(row => (row.user === userId && row.keepId === keepId))
+      .map(row => (row.unread, row.updatedAt))
+      .update((false, now)) > 0
   }
 
   def getUserThreadsForEmailing(lastNotifiedBefore: DateTime)(implicit session: RSession): Seq[UserThread] = {

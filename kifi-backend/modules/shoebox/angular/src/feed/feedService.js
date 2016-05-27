@@ -34,7 +34,8 @@ angular.module('kifi')
           new ml.Expect('Feed returns a list', function(data) { return typeof data.length !== 'undefined'; })
         ]);
 
-        return net.getKeepStream(limit, beforeId || '', afterId || '', (filter || {}).value, (filter || {}).id)
+        var limitOpt = limit && { limit: limit }; // limit should be omitted if null, so pass it in the optional query param object
+        return net.getKeepStream(beforeId || '', afterId || '', (filter || {}).value, (filter || {}).id, limitOpt)
         .then(function (response) {
           ml.specs.getsFeed.respond([null, response.data.keeps]);
           return response.data;

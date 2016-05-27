@@ -359,7 +359,7 @@ class KeepInternerImpl @Inject() (
             val basicKeep = basicKeeps.get(keep.id.get)
             keep.userId.map(uid => eliza.modifyRecipientsAndSendEvent(keep.id.get, uid, keep.recipients.toDiff, basicKeep.flatMap(_.source.map(_.kind)), basicKeep)).getOrElse(Future.successful(()))
           }
-          FutureHelpers.sequentialExec(keeps) { keep =>
+          FutureHelpers.sequentialExec(keeps.filter(k => KeepSource.discrete.contains(k.source))) { keep =>
             val nuri = db.readOnlyMaster { implicit session =>
               normalizedURIRepo.get(keep.uriId)
             }

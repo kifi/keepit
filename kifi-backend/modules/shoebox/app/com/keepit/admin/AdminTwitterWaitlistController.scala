@@ -50,6 +50,11 @@ class AdminTwitterWaitlistController @Inject() (
     Ok(html.admin.twitterWaitlistAccept(result))
   }
 
+  def processWaitlist() = AdminUserAction { request =>
+    twitterWaitlistCommander.processQueue()
+    Ok
+  }
+
   def sendAcceptEmail(syncStateId: Id[TwitterSyncState], userId: Id[User], safe: Boolean) = AdminUserPage.async { request =>
 
     val (user, email, libraryPath, alreadySent) = db.readOnlyReplica { implicit session =>

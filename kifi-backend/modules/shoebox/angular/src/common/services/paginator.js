@@ -22,13 +22,14 @@ angular.module('kifi')
       this._cachedFetch = null;
     };
 
-    Paginator.prototype._calcServerHasMore = function (items) {
+    Paginator.prototype._calcServerHasMore = function (items, pageSize) {
       if (this.whenDone === Paginator.DONE_WHEN_RESPONSE_IS_EMPTY) {
         var responseIsEmpty = (items.length === 0);
         return !responseIsEmpty; // has more if not empty
       } else if (this.whenDone === Paginator.DONE_WHEN_RESPONSE_IS_LESS_THAN_A_FULL_PAGE) {
-        var lessThanFullPage = (items.length < this.fetchPageSize);
-        return !lessThanFullPage; // has more if the response has at least a full page
+        // continue paging if response size is at least a full page OR if pageSize is null (for APIs that let the server choose the page size)
+        var lessThanFullPage = (pageSize || this.fetchPageSize) && (items.length < (pageSize || this.fetchPageSize));
+        return !lessThanFullPage;
       } else {
         return true; // otherwise, continue indefinitely
       }
@@ -48,7 +49,7 @@ angular.module('kifi')
 
       var fetchPromise = sourceFunction(pageNumber, pageSize)
         .then(function (items) {
-          this.hasMoreItems = this._calcServerHasMore(items);
+          this.hasMoreItems = this._calcServerHasMore(items, pageSize);
           this.init = true;
           this.items = this.items.concat(items);
 

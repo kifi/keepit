@@ -16,6 +16,7 @@ import com.keepit.common.performance.Stopwatch
 import com.keepit.common.time._
 import com.keepit.common.util.{ TimedComputation, RightBias }
 import com.keepit.common.util.RightBias.FromOption
+import com.keepit.model.UserValues.UserValueBooleanHandler
 import com.keepit.model._
 import com.keepit.shoebox.data.assemblers.KeepInfoAssemblerConfig.KeepViewAssemblyOptions
 import com.keepit.shoebox.data.assemblers.{ KeepInfoAssemblerConfig, KeepActivityAssembler, KeepInfoAssembler }
@@ -38,6 +39,7 @@ class KeepInfoController @Inject() (
   keepActivityAssembler: KeepActivityAssembler,
   clock: Clock,
   typeaheadCommander: TypeaheadCommander,
+  userValueRepo: UserValueRepo,
   implicit val airbrake: AirbrakeNotifier,
   private implicit val defaultContext: ExecutionContext,
   private implicit val publicIdConfig: PublicIdConfiguration)
@@ -53,18 +55,24 @@ class KeepInfoController @Inject() (
     }
   }
 
-  def getKeepStream(fromPubIdOpt: Option[String], limit: Int, config: KeepViewAssemblyOptions) = UserAction.async { implicit request =>
+  def getKeepStream(fromPubIdOpt: Option[String], limit: Option[Int], config: KeepViewAssemblyOptions) = UserAction.async { implicit request =>
     val stopwatch = new Stopwatch(s"[KIC-STREAM-${RandomStringUtils.randomAlphanumeric(5)}]")
     val goodResult = for {
-      _ <- RightBias.unit.filter(_ => limit < 100, KeepFail.LIMIT_TOO_LARGE: KeepFail)
+      _ <- RightBias.unit.filter(_ => limit.exists(_ > 100), KeepFail.LIMIT_TOO_LARGE: KeepFail)
       fromIdOpt <- fromPubIdOpt.filter(_.nonEmpty).fold[RightBias[KeepFail, Option[Id[Keep]]]](RightBias.right(None)) { pubId =>
         Keep.decodePublicIdStr(pubId).airbrakingOption.withLeft(KeepFail.INVALID_KEEP_ID).map(Some(_))
       }
     } yield {
       stopwatch.logTimeWith("input_decoded")
       val keepIds = db.readOnlyMaster { implicit s =>
+        val numKeepsToShow = {
+          limit.getOrElse {
+            val usesCompactCards = userValueRepo.getValue(request.userId, UserValueBooleanHandler(UserValueName.USE_MINIMAL_KEEP_CARD, default = false))
+            if (usesCompactCards) 6 else 3
+          }
+        }
         val ugh = fromIdOpt.map(kId => keepRepo.get(kId).externalId) // I'm really sad about this external id right now :(
-        keepRepo.getRecentKeepsByActivity(request.userId, limit = limit, beforeIdOpt = ugh, afterIdOpt = None, filterOpt = None).map(_._1.id.get)
+        keepRepo.getRecentKeepsByActivity(request.userId, limit = numKeepsToShow, beforeIdOpt = ugh, afterIdOpt = None, filterOpt = None).map(_._1.id.get)
       }
       stopwatch.logTimeWith(s"query_complete_n_${keepIds.length}")
       keepInfoAssembler.assembleKeepViews(request.userIdOpt, keepSet = keepIds.toSet, config = config).map { viewMap =>
