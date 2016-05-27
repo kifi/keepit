@@ -3,7 +3,7 @@ package com.keepit.controllers.admin
 import com.google.inject.Inject
 import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.concurrent.{ FutureHelpers, ChunkedResponseHelper }
+import com.keepit.common.concurrent.{ ChunkedResponseHelper, FutureHelpers }
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper, UserRequest }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick._
@@ -17,14 +17,15 @@ import com.keepit.heimdal._
 import com.keepit.integrity.LibraryChecker
 import com.keepit.model.{ KeepStates, _ }
 import com.keepit.normalizer.NormalizedURIInterner
-import com.keepit.slack.{ InhouseSlackClient, InhouseSlackChannel }
-import com.keepit.social.{ IdentityHelpers, UserIdentityHelper, Author }
+import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
+import com.keepit.social.{ Author, IdentityHelpers, UserIdentityHelper }
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import play.api.mvc.{ Action, AnyContent }
 import securesocial.core.IdentityId
 import views.html
 import com.keepit.common.core._
+import com.keepit.social.twitter.RawTweet
 
 import scala.collection.mutable
 import scala.collection.mutable.{ HashMap => MutableMap }
@@ -241,7 +242,8 @@ class AdminBookmarksController @Inject() (
 
   }
 
-  def backfillTwitterAttribution(fromPage: Int, pageSize: Int) = AdminUserAction { implicit request =>
+  def backfillTwitterAttribution(userIdsString: String) = AdminUserAction { implicit request =>
+    val userIds = userIdsString.split(",").map(idStr => Id[User](idStr.trim.toLong)).toSet
     SafeFuture {
       def isFromTwitter(source: KeepSource) = source == KeepSource.TwitterSync || source == KeepSource.TwitterFileImport
       def matchesRawKeep(keep: Keep, rawKeep: RawKeep, twitterAttribution: RawTwitterAttribution): Boolean = {
@@ -250,33 +252,36 @@ class AdminBookmarksController @Inject() (
           keep.userId.contains(rawKeep.userId) &&
           keep.keptAt == twitterAttribution.tweet.createdAt
       }
-      var page = fromPage
-      var lastProcessed = 0
-      do {
+      userIds.foreach { userId =>
         db.readWrite { implicit session =>
-          val rawKeeps = rawKeepRepo.pageAscending(page = page, size = pageSize)
+          log.info(s"[backfillTwitterAttribution] Processing user $userId.")
+          val rawKeeps = rawKeepRepo.getByUserId(userId)
+          log.info(s"[backfillTwitterAttribution] Found $rawKeeps for user $userId.")
+          var fixed = 0
           val rawKeepsFromTwitter = rawKeeps.filter(r => isFromTwitter(r.source))
           rawKeepsFromTwitter.foreach { rawKeep =>
             rawKeep.originalJson.foreach { sourceJson =>
-              RawTwitterAttribution.format.reads(sourceJson).foreach { twitterAttribution =>
+              RawTweet.format.reads(sourceJson).foreach { rawTweet =>
                 uriInterner.getByUri(rawKeep.url).foreach { uri =>
+                  val twitterAttribution = RawTwitterAttribution(rawTweet)
                   val keeps = keepRepo.getByUri(uri.id.get, excludeState = None).filter(matchesRawKeep(_, rawKeep, twitterAttribution))
                   val sourceByKeepId = sourceRepo.getRawByKeepIds(keeps.flatMap(_.id).toSet)
                   keeps.foreach { keep =>
                     val isMissingAttribution = !sourceByKeepId.contains(keep.id.get)
-                    if (isMissingAttribution) { sourceRepo.intern(keep.id.get, twitterAttribution) }
+                    if (isMissingAttribution) {
+                      fixed += 1
+                      sourceRepo.intern(keep.id.get, twitterAttribution)
+                    }
                   }
                 }
               }
             }
           }
-          if (page % 10 == 0) log.info(s"[backfillTwitterAttribution] Done processing page $page of size $pageSize.")
-          page += 1
-          lastProcessed = rawKeeps.length
+          log.info(s"[backfillTwitterAttribution] Fixed $fixed keeps for user $userId.")
         }
-      } while (lastProcessed > 0)
+      }
     }
-    Ok(s"Starting from page $fromPage by batch of $pageSize. It's gonna take a while.")
+    Ok(s"Ok. It's gonna take a while.")
   }
 
   def backfillKifiSourceAttribution(startFrom: Option[Long], limit: Int, dryRun: Boolean) = AdminUserAction { implicit request =>
