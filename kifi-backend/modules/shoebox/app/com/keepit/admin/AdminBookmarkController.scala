@@ -256,7 +256,7 @@ class AdminBookmarksController @Inject() (
         db.readWrite { implicit session =>
           log.info(s"[backfillTwitterAttribution] Processing user $userId.")
           val rawKeeps = rawKeepRepo.getByUserId(userId)
-          log.info(s"[backfillTwitterAttribution] Found $rawKeeps for user $userId.")
+          log.info(s"[backfillTwitterAttribution] Found ${rawKeeps.length} for user $userId.")
           var fixed = 0
           val rawKeepsFromTwitter = rawKeeps.filter(r => isFromTwitter(r.source))
           rawKeepsFromTwitter.foreach { rawKeep =>
