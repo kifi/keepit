@@ -10,12 +10,13 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.{ SystemEmailAddress, EmailAddress }
 import com.keepit.common.mail.template.{ TemplateOptions, EmailToSend }
 import com.keepit.model._
+import com.keepit.social.SocialNetworks
 import com.keepit.social.twitter.TwitterHandle
 import play.twirl.api.Html
 import views.html
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.Try
+import scala.util.{ Success, Try }
 
 class AdminTwitterWaitlistController @Inject() (
     val userActionsHelper: UserActionsHelper,
@@ -28,6 +29,7 @@ class AdminTwitterWaitlistController @Inject() (
     emailTemplateSender: EmailTemplateSender,
     userValueRepo: UserValueRepo,
     twitterSyncStateRepo: TwitterSyncStateRepo,
+    socialUserInfoRepo: SocialUserInfoRepo,
     implicit val ec: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) extends AdminUserActions {
 
@@ -53,6 +55,19 @@ class AdminTwitterWaitlistController @Inject() (
   def processWaitlist() = AdminUserAction { request =>
     twitterWaitlistCommander.processQueue()
     Ok
+  }
+
+  def updateLibraryFromTwitterProfile(handle: String, userId: Id[User]) = AdminUserAction.async { request =>
+    db.readOnlyReplica { implicit session =>
+      twitterSyncStateRepo.getByHandleAndUserIdUsed(TwitterHandle(handle), userId).map { sync =>
+        (sync, socialUserInfoRepo.getByUser(userId).find(s => s.networkType == SocialNetworks.TWITTER && s.username.isDefined))
+      }
+    }.collect {
+      case (sync, Some(sui)) =>
+        twitterWaitlistCommander.syncTwitterShow(sync.twitterHandle, sui, sync.libraryId).map { res =>
+          Ok(res.toString)
+        }
+    }.getOrElse(Future.successful(Ok("None")))
   }
 
   def sendAcceptEmail(syncStateId: Id[TwitterSyncState], userId: Id[User], safe: Boolean) = AdminUserPage.async { request =>

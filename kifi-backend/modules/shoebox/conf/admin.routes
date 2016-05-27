@@ -277,6 +277,7 @@ GET     /admin/twitter                                     @com.keepit.controlle
 GET     /admin/twitter/accept                              @com.keepit.controllers.admin.AdminTwitterWaitlistController.acceptUser(userId: Id[User], handle: String)
 GET     /admin/twitter/email                               @com.keepit.controllers.admin.AdminTwitterWaitlistController.sendAcceptEmail(syncStateId: Id[TwitterSyncState], userId: Id[User], safe: Boolean ?= true)
 POST    /admin/twitter/processQueue                        @com.keepit.controllers.admin.AdminTwitterWaitlistController.processWaitlist()
+POST    /admin/twitter/updateLibraryFromTwitterProfile     @com.keepit.controllers.admin.AdminTwitterWaitlistController.updateLibraryFromTwitterProfile(handle: String, userId: Id[User])
 
 
 GET           /admin/rover/searchUrl                                                 @com.keepit.controllers.admin.AdminRoverController.searchUrl()
