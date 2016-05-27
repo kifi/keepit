@@ -1,4 +1,4 @@
-@(entriesList: Seq[TwitterWaitlistEntry]
+@(entriesList: Seq[(TwitterWaitlistEntry, Option[TwitterSyncState])]
 )(implicit request: com.keepit.common.controller.UserRequest[_])
 
 
@@ -10,16 +10,22 @@
     <table class="table table-bordered">
         <tr>
             <th>idx</th>
+            <th>Request Time</th>
+            <th>State</th>
             <th>Twitter Handle</th>
             <th>User Id</th>
             <th>Accept to Waitlist</th>
+            <th>Pulled from Twitter</th>
         </tr>
         @for((entry, i) <- entriesList.zipWithIndex) {
             <tr>
                 <td>@{i+1}</td>
-                <td><a href="https://twitter.com/@{entry.twitterHandle}">@{entry.twitterHandle}</a></td>
-                <td><a href="/admin/user/@{entry.userId.id}">@{entry.userId.id}</a></td>
-                <td><a href="/admin/twitter/accept?handle=@{entry.twitterHandle}&userId=@{entry.userId.id}">Accept</a></td>
+                <td>@adminHelper.dateTimeDisplay(entry._1.createdAt)</td>
+                <td>@{entry._1.state}</td>
+                <td><a href="https://twitter.com/@{entry._1.twitterHandle}">@{entry._1.twitterHandle}</a></td>
+                <td><a href="/admin/user/@{entry._1.userId.id}">@{entry._1.userId.id}</a></td>
+                <td><a href="/admin/twitter/accept?handle=@{entry._1.twitterHandle}&userId=@{entry._1.userId.id}" target="_blank">Accept</a></td>
+                <td>@{entry._2.map(_.lastFetchedAt).flatten.map(_.toString).getOrElse("Never")}</td>
             </tr>
         }
     </table>

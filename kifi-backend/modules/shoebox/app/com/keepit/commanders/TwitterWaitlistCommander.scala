@@ -27,7 +27,7 @@ trait TwitterWaitlistCommander {
   def addEntry(userId: Id[User], handle: TwitterHandle): Either[String, (TwitterWaitlistEntry, Option[Future[ElectronicMail]])]
   def getFakeWaitlistPosition(userId: Id[User], handle: TwitterHandle): Option[Long]
   def getFakeWaitlistLength(): Long
-  def getWaitlist: Seq[TwitterWaitlistEntry]
+  def getWaitlist: Seq[(TwitterWaitlistEntry, Option[TwitterSyncState])]
   def acceptUser(userId: Id[User], handle: TwitterHandle): Either[String, TwitterSyncState]
 }
 
@@ -36,6 +36,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
     db: Database,
     emailRepo: UserEmailAddressRepo,
     twitterWaitlistRepo: TwitterWaitlistRepo,
+    twitterSyncStateRepo: TwitterSyncStateRepo,
     twitterEmailSender: Provider[TwitterWaitlistEmailSender],
     socialUserInfoRepo: SocialUserInfoRepo,
     libraryCommander: LibraryCommander,
@@ -95,9 +96,12 @@ class TwitterWaitlistCommanderImpl @Inject() (
     } * WAITLIST_MULTIPLIER + WAITLIST_LENGTH_SHIFT
   }
 
-  def getWaitlist: Seq[TwitterWaitlistEntry] = {
+  def getWaitlist: Seq[(TwitterWaitlistEntry, Option[TwitterSyncState])] = {
     db.readOnlyReplica { implicit session =>
-      twitterWaitlistRepo.getPending
+      val pending = twitterWaitlistRepo.getPending.map { e => e.userId -> e }.toMap
+      val syncs = twitterSyncStateRepo.getByUserIds(pending.keySet).filterNot(_.userId.isEmpty).map { e => e.userId.get -> e }.toMap
+      val tuples = pending.toSeq.map { case (uid, pend) => pend -> syncs.get(uid) }
+      tuples.sortBy(_._1.createdAt).reverse
     }
   }
 

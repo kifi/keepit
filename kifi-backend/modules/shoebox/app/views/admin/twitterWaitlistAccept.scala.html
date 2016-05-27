@@ -14,6 +14,7 @@
                 <table class="table table-bordered">
                     <tr>
                         <th>Twitter Page</th>
+                        <th>State</th>
                         <th>User Admin Page</th>
                         <th>User Primary Email</th>
                         <th>LibraryId</th>
@@ -23,6 +24,7 @@
                     </tr>
                     <tr>
                         <td><a href="https://twitter.com/@{syncState.twitterHandle}">@{syncState.twitterHandle}</a></td>
+                        <td>@{syncState.state}</td>
                         <td>@if(syncState.userId.isDefined){<a href="/admin/user/@{syncState.userId.get.id}" target="_blank">UserId @{syncState.userId.get.id}</a>}</td>
                         <td>@if(primaryEmail.isDefined){@{primaryEmail.get}}</td>
                         <td>@{syncState.libraryId.id}</td>

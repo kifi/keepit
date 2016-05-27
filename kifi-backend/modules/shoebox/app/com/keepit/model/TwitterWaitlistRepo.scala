@@ -61,12 +61,12 @@ class TwitterWaitlistRepoImpl @Inject() (
 
   def countActiveEntriesBeforeDateTime(time: DateTime)(implicit session: RSession): Int = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val query = sql"select count(*) from twitter_waitlist tw where tw.state = 'active' and tw.created_at < ${time}"
+    val query = sql"select count(*) from twitter_waitlist tw where tw.state = 'active' and tw.created_at < $time"
     query.as[Int].first
   }
 
   def getPending(implicit session: RSession): Seq[TwitterWaitlistEntry] = {
-    (for (r <- rows if r.state === TwitterWaitlistEntryStates.ACTIVE) yield r).list
+    (for (r <- rows if ((r.state === TwitterWaitlistEntryStates.ACTIVE || r.state === TwitterWaitlistEntryStates.ACCEPTED) && r.id > Id[TwitterWaitlistEntry](823))) yield r).list
   }
 
 }

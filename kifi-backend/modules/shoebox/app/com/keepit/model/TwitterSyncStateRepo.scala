@@ -17,6 +17,7 @@ trait TwitterSyncStateRepo extends Repo[TwitterSyncState] {
   def getByHandleAndUserIdUsed(handle: TwitterHandle, userIdUsed: Id[User])(implicit session: RSession): Option[TwitterSyncState]
   def getAllByHandle(handle: TwitterHandle)(implicit session: RSession): Seq[TwitterSyncState]
   def getByUserIdUsed(userIdUsed: Id[User])(implicit session: RSession): Seq[TwitterSyncState]
+  def getByUserIds(userIdUsed: Set[Id[User]])(implicit session: RSession): Seq[TwitterSyncState]
 
   // This needs to be rewritten. Does not work as expected.
   def getTwitterSyncsByFriendIds(twitterHandles: Set[TwitterHandle])(implicit session: RSession): Seq[TwitterSyncState]
@@ -88,6 +89,10 @@ class TwitterSyncStateRepoImpl @Inject() (
 
   def getByUserIdUsed(userIdUsed: Id[User])(implicit session: RSession): Seq[TwitterSyncState] = {
     (for (r <- rows if r.userId === userIdUsed && r.state === TwitterSyncStateStates.ACTIVE) yield r).list
+  }
+
+  def getByUserIds(userIds: Set[Id[User]])(implicit session: RSession): Seq[TwitterSyncState] = {
+    (for (r <- rows if r.userId.inSet(userIds)) yield r).list
   }
 
 }

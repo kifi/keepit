@@ -19,4 +19,6 @@ case class TwitterWaitlistEntry(
 
 object TwitterWaitlistEntryStates extends States[TwitterWaitlistEntry] {
   val ACCEPTED = State[TwitterWaitlistEntry]("accepted")
+  val ANNOUNCED = State[TwitterWaitlistEntry]("announced")
+  val ANNOUNCE_FAIL = State[TwitterWaitlistEntry]("announce_fail")
 }
