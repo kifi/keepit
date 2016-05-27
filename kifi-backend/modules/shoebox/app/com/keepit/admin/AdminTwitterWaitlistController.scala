@@ -52,6 +52,23 @@ class AdminTwitterWaitlistController @Inject() (
     Ok(html.admin.twitterWaitlistAccept(result))
   }
 
+  def viewAcceptedUser(userId: Id[User]) = AdminUserPage { implicit request =>
+    val states = db.readOnlyMaster { implicit s => twitterSyncStateRepo.getByUserIdUsed(userId) }
+    if (states.size != 1) {
+      BadRequest(s"user $userId has ${states.size} states")
+    } else {
+      val syncState = states(0)
+      val (lib, owner, email) = db.readOnlyMaster { implicit s =>
+        val lib = libraryRepo.get(syncState.libraryId)
+        val owner = userRepo.get(lib.ownerId)
+        val email = Try(userEmailAddressRepo.getByUser(userId)).toOption
+        (lib, owner, email)
+      }
+      val libraryPath = libPathCommander.getPathForLibrary(lib)
+      Ok(html.admin.twitterWaitlistAccept(Right(syncState, libraryPath, email)))
+    }
+  }
+
   def processWaitlist() = AdminUserAction { request =>
     twitterWaitlistCommander.processQueue()
     Ok

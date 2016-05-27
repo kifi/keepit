@@ -17,6 +17,7 @@ trait RawKeepRepo extends Repo[RawKeep] {
   def setState(rawKeepId: Id[RawKeep], state: State[RawKeep])(implicit session: RWSession): Boolean
   def insertAll(rawKeeps: Seq[RawKeep])(implicit session: RWSession): Try[Int]
   def insertOne(rawKeep: RawKeep)(implicit session: RWSession): Try[Boolean]
+  def getByKeep(keep: Keep)(implicit session: RSession): Seq[RawKeep]
 }
 
 @Singleton
@@ -86,5 +87,9 @@ class RawKeepRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ex
 
   def insertOne(rawKeep: RawKeep)(implicit session: RWSession): Try[Boolean] = {
     Try(rows.insert(sanitizeRawKeep(rawKeep)) == 1)
+  }
+
+  def getByKeep(keep: Keep)(implicit session: RSession): Seq[RawKeep] = {
+    rows.filter(r => r.userId === keep.userId && r.url === keep.url && r.source === keep.source && r.createdDate === keep.keptAt).list
   }
 }
