@@ -223,7 +223,7 @@ object KeepSource extends Enumerator[KeepSource] {
   val bulk: Set[KeepSource] = imports ++ Set(UserCopied, Unknown, Discussion)
 
   // One-at-a-time keeps
-  val discrete: Set[KeepSource] = Set(Keeper, Site, Mobile, Email, TwitterSync)
+  val discrete: Set[KeepSource] = Set(Keeper, Site, Mobile, Email)
 
   val manual: Set[KeepSource] = Set(Keeper, Site, Mobile, Email)
 
