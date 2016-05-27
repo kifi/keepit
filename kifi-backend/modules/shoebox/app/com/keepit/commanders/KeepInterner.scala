@@ -360,12 +360,11 @@ class KeepInternerImpl @Inject() (
             keep.userId.map(uid => eliza.modifyRecipientsAndSendEvent(keep.id.get, uid, keep.recipients.toDiff, basicKeep.flatMap(_.source.map(_.kind)), basicKeep)).getOrElse(Future.successful(()))
           }
 
-
           // Prefer discrete, recent keeps. Take 20 best that are within the past 14 days.
           val fastfetchKeeps = keeps
-              .sortBy(k => (KeepSource.discrete.contains(k.source), k.keptAt))(implicitly[Ordering[(Boolean, DateTime)]].reverse)
-              .take(20)
-              .filter(_.keptAt.isAfter(clock.now.minusDays(14)))
+            .sortBy(k => (KeepSource.discrete.contains(k.source), k.keptAt))(implicitly[Ordering[(Boolean, DateTime)]].reverse)
+            .take(20)
+            .filter(_.keptAt.isAfter(clock.now.minusDays(14)))
           if (fastfetchKeeps.nonEmpty) {
             FutureHelpers.sequentialExec(fastfetchKeeps) { keep =>
               val nuri = db.readOnlyMaster { implicit session =>
