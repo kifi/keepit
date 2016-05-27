@@ -246,43 +246,30 @@ class AdminBookmarksController @Inject() (
     val userIds = userIdsString.split(",").map(idStr => Id[User](idStr.trim.toLong)).toSeq
     SafeFuture {
       def isFromTwitter(source: KeepSource) = source == KeepSource.TwitterSync || source == KeepSource.TwitterFileImport
-      def mayMatchRawKeep(keep: Keep, rawKeep: RawKeep, twitterAttribution: RawTwitterAttribution): Boolean = {
-        keep.source == rawKeep.source &&
-          keep.url == rawKeep.url &&
-          keep.userId.contains(rawKeep.userId)
-      }
       userIds.foreach { userId =>
+        log.info(s"[backfillTwitterAttribution] Processing user $userId.")
+        var missing = 0
+        var fixed = 0
         db.readWrite { implicit session =>
-          log.info(s"[backfillTwitterAttribution] Processing user $userId.")
-          val rawKeeps = rawKeepRepo.getByUserId(userId)
-          log.info(s"[backfillTwitterAttribution] Found ${rawKeeps.length} for user $userId.")
-          var fixed = 0
-          val rawKeepsFromTwitter = rawKeeps.filter(r => isFromTwitter(r.source))
-          rawKeepsFromTwitter.foreach { rawKeep =>
-            rawKeep.originalJson.foreach { sourceJson =>
-              RawTweet.format.reads(sourceJson).foreach { rawTweet =>
-                uriInterner.getByUri(rawKeep.url).foreach { uri =>
-                  val twitterAttribution = RawTwitterAttribution(rawTweet)
-                  val keepsForRawKeep: Seq[Keep] = keepRepo.getByUri(uri.id.get, excludeState = None).filter(mayMatchRawKeep(_, rawKeep, twitterAttribution))
-                  val sourceByKeepId = sourceRepo.getRawByKeepIds(keepsForRawKeep.flatMap(_.id).toSet)
-                  def isMissingAttribution(keep: Keep): Boolean = !sourceByKeepId.contains(keep.id.get)
-                  def fixKeep(keep: Keep): Unit = {
-                    fixed += 1
-                    sourceRepo.intern(keep.id.get, twitterAttribution)
-                  }
-                  keepsForRawKeep match {
-                    // Unambiguous
-                    case Seq(keep) if isMissingAttribution(keep) => fixKeep(keep)
-                    // Ambiguous, use timestamp to resolve
-                    case multipleKeeps => multipleKeeps.foreach { keep =>
-                      if (isMissingAttribution(keep) && keep.keptAt == rawTweet.createdAt) fixKeep(keep)
+          val allKeeps = keepRepo.getByUser(userId, excludeSet = Set.empty)
+          val sourceByKeepId = sourceRepo.getRawByKeepIds(allKeeps.flatMap(_.id).toSet)
+          def isMissingAttribution(keep: Keep): Boolean = !sourceByKeepId.contains(keep.id.get)
+          allKeeps.foreach { keep =>
+            if (isMissingAttribution(keep)) {
+              missing += 1
+              rawKeepRepo.getByKeep(keep) match {
+                case Seq(rawKeep) =>
+                  rawKeep.originalJson.foreach { sourceJson =>
+                    RawTweet.format.reads(sourceJson).foreach { rawTweet =>
+                      fixed += 1
+                      sourceRepo.intern(keep.id.get, RawTwitterAttribution(rawTweet))
                     }
                   }
-                }
+                case rawKeeps => log.info(s"Failed to fix keep ${keep.id.get} with raw keeps ${rawKeeps.map(_.id.get)}")
               }
             }
           }
-          log.info(s"[backfillTwitterAttribution] Fixed $fixed keeps for user $userId.")
+          log.info(s"[backfillTwitterAttribution] Fixed $fixed/$missing keeps for user $userId.")
         }
       }
     }
