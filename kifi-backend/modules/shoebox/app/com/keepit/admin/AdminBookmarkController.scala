@@ -243,7 +243,7 @@ class AdminBookmarksController @Inject() (
   }
 
   def backfillTwitterAttribution(userIdsString: String) = AdminUserAction { implicit request =>
-    val userIds = userIdsString.split(",").map(idStr => Id[User](idStr.trim.toLong)).toSet
+    val userIds = userIdsString.split(",").map(idStr => Id[User](idStr.trim.toLong)).toSeq
     SafeFuture {
       def isFromTwitter(source: KeepSource) = source == KeepSource.TwitterSync || source == KeepSource.TwitterFileImport
       userIds.foreach { userId =>

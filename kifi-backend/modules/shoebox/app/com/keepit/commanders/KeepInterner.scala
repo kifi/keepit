@@ -359,11 +359,19 @@ class KeepInternerImpl @Inject() (
             val basicKeep = basicKeeps.get(keep.id.get)
             keep.userId.map(uid => eliza.modifyRecipientsAndSendEvent(keep.id.get, uid, keep.recipients.toDiff, basicKeep.flatMap(_.source.map(_.kind)), basicKeep)).getOrElse(Future.successful(()))
           }
-          FutureHelpers.sequentialExec(keeps.filter(k => KeepSource.discrete.contains(k.source))) { keep =>
-            val nuri = db.readOnlyMaster { implicit session =>
-              normalizedURIRepo.get(keep.uriId)
+
+          // Prefer discrete, recent keeps. Take 20 best that are within the past 14 days.
+          val fastfetchKeeps = keeps
+            .sortBy(k => (KeepSource.discrete.contains(k.source), k.keptAt))(implicitly[Ordering[(Boolean, DateTime)]].reverse)
+            .take(20)
+            .filter(_.keptAt.isAfter(clock.now.minusDays(14)))
+          if (fastfetchKeeps.nonEmpty) {
+            FutureHelpers.sequentialExec(fastfetchKeeps) { keep =>
+              val nuri = db.readOnlyMaster { implicit session =>
+                normalizedURIRepo.get(keep.uriId)
+              }
+              roverClient.fetchAsap(nuri.id.get, nuri.url)
             }
-            roverClient.fetchAsap(nuri.id.get, nuri.url)
           }
 
           // Update data-dependencies

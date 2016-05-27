@@ -31,7 +31,7 @@ trait TwitterWaitlistCommander {
   def addUserToWaitlist(userId: Id[User], handle: Option[TwitterHandle]): Either[String, TwitterWaitlistEntry]
   def getFakeWaitlistPosition(userId: Id[User], handle: TwitterHandle): Option[Long]
   def getFakeWaitlistLength(): Long
-  def getWaitlist: Seq[TwitterWaitlistEntry]
+  def getWaitlist: Seq[(TwitterWaitlistEntry, Option[TwitterSyncState])]
   def acceptUser(userId: Id[User], handle: TwitterHandle): Either[String, TwitterSyncState]
 }
 
@@ -39,12 +39,12 @@ trait TwitterWaitlistCommander {
 class TwitterWaitlistCommanderImpl @Inject() (
     db: Database,
     twitterWaitlistRepo: TwitterWaitlistRepo,
+    twitterSyncStateRepo: TwitterSyncStateRepo,
     socialUserInfoRepo: SocialUserInfoRepo,
     libraryCommander: LibraryCommander,
     libraryImageCommander: LibraryImageCommander,
     twitterSyncCommander: TwitterSyncCommander,
     heimdalContextBuilder: HeimdalContextBuilder,
-    syncStateRepo: TwitterSyncStateRepo,
     twitterOAuthProvider: TwitterOAuthProvider,
     libraryRepo: LibraryRepo,
     clock: Clock,
@@ -58,7 +58,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
   // Assumes users only ever have one sync. Error | Entry | Sync
   def createSyncOrWaitlist(userId: Id[User]): Either[String, Either[TwitterWaitlistEntry, TwitterSyncState]] = {
     db.readWrite(attempts = 3) { implicit s =>
-      syncStateRepo.getByUserIdUsed(userId).headOption match {
+      twitterSyncStateRepo.getByUserIdUsed(userId).headOption match {
         case Some(sync) =>
           Left(sync)
         case None =>
@@ -145,10 +145,12 @@ class TwitterWaitlistCommanderImpl @Inject() (
     } * WAITLIST_MULTIPLIER + WAITLIST_LENGTH_SHIFT
   }
 
-  // Won't be needed anymore:
-  def getWaitlist: Seq[TwitterWaitlistEntry] = {
+  def getWaitlist: Seq[(TwitterWaitlistEntry, Option[TwitterSyncState])] = {
     db.readOnlyReplica { implicit session =>
-      twitterWaitlistRepo.getPending
+      val pending = twitterWaitlistRepo.getAdminPage.map { e => e.userId -> e }.toMap
+      val syncs = twitterSyncStateRepo.getByUserIds(pending.keySet).filterNot(_.userId.isEmpty).map { e => e.userId.get -> e }.toMap
+      val tuples = pending.toSeq.map { case (uid, pend) => pend -> syncs.get(uid) }
+      tuples.sortBy(_._1.createdAt).reverse
     }
   }
 
@@ -158,7 +160,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
     val (entryOpt, suiOpt, syncOpt) = db.readWrite { implicit session =>
       val entryOpt = twitterWaitlistRepo.getByUserAndHandle(userId, handle)
       val suiOpt = socialUserInfoRepo.getByUser(userId).find(_.networkType == SocialNetworks.TWITTER)
-      val syncOpt = syncStateRepo.getByHandleAndUserIdUsed(handle, userId)
+      val syncOpt = twitterSyncStateRepo.getByHandleAndUserIdUsed(handle, userId)
       (entryOpt, suiOpt, syncOpt)
     }
 

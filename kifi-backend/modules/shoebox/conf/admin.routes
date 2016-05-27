@@ -275,6 +275,7 @@ POST    /admin/graph/wander                                @com.keepit.controlle
 POST    /admin/library/:id/sendTweet                       @com.keepit.controllers.admin.AdminUserController.tweetAtUserLibrary(id: Id[Library])
 GET     /admin/twitter                                     @com.keepit.controllers.admin.AdminTwitterWaitlistController.getWaitlist()
 GET     /admin/twitter/accept                              @com.keepit.controllers.admin.AdminTwitterWaitlistController.acceptUser(userId: Id[User], handle: String)
+GET     /admin/twitter/accepted                            @com.keepit.controllers.admin.AdminTwitterWaitlistController.viewAcceptedUser(userId: Id[User])
 GET     /admin/twitter/email                               @com.keepit.controllers.admin.AdminTwitterWaitlistController.sendAcceptEmail(syncStateId: Id[TwitterSyncState], userId: Id[User], safe: Boolean ?= true)
 POST    /admin/twitter/processQueue                        @com.keepit.controllers.admin.AdminTwitterWaitlistController.processWaitlist()
 

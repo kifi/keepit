@@ -16,6 +16,7 @@ trait TwitterWaitlistRepo extends Repo[TwitterWaitlistEntry] {
   def getByUserAndHandle(id: Id[User], handle: TwitterHandle)(implicit session: RSession): Option[TwitterWaitlistEntry]
   def getByUser(id: Id[User])(implicit session: RSession): Seq[TwitterWaitlistEntry]
   def countActiveEntriesBeforeDateTime(time: DateTime)(implicit session: RSession): Int
+  def getAdminPage(implicit session: RSession): Seq[TwitterWaitlistEntry]
   def getPending(implicit session: RSession): Seq[TwitterWaitlistEntry]
 }
 
@@ -61,8 +62,12 @@ class TwitterWaitlistRepoImpl @Inject() (
 
   def countActiveEntriesBeforeDateTime(time: DateTime)(implicit session: RSession): Int = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val query = sql"select count(*) from twitter_waitlist tw where tw.state = 'active' and tw.created_at < ${time}"
+    val query = sql"select count(*) from twitter_waitlist tw where tw.state = 'active' and tw.created_at < $time"
     query.as[Int].first
+  }
+
+  def getAdminPage(implicit session: RSession): Seq[TwitterWaitlistEntry] = {
+    (for (r <- rows if ((r.state === TwitterWaitlistEntryStates.ACTIVE || r.state === TwitterWaitlistEntryStates.ACCEPTED) && r.id > Id[TwitterWaitlistEntry](823))) yield r).list
   }
 
   def getPending(implicit session: RSession): Seq[TwitterWaitlistEntry] = {

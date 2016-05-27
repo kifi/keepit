@@ -1,4 +1,5 @@
 // @require scripts/lib/jquery-tokeninput.js
+// @require scripts/lib/antiscroll.min.js
 // @require scripts/lib/mustache.js
 // @require scripts/lib/q.min.js
 // @require scripts/render.js
@@ -83,23 +84,54 @@ var initFriendSearch = (function () {
       onSelect: onSelect.bind(null, source),
       onRemove: onRemove
     }, options));
+
+    $in.parent()
+    .find('.kifi-ti-dropdown')
+    .addClass('kifi-scroll-inner')
+    .preventAncestorScroll()
+    .parent()
+    .addClass('kifi-ti-dropdown-parent');
+
     $in.prev().find('.kifi-ti-token-for-input').repairInputs();
   };
 
-  function search(getExcludeIds, includeSelf, searchFor, ids, query, withResults) {
+  function makeScrollable($view) {
+    $view.find('.kifi-scroll-inner').each(function () {
+      var $this = $(this);
+      $this.parent().antiscroll({x: false});
+      if (!$this.data('wheelListener')) {
+        $this.data('wheelListener', onScrollInnerWheel.bind(this));
+      }
+      $this.on('wheel', $this.data('wheelListener'));
+    });
+  }
+
+  function unMakeScrollable($view) {
+    $view.find('.kifi-scroll-inner').each(function () {
+      var $this = $(this);
+      $this.parent().data('antiscroll').destroy();
+      $this.off('wheel', $this.data('wheelListener'));
+    });
+  }
+
+  function onScrollInnerWheel(e) {
+    var dY = e.originalEvent.deltaY;
+    var sT = this.scrollTop;
+    if (dY > 0 && sT + this.clientHeight < this.scrollHeight ||
+        dY < 0 && sT > 0) {
+      e.originalEvent.didScroll = true; // crbug.com/151734
+    }
+  }
+
+  function search(getExcludeIds, includeSelf, searchFor, ids, query, offset, withResults) {
     searchFor = searchFor || { user: true, email: true, library: false };
-    var n = Math.max(3, Math.min(8, Math.floor((window.innerHeight - 365) / 55)));  // quick rule of thumb
-    api.port.emit('search_recipients', {q: query, n: n, exclude: getExcludeIds().map(getIdOrEmail).concat(ids), searchFor: searchFor }, function (recipients) {
+    api.port.emit('search_recipients', {q: query, n: 10, offset: offset, exclude: getExcludeIds().map(getIdOrEmail).concat(ids), searchFor: searchFor}, function (recipients) {
       recipients = recipients || [];
-      var contacts = recipients.filter(function (r) { return r.id[0] !== 'l'; });
+
       var libraries = recipients.filter(function (r) { return r.id && r.id[0] === 'l' && r.id.indexOf('@') === -1; });
       libraries.forEach(k.formatting.formatLibraryResult);
 
-      var percentContacts = contacts.length / (libraries.length + contacts.length); // keep it a good mix of users + libs
-      var contactsCount = Math.floor(n * percentContacts);
-      contacts = contacts.slice(0, contactsCount);
-      libraries = libraries.slice(0, n - contactsCount);
-      withResults(contacts.concat(libraries));
+      withResults(recipients);
     });
   }
 
@@ -123,7 +155,7 @@ var initFriendSearch = (function () {
       }
       res.keep = res.keep || {};
       res.keep.isSearchResult = true;
-
+      res.extraInfo = 'Kifi library';
       html = $(k.render('html/keeper/keep_box_lib', res, {'name_parts': 'name_parts'}));
       html.addClass('kifi-ti-dropdown-item-token')
       return html.prop('outerHTML');
@@ -196,20 +228,23 @@ var initFriendSearch = (function () {
   }
 
   function showResults($dropdown, els, done) {
-    if ($dropdown[0].childElementCount === 0) {  // bringing entire list into view
+    var n = Math.max(3, Math.min(8, Math.floor((window.innerHeight - 365) / 55)));  // quick rule of thumb
+    var $dropdownElement = $dropdown[0];
+    if ($dropdownElement.childElementCount === 0) {  // bringing entire list into view
       if (els.length) {
         $dropdown.safariHeight(0).append(els);
         $dropdown.off('transitionend').on('transitionend', function (e) {
           if (e.target === this && e.originalEvent.propertyName === 'height') {
             $dropdown.off('transitionend').safariHeight('');
+            makeScrollable($dropdown.parent());
             done();
           }
-        }).safariHeight(measureCloneHeight($dropdown[0], 'clientHeight'));
+        }).safariHeight(measureCloneHeight($dropdownElement, 'clientHeight'));
       } else {
         done();
       }
     } else if (els.length === 0) {  // hiding entire list
-      var height = $dropdown[0].clientHeight;
+      var height = $dropdownElement.clientHeight;
       if (height > 0) {
         $dropdown.safariHeight(height).layout();
         $dropdown.off('transitionend').on('transitionend', function (e) {
@@ -222,22 +257,35 @@ var initFriendSearch = (function () {
         $dropdown.empty();
         done();
       }
+      unMakeScrollable($dropdown.parent());
     } else {  // list is changing
       // fade in overlaid as height adjusts and old fades out
-      var heightInitial = $dropdown[0].clientHeight;
-      var width = $dropdown[0].clientWidth;
+      var heightInitial = $dropdownElement.clientHeight;
+      var width = $dropdownElement.clientWidth;
       $dropdown.safariHeight(heightInitial);
-      var $clone = $($dropdown[0].cloneNode(false))
+      var $clone = $($dropdownElement.cloneNode(false))
         .addClass('kifi-ti-dropdown-clone kifi-instant')
         .css('width', width)
         .append(els)
         .css({visibility: 'hidden', opacity: 0})
         .safariHeight('')
+        .preventAncestorScroll()
         .insertBefore($dropdown);
       var heightFinal = $clone[0].clientHeight;
       $dropdown.layout();
+
+      var dropdownIds = $dropdown.children().toArray().map(getTokenIds);
+      var cloneIds = $clone.children().toArray().map(getTokenIds);
+      var cloneIsNewQuery = isDifferentSubset(cloneIds, dropdownIds)
+      var scrollTop = cloneIsNewQuery ? 0 : $dropdownElement.scrollTop;
+      $dropdown[0].scrollTop = $clone[0].scrollTop = scrollTop;
+
       $clone
-        .css({visibility: 'visible'})
+        .css({
+          visibility: function () {
+            return cloneIsNewQuery ? 'visible' : null;
+          }
+        })
         .safariHeight(heightInitial)
         .layout()
         .on('transitionend', function (e) {
@@ -250,6 +298,7 @@ var initFriendSearch = (function () {
               .layout()
               .css('transition', '');
             $clone.remove();
+            makeScrollable($dropdown.parent());
             done();
           }
         })
@@ -257,9 +306,28 @@ var initFriendSearch = (function () {
         .css({opacity: 1})
         .safariHeight(heightFinal);
       $dropdown
-        .css({opacity: 0})
+        .css({
+          opacity: function () {
+            return cloneIsNewQuery ? 0 : 1;
+          }
+        })
         .safariHeight(heightFinal);
     }
+  }
+
+  function getTokenIds(token) {
+    var $token = $(token);
+    return getIdOrEmail($token.data('tokenInput'));
+  }
+
+  function isDifferentSubset(set, subset) {
+    var n = Math.min(set.length, subset.length);
+    for (var i = 0; i < n; i++) {
+      if (subset[i] !== set[i]) {
+        return true;
+      }
+    }
+    return false;
   }
 
   function measureCloneHeight(el, heightProp) {
