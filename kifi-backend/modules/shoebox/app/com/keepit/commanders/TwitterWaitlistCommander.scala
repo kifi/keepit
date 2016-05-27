@@ -147,7 +147,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
 
   def getWaitlist: Seq[(TwitterWaitlistEntry, Option[TwitterSyncState])] = {
     db.readOnlyReplica { implicit session =>
-      val pending = twitterWaitlistRepo.getPending.map { e => e.userId -> e }.toMap
+      val pending = twitterWaitlistRepo.getAdminPage.map { e => e.userId -> e }.toMap
       val syncs = twitterSyncStateRepo.getByUserIds(pending.keySet).filterNot(_.userId.isEmpty).map { e => e.userId.get -> e }.toMap
       val tuples = pending.toSeq.map { case (uid, pend) => pend -> syncs.get(uid) }
       tuples.sortBy(_._1.createdAt).reverse
