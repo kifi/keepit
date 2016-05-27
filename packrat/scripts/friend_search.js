@@ -261,7 +261,6 @@ var initFriendSearch = (function () {
     } else {  // list is changing
       // fade in overlaid as height adjusts and old fades out
       var heightInitial = $dropdownElement.clientHeight;
-      var scrollTop = $dropdownElement.scrollTop;
       var width = $dropdownElement.clientWidth;
       $dropdown.safariHeight(heightInitial);
       var $clone = $($dropdownElement.cloneNode(false))
@@ -274,11 +273,17 @@ var initFriendSearch = (function () {
         .insertBefore($dropdown);
       var heightFinal = $clone[0].clientHeight;
       $dropdown.layout();
-      $clone[0].scrollTop = scrollTop;
+
+      var dropdownIds = $dropdown.children().toArray().map(getTokenIds);
+      var cloneIds = $clone.children().toArray().map(getTokenIds);
+      var cloneIsNewQuery = isDifferentSubset(cloneIds, dropdownIds)
+      var scrollTop = cloneIsNewQuery ? 0 : $dropdownElement.scrollTop;
+      $dropdown[0].scrollTop = $clone[0].scrollTop = scrollTop;
+
       $clone
         .css({
           visibility: function () {
-            return $clone.children().length > 10 ? null : 'visible';
+            return cloneIsNewQuery ? 'visible' : null;
           }
         })
         .safariHeight(heightInitial)
@@ -303,12 +308,26 @@ var initFriendSearch = (function () {
       $dropdown
         .css({
           opacity: function () {
-            return $clone.children().length > 10 ? 1 : 0;
+            return cloneIsNewQuery ? 0 : 1;
           }
         })
         .safariHeight(heightFinal);
     }
+  }
 
+  function getTokenIds(token) {
+    var $token = $(token);
+    return getIdOrEmail($token.data('tokenInput'));
+  }
+
+  function isDifferentSubset(set, subset) {
+    var n = Math.min(set.length, subset.length);
+    for (var i = 0; i < n; i++) {
+      if (subset[i] !== set[i]) {
+        return true;
+      }
+    }
+    return false;
   }
 
   function measureCloneHeight(el, heightProp) {
