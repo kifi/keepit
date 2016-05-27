@@ -17,8 +17,8 @@ angular.module('kifi')
         feedService.getFeed(limit, streamEnd && streamEnd.id, null, $scope.feedFilter.selected).then(function (keepData) {
           results = results.concat(keepData.keeps);
 
-          if (keepData.keeps.length === 0 || results.length >= limit) {
-            deferred.resolve(results.slice(0, limit));
+          if (keepData.keeps.length === 0 || limit === null || results.length >= limit) {
+            deferred.resolve(results.slice(0, limit || results.length));
           } else { // keepData.length !== 0 && results.length < pageSize
             tryGetFullPage(limit, results[results.length - 1], deferred, results);
           }
