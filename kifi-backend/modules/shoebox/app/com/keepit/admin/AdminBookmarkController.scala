@@ -247,40 +247,46 @@ class AdminBookmarksController @Inject() (
     SafeFuture {
       def isFromTwitter(source: KeepSource) = source == KeepSource.TwitterSync || source == KeepSource.TwitterFileImport
       userIds.foreach { userId =>
-        db.readWrite { implicit session =>
-          log.info(s"[backfillTwitterAttribution] Processing user $userId.")
-          val rawKeeps = rawKeepRepo.getByUserId(userId)
-          log.info(s"[backfillTwitterAttribution] Found ${rawKeeps.length} for user $userId.")
-          var fixed = 0
-          val rawKeepsFromTwitter = rawKeeps.filter(r => isFromTwitter(r.source))
-          rawKeepsFromTwitter.foreach { rawKeep =>
-            rawKeep.originalJson.foreach { sourceJson =>
-              RawTweet.format.reads(sourceJson).foreach { rawTweet =>
-                uriInterner.getByUri(rawKeep.url).foreach { uri =>
-                  val keepsForRawKeep = keepRepo.getByUri(uri.id.get, excludeState = None).filter { keep =>
-                    keep.source == rawKeep.source &&
-                      keep.userId.contains(rawKeep.userId) &&
-                      rawKeep.libraryId.toSet == keep.recipients.libraries &&
-                      rawKeep.createdDate.contains(keep.keptAt)
-                  }
-                  val sourceByKeepId = sourceRepo.getRawByKeepIds(keepsForRawKeep.flatMap(_.id).toSet)
-                  def isMissingAttribution(keep: Keep) = !sourceByKeepId.contains(keep.id.get)
-                  keepsForRawKeep match {
-                    // Unambiguous fix
-                    case Seq(keep) if isMissingAttribution(keep) =>
-                      fixed += 1
-                      sourceRepo.intern(keep.id.get, RawTwitterAttribution(rawTweet))
-                    case multipleKeeps =>
-                      if (multipleKeeps.exists(isMissingAttribution)) {
-                        log.info(s"[backfillTwitterAttribution] RawKeep ${rawKeep.id} matches several keeps including one problematic: $keepsForRawKeep.")
-                      }
+        log.info(s"[backfillTwitterAttribution] Processing user $userId.")
+        var fixed = 0
+        var page = 0
+        var lastPageSize = 0
+        do {
+          db.readWrite { implicit session =>
+            val rawKeeps = rawKeepRepo.getByUserId(userId, page, 1000)
+            lastPageSize = rawKeeps.length
+            page += 1
+            log.info(s"[backfillTwitterAttribution] Processing $lastPageSize raw keeps for user $userId.")
+            val rawKeepsFromTwitter = rawKeeps.filter(r => isFromTwitter(r.source))
+            rawKeepsFromTwitter.foreach { rawKeep =>
+              rawKeep.originalJson.foreach { sourceJson =>
+                RawTweet.format.reads(sourceJson).foreach { rawTweet =>
+                  uriInterner.getByUri(rawKeep.url).foreach { uri =>
+                    val keepsForRawKeep = keepRepo.getByUri(uri.id.get, excludeState = None).filter { keep =>
+                      keep.source == rawKeep.source &&
+                        keep.userId.contains(rawKeep.userId) &&
+                        rawKeep.libraryId.toSet == keep.recipients.libraries &&
+                        rawKeep.createdDate.contains(keep.keptAt)
+                    }
+                    val sourceByKeepId = sourceRepo.getRawByKeepIds(keepsForRawKeep.flatMap(_.id).toSet)
+                    def isMissingAttribution(keep: Keep) = !sourceByKeepId.contains(keep.id.get)
+                    keepsForRawKeep match {
+                      // Unambiguous fix
+                      case Seq(keep) if isMissingAttribution(keep) =>
+                        fixed += 1
+                        sourceRepo.intern(keep.id.get, RawTwitterAttribution(rawTweet))
+                      case multipleKeeps =>
+                        if (multipleKeeps.exists(isMissingAttribution)) {
+                          log.info(s"[backfillTwitterAttribution] RawKeep ${rawKeep.id} matches several keeps including one problematic: $keepsForRawKeep.")
+                        }
+                    }
                   }
                 }
               }
             }
           }
-          log.info(s"[backfillTwitterAttribution] Fixed $fixed keeps for user $userId.")
-        }
+        } while (lastPageSize > 0)
+        log.info(s"[backfillTwitterAttribution] Fixed $fixed keeps for user $userId.")
       }
     }
     Ok(s"Ok. It's gonna take a while.")
