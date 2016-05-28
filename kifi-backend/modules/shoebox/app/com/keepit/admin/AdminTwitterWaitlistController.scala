@@ -1,7 +1,7 @@
 package com.keepit.controllers.admin
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ PathCommander, TwitterWaitlistCommander }
+import com.keepit.commanders.{ TwitterPublishingCommander, PathCommander, TwitterWaitlistCommander }
 import com.keepit.commanders.emails.EmailTemplateSender
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper }
 import com.keepit.common.crypto.PublicIdConfiguration
@@ -15,11 +15,13 @@ import play.twirl.api.Html
 import views.html
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.Try
+import scala.util.{ Failure, Success, Try }
 
 class AdminTwitterWaitlistController @Inject() (
     val userActionsHelper: UserActionsHelper,
     twitterWaitlistCommander: TwitterWaitlistCommander,
+    twitterWaitlistRepo: TwitterWaitlistRepo,
+    twitterPublishingCommander: TwitterPublishingCommander,
     db: Database,
     userRepo: UserRepo,
     libraryRepo: LibraryRepo,
@@ -38,11 +40,10 @@ class AdminTwitterWaitlistController @Inject() (
 
   def acceptUser(userId: Id[User], handle: String) = AdminUserPage { implicit request =>
     val result = twitterWaitlistCommander.acceptUser(userId, TwitterHandle(handle)).right.map { syncState =>
-      val (lib, owner, email) = db.readOnlyMaster { implicit s =>
+      val (lib, email) = db.readOnlyMaster { implicit s =>
         val lib = libraryRepo.get(syncState.libraryId)
-        val owner = userRepo.get(lib.ownerId)
         val email = Try(userEmailAddressRepo.getByUser(userId)).toOption
-        (lib, owner, email)
+        (lib, email)
       }
       val libraryPath = libPathCommander.getPathForLibrary(lib)
       (syncState, libraryPath, email)
@@ -109,7 +110,34 @@ class AdminTwitterWaitlistController @Inject() (
         Ok(s"Email sent to $email")
       }
     }
+  }
 
+  def tweetAtUserLibrary(libraryId: Id[Library]) = AdminUserAction { implicit request =>
+    twitterPublishingCommander.announceNewTwitterLibrary(libraryId) match {
+      case Success(status) =>
+        db.readWrite { implicit s =>
+          twitterWaitlistRepo.getByUser(libraryRepo.get(libraryId).ownerId) map { entry =>
+            twitterWaitlistRepo.save(entry.withState(TwitterWaitlistEntryStates.ANNOUNCED))
+          }
+        }
+        Ok(status.toString)
+      case Failure(e) =>
+        db.readWrite { implicit s =>
+          twitterWaitlistRepo.getByUser(libraryRepo.get(libraryId).ownerId) map { entry =>
+            twitterWaitlistRepo.save(entry.withState(TwitterWaitlistEntryStates.ANNOUNCE_FAIL))
+          }
+        }
+        InternalServerError(e.toString)
+    }
+  }
+
+  def markAsTwitted(userId: Id[User]) = AdminUserAction { implicit request =>
+    val entries = db.readWrite { implicit s =>
+      twitterWaitlistRepo.getByUser(userId) map { entry =>
+        twitterWaitlistRepo.save(entry.withState(TwitterWaitlistEntryStates.ANNOUNCED))
+      }
+    }
+    Ok(s"Done! ${entries.mkString(";")}")
   }
 
 }
