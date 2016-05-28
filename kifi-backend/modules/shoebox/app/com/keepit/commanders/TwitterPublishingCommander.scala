@@ -36,10 +36,7 @@ class TwitterPublishingCommander @Inject() (
       val userTwitterAccount = socialUserInfoRepo.getByUser(library.ownerId).find(u => u.networkType == SocialNetworks.TWITTER).get
       (library, kifiTwitterAccount, userTwitterAccount)
     }
-    val userHasExperiment = experimentCommander.userHasExperiment(library.ownerId, UserExperimentType.ANNOUNCE_NEW_TWITTER_LIBRARY)
-    if (!userHasExperiment) {
-      Failure(new Exception(s"User does not has the ${UserExperimentType.ANNOUNCE_NEW_TWITTER_LIBRARY} experiment"))
-    } else if (library.visibility == LibraryVisibility.PUBLISHED) {
+    if (library.visibility == LibraryVisibility.PUBLISHED) {
       val libraryUrl = s"""https://www.kifi.com${libPathCommander.getPathForLibrary(library)}"""
       userTwitterAccount.profileUrl.map(twitterMessages.parseHandleFromUrl) match {
         case Some(handle) =>
