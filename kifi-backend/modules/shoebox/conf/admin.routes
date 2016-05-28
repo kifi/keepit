@@ -273,7 +273,7 @@ GET     /admin/graph/wander                                @com.keepit.controlle
 POST    /admin/graph/wander                                @com.keepit.controllers.admin.WanderingAdminController.wander()
 
 POST    /admin/library/:id/sendTweet                       @com.keepit.controllers.admin.AdminTwitterWaitlistController.tweetAtUserLibrary(id: Id[Library])
-POST    /admin/library/:id/markAsTwitted                   @com.keepit.controllers.admin.AdminTwitterWaitlistController.markAsTwitted(id: Id[User])
+POST    /admin/user/:id/markAsTwitted                      @com.keepit.controllers.admin.AdminTwitterWaitlistController.markAsTwitted(id: Id[User])
 GET     /admin/twitter                                     @com.keepit.controllers.admin.AdminTwitterWaitlistController.getWaitlist()
 GET     /admin/twitter/accept                              @com.keepit.controllers.admin.AdminTwitterWaitlistController.acceptUser(userId: Id[User], handle: String)
 GET     /admin/twitter/accepted                            @com.keepit.controllers.admin.AdminTwitterWaitlistController.viewAcceptedUser(userId: Id[User])

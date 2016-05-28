@@ -29,9 +29,15 @@
                     <li><a href="/admin/libraries/@{syncState.libraryId.id}" target="_blank">Lib Admin Page</a></li>
                     <li><a href="https://www.kifi.com/@{libraryPath}" target="_blank">Kifi Library</a></li>
                     <li><a href="/admin/twitter/email?userId=@syncState.userId&syncStateId=@syncState.id.get" target="_blank">Send email</a></li>
-                    <li><a href="/admin/library/@{syncState.libraryId.id}/sendTweet" target="_blank">Tweet At the user</a></li>
-                    <li><a href="/admin/library/@{syncState.userId}/markAsTwitted" target="_blank">Mark as tweeted</a></li>
-                    <li><a href="/admin/library/@{syncState.libraryId.id}/markAsTwitted" target="_blank">Mark as Tweeted</a></li>
+                    <li>
+                      <form action="@com.keepit.controllers.admin.routes.AdminTwitterWaitlistController.tweetAtUserLibrary(syncState.libraryId)" method="POST" class="form-inline">
+                        <input type="Submit" value="Tweet at user">
+                      </form>
+                    <li>
+                      <form action="@com.keepit.controllers.admin.routes.AdminTwitterWaitlistController.markAsTwitted(syncState.userId.getOrElse(Id[User](-1)))" method="POST" class="form-inline">
+                        <input type="Submit" value="Mark As Twitted">
+                      </form>
+                    </li>
 
                 </ul>
             }
