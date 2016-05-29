@@ -22,8 +22,8 @@
                 <td>@{i+1}</td>
                 <td>@adminHelper.dateTimeDisplay(entry._1.createdAt)</td>
                 <td>@{entry._1.state}</td>
-                <td><a href="https://twitter.com/@{entry._1.twitterHandle}">@{entry._1.twitterHandle}</a></td>
-                <td><a href="/admin/user/@{entry._1.userId.id}">@{entry._1.userId.id}</a></td>
+                <td><a href="https://twitter.com/@{entry._1.twitterHandle}" target="_blank">@{entry._1.twitterHandle}</a></td>
+                <td><a href="/admin/user/@{entry._1.userId.id}" target="_blank">@{entry._1.userId.id}</a></td>
                 <td>@if(entry._1.state.toString == "accepted"){
                     <a href="/admin/twitter/accepted?userId=@{entry._1.userId.id}" target="_blank">View</a>
                 }else{
