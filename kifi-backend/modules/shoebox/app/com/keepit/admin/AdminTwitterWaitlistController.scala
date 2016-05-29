@@ -73,13 +73,13 @@ class AdminTwitterWaitlistController @Inject() (
     Ok
   }
 
-  def sendAcceptEmail(syncStateId: Id[TwitterSyncState], userId: Id[User], safe: Boolean) = AdminUserPage.async { request =>
-
+  def sendAcceptEmail(syncStateId: Id[TwitterSyncState], safe: Boolean) = AdminUserPage.async { request =>
     val (user, email, libraryPath, alreadySent) = db.readOnlyReplica { implicit session =>
+      val sync = twitterSyncStateRepo.get(syncStateId)
+      val userId = sync.userId.get
       val user = userRepo.get(userId)
       val email = userEmailAddressRepo.getByUser(userId)
-      val sync = twitterSyncStateRepo.get(syncStateId)
-      val alreadySent = userValueRepo.getValue(user.id.get, UserValues.twitterSyncAcceptSent)
+      val alreadySent = userValueRepo.getValue(userId, UserValues.twitterSyncAcceptSent)
 
       val library = libraryRepo.get(sync.libraryId)
       val libraryPath = libPathCommander.getPathForLibrary(library)
@@ -101,8 +101,8 @@ class AdminTwitterWaitlistController @Inject() (
         subject = s"${user.firstName} your wait is over: Twitter deep search is ready for you",
         to = Right(email),
         category = NotificationCategory.User.WAITLIST,
-        htmlTemplate = views.html.email.black.twitterAccept(userId, libraryPath, libPathEncoded),
-        textTemplate = Some(views.html.email.black.twitterAccept(userId, libraryPath, libPathEncoded)),
+        htmlTemplate = views.html.email.black.twitterAccept(user.id.get, libraryPath, libPathEncoded),
+        textTemplate = Some(views.html.email.black.twitterAccept(user.id.get, libraryPath, libPathEncoded)),
         campaign = Some("passwordReset"),
         templateOptions = Seq(TemplateOptions.CustomLayout).toMap
       )
