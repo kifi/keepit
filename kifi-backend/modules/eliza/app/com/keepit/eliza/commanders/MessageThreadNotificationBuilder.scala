@@ -102,7 +102,6 @@ trait MessageThreadNotificationBuilder {
   import MessageThreadNotificationBuilder.PrecomputedInfo
 
   def buildForKeeps(userId: Id[User], keepIds: Set[Id[Keep]], precomputed: Option[PrecomputedInfo.BuildForKeeps] = None): Future[Map[Id[Keep], MessageThreadNotification]]
-  def buildForUsers(keepId: Id[Keep], userIds: Set[Id[User]], precomputed: Option[PrecomputedInfo.BuildForUsers] = None): Future[Map[Id[User], MessageThreadNotification]]
   def buildForUsersFromEvent(userIds: Set[Id[User]], keepId: Id[Keep], event: BasicKeepEvent, author: BasicUser, precomputedInfo: Option[PrecomputedInfo.BuildForEvent] = None): Future[Map[Id[User], MessageThreadNotification]]
 
   // Convenience methods, just wrappers around the real methods above
@@ -298,7 +297,5 @@ class MessageThreadNotificationBuilderImpl @Inject() (
 
     }
   }
-
-  def buildForUsers(keepId: Id[Keep], userIds: Set[Id[User]], precomputed: Option[PrecomputedInfo.BuildForUsers] = None): Future[Map[Id[User], MessageThreadNotification]] = ???
 }
 
