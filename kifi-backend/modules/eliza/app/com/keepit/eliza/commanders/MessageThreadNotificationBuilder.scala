@@ -160,6 +160,12 @@ class MessageThreadNotificationBuilderImpl @Inject() (
 
   def buildForKeeps(userId: Id[User], keepIds: Set[Id[Keep]], precomputed: Option[PrecomputedInfo.BuildForKeeps] = None): Future[Map[Id[Keep], MessageThreadNotification]] = {
     val keepsByIdFut = shoebox.getCrossServiceKeepsByIds(keepIds)
+    val basicUserByIdFut = keepsByIdFut.flatMap { keepsById =>
+      precomputed.flatMap(_.basicUserMap).map(Future.successful).getOrElse {
+        val allUsers = keepsById.values.flatMap(_.users)
+        shoebox.getBasicUsers(allUsers.toSeq)
+      }
+    }
     val infoFut = db.readOnlyMasterAsync { implicit s =>
       val lastMsgById = precomputed.flatMap(_.lastMsgById).getOrElse {
         keepIds.flatAugmentWith(messageRepo.getLatest).toMap
@@ -186,23 +192,20 @@ class MessageThreadNotificationBuilderImpl @Inject() (
     }
     for {
       keepsById <- keepsByIdFut
+      basicUserById <- basicUserByIdFut
       (lastMsgById, userThreadById, threadActivityById, msgCountById) <- infoFut
-      basicUserByIdMap <- precomputed.flatMap(_.basicUserMap).map(Future.successful).getOrElse {
-        val allUsers = keepsById.values.flatMap(_.users)
-        shoebox.getBasicUsers(allUsers.toSeq)
-      }
     } yield keepsById.map {
       case (keepId, keep) =>
         val userThreadOpt = userThreadById.get(keepId)
         val messageOpt = lastMsgById.get(keepId)
-        val threadStarter = keep.owner.map(basicUserByIdMap(_))
+        val threadStarter = keep.owner.map(basicUserById(_))
         val threadActivity = threadActivityById(keepId)
         val MessageCount(numMessages, numUnread) = msgCountById(keepId)
         val muted = userThreadOpt.exists(_.muted)
         val unread = userThreadOpt.map(_.unread).getOrElse(!messageOpt.exists(_.from.asUser.safely.contains(userId)))
 
         val author = messageOpt.map(_.from).collect {
-          case MessageSender.User(id) => BasicUserLikeEntity(basicUserByIdMap(id))
+          case MessageSender.User(id) => BasicUserLikeEntity(basicUserById(id))
           case MessageSender.NonUser(nup) => BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nup))
         } orElse threadStarter.map(BasicUserLikeEntity(_))
         val authorActivityInfos = threadActivity.filter(_.lastActive.isDefined)
@@ -213,7 +216,7 @@ class MessageThreadNotificationBuilderImpl @Inject() (
           case None => authorActivityInfos.count(_.userId != userId)
         }
         keepId -> {
-          val allParticipants = keep.users.toSeq.map(u => BasicUserLikeEntity(basicUserByIdMap(u))) ++
+          val allParticipants = keep.users.toSeq.map(u => BasicUserLikeEntity(basicUserById(u))) ++
             keep.emails.map(emailAddress => BasicUserLikeEntity(BasicNonUser.fromEmail(emailAddress)))
           val orderedParticipants = allParticipants.sortBy(x => x.fold(nu => (nu.firstName.getOrElse(""), nu.lastName.getOrElse("")), u => (u.firstName, u.lastName)))
           val indexOfFirstAuthor = orderedParticipants.zipWithIndex.collectFirst {
@@ -229,7 +232,7 @@ class MessageThreadNotificationBuilderImpl @Inject() (
             time = messageOpt.map(_.createdAt).getOrElse(keep.keptAt),
             author = author,
             text = messageOpt.map { message =>
-              message.auxData.map(SystemMessageData.generateMessageText(_, basicUserByIdMap)).getOrElse(message.messageText)
+              message.auxData.map(SystemMessageData.generateMessageText(_, basicUserById)).getOrElse(message.messageText)
             } orElse keep.title getOrElse keep.url,
             threadId = pubKeepId,
             locator = locator,
