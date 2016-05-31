@@ -1,6 +1,7 @@
 package com.keepit.commanders
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.commanders.KeepQuery.PagingFilter
 import com.keepit.common.core.tryExtensionOps
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
@@ -17,8 +18,8 @@ case class KeepQuery(
     arrangement: Option[KeepQuery.Arrangement],
     paging: KeepQuery.Paging) {
   def withArrangement(newArrangement: KeepQuery.Arrangement) = this.copy(arrangement = Some(newArrangement))
-  def withLimit(newLimit: Int) = this.copy(paging = paging.copy(limit = Limit(newLimit)))
-  def fromId(id: Id[Keep]) = this.copy(paging = paging.copy(fromId = Some(id)))
+  def withLimit(newLimit: Int) = this.copy(paging = paging.copy(limit = newLimit))
+  def withFilter(newFilter: PagingFilter) = this.copy(paging = paging.copy(filter = Some(newFilter)))
 }
 
 object KeepQuery {
@@ -30,7 +31,10 @@ object KeepQuery {
   // FirstOrder(uriIds, viewer) => keeps on `uriId` that `viewer` is directly connected to, or connected via a library
   case class FirstOrder(uriId: Id[NormalizedURI], viewer: Id[User]) extends Target
 
-  final case class Paging(fromId: Option[Id[Keep]], offset: Offset, limit: Limit)
+  case class Paging(filter: Option[PagingFilter], offset: Int, limit: Int)
+  sealed abstract class PagingFilter
+  case class FromId(fromId: Id[Keep]) extends PagingFilter
+  case class Seen(seen: Set[Id[Keep]]) extends PagingFilter
   final case class Arrangement(ordering: KeepOrdering, direction: SortDirection)
   object Arrangement {
     implicit val format: Format[Arrangement] = Json.format[Arrangement]
