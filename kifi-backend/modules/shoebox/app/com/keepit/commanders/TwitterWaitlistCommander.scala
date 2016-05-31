@@ -286,6 +286,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
         val lib = libraryRepo.getNoCache(libraryId)
         if (lib.description.isEmpty || lib.description.exists(_.indexOf("Interesting pages") == 0)) {
           libraryRepo.save(libraryRepo.getNoCache(libraryId).copy(description = Some(desc)))
+          log.info(s"[updateLibraryFromShow] $libraryId ($userId): Description updated to $desc")
         }
       }
 
@@ -293,6 +294,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
       show.`protected`.foreach { protectedProfile =>
         if (protectedProfile) {
           libraryRepo.save(libraryRepo.getNoCache(libraryId).copy(visibility = LibraryVisibility.SECRET))
+          log.info(s"[updateLibraryFromShow] $libraryId ($userId): Visibility updated to $protectedProfile")
         }
       }
     }
@@ -304,6 +306,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
       }
       if (existing.isEmpty) {
         syncPic(userId, libraryId, image)
+        log.info(s"[updateLibraryFromShow] $libraryId ($userId): Image updated to $image")
       }
     }
   }
