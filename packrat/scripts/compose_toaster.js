@@ -74,7 +74,7 @@ k.toaster = k.toaster || (function () {
     }
     $toast = $(k.render('html/keeper/compose_toaster', {
       showTo: true,
-      draftPlaceholder: 'Write something…',
+      draftPlaceholder: '(Optional) Write something…',
       draftDefault: DEFAULT_MESSAGE_TEXT
     }, {
       compose: 'compose'
