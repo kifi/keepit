@@ -39,7 +39,7 @@ class ShoeboxTasksPlugin @Inject() (
       twitterSyncCommander.syncAll()
     }
 
-    scheduleTaskOnOneMachine(system, 2 minutes, 333 seconds, "twitter waitlist accept") {
+    scheduleTaskOnLeader(system, 66 seconds, 13 seconds, "twitter waitlist accept") {
       twitterWaitListCommander.processQueue()
     }
 
