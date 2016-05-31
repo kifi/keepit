@@ -6,7 +6,7 @@ import com.keepit.common.controller._
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.time.Clock
+import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.social.twitter.TwitterHandle
 import com.keepit.social.{ SocialGraphPlugin, SocialNetworks }
@@ -27,6 +27,7 @@ class TwitterWaitlistController @Inject() (
     val userActionsHelper: UserActionsHelper,
     twitterSyncStateRepo: TwitterSyncStateRepo,
     libraryRepo: LibraryRepo,
+    clock: Clock,
     implicit val ec: ExecutionContext) extends UserActions with ShoeboxServiceController {
 
   def twitterWaitlistLandingRedirectHack() = twitterWaitlistLanding()
@@ -167,30 +168,46 @@ class TwitterWaitlistController @Inject() (
         }
         if (twitterSui.isEmpty) {
           Redirect("/link/twitter?intent=waitlist").withSession(session + (SecureSocial.OriginalUrlKey -> "/twitter/thanks"))
-        } else if (existingSync.nonEmpty) {
-          val library = db.readOnlyReplica { implicit session =>
-            libraryRepo.get(existingSync.get.libraryId)
-          }
-          Redirect(libPathCommander.getPathForLibrary(library))
         } else {
-          pollDbForTwitterHandle(ur.userId, iterations = 75).map { twRes =>
-            twRes match {
-              case Some(handle) =>
-                commander.addUserToWaitlist(ur.userId, Some(handle))
-              case None => // we failed :(
-                log.warn(s"Couldn't get twitter handle in time, we'll try again. userId: ${ur.userId.id}. They want to be waitlisted.")
-                socialGraphPlugin.asyncFetch(twitterSui.get).onComplete { _ =>
-                  pollDbForTwitterHandle(ur.userId, iterations = 75).onComplete {
-                    case Success(Some(handle)) =>
-                      commander.addUserToWaitlist(ur.userId, Some(handle))
-                    case fail => // we failed :(
-                      airbrakeNotifier.notify(s"Couldn't get twitter handle in time, failed retry. userId: ${ur.userId.id}. They want to be waitlisted. $fail")
-                  }
-                }
+          commander.createSyncOrWaitlist(ur.userId) match {
+            case Left(error) =>
+              log.warn(s"[thanksForTwitterWaitlist] ${ur.userId} Error when creating sync, $error")
+              oldBehavior(ur.userId, twitterSui.get)
+              MarketingSiteRouter.marketingSite("twitter-confirmation")
+            case Right(Right(sync)) if sync.createdAt.isBefore(clock.now.minusMinutes(20)) =>
+              log.info(s"[thanksForTwitterWaitlist] ${ur.userId} Had a sync, redirecting $sync")
+              redirectToLibrary(existingSync.get.libraryId)
+            case Right(waitOrNewSync) =>
+              log.info(s"[thanksForTwitterWaitlist] ${ur.userId} now on waitlist $waitOrNewSync")
+              MarketingSiteRouter.marketingSite("twitter-confirmation")
+          }
+        }
+    }
+  }
+
+  private def redirectToLibrary(libraryId: Id[Library]) = {
+    val library = db.readOnlyReplica { implicit session =>
+      libraryRepo.get(libraryId)
+    }
+    Redirect(libPathCommander.getPathForLibrary(library))
+  }
+
+  private def oldBehavior(userId: Id[User], twitterSui: SocialUserInfo) = {
+    pollDbForTwitterHandle(userId, iterations = 75).map { twRes =>
+      twRes match {
+        case Some(handle) =>
+          commander.addUserToWaitlist(userId, Some(handle))
+        case None => // we failed :(
+          log.warn(s"Couldn't get twitter handle in time, we'll try again. userId: ${userId.id}. They want to be waitlisted.")
+          socialGraphPlugin.asyncFetch(twitterSui).onComplete { _ =>
+            pollDbForTwitterHandle(userId, iterations = 75).onComplete {
+              case Success(Some(handle)) =>
+                commander.addUserToWaitlist(userId, Some(handle))
+              case fail => // we failed :(
+                airbrakeNotifier.notify(s"Couldn't get twitter handle in time, failed retry. userId: ${userId.id}. They want to be waitlisted. $fail")
             }
           }
-          MarketingSiteRouter.marketingSite("twitter-confirmation")
-        }
+      }
     }
   }
 

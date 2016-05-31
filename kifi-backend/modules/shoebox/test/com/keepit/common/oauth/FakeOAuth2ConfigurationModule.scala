@@ -41,7 +41,7 @@ class FakeLinkedInOAuthProvider extends LinkedInOAuthProvider with FakeOAuth2Pro
 class FakeSlackOAuthProvider extends SlackOAuthProvider with FakeOAuthProvider[SlackAuthorizationResponse, SlackIdentity]
 @Singleton
 class FakeTwitterOAuthProvider extends TwitterOAuthProvider with FakeOAuth1Provider[TwitterIdentity] {
-  def getUserShow(accessToken: OAuth1TokenInfo, screenName: TwitterHandle): Future[TwitterUserShow] = Future.successful(TwitterUserShow(None, None, None, None))
+  def getUserShow(accessToken: OAuth1TokenInfo, screenName: TwitterHandle): Future[TwitterUserShow] = Future.successful(TwitterUserShow(None, None, None, None, None))
 }
 
 

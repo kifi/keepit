@@ -57,7 +57,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
   private val WAITLIST_LENGTH_SHIFT = 1152
   private val WAITLIST_MULTIPLIER = 3
 
-  // Assumes users only ever have one sync. Error | Entry | Sync
+  // Assumes users only ever have one sync. ErrorStr | Entry | Sync
   def createSyncOrWaitlist(userId: Id[User]): Either[String, Either[TwitterWaitlistEntry, TwitterSyncState]] = {
     db.readWrite(attempts = 3) { implicit s =>
       twitterSyncStateRepo.getByUserIdUsed(userId).headOption match {
