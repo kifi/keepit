@@ -1,7 +1,7 @@
 package com.keepit.search.user
 
+import com.keepit.common.util.IdFilterCompressor
 import com.keepit.model.{ UserFactory }
-import com.keepit.search.util.IdFilterCompressor
 import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, FakeShoeboxServiceModule, ShoeboxServiceClient }
 import com.keepit.test.CommonTestInjector
 import org.specs2.mutable.Specification

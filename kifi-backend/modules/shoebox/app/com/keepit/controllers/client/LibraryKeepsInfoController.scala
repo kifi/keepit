@@ -42,7 +42,7 @@ class LibraryKeepsInfoController @Inject() (
       _ <- RightBias.unit.filter(_ => permissions.contains(LibraryPermission.VIEW_LIBRARY), LibraryFail.INSUFFICIENT_PERMISSIONS)
     } yield {
       val arrangementOpt = KeepQuery.Arrangement.fromOptions(order, dir)
-      val paging = KeepQuery.Paging(fromId = fromId, offset = Offset(offset), limit = Limit(limit))
+      val paging = KeepQuery.Paging(filter = fromId.map(KeepQuery.FromId), offset = offset, limit = limit)
       val keepIds = db.readOnlyMaster { implicit s =>
         keepQueryCommander.getKeeps(request.userIdOpt, KeepQuery(
           target = KeepQuery.ForLibrary(libId),
