@@ -107,6 +107,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   val allProbabilisticExperimentGenerators = MutableMap[Name[ProbabilisticExperimentGenerator], ProbabilisticExperimentGenerator]()
   val allUserBookmarks = MutableMap[Id[User], Set[Id[Keep]]]().withDefaultValue(Set.empty)
   val allBookmarks = MutableMap[Id[Keep], Keep]()
+  val allCrossServiceKeeps = MutableMap[Id[Keep], CrossServiceKeep]()
   val allNormalizedURIs = MutableMap[Id[NormalizedURI], NormalizedURI]()
   val uriToUrl = MutableMap[Id[NormalizedURI], URL]()
   val allCollections = MutableMap[Id[Collection], Collection]()
@@ -685,7 +686,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   def getOrgTrackingValues(orgId: Id[Organization]): Future[OrgTrackingValues] = Future.successful(OrgTrackingValues(0, 0, 0, 0))
 
   def getCrossServiceKeepsByIds(ids: Set[Id[Keep]]): Future[Map[Id[Keep], CrossServiceKeep]] = Future.successful {
-    ids.map(id => id -> CrossServiceKeep(
+    ids.map(id => id -> allCrossServiceKeeps.getOrElse(id, CrossServiceKeep(
       id = id,
       externalId = ExternalId(),
       seq = SequenceNumber.ZERO,
@@ -700,7 +701,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
       lastActivityAt = currentDateTime.minusHours(10),
       title = Some("Kifi!"),
       note = Some("is great")
-    )).toMap
+    ))).toMap
   }
 
   def getDiscussionKeepsByIds(viewerId: Id[User], keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], DiscussionKeep]] = Future.successful {
@@ -722,7 +723,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   def getSlackTeamIds(orgIds: Set[Id[Organization]]): Future[Map[Id[Organization], SlackTeamId]] = Future.successful(Map.empty)
   def getSlackTeamInfo(slackTeamId: SlackTeamId): Future[Option[InternalSlackTeamInfo]] = Future.successful(None)
   def internKeep(creator: Id[User], users: Set[Id[User]], emails: Set[EmailAddress], uriId: Id[NormalizedURI], url: String, title: Option[String], note: Option[String], source: Option[KeepSource]): Future[CrossServiceKeep] = {
-    Future.successful(CrossServiceKeep(
+    val keep = CrossServiceKeep(
       id = nextBookmarkId(),
       externalId = ExternalId(),
       seq = SequenceNumber.ZERO,
@@ -737,7 +738,9 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
       lastActivityAt = currentDateTime,
       title = title,
       note = note
-    ))
+    )
+    allCrossServiceKeeps += (keep.id -> keep)
+    Future.successful(keep)
   }
 
   def editRecipientsOnKeep(editorId: Id[User], keepId: Id[Keep], diff: KeepRecipientsDiff): Future[Unit] = Future.successful(Unit)
