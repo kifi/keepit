@@ -571,24 +571,22 @@ class KeepRepoImpl @Inject() (
             )
         } yield k
     }
-    def filterSeenRows(rs: Rows): Rows = paging.filter.fold(rs) {
-      case Seen(ids) => rs.filterNot(_.id.inSet(ids))
-      case FromId(fromId) =>
-        val fromKeep = get(fromId)
-        arrangement.ordering match {
-          case KeepOrdering.LAST_ACTIVITY_AT =>
-            val fromTime = fromKeep.lastActivityAt
-            arrangement.direction match {
-              case SortDirection.ASCENDING => rs.filter(r => r.lastActivityAt > fromKeep.lastActivityAt || (r.lastActivityAt === fromTime && r.id > fromId))
-              case SortDirection.DESCENDING => rs.filter(r => r.lastActivityAt < fromKeep.lastActivityAt || (r.lastActivityAt === fromTime && r.id < fromId))
-            }
-          case KeepOrdering.KEPT_AT =>
-            val fromTime = fromKeep.keptAt
-            arrangement.direction match {
-              case SortDirection.ASCENDING => rs.filter(r => r.keptAt > fromKeep.keptAt || (r.keptAt === fromTime && r.id > fromId))
-              case SortDirection.DESCENDING => rs.filter(r => r.keptAt < fromKeep.keptAt || (r.keptAt === fromTime && r.id < fromId))
-            }
-        }
+    def filterByTime(rs: Rows): Rows = paging.fromId.fold(rs) { fromId =>
+      val fromKeep = get(fromId)
+      arrangement.ordering match {
+        case KeepOrdering.LAST_ACTIVITY_AT =>
+          val fromTime = fromKeep.lastActivityAt
+          arrangement.direction match {
+            case SortDirection.ASCENDING => rs.filter(r => r.lastActivityAt > fromKeep.lastActivityAt || (r.lastActivityAt === fromTime && r.id > fromId))
+            case SortDirection.DESCENDING => rs.filter(r => r.lastActivityAt < fromKeep.lastActivityAt || (r.lastActivityAt === fromTime && r.id < fromId))
+          }
+        case KeepOrdering.KEPT_AT =>
+          val fromTime = fromKeep.keptAt
+          arrangement.direction match {
+            case SortDirection.ASCENDING => rs.filter(r => r.keptAt > fromKeep.keptAt || (r.keptAt === fromTime && r.id > fromId))
+            case SortDirection.DESCENDING => rs.filter(r => r.keptAt < fromKeep.keptAt || (r.keptAt === fromTime && r.id < fromId))
+          }
+      }
     }
     def orderByTime(rs: Rows): Rows = arrangement match {
       case Arrangement(KeepOrdering.LAST_ACTIVITY_AT, SortDirection.ASCENDING) => rs.sortBy(r => (r.lastActivityAt asc, r.id asc))
@@ -596,9 +594,10 @@ class KeepRepoImpl @Inject() (
       case Arrangement(KeepOrdering.KEPT_AT, SortDirection.ASCENDING) => rs.sortBy(r => (r.keptAt asc, r.id asc))
       case Arrangement(KeepOrdering.KEPT_AT, SortDirection.DESCENDING) => rs.sortBy(r => (r.keptAt desc, r.id desc))
     }
-    def pageThroughOrderedRows(rs: Rows) = rs.map(_.id).drop(paging.offset).take(paging.limit)
+    def pageThroughOrderedRows(rs: Rows) = rs.map(_.id).drop(paging.offset.value).take(paging.limit.value)
 
-    val q = activeRows |> filterByTarget |> filterSeenRows |> orderByTime |> pageThroughOrderedRows
+    val q = activeRows |> filterByTarget |> filterByTime |> orderByTime |> pageThroughOrderedRows
+    println(q.selectStatement)
     q.list
   }
 

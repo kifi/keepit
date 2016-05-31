@@ -1,7 +1,6 @@
 package com.keepit.search.index.user
 
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.util.IdFilterCompressor
 import com.keepit.model._
 import com.keepit.search.user.{ DeprecatedUserSearchFilterFactory, DeprecatedUserSearcher, DeprecatedUserQueryParser }
 import com.keepit.search.index.{ VolatileIndexDirectory, IndexDirectory, DefaultAnalyzer }
@@ -10,6 +9,7 @@ import com.keepit.test._
 import org.specs2.mutable._
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 import com.keepit.shoebox.FakeShoeboxServiceModule
+import com.keepit.search.util.IdFilterCompressor
 import com.keepit.typeahead.PrefixFilter
 import com.keepit.common.mail.EmailAddress
 

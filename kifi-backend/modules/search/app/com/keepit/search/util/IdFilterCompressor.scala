@@ -1,11 +1,11 @@
-package com.keepit.common.util
+package com.keepit.search.util
 
-import java.io.{ ByteArrayInputStream, ByteArrayOutputStream }
+import org.apache.lucene.store.OutputStreamDataOutput
+import org.apache.lucene.store.InputStreamDataInput
+import java.io.ByteArrayOutputStream
+import java.io.ByteArrayInputStream
 import java.util.Arrays
 import java.util.zip.Adler32
-
-import com.keepit.search.util.LongArraySet
-import org.apache.lucene.store.{ InputStreamDataInput, OutputStreamDataOutput }
 
 object IdFilterCompressor extends IdFilterBase[LongArraySet] {
 

@@ -8,7 +8,6 @@ import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.json.SchemaReads
 import com.keepit.common.logging.SlackLog
 import com.keepit.common.mail.{ BasicContact, EmailAddress }
 import com.keepit.common.net.QsFormat
@@ -26,7 +25,6 @@ import com.keepit.shoebox.data.keep._
 import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
 import com.keepit.social.BasicAuthor
 import org.apache.commons.lang3.RandomStringUtils
-import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -79,19 +77,6 @@ object KeepInfoAssemblerConfig {
   )(KeepViewAssemblyOptions.apply, unlift(KeepViewAssemblyOptions.unapply))
 
   implicit val qsBinder = QsFormat.binder(qsf)
-
-  import SchemaReads._
-  private implicit val imageSizeSReads = SchemaReads.trivial[ImageSize]("image size")
-  implicit val useDefaultForMissing: SchemaReads[KeepViewAssemblyOptions] = (
-    (__ \ "idealImageSize").readNullableWithSchema[ImageSize].withDefault(default.idealImageSize) and
-    (__ \ "numEventsPerKeep").readNullableWithSchema[Int].withDefault(default.numEventsPerKeep) and
-    (__ \ "hideOtherPublishedLibraries").readNullableWithSchema[Boolean].withDefault(default.hideOtherPublishedLibraries) and
-    (__ \ "numContextualKeeps").readNullableWithSchema[Int].withDefault(default.numContextualKeeps) and
-    (__ \ "numContextualKeepers").readNullableWithSchema[Int].withDefault(default.numContextualKeepers) and
-    (__ \ "numContextualLibraries").readNullableWithSchema[Int].withDefault(default.numContextualLibraries) and
-    (__ \ "numContextualTags").readNullableWithSchema[Int].withDefault(default.numContextualTags) and
-    (__ \ "sanitizeUrls").readNullableWithSchema[Boolean].withDefault(default.sanitizeUrls)
-  )(KeepViewAssemblyOptions.apply _)
 }
 
 class KeepInfoAssemblerImpl @Inject() (

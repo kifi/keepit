@@ -1,9 +1,8 @@
 package com.keepit.search
 
 import com.keepit.common.db.Id
-import com.keepit.common.util.IdFilterCompressor
 import com.keepit.model.{ Library, Organization, User }
-import com.keepit.search.util.LongArraySet
+import com.keepit.search.util.{ LongArraySet, IdFilterCompressor }
 import com.kifi.macros.json
 
 sealed trait SearchScope
