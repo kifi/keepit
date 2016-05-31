@@ -8,6 +8,7 @@ import com.google.inject.{Inject, ImplementedBy, Singleton}
 
 import com.keepit.common.core.File
 import com.keepit.common.images.{ Photoshop, RawImageInfo }
+import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ URI, WebService }
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.store.{ ImageOffset, ImagePath, ImageSize }
@@ -507,7 +508,7 @@ object ProcessedImageSize {
 @Singleton
 class ImageCleanup @Inject() (
   clock: Clock
-) {
+) extends Logging {
   // When temporary files are created, they can be registered with this class, which will
   // delete them after a certain amount of time has passed.
   private val images = new mutable.Queue[(DateTime, String)]()
@@ -529,6 +530,9 @@ class ImageCleanup @Inject() (
         if (file.exists()) {
           file.delete()
         }
+      } match {
+        case Failure(ex) => log.info(s"Couldn't delete file $filename: ${ex.toString}")
+        case Success(_) =>
       }
       if (images.nonEmpty) {
         purge()
