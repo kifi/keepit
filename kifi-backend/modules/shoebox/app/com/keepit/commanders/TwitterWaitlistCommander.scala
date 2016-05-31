@@ -168,7 +168,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
 
     (entryOpt, suiOpt, syncOpt) match {
       case (Some(entry), Some(sui), None) if entry.state == TwitterWaitlistEntryStates.ACTIVE && sui.credentials.isDefined && sui.userId.isDefined =>
-        createSync(entry)
+        createSync(entry.id.get)
       case _ =>
         // invalid
         Left(s"Couldn't accept User $userId. Entry: $entryOpt, SocialUserInfo: $suiOpt, SyncState: $syncOpt")
@@ -202,7 +202,6 @@ class TwitterWaitlistCommanderImpl @Inject() (
       }
       (entry, suiAndHandle)
     }
-
 
     suiAndHandle match {
       case Some((sui, handle)) if entry.state == TwitterWaitlistEntryStates.ACTIVE =>

@@ -174,7 +174,7 @@ class TwitterWaitlistController @Inject() (
               log.warn(s"[thanksForTwitterWaitlist] ${ur.userId} Error when creating sync, $error")
               oldBehavior(ur.userId, twitterSui.get)
               MarketingSiteRouter.marketingSite("twitter-confirmation")
-            case Right(Right(sync)) if sync.createdAt.isBefore(clock.now.minusMinutes(20)) =>
+            case Right(Right(sync)) if syncIsReady(sync) =>
               log.info(s"[thanksForTwitterWaitlist] ${ur.userId} Had a sync, redirecting $sync")
               redirectToLibrary(existingSync.get.libraryId)
             case Right(waitOrNewSync) =>
@@ -182,6 +182,14 @@ class TwitterWaitlistController @Inject() (
               MarketingSiteRouter.marketingSite("twitter-confirmation")
           }
         }
+    }
+  }
+
+  private def syncIsReady(sync: TwitterSyncState) = {
+    db.readOnlyReplica { implicit session =>
+      // Very old, or recent and has keeps
+      sync.createdAt.isBefore(clock.now.minusMinutes(120)) ||
+        (sync.createdAt.isBefore(clock.now.minusMinutes(2)) && libraryRepo.get(sync.libraryId).keepCount > 0)
     }
   }
 
