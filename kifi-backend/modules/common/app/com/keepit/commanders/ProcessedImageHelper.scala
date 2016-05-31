@@ -531,7 +531,7 @@ class ImageCleanup @Inject() (
           file.delete()
         }
       } match {
-        case Failure(ex) => log.info(s"Couldn't delete file $filename: ${ex.toString}")
+        case Failure(ex) => log.info(s"[ImageCleanup] Couldn't delete file $filename: ${ex.toString}")
         case Success(_) =>
       }
       if (images.nonEmpty) {
