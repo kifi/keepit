@@ -2,7 +2,7 @@ package com.keepit.commanders
 
 import com.google.inject.Injector
 import com.keepit.commanders.KeepQuery.Arrangement.FromOrdering
-import com.keepit.commanders.KeepQuery.{ FromId, ForUri, ForLibrary }
+import com.keepit.commanders.KeepQuery.{ ForUri, ForLibrary }
 import com.keepit.common.controller._
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
@@ -46,7 +46,7 @@ class KeepQueryCommanderTest extends Specification with ShoeboxTestInjector {
         val query = KeepQuery(
           target = ForLibrary(lib.id.get),
           arrangement = None,
-          paging = KeepQuery.Paging(filter = None, offset = 0, limit = 10)
+          paging = KeepQuery.Paging(fromId = None, offset = Offset(0), limit = Limit(10))
         )
         db.readOnlyMaster { implicit s =>
           // By default, order by lastActivityAt
@@ -58,7 +58,7 @@ class KeepQueryCommanderTest extends Specification with ShoeboxTestInjector {
           inject[KeepQueryCommander].getKeeps(Some(user.id.get), query.withArrangement(KEPT_AT.asc)) === byKA.reverse.take(10)
 
           // Page by id
-          inject[KeepQueryCommander].getKeeps(Some(user.id.get), query.withFilter(FromId(byLAA(5)))) === byLAA.drop(6).take(10)
+          inject[KeepQueryCommander].getKeeps(Some(user.id.get), query.fromId(byLAA(5))) === byLAA.drop(6).take(10)
         }
         1 === 1
       }
@@ -79,7 +79,7 @@ class KeepQueryCommanderTest extends Specification with ShoeboxTestInjector {
         val query = KeepQuery(
           target = ForUri(uri, user.id.get, KeepRecipients.EMPTY),
           arrangement = None,
-          paging = KeepQuery.Paging(filter = None, offset = 0, limit = 10)
+          paging = KeepQuery.Paging(fromId = None, offset = Offset(0), limit = Limit(10))
         )
         db.readOnlyMaster { implicit s =>
           inject[KeepQueryCommander].getKeeps(Some(user.id.get), query).length === 3 // of the four keeps, only 3 are visible

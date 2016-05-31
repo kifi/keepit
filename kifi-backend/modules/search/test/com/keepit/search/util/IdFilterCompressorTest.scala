@@ -1,8 +1,6 @@
 package com.keepit.search.util
 
-import com.keepit.common.util.{ IdFilterCompressorException, IdFilterCompressor }
 import org.specs2.mutable._
-
 import scala.util.Random
 
 class IdFilterCompressorTest extends Specification {
