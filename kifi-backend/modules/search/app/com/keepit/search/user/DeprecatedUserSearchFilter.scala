@@ -2,8 +2,8 @@ package com.keepit.search.user
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.db.Id
+import com.keepit.common.util.IdFilterCompressor
 import com.keepit.model.User
-import com.keepit.search.util.IdFilterCompressor
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
