@@ -95,6 +95,7 @@ package object json {
     implicit def set[T](implicit sr: SchemaReads[T]): SchemaReads[Set[T]] = SchemaReads(Reads.set(sr.reads), JsonSchema.Array(sr.schema))
     implicit val int: SchemaReads[Int] = trivial("int")
     implicit val str: SchemaReads[String] = trivial("str")
+    implicit val bool: SchemaReads[Boolean] = trivial("boolean")
     implicit val userId: SchemaReads[ExternalId[User]] = trivial("user_id")
     implicit val libraryId: SchemaReads[PublicId[Library]] = trivial("library_id")
     implicit val email: SchemaReads[EmailAddress] = trivial("email")
@@ -106,6 +107,9 @@ package object json {
 
       def readNullableWithSchema[T](implicit sr: SchemaReads[T]) =
         SchemaReads(jsp.readNullable(sr.reads), JsonSchema.Object(Seq(jsp.path.map(_.toJsonString).mkString.stripPrefix(".") -> JsonSchema.Optional(sr.schema))))
+    }
+    implicit class NullableReads[T](srOpt: SchemaReads[Option[T]]) {
+      def withDefault(default: T): SchemaReads[T] = srOpt.map(_ getOrElse default)
     }
 
     implicit val fcbSchemaReads: FunctionalCanBuild[SchemaReads] = new FunctionalCanBuild[SchemaReads] {
