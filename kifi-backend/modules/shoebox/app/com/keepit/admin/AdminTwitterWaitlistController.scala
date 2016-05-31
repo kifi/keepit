@@ -10,6 +10,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.{ SystemEmailAddress, EmailAddress }
 import com.keepit.common.mail.template.{ TemplateOptions, EmailToSend }
 import com.keepit.model._
+import com.keepit.social.SocialNetworks
 import com.keepit.social.twitter.TwitterHandle
 import play.twirl.api.Html
 import views.html
@@ -30,6 +31,7 @@ class AdminTwitterWaitlistController @Inject() (
     emailTemplateSender: EmailTemplateSender,
     userValueRepo: UserValueRepo,
     twitterSyncStateRepo: TwitterSyncStateRepo,
+    socialUserInfoRepo: SocialUserInfoRepo,
     implicit val ec: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) extends AdminUserActions {
 
@@ -73,43 +75,17 @@ class AdminTwitterWaitlistController @Inject() (
     Ok
   }
 
-  def sendAcceptEmail(syncStateId: Id[TwitterSyncState], safe: Boolean) = AdminUserPage.async { request =>
-    val (user, email, libraryPath, alreadySent) = db.readOnlyReplica { implicit session =>
-      val sync = twitterSyncStateRepo.get(syncStateId)
-      val userId = sync.userId.get
-      val user = userRepo.get(userId)
-      val email = userEmailAddressRepo.getByUser(userId)
-      val alreadySent = userValueRepo.getValue(userId, UserValues.twitterSyncAcceptSent)
-
-      val library = libraryRepo.get(sync.libraryId)
-      val libraryPath = libPathCommander.getPathForLibrary(library)
-
-      (user, email, libraryPath, alreadySent)
-    }
-    val libPathEncoded = java.net.URLEncoder.encode(libraryPath, "UTF-8")
-
-    if (safe && alreadySent) {
-      Future.successful(BadRequest("Email already sent. Not expecting to see this? Ask Andrew"))
-    } else {
-      db.readWrite { implicit session =>
-        userValueRepo.setValue(user.id.get, UserValueName.TWITTER_SYNC_ACCEPT_SENT, true)
+  def updateLibraryFromTwitterProfile(handle: String, userId: Id[User]) = AdminUserAction.async { request =>
+    db.readOnlyReplica { implicit session =>
+      twitterSyncStateRepo.getByHandleAndUserIdUsed(TwitterHandle(handle), userId).map { sync =>
+        (sync, socialUserInfoRepo.getByUser(userId).find(s => s.networkType == SocialNetworks.TWITTER && s.username.isDefined))
       }
-
-      val emailToSend = EmailToSend(
-        fromName = Some(Right("Ashley McGregor Dey")),
-        from = EmailAddress("ashley@kifi.com"),
-        subject = s"${user.firstName} your wait is over: Twitter deep search is ready for you",
-        to = Right(email),
-        category = NotificationCategory.User.WAITLIST,
-        htmlTemplate = views.html.email.black.twitterAccept(user.id.get, libraryPath, libPathEncoded),
-        textTemplate = Some(views.html.email.black.twitterAccept(user.id.get, libraryPath, libPathEncoded)),
-        campaign = Some("passwordReset"),
-        templateOptions = Seq(TemplateOptions.CustomLayout).toMap
-      )
-      emailTemplateSender.send(emailToSend).map { result =>
-        Ok(s"Email sent to $email")
-      }
-    }
+    }.collect {
+      case (sync, Some(sui)) =>
+        twitterWaitlistCommander.syncTwitterShow(sync.twitterHandle, sui, sync.libraryId).map { res =>
+          Ok(res.toString)
+        }
+    }.getOrElse(Future.successful(Ok("None")))
   }
 
   def tweetAtUserLibrary(libraryId: Id[Library]) = AdminUserAction { implicit request =>

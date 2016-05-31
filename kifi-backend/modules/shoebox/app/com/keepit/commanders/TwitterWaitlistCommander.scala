@@ -10,6 +10,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.oauth.{ OAuth1TokenInfo, TwitterUserShow, TwitterOAuthProvider }
 import com.keepit.common.time._
+import com.keepit.controllers.ext.ExtLibraryController
 import com.keepit.heimdal.HeimdalContextBuilder
 import com.keepit.model._
 import com.keepit.social.twitter.TwitterHandle
@@ -27,6 +28,7 @@ import scala.util.{ Try, Success }
 trait TwitterWaitlistCommander {
   def createSyncOrWaitlist(userId: Id[User]): Either[String, Either[TwitterWaitlistEntry, TwitterSyncState]]
   def processQueue(): Unit
+  def syncTwitterShow(handle: TwitterHandle, sui: SocialUserInfo, libraryId: Id[Library]): Future[Option[TwitterUserShow]]
 
   def addUserToWaitlist(userId: Id[User], handle: Option[TwitterHandle]): Either[String, TwitterWaitlistEntry]
   def getFakeWaitlistPosition(userId: Id[User], handle: TwitterHandle): Option[Long]
@@ -55,7 +57,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
   private val WAITLIST_LENGTH_SHIFT = 1152
   private val WAITLIST_MULTIPLIER = 3
 
-  // Assumes users only ever have one sync. Error | Entry | Sync
+  // Assumes users only ever have one sync. ErrorStr | Entry | Sync
   def createSyncOrWaitlist(userId: Id[User]): Either[String, Either[TwitterWaitlistEntry, TwitterSyncState]] = {
     db.readWrite(attempts = 3) { implicit s =>
       twitterSyncStateRepo.getByUserIdUsed(userId).headOption match {
@@ -220,24 +222,8 @@ class TwitterWaitlistCommanderImpl @Inject() (
           val sync = twitterSyncCommander.internTwitterSync(Some(entry.userId), lib.id.get, handle, SyncTarget.Tweets)
           log.info(s"[createSync] Sync created for ${entry.userId}, ${handle.value}")
 
-          updateUserShow(sui, handle).andThen {
-            case Success(Some(show)) =>
-              log.info(s"[createSync] Got show for ${entry.userId}, $show")
-
-              // Update lib's description
-              db.readWrite { implicit session =>
-                libraryRepo.save(libraryRepo.get(lib.id.get).copy(description = show.description))
-              }
-
-              // Update library picture
-              show.profile_banner_url.map { image =>
-                syncPic(entry.userId, handle, lib.id.get, image)
-              }
-
-            case fail =>
-              log.info(s"[twc-acceptUser] Couldn't get show for ${entry.userId}, $fail")
-          }.andThen {
-            case _ =>
+          syncTwitterShow(handle, sui, lib.id.get).andThen {
+            case _ => // Always sync, even if show failed to update
               twitterSyncCommander.syncOne(Some(sui), sync, sui.userId.get)
           }
 
@@ -248,7 +234,14 @@ class TwitterWaitlistCommanderImpl @Inject() (
     }
   }
 
-  private def updateUserShow(sui: SocialUserInfo, handle: TwitterHandle): Future[Option[TwitterUserShow]] = {
+  def syncTwitterShow(handle: TwitterHandle, sui: SocialUserInfo, libraryId: Id[Library]) = {
+    getAndUpdateUserShow(sui, handle).andThen {
+      case Success(Some(show)) => updateLibraryFromShow(sui.userId.get, libraryId, show)
+      case fail => log.info(s"[twc-acceptUser] Couldn't get show for ${sui.userId}, $fail")
+    }
+  }
+
+  private def getAndUpdateUserShow(sui: SocialUserInfo, handle: TwitterHandle): Future[Option[TwitterUserShow]] = {
     val result = for {
       cred <- sui.credentials
       oauth <- cred.oAuth1Info
@@ -268,6 +261,9 @@ class TwitterWaitlistCommanderImpl @Inject() (
           show.followers_count.foreach { count =>
             userValueRepo.setValue(userId, UserValueName.TWITTER_FOLLOWERS_COUNT, count)
           }
+          show.`protected`.foreach { protectedProfile =>
+            userValueRepo.setValue(userId, UserValueName.TWITTER_PROTECTED_ACCOUNT, protectedProfile)
+          }
         }
         Some(show)
       }
@@ -275,7 +271,35 @@ class TwitterWaitlistCommanderImpl @Inject() (
     result.getOrElse(Future.successful(None))
   }
 
-  private def syncPic(userId: Id[User], handle: TwitterHandle, libraryId: Id[Library], bannerPic: String) = {
+  private def updateLibraryFromShow(userId: Id[User], libraryId: Id[Library], show: TwitterUserShow) = {
+    log.info(s"[createSync] Got show for $userId, $show")
+
+    db.readWrite(attempts = 3) { implicit session =>
+      // Update lib's description
+      show.description.foreach { desc =>
+        libraryRepo.save(libraryRepo.getNoCache(libraryId).copy(description = Some(desc)))
+      }
+
+      // Update visibility, only reducing visibility
+      show.`protected`.foreach { protectedProfile =>
+        if (protectedProfile) {
+          libraryRepo.save(libraryRepo.getNoCache(libraryId).copy(visibility = LibraryVisibility.SECRET))
+        }
+      }
+    }
+
+    // Update library picture
+    show.profile_banner_url.foreach { image =>
+      val existing = db.readOnlyReplica { implicit session =>
+        libraryImageCommander.getBestImageForLibrary(libraryId, ExtLibraryController.defaultImageSize)
+      }
+      if (existing.isEmpty) {
+        syncPic(userId, libraryId, image)
+      }
+    }
+  }
+
+  private def syncPic(userId: Id[User], libraryId: Id[Library], bannerPic: String) = {
     // Twitter's return URL is actually incomplete. You need to specify a size. We'll use the largest.
     val imageUrl = bannerPic + "/1500x500"
     WS.url(imageUrl).getStream().flatMap {
@@ -283,7 +307,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
         if (headers.status != 200) {
           Future.failed(new RuntimeException(s"Image returned non-200 code, ${headers.status}, $imageUrl"))
         } else {
-          val tempFile = TemporaryFile(prefix = s"tw-${handle.value}")
+          val tempFile = TemporaryFile(prefix = s"tw-${userId.id}-${libraryId.id}")
           tempFile.file.deleteOnExit()
           cleanup.cleanup(tempFile.file)
           val outputStream = new FileOutputStream(tempFile.file)

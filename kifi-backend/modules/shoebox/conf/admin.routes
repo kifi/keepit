@@ -277,8 +277,8 @@ POST    /admin/user/:id/markAsTwitted                      @com.keepit.controlle
 GET     /admin/twitter                                     @com.keepit.controllers.admin.AdminTwitterWaitlistController.getWaitlist()
 GET     /admin/twitter/accept                              @com.keepit.controllers.admin.AdminTwitterWaitlistController.acceptUser(userId: Id[User], handle: String)
 GET     /admin/twitter/accepted                            @com.keepit.controllers.admin.AdminTwitterWaitlistController.viewAcceptedUser(userId: Id[User])
-POST    /admin/twitter/email                               @com.keepit.controllers.admin.AdminTwitterWaitlistController.sendAcceptEmail(syncStateId: Id[TwitterSyncState], safe: Boolean ?= true)
 POST    /admin/twitter/processQueue                        @com.keepit.controllers.admin.AdminTwitterWaitlistController.processWaitlist()
+POST    /admin/twitter/updateLibraryFromTwitterProfile     @com.keepit.controllers.admin.AdminTwitterWaitlistController.updateLibraryFromTwitterProfile(handle: String, userId: Id[User])
 
 
 GET           /admin/rover/searchUrl                                                 @com.keepit.controllers.admin.AdminRoverController.searchUrl()

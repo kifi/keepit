@@ -2,7 +2,7 @@ package com.keepit.shoebox
 
 import akka.actor.ActorSystem
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.commanders.TwitterSyncCommander
+import com.keepit.commanders.{ TwitterWaitlistCommander, TwitterSyncCommander }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
 import com.keepit.normalizer.NormalizationUpdatingActor
@@ -18,6 +18,7 @@ import scala.concurrent.duration._
 @Singleton
 class ShoeboxTasksPlugin @Inject() (
     twitterSyncCommander: TwitterSyncCommander,
+    twitterWaitListCommander: TwitterWaitlistCommander,
     system: ActorSystem,
     quartz: ActorInstance[QuartzActor],
     articleIngestionActor: ActorInstance[ShoeboxArticleIngestionActor],
@@ -36,6 +37,10 @@ class ShoeboxTasksPlugin @Inject() (
     log.info("ShoeboxTasksPlugin onStart")
     scheduleTaskOnOneMachine(system, 3 minute, 1 minutes, "twitter sync") {
       twitterSyncCommander.syncAll()
+    }
+
+    scheduleTaskOnOneMachine(system, 2 minutes, 333 seconds, "twitter waitlist accept") {
+      twitterWaitListCommander.processQueue()
     }
 
     scheduleTaskOnLeader(system, 30 minutes, 30 minutes, "payments processing") {
