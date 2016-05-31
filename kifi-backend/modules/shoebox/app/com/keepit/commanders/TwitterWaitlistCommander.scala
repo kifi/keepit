@@ -255,6 +255,12 @@ class TwitterWaitlistCommanderImpl @Inject() (
           show.profile_banner_url.foreach { img =>
             userValueRepo.setValue(userId, UserValueName.TWITTER_BANNER_IMAGE, img)
           }
+          show.statuses_count.foreach { cnt =>
+            userValueRepo.setValue(userId, UserValueName.TWITTER_STATUSES_COUNT, cnt)
+          }
+          show.favourites_count.foreach { cnt =>
+            userValueRepo.setValue(userId, UserValueName.TWITTER_FAVOURITES_COUNT, cnt)
+          }
           show.description.foreach { descr =>
             userValueRepo.setValue(userId, UserValueName.TWITTER_DESCRIPTION, descr)
           }
@@ -275,15 +281,20 @@ class TwitterWaitlistCommanderImpl @Inject() (
     log.info(s"[createSync] Got show for $userId, $show")
 
     db.readWrite(attempts = 3) { implicit session =>
-      // Update lib's description
+      // Update lib's description if it's the default
       show.description.foreach { desc =>
-        libraryRepo.save(libraryRepo.getNoCache(libraryId).copy(description = Some(desc)))
+        val lib = libraryRepo.getNoCache(libraryId)
+        if (lib.description.isEmpty || lib.description.exists(_.indexOf("Interesting pages") == 0)) {
+          libraryRepo.save(libraryRepo.getNoCache(libraryId).copy(description = Some(desc)))
+          log.info(s"[updateLibraryFromShow] $libraryId ($userId): Description updated to $desc")
+        }
       }
 
       // Update visibility, only reducing visibility
       show.`protected`.foreach { protectedProfile =>
         if (protectedProfile) {
           libraryRepo.save(libraryRepo.getNoCache(libraryId).copy(visibility = LibraryVisibility.SECRET))
+          log.info(s"[updateLibraryFromShow] $libraryId ($userId): Visibility updated to $protectedProfile")
         }
       }
     }
@@ -295,6 +306,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
       }
       if (existing.isEmpty) {
         syncPic(userId, libraryId, image)
+        log.info(s"[updateLibraryFromShow] $libraryId ($userId): Image updated to $image")
       }
     }
   }

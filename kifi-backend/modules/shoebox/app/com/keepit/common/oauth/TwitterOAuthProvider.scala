@@ -20,7 +20,9 @@ import scala.concurrent.Future
   followers_count: Option[Int],
   description: Option[String],
   friends_count: Option[Int],
-  `protected`: Option[Boolean])
+  `protected`: Option[Boolean],
+  statuses_count: Option[Int],
+  favourites_count: Option[Int])
 
 object TwitterOAuthProvider {
   def toIdentity(auth: OAuth1Info, info: TwitterUserInfo): TwitterIdentity = {
