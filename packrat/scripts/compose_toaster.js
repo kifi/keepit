@@ -12,7 +12,7 @@
 
 k.toaster = k.toaster || (function () {
   'use strict';
-  var DEFAULT_MESSAGE_TEXT = 'Check this out.';
+  var DEFAULT_MESSAGE_TEXT = '';
   var $toast, $sent;
 
   var handlers = {
@@ -94,7 +94,7 @@ k.toaster = k.toaster || (function () {
     })
     .appendTo($parent);
 
-    var compose = k.compose($toast, send.bind(null, $toast));
+    var compose = k.compose($toast, send.bind(null, $toast), { allowEmpty: true });
     compose.initTagSuggest();
 
     $toast.data('compose', compose);
@@ -245,7 +245,7 @@ k.toaster = k.toaster || (function () {
     }
     numOthers += Math.max(0, libraries.length - 1)
     $sent = $(k.render('html/keeper/sent', {
-      customMessage: text !== DEFAULT_MESSAGE_TEXT,
+      customMessage: text !== DEFAULT_MESSAGE_TEXT && text !== '',
       toSelf: toSelf,
       names: names,
       emails: emails,

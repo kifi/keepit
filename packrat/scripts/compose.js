@@ -219,8 +219,11 @@ k.compose = k.compose || (function() {
     }
   }
 
-  return function compose($container, handleSubmit) {
-    var $form = $container.find('.kifi-compose').data('empty', true);
+  return function compose($container, handleSubmit, options) {
+    options = options || {};
+    options.allowEmpty = options.allowEmpty || false;
+
+    var $form = $container.find('.kifi-compose').data('empty', true).data('options', options);
     $forms = $forms.add($form);
     var $to = $form.find('.kifi-compose-to');
     var throttledSaveDraft = _.throttle(function () {
@@ -276,8 +279,9 @@ k.compose = k.compose || (function() {
       if ($form.data('submitted')) {
         return;
       }
+      var options = $form.data('options');
       var text;
-      if ($form.hasClass('kifi-empty') || !(text = editor.markdown())) {
+      if (!options.allowEmpty && ($form.hasClass('kifi-empty') || !(text = editor.markdown()))) {
         editor.$el.focus();
         return;
       }
@@ -289,6 +293,7 @@ k.compose = k.compose || (function() {
         }
       }
       var $submit = $form.find('.kifi-compose-submit').removeAttr('href');
+
       $form.data('submitted', true);
       handleSubmit(text, recipients, e.originalEvent.guided).then(function reenable(reset) {
         if (reset) {
