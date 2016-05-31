@@ -357,7 +357,7 @@ class AuthController @Inject() (
       case result =>
         authHelper.transformResult(result) { (_, sess: Session) =>
           // TODO: set FORTYTWO_USER_ID instead of clearing it and then setting it on the next request?
-          val session = if (sess.get(SecureSocial.OriginalUrlKey).isEmpty) (sess + (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url)).deleteUserId else sess
+          val session = (sess + (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url)).deleteUserId
           // todo implement POST hook
           // This could be a POST, url encoded body. If so, there may be a registration hook for us to add to their session.
           // ie, auto follow library, auto friend, etc
