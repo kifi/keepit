@@ -1,7 +1,7 @@
 package com.keepit.controllers.admin
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ PathCommander, TwitterWaitlistCommander }
+import com.keepit.commanders.{ TwitterPublishingCommander, PathCommander, TwitterWaitlistCommander }
 import com.keepit.commanders.emails.EmailTemplateSender
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper }
 import com.keepit.common.crypto.PublicIdConfiguration
@@ -16,11 +16,13 @@ import play.twirl.api.Html
 import views.html
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Success, Try }
+import scala.util.{ Failure, Success, Try }
 
 class AdminTwitterWaitlistController @Inject() (
     val userActionsHelper: UserActionsHelper,
     twitterWaitlistCommander: TwitterWaitlistCommander,
+    twitterWaitlistRepo: TwitterWaitlistRepo,
+    twitterPublishingCommander: TwitterPublishingCommander,
     db: Database,
     userRepo: UserRepo,
     libraryRepo: LibraryRepo,
@@ -40,11 +42,10 @@ class AdminTwitterWaitlistController @Inject() (
 
   def acceptUser(userId: Id[User], handle: String) = AdminUserPage { implicit request =>
     val result = twitterWaitlistCommander.acceptUser(userId, TwitterHandle(handle)).right.map { syncState =>
-      val (lib, owner, email) = db.readOnlyMaster { implicit s =>
+      val (lib, email) = db.readOnlyMaster { implicit s =>
         val lib = libraryRepo.get(syncState.libraryId)
-        val owner = userRepo.get(lib.ownerId)
         val email = Try(userEmailAddressRepo.getByUser(userId)).toOption
-        (lib, owner, email)
+        (lib, email)
       }
       val libraryPath = libPathCommander.getPathForLibrary(lib)
       (syncState, libraryPath, email)
@@ -87,44 +88,32 @@ class AdminTwitterWaitlistController @Inject() (
     }.getOrElse(Future.successful(Ok("None")))
   }
 
-  def sendAcceptEmail(syncStateId: Id[TwitterSyncState], userId: Id[User], safe: Boolean) = AdminUserPage.async { request =>
-
-    val (user, email, libraryPath, alreadySent) = db.readOnlyReplica { implicit session =>
-      val user = userRepo.get(userId)
-      val email = userEmailAddressRepo.getByUser(userId)
-      val sync = twitterSyncStateRepo.get(syncStateId)
-      val alreadySent = userValueRepo.getValue(user.id.get, UserValues.twitterSyncAcceptSent)
-
-      val library = libraryRepo.get(sync.libraryId)
-      val libraryPath = libPathCommander.getPathForLibrary(library)
-
-      (user, email, libraryPath, alreadySent)
+  def tweetAtUserLibrary(libraryId: Id[Library]) = AdminUserAction { implicit request =>
+    twitterPublishingCommander.announceNewTwitterLibrary(libraryId) match {
+      case Success(status) =>
+        db.readWrite { implicit s =>
+          twitterWaitlistRepo.getByUser(libraryRepo.get(libraryId).ownerId) map { entry =>
+            twitterWaitlistRepo.save(entry.withState(TwitterWaitlistEntryStates.ANNOUNCED))
+          }
+        }
+        Ok(status.toString)
+      case Failure(e) =>
+        db.readWrite { implicit s =>
+          twitterWaitlistRepo.getByUser(libraryRepo.get(libraryId).ownerId) map { entry =>
+            twitterWaitlistRepo.save(entry.withState(TwitterWaitlistEntryStates.ANNOUNCE_FAIL))
+          }
+        }
+        InternalServerError(e.toString)
     }
-    val libPathEncoded = java.net.URLEncoder.encode(libraryPath, "UTF-8")
+  }
 
-    if (safe && alreadySent) {
-      Future.successful(BadRequest("Email already sent. Not expecting to see this? Ask Andrew"))
-    } else {
-      db.readWrite { implicit session =>
-        userValueRepo.setValue(user.id.get, UserValueName.TWITTER_SYNC_ACCEPT_SENT, true)
-      }
-
-      val emailToSend = EmailToSend(
-        fromName = Some(Right("Ashley McGregor Dey")),
-        from = EmailAddress("ashley@kifi.com"),
-        subject = s"${user.firstName} your wait is over: Twitter deep search is ready for you",
-        to = Right(email),
-        category = NotificationCategory.User.WAITLIST,
-        htmlTemplate = views.html.email.black.twitterAccept(userId, libraryPath, libPathEncoded),
-        textTemplate = Some(views.html.email.black.twitterAccept(userId, libraryPath, libPathEncoded)),
-        campaign = Some("passwordReset"),
-        templateOptions = Seq(TemplateOptions.CustomLayout).toMap
-      )
-      emailTemplateSender.send(emailToSend).map { result =>
-        Ok(s"Email sent to $email")
+  def markAsTwitted(userId: Id[User]) = AdminUserAction { implicit request =>
+    val entries = db.readWrite { implicit s =>
+      twitterWaitlistRepo.getByUser(userId) map { entry =>
+        twitterWaitlistRepo.save(entry.withState(TwitterWaitlistEntryStates.ANNOUNCED))
       }
     }
-
+    Ok(s"Done! ${entries.mkString(";")}")
   }
 
 }

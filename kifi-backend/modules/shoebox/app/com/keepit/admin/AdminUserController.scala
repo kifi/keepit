@@ -1077,12 +1077,4 @@ class AdminUserController @Inject() (
 
     Ok("going!")
   }
-
-  def tweetAtUserLibrary(libraryId: Id[Library]) = AdminUserAction { implicit request =>
-    twitterPublishingCommander.announceNewTwitterLibrary(libraryId) match {
-      case Success(status) => Ok(status.toString)
-      case Failure(e) => InternalServerError(e.toString)
-    }
-  }
-
 }

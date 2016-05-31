@@ -10,33 +10,21 @@
                 <p>@{result.left.get}</p>
             }
             case Right((syncState, libraryPath, primaryEmail)) => {
-                <h2>Twitter Handle @{syncState.twitterHandle} successfully accepted!</h2>
-                <table class="table table-bordered">
-                    <tr>
-                        <th>Twitter Page</th>
-                        <th>State</th>
-                        <th>User Admin Page</th>
-                        <th>User Primary Email</th>
-                        <th>LibraryId</th>
-                        <th>Library Admin Page</th>
-                        <th>Library Kifi Page</th>
-                        <th>Email user</th>
-                    </tr>
-                    <tr>
-                        <td><a href="https://twitter.com/@{syncState.twitterHandle}">@{syncState.twitterHandle}</a></td>
-                        <td>@{syncState.state}</td>
-                        <td>@if(syncState.userId.isDefined){<a href="/admin/user/@{syncState.userId.get.id}" target="_blank">UserId @{syncState.userId.get.id}</a>}</td>
-                        <td>@if(primaryEmail.isDefined){@{primaryEmail.get}}</td>
-                        <td>@{syncState.libraryId.id}</td>
-                        <td><a href="/admin/libraries/@{syncState.libraryId.id}" target="_blank">Lib Admin Page</a></td>
-                        <td><a href="https://www.kifi.com/@{libraryPath}" target="_blank">Kifi Library</a></td>
-                        <td><a href="/admin/twitter/email?userId=@syncState.userId&syncStateId=@syncState.id.get" target="_blank">Send email</a></td>
-                        <td><a href="/admin/library/@{syncState.libraryId.id}/sendTweet" target="_blank">Tweet At the user</a></td>
-                    </tr>
-                </table>
-                <iframe src="https://www.kifi.com@{libraryPath}" width="1028" height="1028">
-                    <p>Your browser does not support iframes.</p>
-                </iframe>
+                <h2>Twitter Handle <a href="https://twitter.com/@{syncState.twitterHandle}" target="_blank">Twitter page of @{syncState.twitterHandle}</a> successfully accepted!</h2>
+                State: <b>@{syncState.state}</b><br/>
+                <ul>
+                  <li>@if(syncState.userId.isDefined){<a href="/admin/user/@{syncState.userId.get.id}" target="_blank">User @{syncState.userId.get.id}</a>} @if(primaryEmail.isDefined){@{primaryEmail.get}}</li>
+                  <li><a href="https://www.kifi.com@{libraryPath}" target="_blank">Kifi Library</a></li>
+                  <li><a href="/admin/libraries/@{syncState.libraryId.id}" target="_blank">Lib Admin Page</a></li>
+                    <!--<a href="/admin/twitter/email?userId=@syncState.userId&syncStateId=@syncState.id.get" target="_blank">Send email</a></li-->
+                </ul>
+                <form action="@com.keepit.controllers.admin.routes.AdminTwitterWaitlistController.tweetAtUserLibrary(syncState.libraryId)" method="POST" class="form-inline">
+                  <input type="Submit" value="Tweet at user">
+                </form>
+                <form action="@com.keepit.controllers.admin.routes.AdminTwitterWaitlistController.markAsTwitted(syncState.userId.getOrElse(Id[User](-1)))" method="POST" class="form-inline">
+                  <input type="Submit" value="Mark As Twitted">
+                </form>
+
             }
         }
 
