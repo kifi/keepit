@@ -86,7 +86,7 @@ class TwitterWaitlistController @Inject() (
     val session = request.session
     request match {
       case requestNonUser: NonUserRequest[_] =>
-        Redirect("/signup/twitter?intent=waitlist").withSession(session + (SecureSocial.OriginalUrlKey -> "/twitter/thanks"))
+        Redirect("/signup/twitter?intent=waitlist")
       case ur: UserRequest[_] =>
         val twitterSocialForUser = db.readOnlyMaster { implicit s =>
           socialRepo.getByUser(ur.user.id.get).find(_.networkType == SocialNetworks.TWITTER)

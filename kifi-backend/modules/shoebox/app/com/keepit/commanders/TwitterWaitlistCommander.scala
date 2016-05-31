@@ -75,7 +75,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
       }
     } match {
       case Right(waitlist) if waitlist.twitterHandle.isDefined =>
-        createSync(waitlist).right.map(t => Right(t))
+        createSync(waitlist.id.get).right.map(t => Right(t))
       case Right(waitlist) =>
         Right(Left(waitlist))
       case Left(sync) =>
@@ -94,7 +94,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
         }.take(10).toList // Not super efficient but fine for now, especially for testing
       }.map { p =>
         log.info(s"[processQueue] Creating sync for ${p.userId}")
-        createSync(p)
+        createSync(p.id.get)
       }
     }
   }
@@ -186,20 +186,23 @@ class TwitterWaitlistCommanderImpl @Inject() (
   }
 
   // entry's user must have a valid Twitter SUI, otherwise this no-ops
-  private def createSync(entry: TwitterWaitlistEntry): Either[String, TwitterSyncState] = {
-    val suiAndHandle = {
-      if (entry.state == TwitterWaitlistEntryStates.ACTIVE) {
-        db.readOnlyReplica { implicit s =>
-          usersTwitterSui(entry.userId)
-        }.flatMap { sui =>
-          entry.twitterHandle.orElse(sui.username.map(TwitterHandle(_))).map { handle =>
-            (sui, handle)
+  private def createSync(entryId: Id[TwitterWaitlistEntry]): Either[String, TwitterSyncState] = {
+    val (entry, suiAndHandle) = db.readOnlyMaster { implicit session =>
+      val entry = twitterWaitlistRepo.get(entryId)
+      val suiAndHandle = {
+        if (entry.state == TwitterWaitlistEntryStates.ACTIVE) {
+          usersTwitterSui(entry.userId).flatMap { sui =>
+            entry.twitterHandle.orElse(sui.username.map(TwitterHandle(_))).map { handle =>
+              (sui, handle)
+            }
           }
+        } else {
+          None
         }
-      } else {
-        None
       }
+      (entry, suiAndHandle)
     }
+
 
     suiAndHandle match {
       case Some((sui, handle)) if entry.state == TwitterWaitlistEntryStates.ACTIVE =>
@@ -234,6 +237,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
     }
   }
 
+  // Move to TwitterSyncCommander so that we can call this periodically during syncs?
   def syncTwitterShow(handle: TwitterHandle, sui: SocialUserInfo, libraryId: Id[Library]) = {
     getAndUpdateUserShow(sui, handle).andThen {
       case Success(Some(show)) => updateLibraryFromShow(sui.userId.get, libraryId, show)
@@ -252,23 +256,25 @@ class TwitterWaitlistCommanderImpl @Inject() (
           if (sui.state == SocialUserInfoStates.TOKEN_EXPIRED) {
             socialUserInfoRepo.save(sui.copy(state = SocialUserInfoStates.CREATED))
           }
-          show.profile_banner_url.foreach { img =>
-            userValueRepo.setValue(userId, UserValueName.TWITTER_BANNER_IMAGE, img)
-          }
-          show.statuses_count.foreach { cnt =>
-            userValueRepo.setValue(userId, UserValueName.TWITTER_STATUSES_COUNT, cnt)
-          }
-          show.favourites_count.foreach { cnt =>
-            userValueRepo.setValue(userId, UserValueName.TWITTER_FAVOURITES_COUNT, cnt)
-          }
-          show.description.foreach { descr =>
-            userValueRepo.setValue(userId, UserValueName.TWITTER_DESCRIPTION, descr)
-          }
-          show.followers_count.foreach { count =>
-            userValueRepo.setValue(userId, UserValueName.TWITTER_FOLLOWERS_COUNT, count)
-          }
-          show.`protected`.foreach { protectedProfile =>
-            userValueRepo.setValue(userId, UserValueName.TWITTER_PROTECTED_ACCOUNT, protectedProfile)
+          if (sui.username.exists(_ == handle.value)) {
+            show.profile_banner_url.foreach { img =>
+              userValueRepo.setValue(userId, UserValueName.TWITTER_BANNER_IMAGE, img)
+            }
+            show.statuses_count.foreach { cnt =>
+              userValueRepo.setValue(userId, UserValueName.TWITTER_STATUSES_COUNT, cnt)
+            }
+            show.favourites_count.foreach { cnt =>
+              userValueRepo.setValue(userId, UserValueName.TWITTER_FAVOURITES_COUNT, cnt)
+            }
+            show.description.foreach { descr =>
+              userValueRepo.setValue(userId, UserValueName.TWITTER_DESCRIPTION, descr)
+            }
+            show.followers_count.foreach { count =>
+              userValueRepo.setValue(userId, UserValueName.TWITTER_FOLLOWERS_COUNT, count)
+            }
+            show.`protected`.foreach { protectedProfile =>
+              userValueRepo.setValue(userId, UserValueName.TWITTER_PROTECTED_ACCOUNT, protectedProfile)
+            }
           }
         }
         Some(show)
