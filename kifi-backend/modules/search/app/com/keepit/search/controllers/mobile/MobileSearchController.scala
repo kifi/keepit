@@ -5,6 +5,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.json
 import com.keepit.common.net.URISanitizer
 import com.keepit.common.store.{ ImageSize, S3ImageConfig }
+import com.keepit.common.util.IdFilterCompressor
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.BasicImages
 import com.keepit.search.augmentation.AugmentationCommander
@@ -17,7 +18,6 @@ import com.google.inject.Inject
 import com.keepit.common.controller.{ SearchServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.logging.Logging
 import com.keepit.model._
-import com.keepit.search.util.IdFilterCompressor
 import com.keepit.search._
 import com.keepit.model.UserExperimentType._
 import play.api.libs.json.JsArray

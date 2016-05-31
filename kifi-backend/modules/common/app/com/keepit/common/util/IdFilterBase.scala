@@ -1,4 +1,4 @@
-package com.keepit.search.util
+package com.keepit.common.util
 
 import org.apache.commons.codec.binary.Base64
 
@@ -34,7 +34,7 @@ class IdFilterCompressorException(msg: String, exception: Exception) extends Exc
   def this(msg: String) = this(msg, null)
 }
 
-class LongSetIdFilter extends IdFilterBase[Set[Long]] {
+object LongSetIdFilter extends IdFilterBase[Set[Long]] {
   protected val emptySet: Set[Long] = Set()
 
   private val formatter = ArrayBinaryFormat.longArrayFormat

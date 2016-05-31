@@ -6,13 +6,13 @@ import com.keepit.common.controller._
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
+import com.keepit.common.util.IdFilterCompressor
 import com.keepit.search.controllers.util.{ SearchControllerUtil }
 import com.keepit.model._
 import com.keepit.model.UserExperimentType.ADMIN
 import com.keepit.search.engine.uri.UriShardHit
 import com.keepit.search.index.Searcher
 import com.keepit.search.index.graph.library.LibraryIndexer
-import com.keepit.search.util.IdFilterCompressor
 import com.keepit.search.{ SearchContext, SearchRanking, UriSearchCommander }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.BasicUser
