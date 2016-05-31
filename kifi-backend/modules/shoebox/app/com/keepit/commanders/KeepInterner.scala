@@ -318,10 +318,10 @@ class KeepInternerImpl @Inject() (
   }
 
   private val reportingLock = new ReactiveLock(2)
-  private val debouncer = new Debouncing.Buffer[Seq[CrossServiceKeep]]
   private def reportNewKeeps(keeps: Seq[Keep], libraries: Seq[Library], ctx: HeimdalContext): Unit = {
     if (keeps.nonEmpty) {
       // Don't block keeping for these
+      log.info(s"[reportNewKeeps] Data updates for import ${reportingLock.waiting}")
       reportingLock.withLockFuture {
         SafeFuture {
           // Analytics & typeaheads
