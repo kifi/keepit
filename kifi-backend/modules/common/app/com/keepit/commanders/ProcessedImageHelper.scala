@@ -520,18 +520,18 @@ class ImageCleanup @Inject() (
 
   private def purge(): Unit = {
     synchronized {
-      if (images.headOption.exists(_._1.isBefore(clock.now.minusMinutes(cleanupAfterMin)))) {
+      if (images.headOption.exists(_._1.isBefore(clock.now.minusMinutes(cleanupAfterMin))) || images.length > 500) {
         Some(images.dequeue()._2)
       } else None
-    }.map { filename =>
+    }.foreach { filename =>
       Try {
         val file = new File(filename)
         if (file.exists()) {
           file.delete()
         }
-        if (images.nonEmpty) {
-          purge()
-        }
+      }
+      if (images.nonEmpty) {
+        purge()
       }
     }
   }
