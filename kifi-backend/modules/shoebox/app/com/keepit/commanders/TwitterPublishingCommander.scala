@@ -30,13 +30,14 @@ class TwitterPublishingCommander @Inject() (
     twitterSocialGraph: TwitterSocialGraph) extends Logging {
 
   def announceNewTwitterLibrary(libraryId: Id[Library]): Try[Status] = {
-    val (library, kifiTwitterAccount, userTwitterAccount) = db.readOnlyMaster { implicit session =>
+    val (user, library, kifiTwitterAccount, userTwitterAccount) = db.readOnlyMaster { implicit session =>
       val library = libraryRepo.get(libraryId)
       val kifiTwitterAccount = socialUserInfoRepo.get(Id[SocialUserInfo](6934770)) //kifi sui id. i.e. this is kifi's twitter account and credentials
       val userTwitterAccount = socialUserInfoRepo.getByUser(library.ownerId).find(u => u.networkType == SocialNetworks.TWITTER).get
-      (library, kifiTwitterAccount, userTwitterAccount)
+      val user = userRepo.get(library.ownerId)
+      (user, library, kifiTwitterAccount, userTwitterAccount)
     }
-    if (library.visibility == LibraryVisibility.PUBLISHED) {
+    if (library.visibility == LibraryVisibility.PUBLISHED && user.state == UserStates.ACTIVE) {
       val libraryUrl = s"""https://www.kifi.com${libPathCommander.getPathForLibrary(library)}"""
       userTwitterAccount.profileUrl.map(twitterMessages.parseHandleFromUrl) match {
         case Some(handle) =>
@@ -44,7 +45,7 @@ class TwitterPublishingCommander @Inject() (
           twitterSocialGraph.sendTweet(kifiTwitterAccount, None, message)
         case None => Failure(new Exception(s"can't get user profile handle for $userTwitterAccount"))
       }
-    } else Failure(new Exception(s"library is private"))
+    } else Failure(new Exception(s"library is private $library ; or user is not active: $user"))
   }
 
 }
