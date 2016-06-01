@@ -64,7 +64,7 @@ object SlackPushGenerator {
   def slackAuthorFromKifiUser(bu: BasicUser)(implicit imgConfig: S3ImageConfig): SlackAttachment.Author = SlackAttachment.Author(
     name = bu.fullName,
     link = Some(bu.path.absolute),
-    icon = Some(bu.picturePath.getImageUrl.value)
+    icon = Some("https:" + bu.picturePath.getImageUrl.value.stripPrefix("https:"))
   )
 }
 
