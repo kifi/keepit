@@ -58,7 +58,7 @@ class KeepInfoController @Inject() (
   def getKeepStream(fromPubIdOpt: Option[String], limit: Option[Int], config: KeepViewAssemblyOptions) = UserAction.async { implicit request =>
     val stopwatch = new Stopwatch(s"[KIC-STREAM-${RandomStringUtils.randomAlphanumeric(5)}]")
     val goodResult = for {
-      _ <- RightBias.unit.filter(_ => limit.exists(_ > 100), KeepFail.LIMIT_TOO_LARGE: KeepFail)
+      _ <- RightBias.unit.filter(_ => limit.forall(_ <= 50), KeepFail.LIMIT_TOO_LARGE: KeepFail)
       fromIdOpt <- fromPubIdOpt.filter(_.nonEmpty).fold[RightBias[KeepFail, Option[Id[Keep]]]](RightBias.right(None)) { pubId =>
         Keep.decodePublicIdStr(pubId).airbrakingOption.withLeft(KeepFail.INVALID_KEEP_ID).map(Some(_))
       }
