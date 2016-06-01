@@ -5,9 +5,10 @@ import com.keepit.commanders.gen.{ BasicULOBatchFetcher, KeepActivityGen }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, FakeAirbrakeNotifier }
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.time._
-import com.keepit.common.util.{ EnglishProperNouns, RoughlyHumanNames, DescriptionElements }
+import com.keepit.common.util.{ DeltaSet, EnglishProperNouns, RoughlyHumanNames, DescriptionElements }
 import com.keepit.eliza.{ ElizaServiceClient, FakeElizaServiceClientImpl }
 import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model.LibraryFactoryHelper._
@@ -54,20 +55,17 @@ class KeepActivityGenTest extends Specification with ShoeboxTestInjector {
 
         import com.keepit.common.util.DescriptionElements._
         val eventHeaders = db.readWrite { implicit s =>
-          Map(userIdsToAdd.take(2) -> true, libIdsToAdd.take(4) -> false, userIdsToAdd.takeRight(2) -> true, libIdsToAdd.takeRight(4) -> false).map {
-            case (ids, true) => // users
-              val adding = ids.map(id => Id[User](id.id))
-              keepEventCommander.persistKeepEventAndUpdateEliza(keep.id.get, KeepEventData.ModifyRecipients(user.id.get, KeepRecipientsDiff.addUsers(adding)), eventTime = Some(fakeClock.now()), source = None)
-              fakeClock += Hours.ONE
-              val entities = adding.map(id => generateUserElement(basicUserById(id), fullName = false)).toSeq
-              DescriptionElements.formatPlain(DescriptionElements(basicUser, "sent this to", unwordsPretty(entities)))
-            case (ids, false) => // libraries
-              val adding = ids.map(id => Id[Library](id.id))
-              keepEventCommander.persistKeepEventAndUpdateEliza(keep.id.get, KeepEventData.ModifyRecipients(user.id.get, KeepRecipientsDiff.addLibraries(adding)), eventTime = Some(fakeClock.now()), source = None)
-              fakeClock += Hours.ONE
-              val entities = adding.map(id => fromBasicLibrary(basicLibById(id))).toSeq
-              DescriptionElements.formatPlain(DescriptionElements(basicUser, "sent this to", unwordsPretty(entities)))
-          }.toSeq
+          Seq(userIdsToAdd.take(2), userIdsToAdd.takeRight(2)).map { adding =>
+            keepEventCommander.persistKeepEventAndUpdateEliza(keep.id.get, KeepEventData.ModifyRecipients(user.id.get, KeepRecipientsDiff.addUsers(adding)), eventTime = Some(fakeClock.now()), source = None)
+            fakeClock += Hours.ONE
+            val entities = adding.toSeq.sorted.map(id => generateUserElement(basicUserById(id), fullName = false))
+            DescriptionElements.formatPlain(DescriptionElements(basicUser, "sent this to", unwordsPretty(entities)))
+          } ++ Seq(libIdsToAdd.take(4), libIdsToAdd.takeRight(4)).map { adding =>
+            keepEventCommander.persistKeepEventAndUpdateEliza(keep.id.get, KeepEventData.ModifyRecipients(user.id.get, KeepRecipientsDiff.addLibraries(adding)), eventTime = Some(fakeClock.now()), source = None)
+            fakeClock += Hours.ONE
+            val entities = adding.toSeq.sorted.map(id => fromBasicLibrary(basicLibById(id))).toSeq
+            DescriptionElements.formatPlain(DescriptionElements(basicUser, "sent this to", unwordsPretty(entities)))
+          }
         }
 
         val events = db.readOnlyMaster { implicit s => inject[KeepEventRepo].pageForKeep(keep.id.get, fromTime = None, limit = 10) }
@@ -84,6 +82,28 @@ class KeepActivityGenTest extends Specification with ShoeboxTestInjector {
         val initialKeepEvent = activity.events.last
         initialKeepEvent.author === BasicAuthor.fromUser(basicUser)
         1 === 1
+      }
+    }
+    "format recipients diffs properly" in {
+      withDb(modules: _*) { implicit injector =>
+        val (alice, bob) = db.readWrite { implicit s =>
+          val alice = UserFactory.user().withName("Alice", "AliceLN").saved
+          val bob = UserFactory.user().withName("Bob", "BobLN").saved
+          (alice, bob)
+        }
+        def f(diff: KeepRecipientsDiff): String = DescriptionElements.formatPlain {
+          inject[BasicULOBatchFetcher].run(KeepActivityGen.generalRecipientsDiff(diff))
+        }
+
+        // Single addition/removal
+        f(KeepRecipientsDiff.empty.plusUser(alice.id.get)) === "sent this to Alice"
+        f(KeepRecipientsDiff.empty.minusUser(alice.id.get)) === "removed Alice"
+
+        // Doubles
+        f(KeepRecipientsDiff.empty.plusUser(alice.id.get).plusUser(bob.id.get)) === "sent this to Alice and Bob"
+        f(KeepRecipientsDiff.empty.minusUser(alice.id.get).minusUser(bob.id.get)) === "removed Alice and Bob"
+        f(KeepRecipientsDiff.empty.minusUser(alice.id.get).plusUser(bob.id.get)) === "removed Alice and added Bob"
+        f(KeepRecipientsDiff.empty.minusUser(Id(42)).plusUser(Id(43))) === "tried to change this keep's recipients"
       }
     }
   }

@@ -1,7 +1,9 @@
 package com.keepit.commanders.gen
 
 import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.util.DescriptionElements._
 import com.keepit.common.util._
@@ -146,17 +148,7 @@ object KeepActivityGen {
         val headerBF = {
           val actionElementBF = Seq(
             specialCaseForMovedLibrary(diff)
-          ).flatten.headOption.getOrElse {
-              val KeepRecipientsDiff(users, libraries, emails) = diff
-              val addedUserElementsBF = BatchFetchable.seq(users.added.toSeq.map(BatchFetchable.user)).map(_.flatten.map(fromBasicUser))
-              val addedLibElementsBF = BatchFetchable.seq(libraries.added.toSeq.map(BatchFetchable.library)).map(_.flatten.map(fromBasicLibrary))
-              val addedEmailElements = emails.added.toSeq.map(email => fromText(email.address))
-              (addedUserElementsBF and addedLibElementsBF).tupled.map {
-                case (addedUserElements, addedLibElements) =>
-                  val addedEntities = addedUserElements ++ addedLibElements ++ addedEmailElements
-                  DescriptionElements("sent this to", unwordsPretty(addedEntities))
-              }
-            }
+          ).flatten.headOption getOrElse generalRecipientsDiff(diff)
           val userElementBF = basicAddedByBF.map { basicAddedBy => basicAddedBy.map(fromBasicUser).getOrElse(fromText("Someone")) }
           (userElementBF and actionElementBF).tupled.map {
             case (userElement, actionElement) => DescriptionElements(userElement, actionElement)
@@ -186,7 +178,7 @@ object KeepActivityGen {
     }
   }
 
-  private def specialCaseForMovedLibrary(diff: KeepRecipientsDiff): Option[BatchFetchable[DescriptionElements]] = {
+  def specialCaseForMovedLibrary(diff: KeepRecipientsDiff): Option[BatchFetchable[DescriptionElements]] = {
     val KeepRecipientsDiff(users, libraries, emails) = diff
     if (users.isEmpty && emails.isEmpty && libraries.added.size == 1 && libraries.removed.size == 1) Some {
       val fromLib = BatchFetchable.library(libraries.removed.head).map(_ getOrElse BasicLibrary.fake)
@@ -196,5 +188,26 @@ object KeepActivityGen {
       }
     }
     else None
+  }
+  def generalRecipientsDiff(diff: KeepRecipientsDiff)(implicit s3config: S3ImageConfig, airbrake: AirbrakeNotifier): BatchFetchable[DescriptionElements] = {
+    def unwords(users: Set[Id[User]], libraries: Set[Id[Library]], emails: Set[EmailAddress]): BatchFetchable[Option[DescriptionElements]] = {
+      val userElements = BatchFetchable.seq(users.toSeq.sorted.map(BatchFetchable.user)).map(_.flatten.map(fromBasicUser))
+      val libElements = BatchFetchable.seq(libraries.toSeq.sorted.map(BatchFetchable.library)).map(_.flatten.map(fromBasicLibrary))
+      val emailElements = BatchFetchable.trivial(emails.toSeq.sorted.map(e => fromText(e.address)))
+      (userElements and libElements and emailElements).tupled.map {
+        case (Seq(), Seq(), Seq()) => None
+        case (as, bs, cs) => Some(DescriptionElements.unwordsPretty(as ++ bs ++ cs))
+      }
+    }
+    val addedOpt = unwords(diff.users.added, diff.libraries.added, diff.emails.added)
+    val removedOpt = unwords(diff.users.removed, diff.libraries.removed, diff.emails.removed)
+    (addedOpt and removedOpt).tupled.map {
+      case (Some(added), Some(removed)) => DescriptionElements("removed", removed, "and added", added)
+      case (Some(added), None) => DescriptionElements("sent this to", added)
+      case (None, Some(removed)) => DescriptionElements("removed", removed)
+      case (None, None) =>
+        airbrake.notify(s"Could not generate description for diff $diff")
+        DescriptionElements("tried to change this keep's recipients")
+    }
   }
 }
