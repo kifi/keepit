@@ -7,6 +7,7 @@ import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.{ ReactiveLock, FutureHelpers, ExecutionContext }
 import com.keepit.common.mail.EmailAddress
+import com.keepit.common.performance.StatsdTiming
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.search.SearchServiceClient
@@ -130,6 +131,7 @@ class KeepInternerImpl @Inject() (
     }
     candidates.maxByOpt { keep => (keep.recipients == connections, keep.lastActivityAt, keep.id.get) }
   }
+  @StatsdTiming("KeepInterner.internKeepByRequest")
   def internKeepByRequest(internReq: KeepInternRequest)(implicit session: RWSession, context: HeimdalContext): Try[(Keep, Boolean)] = {
     val urlIsCompletelyUnusable = httpPrefix.findPrefixOf(internReq.url.toLowerCase).isEmpty || normalizationService.prenormalize(internReq.url).isFailure
     if (urlIsCompletelyUnusable) Failure(KeepFail.MALFORMED_URL)
@@ -237,6 +239,7 @@ class KeepInternerImpl @Inject() (
       Failure(e)
   }
 
+  @StatsdTiming("KeepInterner.internKeep")
   private def internKeep(uri: NormalizedURI, userIdOpt: Option[Id[User]], libraryOpt: Option[Library], usersAdded: Set[Id[User]], source: KeepSource,
     title: Option[String], url: String, keptAt: DateTime,
     thirdPartyAttribution: Option[RawSourceAttribution], note: Option[String])(implicit session: RWSession) = {
