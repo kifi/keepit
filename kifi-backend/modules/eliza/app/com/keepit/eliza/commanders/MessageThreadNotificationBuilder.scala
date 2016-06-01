@@ -2,10 +2,11 @@ package com.keepit.eliza.commanders
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
-import com.keepit.common.core.{ iterableExtensionOps, optionExtensionOps, mapExtensionOps }
+import com.keepit.common.core.{ iterableExtensionOps, mapExtensionOps, optionExtensionOps }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.time._
 import com.keepit.common.util.DescriptionElements
 import com.keepit.eliza.model._
@@ -13,7 +14,7 @@ import com.keepit.model._
 import com.keepit.model.BasicKeepEvent.BasicKeepEventId
 import com.keepit.model.{ CommonKeepEvent, DeepLocator, Keep, NotificationCategory, User }
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.social.{ BasicNonUser, BasicUser, BasicUserLikeEntity }
+import com.keepit.social.{ Author, AuthorKind, BasicAuthor, BasicNonUser, BasicUser, BasicUserLikeEntity }
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -148,6 +149,7 @@ class MessageThreadNotificationBuilderImpl @Inject() (
   messageRepo: MessageRepo,
   messageFetchingCommander: MessageFetchingCommander,
   shoebox: ShoeboxServiceClient,
+  implicit val imageConfig: S3ImageConfig,
   implicit val airbrake: AirbrakeNotifier,
   implicit val publicIdConfig: PublicIdConfiguration,
   implicit val executionContext: ExecutionContext)
@@ -160,12 +162,8 @@ class MessageThreadNotificationBuilderImpl @Inject() (
 
   def buildForKeeps(userId: Id[User], keepIds: Set[Id[Keep]], precomputed: Option[PrecomputedInfo.BuildForKeeps] = None): Future[Map[Id[Keep], MessageThreadNotification]] = {
     val keepsByIdFut = shoebox.getCrossServiceKeepsByIds(keepIds)
-    val basicUserByIdFut = keepsByIdFut.flatMap { keepsById =>
-      precomputed.flatMap(_.basicUserMap).map(Future.successful).getOrElse {
-        val allUsers = keepsById.values.flatMap(_.users)
-        shoebox.getBasicUsers(allUsers.toSeq)
-      }
-    }
+    val sourcesByIdFut = shoebox.getSourceAttributionForKeeps(keepIds)
+
     val infoFut = db.readOnlyMasterAsync { implicit s =>
       val lastMsgById = precomputed.flatMap(_.lastMsgById).getOrElse {
         keepIds.flatAugmentWith(messageRepo.getLatest).toMap
@@ -192,22 +190,32 @@ class MessageThreadNotificationBuilderImpl @Inject() (
     }
     for {
       keepsById <- keepsByIdFut
-      basicUserById <- basicUserByIdFut
+      sourcesById <- sourcesByIdFut
       (lastMsgById, userThreadById, threadActivityById, msgCountById) <- infoFut
+      basicUserByIdMap <- precomputed.flatMap(_.basicUserMap).map(Future.successful).getOrElse {
+        val allUsers = keepsById.values.flatMap(keep => keep.users ++ keep.owner) ++ lastMsgById.values.flatMap(_.from.asUser)
+        shoebox.getBasicUsers(allUsers.toSeq)
+      }
     } yield keepsById.map {
       case (keepId, keep) =>
         val userThreadOpt = userThreadById.get(keepId)
         val messageOpt = lastMsgById.get(keepId)
-        val threadStarter = keep.owner.map(basicUserById(_))
+
         val threadActivity = threadActivityById(keepId)
         val MessageCount(numMessages, numUnread) = msgCountById(keepId)
         val muted = userThreadOpt.exists(_.muted)
         val unread = userThreadOpt.map(_.unread).getOrElse(!messageOpt.exists(_.from.asUser.safely.contains(userId)))
 
+        // This is the worst, we need to replace this BasicUserLikeEntity stuff with BasicAuthor
+        val threadStarter = keep.owner.map(id => BasicUserLikeEntity(basicUserByIdMap(id))) orElse sourcesById.get(keepId).map(BasicAuthor.fromSource).flatMap { author =>
+          BasicNonUser.fromBasicAuthor(author).map(BasicUserLikeEntity(_))
+        }
+
         val author = messageOpt.map(_.from).collect {
-          case MessageSender.User(id) => BasicUserLikeEntity(basicUserById(id))
+          case MessageSender.User(id) => BasicUserLikeEntity(basicUserByIdMap(id))
           case MessageSender.NonUser(nup) => BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nup))
-        } orElse threadStarter.map(BasicUserLikeEntity(_))
+        } orElse threadStarter
+
         val authorActivityInfos = threadActivity.filter(_.lastActive.isDefined)
 
         val lastSeenOpt: Option[DateTime] = threadActivity.find(_.userId == userId).flatMap(_.lastSeen)
@@ -216,11 +224,11 @@ class MessageThreadNotificationBuilderImpl @Inject() (
           case None => authorActivityInfos.count(_.userId != userId)
         }
         keepId -> {
-          val allParticipants = keep.users.toSeq.map(u => BasicUserLikeEntity(basicUserById(u))) ++
+          val allParticipants = keep.users.toSeq.map(u => BasicUserLikeEntity(basicUserByIdMap(u))) ++
             keep.emails.map(emailAddress => BasicUserLikeEntity(BasicNonUser.fromEmail(emailAddress)))
           val orderedParticipants = allParticipants.sortBy(x => x.fold(nu => (nu.firstName.getOrElse(""), nu.lastName.getOrElse("")), u => (u.firstName, u.lastName)))
           val indexOfFirstAuthor = orderedParticipants.zipWithIndex.collectFirst {
-            case (Right(user), idx) if threadStarter.exists(_.externalId == user.externalId) => idx
+            case (Right(user), idx) if threadStarter.exists(_.right.exists(_.externalId == user.externalId)) => idx
           }.getOrElse {
             airbrake.notify(s"Thread starter is not one of the participants for keep $keepId")
             0
@@ -232,7 +240,7 @@ class MessageThreadNotificationBuilderImpl @Inject() (
             time = messageOpt.map(_.createdAt).getOrElse(keep.keptAt),
             author = author,
             text = messageOpt.map { message =>
-              message.auxData.map(SystemMessageData.generateMessageText(_, basicUserById)).getOrElse(message.messageText)
+              message.auxData.map(SystemMessageData.generateMessageText(_, basicUserByIdMap)).getOrElse(message.messageText)
             } orElse keep.title getOrElse keep.url,
             threadId = pubKeepId,
             locator = locator,
