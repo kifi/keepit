@@ -5,7 +5,7 @@ import java.util.UUID
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.core._
 import com.keepit.common.logging.Logging
-import com.keepit.common.oauth.TwitterOAuthProvider
+import com.keepit.common.oauth.{ BetterRoutesHelper, TwitterOAuthProvider }
 import com.keepit.social.{ UserIdentity, UserIdentityProvider }
 import net.codingwell.scalaguice.InjectorExtensions._
 import play.api.Application
@@ -66,7 +66,7 @@ class TwitterProvider(app: Application) extends securesocial.core.providers.Twit
     }.getOrElse {
       // the oauth_verifier field is not in the request, this is the 1st step in the auth flow.
       // we need to get the request tokens
-      val callbackUrl = RoutesHelper.authenticate(id).absoluteURL(IdentityProvider.sslEnabled)
+      val callbackUrl = BetterRoutesHelper.authenticate(id).absoluteURL(IdentityProvider.sslEnabled)
       log.info(s"[doAuth($id).1] callback url = $callbackUrl")
       service.retrieveRequestToken(callbackUrl) match {
         case Right(requestToken) =>
