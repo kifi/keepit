@@ -9,17 +9,19 @@ import com.keepit.common.db.{ State, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.oauth.{ OAuth1TokenInfo, TwitterUserShow, TwitterOAuthProvider }
+import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.time._
 import com.keepit.controllers.ext.ExtLibraryController
 import com.keepit.heimdal.HeimdalContextBuilder
 import com.keepit.model._
 import com.keepit.social.twitter.TwitterHandle
-import com.keepit.social.{ SocialNetworks, SocialNetworkType }
+import com.keepit.social.{ SocialGraphPlugin, SocialNetworks, SocialNetworkType }
 import org.joda.time.DateTime
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.iteratee.Iteratee
 import play.api.libs.ws.WS
 import play.api.Play.current
+import scala.concurrent.duration._
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Try, Success }
@@ -52,6 +54,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
     clock: Clock,
     userValueRepo: UserValueRepo,
     cleanup: ImageCleanup,
+    socialGraphPlugin: SocialGraphPlugin,
     implicit val executionContext: ExecutionContext) extends TwitterWaitlistCommander with Logging {
 
   private val WAITLIST_LENGTH_SHIFT = 1152
@@ -67,6 +70,9 @@ class TwitterWaitlistCommanderImpl @Inject() (
           val handle = inferHandle(userId)
           val exitingWaitlist = twitterWaitlistRepo.getByUser(userId).find(_.state == TwitterWaitlistEntryStates.ACTIVE) match {
             case Some(wl) if wl.twitterHandle.isEmpty && handle.nonEmpty => Some(twitterWaitlistRepo.save(wl.copy(twitterHandle = handle)))
+            case other if handle.isEmpty =>
+              usersTwitterSui(userId).foreach(socialGraphPlugin.asyncFetch(_, broadcastToOthers = true))
+              other
             case other => other
           }
           Right(exitingWaitlist.getOrElse {
@@ -185,16 +191,15 @@ class TwitterWaitlistCommanderImpl @Inject() (
       .lastOption
   }
 
+  private val refreshSocial = new RequestConsolidator[Id[SocialUserInfo], Unit](15.minutes)
   // entry's user must have a valid Twitter SUI, otherwise this no-ops
   private def createSync(entryId: Id[TwitterWaitlistEntry]): Either[String, TwitterSyncState] = {
     val (entry, suiAndHandle) = db.readOnlyMaster { implicit session =>
       val entry = twitterWaitlistRepo.get(entryId)
       val suiAndHandle = {
         if (entry.state == TwitterWaitlistEntryStates.ACTIVE) {
-          usersTwitterSui(entry.userId).flatMap { sui =>
-            entry.twitterHandle.orElse(sui.username.map(TwitterHandle(_))).map { handle =>
-              (sui, handle)
-            }
+          usersTwitterSui(entry.userId).map { sui =>
+            (sui, entry.twitterHandle.orElse(sui.username.map(TwitterHandle(_))))
           }
         } else {
           None
@@ -204,7 +209,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
     }
 
     suiAndHandle match {
-      case Some((sui, handle)) if entry.state == TwitterWaitlistEntryStates.ACTIVE =>
+      case Some((sui, Some(handle))) if entry.state == TwitterWaitlistEntryStates.ACTIVE =>
         val addRequest = LibraryInitialValues(
           name = s"@$handle’s Twitter Links",
           visibility = LibraryVisibility.PUBLISHED,
@@ -231,6 +236,12 @@ class TwitterWaitlistCommanderImpl @Inject() (
 
           Right(sync)
         })
+      case Some((sui, None)) if sui.createdAt.isBefore(clock.now.minusMinutes(2)) && entry.createdAt.isAfter(clock.now.minusMinutes(60)) => // We don't know who this is. Try refetching again.
+        refreshSocial(sui.id.get) { _ =>
+          log.info(s"[createSync] Attempting to refetch SUI for ${entry.id.get}, userId: ${entry.userId}")
+          socialGraphPlugin.asyncFetch(sui, broadcastToOthers = true)
+        }
+        Left(s"[createSync] Nothing to do for ${entry.id.get}, userId: ${entry.userId} because we have no handle.")
       case _ =>
         Left(s"[createSync] Nothing to do for ${entry.id.get}, userId: ${entry.userId}, handle: ${entry.twitterHandle}")
     }
@@ -290,8 +301,8 @@ class TwitterWaitlistCommanderImpl @Inject() (
       show.description.foreach { desc =>
         val lib = libraryRepo.getNoCache(libraryId)
         if (lib.description.isEmpty || lib.description.exists(_.indexOf("Interesting pages") == 0)) {
-          libraryRepo.save(libraryRepo.getNoCache(libraryId).copy(description = Some(desc)))
-          log.info(s"[updateLibraryFromShow] $libraryId ($userId): Description updated to $desc")
+          libraryRepo.save(libraryRepo.getNoCache(libraryId).copy(description = Option(desc).filter(_.nonEmpty)))
+          log.info(s"[updateLibraryFromShow] $libraryId ($userId): Description updated to ${Option(desc).filter(_.nonEmpty)}")
         }
       }
 
