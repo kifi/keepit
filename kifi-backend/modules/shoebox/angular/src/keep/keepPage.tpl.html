@@ -13,9 +13,9 @@
           delete-callback="unkeepFromLibrary"
           max-initial-comments="maxInitialComments"></div>
     </div>
-    <div class="kf-keep-page-rhr" ng-if="enableRHR">
+    <div class="kf-keep-page-rhr">
       <div class="kf-keep-page-rhr-container" ng-if="keep.keepers.length">
-        <div class="kf-keep-page-rhr-header">Other people kept this</div>
+        <div class="kf-keep-page-rhr-header">Kept by</div>
         <span class="kf-keep-page-who-pic-box" ng-repeat="keeper in keep.keepers | limitTo:40" kf-user-tooltip="::keeper"
               library="::keeper.library" desc="Your Kifi connection">
           <a class="kf-keep-page-who-pic" ng-attr-style="background-image:url({{::keeper|pic:100}})"
@@ -25,7 +25,7 @@
         </span>
       </div>
       <div class="kf-keep-page-rhr-container" ng-if="keep.libraries.length">
-        <div class="kf-keep-page-rhr-header">This page is in other libraries</div>
+        <div class="kf-keep-page-rhr-header">In these libraries</div>
         <a class="library-select-option kf-keep-page-rhr-library-wrapper"
            ng-repeat="libraryAndKeeper in keep.libraries" ng-init="library=libraryAndKeeper[0]"
            ng-class="{'selected': library.selected}"
@@ -35,21 +35,23 @@
         </a>
       </div>
       <div class="kf-keep-page-rhr-container" ng-if="keep.sources.length">
-        <div class="kf-keep-page-rhr-header">This page is in these channels</div>
-        <div ng-repeat="source in keep.sources">
-          <a class="kf-flex-row kf-keep-page-source-row" ng-if="source.slack" ng-href="{{source.slack.message.permalink}}">
-            <div class="kf-keep-page-sources-slack-image svg-slack"></div>
+        <div class="kf-keep-page-rhr-header">In these channels</div>
+        <div class="kf-keep-page-source-container" ng-repeat="source in keep.sources">
+          <a class="kf-keep-page-source-row" ng-if="source.slack" ng-href="{{source.slack.message.permalink}}" target="_blank">
             <div>
+              <div class="kf-keep-page-sources-slack-image svg-slack"></div>
               <div class="kf-keep-page-sources-title" ng-bind="source.slack.message.channel.name"></div>
-              <div class="kf-keep-page-sources-message">@<span ng-bind="source.slack.message.username"></span>: <span ng-bind="source.slack.message.text|slackText"></span></div>
             </div>
+            <div class="kf-keep-page-sources-message" ng-if="source.slack.message.length">@<span ng-bind="source.slack.message.username"></span>: <span ng-bind="source.slack.message.text|slackText"></span></div>
+            <div class="kf-keep-page-sources-message" ng-if="!source.slack.message.length">@<span ng-bind-template="{{source.slack.message.username}} sent this"></span></div>
           </a>
-          <a class="kf-flex-row kf-keep-page-source-row" ng-if="source.twitter" ng-href="{{source.twitter.tweet.permalink}}">
-            <div class="kf-keep-twitter-logo kf-keep-page-sources-twitter-image svg-twitter-blue"></div>
+          <a class="kf-keep-page-source-row" ng-if="source.twitter" ng-href="{{source.twitter.tweet.permalink}}" target="_blank">
             <div>
+              <div class="kf-keep-twitter-logo kf-keep-page-sources-twitter-image svg-twitter-blue"></div>
               <div class="kf-keep-page-sources-title" ng-bind="source.twitter.tweet.user.name"></div>
-              <div class="kf-keep-page-sources-message">@<span ng-bind="source.twitter.tweet.user.screen_name"></span>: <span ng-bind="source.twitter.tweet.text"></span></div>
             </div>
+            <div class="kf-keep-page-sources-message" ng-if="source.twitter.tweet.text.length">@<span ng-bind="source.twitter.tweet.user.screen_name"></span>: <span ng-bind="source.twitter.tweet.text"></span></div>
+            <div class="kf-keep-page-sources-message" ng-if="!source.twitter.tweet.text.length">@<span ng-bind-template="{{source.twitter.tweet.user.screen_name}} sent this"></span></div>
           </a>
         </div>
       </div>
