@@ -8,6 +8,7 @@ import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.common.db.Id
 import com.keepit.common.store.FakeElizaStoreModule
 import com.keepit.common.time._
+import com.keepit.discussion.MessageSource
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.eliza.model.{ MessageSender, _ }
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
@@ -87,13 +88,21 @@ class ElizaDiscussionCommanderTest extends TestKitSupport with SpecificationLike
     "add messages to discussions" in {
       "add new commenters as they chime in" in {
         withDb(modules: _*) { implicit injector =>
-          val keep = Id[Keep](1)
           val user1 = Id[User](1)
           val user2 = Id[User](2)
 
-          db.readOnlyMaster { implicit s => messageThreadRepo.getByKeepId(keep) must beNone }
+          val (thread, msg) = Await.result(messagingCommander.sendNewMessage(
+            user1,
+            Seq.empty,
+            Seq.empty,
+            url = "http://idgaf.com",
+            titleOpt = None,
+            messageText = "First post!",
+            source = Some(MessageSource.CHROME)
+          ), Duration.Inf)
 
-          Await.result(discussionCommander.sendMessage(user1, "First post!", keep), Duration.Inf)
+          val keep = thread.keepId
+
           db.readOnlyMaster { implicit s =>
             val th = messageThreadRepo.getByKeepId(keep).get
             th.participants.allUsers === Set(user1)
@@ -119,12 +128,22 @@ class ElizaDiscussionCommanderTest extends TestKitSupport with SpecificationLike
     "mark keeps as read" in {
       "handle unread messages" in {
         withDb(modules: _*) { implicit injector =>
-          val keep = Id[Keep](1)
           val user1 = Id[User](1)
           val user2 = Id[User](2)
 
+          val (thread, msg) = Await.result(messagingCommander.sendNewMessage(
+            user1,
+            Seq.empty,
+            Seq.empty,
+            url = "http://idgaf.com",
+            titleOpt = None,
+            messageText = "First post!",
+            source = Some(MessageSource.CHROME)
+          ), Duration.Inf)
+
+          val keep = thread.keepId
+
           Await.result(for {
-            _ <- discussionCommander.sendMessage(user1, "First post!", keep)
             _ <- discussionCommander.sendMessage(user2, "My first post too!", keep)
             _ <- discussionCommander.sendMessage(user2, "And another post!", keep)
           } yield Unit, Duration.Inf)

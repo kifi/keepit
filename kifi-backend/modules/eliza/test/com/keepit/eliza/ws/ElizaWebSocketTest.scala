@@ -3,7 +3,7 @@ package com.keepit.eliza.ws
 import java.util.UUID
 
 import com.keepit.common.actor.FakeActorSystemModule
-import com.keepit.common.concurrent.FakeExecutionContextModule
+import com.keepit.common.concurrent.{ FakeExecutionContextModule, WatchableExecutionContext }
 import com.keepit.common.controller.FakeUserActionsModule
 import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.Id
@@ -119,6 +119,7 @@ class ElizaWebSocketTest extends Specification with ElizaApplicationInjector wit
           messageText = "I need this to work",
           source = Some(MessageSource.CHROME)
         ), Duration.Inf)
+        inject[WatchableExecutionContext].drain()
 
         val message = socket.out
         message(0).as[String] === "message"

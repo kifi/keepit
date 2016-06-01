@@ -686,22 +686,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   def getOrgTrackingValues(orgId: Id[Organization]): Future[OrgTrackingValues] = Future.successful(OrgTrackingValues(0, 0, 0, 0))
 
   def getCrossServiceKeepsByIds(ids: Set[Id[Keep]]): Future[Map[Id[Keep], CrossServiceKeep]] = Future.successful {
-    ids.map(id => id -> allCrossServiceKeeps.getOrElse(id, CrossServiceKeep(
-      id = id,
-      externalId = ExternalId(),
-      seq = SequenceNumber.ZERO,
-      state = KeepStates.ACTIVE,
-      owner = Some(Id[User](1)),
-      users = Set(Id[User](1)),
-      emails = Set.empty,
-      libraries = Set.empty,
-      url = "http://www.kifi.com",
-      uriId = Id[NormalizedURI](1),
-      keptAt = currentDateTime.minusHours(10),
-      lastActivityAt = currentDateTime.minusHours(10),
-      title = Some("Kifi!"),
-      note = Some("is great")
-    ))).toMap
+    ids.map(id => id -> allCrossServiceKeeps(id)).toMap
   }
 
   def getDiscussionKeepsByIds(viewerId: Id[User], keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], DiscussionKeep]] = Future.successful {
