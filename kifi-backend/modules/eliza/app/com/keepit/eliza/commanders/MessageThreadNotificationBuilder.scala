@@ -207,14 +207,14 @@ class MessageThreadNotificationBuilderImpl @Inject() (
         val unread = userThreadOpt.map(_.unread).getOrElse(!messageOpt.exists(_.from.asUser.safely.contains(userId)))
 
         // This is the worst, we need to replace this BasicUserLikeEntity stuff with BasicAuthor
-        val threadStarter = keep.owner.map(id => BasicUserLikeEntity(basicUserByIdMap(id))) orElse sourcesById.get(keepId).map(BasicAuthor.fromSource).flatMap { author =>
+        val firstAuthorOpt = keep.owner.map(id => BasicUserLikeEntity(basicUserByIdMap(id))) orElse sourcesById.get(keepId).map(BasicAuthor.fromSource).flatMap { author =>
           BasicNonUser.fromBasicAuthor(author).map(BasicUserLikeEntity(_))
         }
 
         val author = messageOpt.map(_.from).collect {
           case MessageSender.User(id) => BasicUserLikeEntity(basicUserByIdMap(id))
           case MessageSender.NonUser(nup) => BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nup))
-        } orElse threadStarter
+        } orElse firstAuthorOpt
 
         val authorActivityInfos = threadActivity.filter(_.lastActive.isDefined)
 
@@ -224,15 +224,16 @@ class MessageThreadNotificationBuilderImpl @Inject() (
           case None => authorActivityInfos.count(_.userId != userId)
         }
         keepId -> {
-          val allParticipants = keep.users.toSeq.map(u => BasicUserLikeEntity(basicUserByIdMap(u))) ++
-            keep.emails.map(emailAddress => BasicUserLikeEntity(BasicNonUser.fromEmail(emailAddress)))
-          val orderedParticipants = allParticipants.sortBy(x => x.fold(nu => (nu.firstName.getOrElse(""), nu.lastName.getOrElse("")), u => (u.firstName, u.lastName)))
-          val indexOfFirstAuthor = orderedParticipants.zipWithIndex.collectFirst {
-            case (Right(user), idx) if threadStarter.exists(_.right.exists(_.externalId == user.externalId)) => idx
-          }.getOrElse {
-            airbrake.notify(s"Thread starter is not one of the participants for keep $keepId")
-            0
+          val allParticipants: Seq[BasicUserLikeEntity] = {
+            val userParticipants = keep.users.toSeq.map(u => BasicUserLikeEntity(basicUserByIdMap(u)))
+            val emailParticipants = keep.emails.map(emailAddress => BasicUserLikeEntity(BasicNonUser.fromEmail(emailAddress)))
+            val nonUserFirstAuthor: Option[BasicNonUser] = firstAuthorOpt.flatMap(_.left.toOption)
+            userParticipants ++ emailParticipants ++ nonUserFirstAuthor.map(BasicUserLikeEntity(_))
           }
+          val orderedParticipants = allParticipants.sortBy(x => x.fold(nu => (nu.firstName.getOrElse(""), nu.lastName.getOrElse("")), u => (u.firstName, u.lastName)))
+          def isFirstAuthor(participant: BasicUserLikeEntity): Boolean = firstAuthorOpt.exists(firstAuthor => BasicUserLikeEntity.idString(firstAuthor) == BasicUserLikeEntity.idString(participant))
+          val indexOfFirstAuthor = orderedParticipants.indexWhere(isFirstAuthor)
+
           val pubKeepId = Keep.publicId(keepId)
           val locator = MessageThread.locator(pubKeepId)
           MessageThreadNotification(

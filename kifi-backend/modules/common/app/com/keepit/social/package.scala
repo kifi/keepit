@@ -22,6 +22,11 @@ package object social {
       def unapply(that: BasicUserLikeEntity): Option[BasicNonUser] = that.fold(nonUser => Some(nonUser), user => None)
     }
 
+    def idString(entity: BasicUserLikeEntity): String = entity match {
+      case Left(nonUser) => nonUser.id
+      case Right(user) => user.externalId.id
+    }
+
   }
 
   private implicit val nonUserTypeFormat = Json.format[NonUserKind]
