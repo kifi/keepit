@@ -19,7 +19,7 @@ class BasicULOBatchFetcher @Inject() (
 
   def fetch(bf: BatchFetchable[_]): Values = {
     db.readOnlyMaster { implicit s =>
-      val users = basicUserGen.loadAll(bf.keys.users)
+      val users = basicUserGen.loadAllActive(bf.keys.users)
       val libs = basicLibGen.getBasicLibraries(bf.keys.libraries)
       val orgs = basicOrgGen.getBasicOrganizations(bf.keys.orgs)
       Values(users, libs, orgs)
@@ -31,7 +31,7 @@ class BasicULOBatchFetcher @Inject() (
 
   // NB: it is probably a bad sign if you're using this function
   def runInPlace[T](bf: BatchFetchable[T])(implicit session: RSession): T = {
-    val users = basicUserGen.loadAll(bf.keys.users)
+    val users = basicUserGen.loadAllActive(bf.keys.users)
     val libs = basicLibGen.getBasicLibraries(bf.keys.libraries)
     val orgs = basicOrgGen.getBasicOrganizations(bf.keys.orgs)
 
