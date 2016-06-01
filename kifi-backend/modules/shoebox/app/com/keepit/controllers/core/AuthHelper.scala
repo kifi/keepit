@@ -7,6 +7,7 @@ import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.net.UserAgent
 import com.google.inject.Inject
 import com.keepit.common.oauth._
+import com.keepit.common.path.Path
 import com.keepit.common.service.IpAddress
 import com.keepit.controllers.core.PostRegIntent._
 import com.keepit.payments.CreditCode
@@ -86,12 +87,18 @@ object PostRegIntent {
     val creditCodeKey = "creditCode"
     val cookieKeys = Set(creditCodeKey)
   }
+  case class RedirectAfter(url: String) extends PostRegIntent
+  object RedirectAfter {
+    val intentValue = "redirectAfter"
+    val redirectToKey = "redirectTo"
+    val cookieKeys = Set(redirectToKey)
+  }
   case object JoinTwitterWaitlist extends PostRegIntent { val intentValue = "waitlist" }
   case object NoIntent extends PostRegIntent
 
   val intentKey = "intent"
   val onFailUrlKey = "onFailUrl"
-  val discardingCookies = Set(Set(intentKey, onFailUrlKey), AutoFollowLibrary.cookieKeys, AutoJoinOrganization.cookieKeys, AutoJoinKeep.cookieKeys, Slack.cookieKeys, ApplyCreditCode.cookieKeys).flatten.map(DiscardingCookie(_)).toSeq
+  val discardingCookies = Set(Set(intentKey, onFailUrlKey), AutoFollowLibrary.cookieKeys, AutoJoinOrganization.cookieKeys, AutoJoinKeep.cookieKeys, Slack.cookieKeys, ApplyCreditCode.cookieKeys, RedirectAfter.cookieKeys).flatten.map(DiscardingCookie(_)).toSeq
 
   def fromCookies(cookies: Set[Cookie])(implicit config: PublicIdConfiguration): PostRegIntent = {
     val cookieByName = cookies.groupBy(_.name).mapValuesStrict(_.head)
@@ -129,6 +136,7 @@ object PostRegIntent {
         Some(Slack(slackTeamIdOpt, extraScopesOpt))
       }
       case ApplyCreditCode.intentValue => cookieByName.get(ApplyCreditCode.creditCodeKey).map(c => ApplyCreditCode(CreditCode(c.value)))
+      case RedirectAfter.intentValue => cookieByName.get(RedirectAfter.redirectToKey).map(c => RedirectAfter(c.value))
       case JoinTwitterWaitlist.intentValue => Some(JoinTwitterWaitlist)
     }.flatten.getOrElse(NoIntent)
   }
@@ -302,6 +310,7 @@ class AuthHelper @Inject() (
         "/teams/new"
       case JoinTwitterWaitlist =>
         "/twitter/thanks"
+      case RedirectAfter(url) => Path(url).relativeWithLeadingSlash
       case NoIntent => homeOrInstall
     }
   }
