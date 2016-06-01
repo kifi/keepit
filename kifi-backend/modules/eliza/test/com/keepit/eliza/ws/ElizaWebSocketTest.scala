@@ -3,12 +3,13 @@ package com.keepit.eliza.ws
 import java.util.UUID
 
 import com.keepit.common.actor.FakeActorSystemModule
-import com.keepit.common.concurrent.FakeExecutionContextModule
+import com.keepit.common.concurrent.{ FakeExecutionContextModule, WatchableExecutionContext }
 import com.keepit.common.controller.FakeUserActionsModule
 import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.Id
 import com.keepit.common.store.FakeElizaStoreModule
 import com.keepit.common.time.{ CrossServiceTime, DEFAULT_DATE_TIME_ZONE, currentDateTime }
+import com.keepit.discussion.MessageSource
 import com.keepit.eliza.commanders.MessagingCommander
 import com.keepit.eliza.controllers.shared.SharedWsMessagingController
 import com.keepit.eliza.model._
@@ -23,6 +24,9 @@ import org.specs2.time.NoTimeConversions
 import play.api.libs.json.{ JsArray, Json }
 import play.api.mvc.WebSocket
 import play.api.test.Helpers._
+
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
 class ElizaWebSocketTest extends Specification with ElizaApplicationInjector with NoTimeConversions with WsTestBehavior {
   implicit def time: CrossServiceTime = CrossServiceTime(currentDateTime)
@@ -99,29 +103,29 @@ class ElizaWebSocketTest extends Specification with ElizaApplicationInjector wit
       running(new ElizaApplication(modules: _*)) {
 
         setupUserIdentity
-        val messagingCommander = inject[MessagingCommander]
         val socket = MockWebSocket()
         socket.out
 
-        val messageThreadRepo = inject[MessageThreadRepo]
-        val userThreadRepo = inject[UserThreadRepo]
-
-        val user = Id[User](1)
-        val (messageThread, userThread) = db.readWrite { implicit session =>
-          val messageThread = MessageThreadFactory.thread().withUri(Id(1)).withOnlyStarter(user).withUsers(Id(2)).saved
-          val userThread = userThreadRepo.save(UserThread.forMessageThread(messageThread)(user))
-          (messageThread, userThread)
-        }
+        val user1 = Id[User](1)
+        val user2 = Id[User](2)
 
         implicit val context = new HeimdalContext(Map())
-
-        messagingCommander.sendMessage(Id[User](2), messageThread, "So long and thanks for all the fish", None, None)
+        val (messageThread, msg) = Await.result(messagingCommander.sendNewMessage(
+          user1,
+          Seq(user1, user2),
+          Seq.empty,
+          url = "http://www.lemonde.fr",
+          titleOpt = None,
+          messageText = "I need this to work",
+          source = Some(MessageSource.CHROME)
+        ), Duration.Inf)
+        inject[WatchableExecutionContext].drain()
 
         val message = socket.out
         message(0).as[String] === "message"
         message(1).as[String] === messageThread.pubKeepId.id
         val messageContent = message(2)
-        (messageContent \ "text").as[String] === "So long and thanks for all the fish"
+        (messageContent \ "text").as[String] === msg.messageText
         (messageContent \ "participants").asInstanceOf[JsArray].value.length === 2
         val first = socket.out(0).as[String]
         val second = socket.out(0).as[String]
