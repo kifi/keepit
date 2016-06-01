@@ -40,8 +40,8 @@ case class BasicNonUser(kind: NonUserKind, id: String, firstName: Option[String]
 }
 
 object BasicNonUser {
-  val defaultEmailPictureName = S3UserPictureConfig.defaultName + ".jpg"
-  def fromEmail(email: EmailAddress): BasicNonUser = BasicNonUser(NonUserKinds.email, id = email.address, firstName = None, lastName = None, pictureName = defaultEmailPictureName)
+  val DefaultPictureName = S3UserPictureConfig.defaultName + ".jpg"
+  def fromEmail(email: EmailAddress): BasicNonUser = BasicNonUser(NonUserKinds.email, id = email.address, firstName = None, lastName = None, pictureName = DefaultPictureName)
   def fromBasicAuthor(author: BasicAuthor): Option[BasicNonUser] = NonUserKinds.fromAuthorKind(author.kind).map { kind =>
     BasicNonUser(kind, author.id, Some(author.name), None, pictureName = author.picture)
   }
