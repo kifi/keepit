@@ -70,9 +70,9 @@ class TwitterWaitlistCommanderImpl @Inject() (
           val handle = inferHandle(userId)
           val exitingWaitlist = twitterWaitlistRepo.getByUser(userId).find(_.state == TwitterWaitlistEntryStates.ACTIVE) match {
             case Some(wl) if wl.twitterHandle.isEmpty && handle.nonEmpty => Some(twitterWaitlistRepo.save(wl.copy(twitterHandle = handle)))
-            case other if handle.isEmpty =>
+            case None if handle.isEmpty =>
               usersTwitterSui(userId).foreach(socialGraphPlugin.asyncFetch(_, broadcastToOthers = true))
-              other
+              None
             case other => other
           }
           Right(exitingWaitlist.getOrElse {
