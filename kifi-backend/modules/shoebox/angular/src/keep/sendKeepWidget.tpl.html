@@ -5,36 +5,35 @@
   </div>
 
   <ul class="kf-skw-suggestions">
-    <li class="kf-skw-suggestion" ng-repeat="suggestion in suggestions" ng-if="!suggestion.isSelected" ng-click="onClickSuggestion(suggestion)">
+    <li ng-repeat="suggestion in suggestions" ng-if="!suggestion.isSelected" ng-click="onClickSuggestion(suggestion)">
       <div ng-include="'keep/sendKeepSuggestionItem.tpl.html'"></div>
+    </li>
+    <li class="kf-skw-suggestion" ng-if="suggestions.length === 0">
+      <div class="kf-skw-suggestion-noresults">No results found...</div>
     </li>
   </ul>
 
   <div class="kf-skw-input-container">
-    <span class="kf-skw-recipient-list">
-      <span class="kf-skw-recipient" ng-repeat="selection in selections">
-        <span class="kf-skw-recipient" ng-init="library = selection;" ng-if="selection.kind === 'library'" ng-style="{'background-color': library.color || 'grey' }">
-          <span class="kf-skw-recipient-library">
-            <svg kf-symbol-sprite
-                 ng-if="library && library|libPrivacyIcon"
-                 icon="{{::library|libPrivacyIcon}}"></svg>
-            <img
-              class="kf-skw-recipient-library-slack"
-              ng-if="library && library.slack"
-              src="/img/slack-hash-white.png"/>
-            <span class="kf-skw-recipient-txt" ng-bind="library.name"></span>
-            <span class="kf-skw-recipient-remove" ng-click="removeSelection(selection)">x</span>
-          </span>
-        </span>
-        <span class="kf-skw-recipient kf-skw-recipient-user" ng-init="user = selection;" ng-if="selection.kind === 'user'">
-          <img class="kf-skw-recipient-user-img" ng-src="{{user|pic:100}}"/>
-          <span class="kf-skw-recipient-txt" ng-bind="user.name"></span>
-          <span class="kf-skw-recipient-remove" ng-click="removeSelection(selection)">x</span>
-        </span>
-        <span class="kf-skw-recipient kf-skw-recipient-email" ng-init="email = selection;" ng-if="selection.kind === 'email'">
-          <span class="kf-skw-recipient-txt" ng-bind="email.email"></span>
-          <span class="kf-skw-recipient-remove" ng-click="removeSelection(selection)">x</span>
-        </span>
+    <span class="kf-skw-recipient-container" ng-repeat="selection in selections">
+      <span class="kf-skw-recipient kf-skw-recipient-library" ng-init="library = selection;" ng-if="selection.kind === 'library'" ng-style="{'background-color': library.color || 'grey' }">
+        <svg kf-symbol-sprite
+             ng-if="library.visibility !== 'discoverable'"
+             icon="{{library|libPrivacyIcon}}"></svg>
+        <img
+          class="kf-skw-recipient-library-slack"
+          ng-if="library && library.slack"
+          src="/img/slack-hash-white.png"/>
+        <span class="kf-skw-recipient-txt" ng-bind="library.name"></span>
+        <span class="kf-skw-recipient-remove" ng-click="removeSelection(selection)">x</span>
+      </span>
+      <span class="kf-skw-recipient kf-skw-recipient-user" ng-init="user = selection;" ng-if="selection.kind === 'user'">
+        <img class="kf-skw-recipient-user-img" ng-src="{{user|pic:100}}"/>
+        <span class="kf-skw-recipient-txt" ng-bind="user.name"></span>
+        <span class="kf-skw-recipient-remove" ng-click="removeSelection(selection)">x</span>
+      </span>
+      <span class="kf-skw-recipient kf-skw-recipient-email" ng-init="email = selection;" ng-if="selection.kind === 'email'">
+        <span class="kf-skw-recipient-txt" ng-bind="email.email"></span>
+        <span class="kf-skw-recipient-remove" ng-click="removeSelection(selection)">x</span>
       </span>
     </span>
     <input class="kf-skw-input" ng-model="typeahead" ng-change="onTypeaheadInputChanged(typeahead)" ng-keydown="processKeyEvent($event)" autofocus="autofocus" placeholder="{{ selections.length ? '' : 'Enter a user, library, or email...' }}">
