@@ -284,6 +284,7 @@ class PermissionCommanderImpl @Inject() (
           viewerOwnsTheKeep || viewerOwnsOneOfTheKeepLibraries
         }
         val canRemoveLibraries = userIdOpt containsTheSameValueAs k.userId
+        val canRemoveParticipants = userIdOpt containsTheSameValueAs k.userId
         val canViewKeep = {
           val viewerOwnsKeep = userIdOpt containsTheSameValueAs k.userId
 
@@ -301,6 +302,7 @@ class PermissionCommanderImpl @Inject() (
           canAddLibraries -> KeepPermission.ADD_LIBRARIES,
           canRemoveLibraries -> KeepPermission.REMOVE_LIBRARIES,
           canAddParticipants -> KeepPermission.ADD_PARTICIPANTS,
+          canRemoveParticipants -> KeepPermission.REMOVE_PARTICIPANTS,
           canAddMessage -> KeepPermission.ADD_MESSAGE,
           canDeleteOwnMessages -> KeepPermission.DELETE_OWN_MESSAGES,
           canDeleteOtherMessages -> KeepPermission.DELETE_OTHER_MESSAGES,
