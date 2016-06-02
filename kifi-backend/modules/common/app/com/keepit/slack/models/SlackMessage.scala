@@ -44,7 +44,6 @@ case class SlackAttachment(
     title: Option[SlackAttachment.Title] = None,
     text: Option[String] = None,
     fields: Seq[SlackAttachment.Field] = Seq.empty,
-    footer: Option[String] = None,
     fromUrl: Option[String] = None,
     imageUrl: Option[String] = None,
     thumbUrl: Option[String] = None,
@@ -69,14 +68,6 @@ object SlackAttachment {
     ).withFullMarkdown
   }
 
-  def footer(text: DescriptionElements): SlackAttachment = {
-    SlackAttachment(
-      text = Some(" "), // needed in order to force the attachment to display
-      footer = Some(DescriptionElements.formatForSlack(text)),
-      fallback = Some(DescriptionElements.formatPlain(text).abbreviate(40))
-    ).withFullMarkdown
-  }
-
   def applyFromSlack(
     fallback: Option[String],
     color: Option[String],
@@ -89,14 +80,13 @@ object SlackAttachment {
     titleLink: Option[String],
     text: Option[String],
     fields: Option[Seq[SlackAttachment.Field]],
-    footer: Option[String],
     fromUrl: Option[String],
     imageUrl: Option[String],
     thumbUrl: Option[String],
     markdownIn: Option[Set[String]]): SlackAttachment = {
     val author = authorName.map(Author(_, authorLink, authorIcon))
     val title = titleValue.map(Title(_, titleLink))
-    SlackAttachment(fallback, color, pretext, service, author, title, text, fields.getOrElse(Seq.empty), footer, fromUrl, imageUrl, thumbUrl, markdownIn)
+    SlackAttachment(fallback, color, pretext, service, author, title, text, fields.getOrElse(Seq.empty), fromUrl, imageUrl, thumbUrl, markdownIn)
   }
 
   def unapplyToSlack(attachment: SlackAttachment) = Some((
@@ -111,7 +101,6 @@ object SlackAttachment {
     attachment.title.flatMap(_.link): Option[String],
     attachment.text: Option[String],
     Some(attachment.fields).filter(_.nonEmpty): Option[Seq[SlackAttachment.Field]],
-    attachment.footer: Option[String],
     attachment.fromUrl: Option[String],
     attachment.imageUrl: Option[String],
     attachment.thumbUrl: Option[String],
@@ -131,7 +120,6 @@ object SlackAttachment {
     (__ \ 'title_link).formatIfPossible[String] and
     (__ \ 'text).formatIfPossible[String] and
     (__ \ 'fields).formatIfPossible[Seq[SlackAttachment.Field]] and
-    (__ \ 'footer).formatIfPossible[String] and
     (__ \ 'from_url).formatIfPossible[String] and
     (__ \ 'image_url).formatIfPossible[String] and
     (__ \ 'thumb_url).formatIfPossible[String] and
