@@ -1,0 +1,36 @@
+<div ng-if="suggestion.kind === 'user'">
+  <div class="kf-skw-suggestion-img">
+    <img class="kf-skw-suggestion-user-img" ng-src="{{suggestion|pic:100}}"/>
+  </div>
+  <span class="kf-skw-suggestion-content">
+    <div class="kf-skw-suggestion-name" ng-bind="suggestion.name"></div>
+    <div class="kf-skw-suggestion-subname">Kifi user</div>
+  </span>
+  <span class="kf-skw-suggestion-select-mark">
+
+  </span>
+</div>
+<div ng-if="suggestion.kind === 'library'">
+  <div class="kf-skw-suggestion-img">
+    <div class="kf-skw-library-card" ng-if="!suggestion.orgAvatar" ng-style="{ 'background-color': suggestion.color || 'grey' }"></div>
+    <img class="kf-skw-library-org-img" ng-src="{{ {avatarPath: suggestion.orgAvatar}|pic:100 }}" ng-if="suggestion.orgAvatar"/>
+  </div>
+  <span class="kf-skw-suggestion-content">
+    <div class="kf-skw-suggestion-content-row1 kf-flex-row">
+      <span class="kf-skw-suggestion-name" ng-bind="suggestion.name"></span>
+      <svg class="kf-skw-library-privacy symbol-sprite" kf-symbol-sprite
+           icon="{{suggestion.visibility === 'discoverable' ? 'star' : (suggestion|libPrivacyIcon)}}"></svg>
+      <img class="kf-skw-library-slack" src="/img/slack-hash-black.png" ng-if="suggestion.slack" />
+    </div>
+    <span class="kf-skw-suggestion-subname" ng-bind="suggestion.spaceName"></span>
+  </span>
+</div>
+<div ng-if="suggestion.kind === 'email'">
+  <div class="kf-skw-suggestion-img">
+    <div class="kf-skw-suggestion-email-img"></div>
+  </div>
+  <span class="kf-skw-suggestion-content">
+    <div class="kf-skw-suggestion-name" ng-bind="suggestion.email"></div>
+    <div class="kf-skw-suggestion-subname">An email contact</div>
+  </span>
+</div>

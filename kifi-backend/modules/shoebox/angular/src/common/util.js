@@ -292,5 +292,6 @@ angular.module('util', [])
   TAB: 9,
   DEL: 46,
   F2: 113,
-  SPACE: 32
+  SPACE: 32,
+  BSPACE: 8
 });
