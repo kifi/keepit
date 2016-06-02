@@ -176,6 +176,7 @@
                  ng-bind="participant|name"></div>
           </div>
          </span>
+        <button class="kf-keep-card-add-btn sprite sprite-add-link-2-active" ng-if="showAddRecipients" kf-send-keep-widget keep="keep"></button>
       </div>
 
       <div ng-if="galleryView && !showActivityEvents" kf-keep-comments keep="keep" max-initial-comments="maxInitialComments" edit-keep-note="editKeepNote" can-edit-keep="canEditKeep"></div>

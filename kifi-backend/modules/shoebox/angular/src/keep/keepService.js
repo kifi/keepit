@@ -58,6 +58,31 @@ angular.module('kifi')
         }).then(function (result) {
           return result.data;
         });
+      },
+
+
+      modifyKeepRecipients: function(keepId, usersToAdd, librariesToAdd, emailsToAdd, usersToRemove, librariesToRemove, emailsToRemove) {
+        var diff = {
+          users: {
+            add: usersToAdd, remove: usersToRemove
+          },
+          libraries: {
+            add: librariesToAdd, remove: librariesToRemove
+          },
+          emails: {
+            add: emailsToAdd, remove: emailsToRemove
+          },
+          source: 'Kifi.com'
+        };
+
+        return net.modifyKeepRecipients(keepId, diff);
+      },
+
+      suggestRecipientsForKeep: function (query, limit, offset, requested) {
+        return net.suggestRecipientsForKeep({query: query, limit: limit, offset: offset, requested: requested})
+          .then(function (result) {
+            return result.data;
+          });
       }
     };
 

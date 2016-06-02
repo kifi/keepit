@@ -123,10 +123,12 @@ angular.module('kifi')
       createTeamFromSlack: post(shoebox, '/organizations/create/slack?slackTeamId=:optSlackTeamId&slackState=:optSlackState'),
       togglePersonalDigest: post(shoebox, '/organizations/slack/togglePersonalDigest?slackTeamId=:slackTeamId&slackUserId=:slackUserId&turnOn=:turnOn'),
 
+      modifyKeepRecipients: post(api, '/1/keeps/:id/recipients'),
       addMessageToKeepDiscussion: post(api, '/1/keeps/:id/messages'),
       getMessagesForKeepDiscussion: get(shoebox, '/keeps/:id/messages?limit=:limit&fromId=:fromId'), // ?limit={{number}}&fromId={{Option(String))}}
       deleteMessageFromKeepDiscussion: post(shoebox, '/keeps/:id/messages/delete'),
-      markDiscussionAsRead: post(shoebox, '/keeps/markAsRead')
+      markDiscussionAsRead: post(shoebox, '/keeps/markAsRead'),
+      suggestRecipientsForKeep: get(api, '/1/keeps/suggestRecipients')
     };
 
     function get(base, pathSpec, cacheSec) {
