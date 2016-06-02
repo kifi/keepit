@@ -41,7 +41,10 @@ class TwitterPublishingCommander @Inject() (
       val libraryUrl = s"""https://www.kifi.com${libPathCommander.getPathForLibrary(library)}"""
       userTwitterAccount.profileUrl.map(twitterMessages.parseHandleFromUrl) match {
         case Some(handle) =>
-          val message = s"$handle your #twitterdeepsearch fully searchable @kifi library is ready! $libraryUrl?kcid=na-kp_social_jr-twitter-dsw"
+          val numKeepsText: String = if (library.keepCount > 10) {
+            s""" with ${library.keepCount} links"""
+          } else ""
+          val message = s"$handle your #twitterdeepsearch fully searchable @kifi library is ready$numKeepsText! $libraryUrl?kcid=na-kp_social_jr-twitter-dsw"
           twitterSocialGraph.sendTweet(kifiTwitterAccount, None, message)
         case None => Failure(new Exception(s"can't get user profile handle for $userTwitterAccount"))
       }
