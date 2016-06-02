@@ -1,32 +1,28 @@
 .kf-send-keep-widget
   position: absolute
-  border: 1px solid black
+  border: 1px solid alpha(black, 1)
   border-radius: 8px
   overflow: hidden
   background: white
-  width: 300px
   text-align: left
   z-index: 2
+  width: 300px
 
 .kf-skw-header
+  display: flex
+  justify-content: space-between
+  align-items: center
   background-color: #333
-  padding 10px 16px
+  padding 12px 10px
 
 .kf-skw-header-txt
   font-size: 14px
   color: white
-  text-align: left
 
 .kf-skw-close
-  display: inline
-  position: relative
-  float: right
   height: 16px
   width: 16px
-  border-radius: 20px
-  padding: 2px
-  bottom: 18px
-  left: 10px
+  margin-left: auto
 
   &:hover
     fill: white
@@ -40,21 +36,78 @@
   display: flex
   flex-wrap: wrap
   background-color: #fcfcfc
-  border: 1px solid lightGrey
   padding: 10px
-  width: 280px
+  border-top: 1px solid lightGrey
+
+.kf-skw-recipient-container
+  display: inline-flex
+  align-items: center
+  margin-bottom: 4px
+  margin-right: 3px
+
+.kf-skw-recipient
+  display: inline-flex
+  align-items: center
+  justify-content: space-between
+  cursor: default
+  font-size: 12px
+  padding: 3px 4px
+  border: 0px
+  border-radius: 4px
+  color: white
 
   * + *
-    margin-left: 0px
+    margin-left: 3px
+
+.kf-skw-recipient-txt
+  white-space: nowrap
+  overflow: hidden
+  text-overflow: ellipsis
+  max-width: 210px
+
+.kf-skw-recipient-email
+  background-color: #e36766
+
+.kf-skw-recipient-library
+  > svg
+    width: 15px
+    height: 15px
+    fill: white
+
+  > img
+    width: 12px
+    height: 12px
+    margin-top: -1px
+
+.kf-skw-recipient-user
+  background: alpha(gray, .5)
+  color: white
+  border-radius: 4px
+
+  > img
+    position: relative
+    width: 15px
+    height: 15px
+    border-radius: 100%
+    bottom: 1px
+
+.kf-skw-recipient-remove
+  display: inline
+  position: relative
+  cursor: pointer
+  bottom: .5px
+
+  &:hover
+    color: alpha(black, .2)
 
 .kf-skw-input
   display: inline
+  position: relative
+  bottom: 2px
   border: 0px
   font-size: 12px
-  background-color: #fcfcfc
-  margin-top: 3px
-  margin-left: 2px
-  margin-bottom: 5px
+  background-color: inherit
+  width: 162px // fit placeholder text width
 
 .kf-skw-input-shadow
   position: absolute
@@ -78,6 +131,7 @@
   text-align: center
   position: relative
   height: 15px
+  margin-top: 2px
 
   &:hover
     border: 1px solid lightGrey
@@ -106,81 +160,3 @@
   color: libraryGreen
   font-size: 12px
   margin-bottom: 5px
-
-.kf-skw-suggestion
-  color: black
-  font-size: 10px
-  position: relative
-  height: 50px
-  width: 100%
-  border-bottom: 1px solid #e7e7e7
-
-  &:hover
-    background-color: #e7e7e7
-
-.kf-skw-recipient-list
-  display: inline
-  margin-right: 0
-
-.kf-skw-recipient
-  display: inline-block
-  cursor: default
-  font-size: 12px
-  padding: 3px 4px
-  padding-right: 4px
-  border: 0px solid black
-  border-radius: 4px
-  margin-bottom: 1px
-
-  * + *
-    margin-left: 3px
-
-.kf-skw-recipient-txt
-  display: inline-flex
-  white-space: nowrap
-  overflow: hidden
-  text-overflow: ellipsis
-  max-width: 210px
-
-.kf-skw-recipient-email
-  color: white
-  background-color: #e36766
-
-.kf-skw-recipient-library
-  font-size: 12px
-  display: inline
-  color: white
-
-  > svg
-    width: 15px
-    height: 15px
-    flex-shrink: 0
-    fill: white
-
-  > img
-    width: 12px
-    height: 12px
-    flex-shrink: 0
-    margin-top: -1px
-
-.kf-skw-recipient-user
-  background: alpha(gray, .5)
-  color: white
-  border-radius: 4px
-
-  > img
-    position: relative
-    width: 15px
-    height: 15px
-    border-radius: 100%
-    bottom: 1px
-
-.kf-skw-recipient-remove
-  display: inline
-  position: relative
-  bottom: 1px
-  right: 1px
-  cursor: pointer
-
-  &:hover
-    color: alpha(black, .2)
