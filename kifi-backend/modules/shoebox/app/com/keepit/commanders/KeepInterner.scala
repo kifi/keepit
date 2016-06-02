@@ -168,7 +168,7 @@ class KeepInternerImpl @Inject() (
             lastActivityAt = keptAt
           )
           val newKeep = try {
-            keepMutator.persistKeep(integrityHelpers.improveKeepSafely(uri, keep)) tap { improvedKeep =>
+            keepMutator.persistBrandNewKeep(integrityHelpers.improveKeepSafely(uri, keep)) tap { improvedKeep =>
               sourceAttrRepo.intern(improvedKeep.id.get, internReq.attribution)
             }
           } catch {
@@ -280,7 +280,7 @@ class KeepInternerImpl @Inject() (
           lastActivityAt = keptAt
         )
         val internedKeep = try {
-          keepMutator.persistKeep(integrityHelpers.improveKeepSafely(uri, keep)) tap { improvedKeep =>
+          keepMutator.persistBrandNewKeep(integrityHelpers.improveKeepSafely(uri, keep), libraryOpt.toSeq) tap { improvedKeep =>
             sourceAttribution.foreach { attr => sourceAttrRepo.intern(improvedKeep.id.get, attr) }
           }
         } catch {

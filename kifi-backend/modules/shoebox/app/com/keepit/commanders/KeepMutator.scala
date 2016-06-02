@@ -29,7 +29,7 @@ import scala.util.Try
  */
 @ImplementedBy(classOf[KeepMutatorImpl])
 trait KeepMutator {
-  def persistKeep(k: Keep)(implicit session: RWSession): Keep
+  def persistBrandNewKeep(k: Keep, precomputed: Seq[Library] = Seq.empty)(implicit session: RWSession): Keep
   def unsafeModifyKeepRecipients(keepId: Id[Keep], diff: KeepRecipientsDiff, userAttribution: Option[Id[User]])(implicit session: RWSession): Keep
   def updateKeepNote(userId: Id[User], oldKeep: Keep, newNote: String)(implicit session: RWSession): Keep
   def updateKeepTitle(oldKeep: Keep, newTitle: String)(implicit session: RWSession): Keep
@@ -59,9 +59,6 @@ class KeepMutatorImpl @Inject() (
   basicUserRepo: BasicUserRepo,
   basicOrganizationGen: BasicOrganizationGen,
   libraryMembershipRepo: LibraryMembershipRepo,
-  hashtagTypeahead: HashtagTypeahead,
-  keepDecorator: KeepDecorator,
-  twitterPublishingCommander: TwitterPublishingCommander,
   uriHelpers: UriIntegrityHelpers,
   slackPusher: LibraryToSlackChannelPusher,
   tagCommander: TagCommander,
@@ -104,7 +101,7 @@ class KeepMutatorImpl @Inject() (
     val existingTags = tagCommander.getTagInfoForKeeps(Seq(keep.id.get))(session)(keep.id.get).filter(_.messageId.isEmpty)
     val newTags = noteTags.filter(nt => !existingTags.exists(_.tag.normalized == nt.normalized))
     val tagsToRemove = existingTags
-      .filter(et => et.userId.exists(_ == userId) && et.messageId.isEmpty && !noteTags.exists(_.normalized == et.tag.normalized))
+      .filter(et => et.userId.safely.contains(userId) && et.messageId.isEmpty && !noteTags.exists(_.normalized == et.tag.normalized))
       .map(_.tag)
 
     tagCommander.addTagsToKeep(keep.id.get, newTags, Some(userId), None)
@@ -117,36 +114,28 @@ class KeepMutatorImpl @Inject() (
     keepRepo.save(keep)
   }
 
-  def persistKeep(k: Keep)(implicit session: RWSession): Keep = {
+  def persistBrandNewKeep(k: Keep, precomputedLibraries: Seq[Library] = Seq.empty)(implicit session: RWSession): Keep = {
+    // This method accepts a pre-computed Seq[Library] strictly for performance reasons (to avoid looking them up when creating KTLs)
     require(k.userId.toSet subsetOf k.recipients.users, "keep owner is not one of the connected users")
+    require(k.id.isEmpty, "persistKeep should not be used to update keeps")
 
-    val oldKeepOpt = k.id.map(keepRepo.get)
-    val oldRecipients = oldKeepOpt.map(_.recipients)
     val newKeep = {
-      val saved = keepRepo.save(k.withRecipients(k.recipients union oldRecipients))
+      val saved = keepRepo.save(k)
       (saved.note, saved.userId) match {
         case (Some(n), Some(uid)) if n.nonEmpty => updateKeepNote(uid, saved, saved.note.getOrElse("")) // Saves again, but easiest way to do it.
         case _ => saved
       }
     }
 
-    val oldLibraries = oldRecipients.map(_.libraries).getOrElse(Set.empty)
-    if (oldLibraries != newKeep.recipients.libraries) {
-      val libraries = libraryRepo.getActiveByIds(newKeep.recipients.libraries -- oldLibraries).values
-      libraries.foreach { lib => ktlCommander.internKeepInLibrary(newKeep, lib, newKeep.userId) }
-    }
+    val libraries = if (precomputedLibraries.map(_.id.get).toSet == newKeep.recipients.libraries) {
+      precomputedLibraries
+    } else libraryRepo.getActiveByIds(newKeep.recipients.libraries).values
 
-    val oldUsers = oldRecipients.map(_.users).getOrElse(Set.empty)
-    if (oldUsers != newKeep.recipients.users) {
-      val newUsers = newKeep.recipients.users -- oldUsers
-      newUsers.foreach { userId => ktuCommander.internKeepInUser(newKeep, userId, addedBy = None, addedAt = None) }
-    }
+    libraries.foreach { lib => ktlCommander.internKeepInLibrary(newKeep, lib, addedBy = newKeep.userId) }
+    newKeep.recipients.users.foreach { userId => ktuCommander.internKeepInUser(newKeep, userId, addedBy = newKeep.userId, addedAt = None) }
+    newKeep.recipients.emails.foreach { email => kteCommander.internKeepInEmail(newKeep, email, addedBy = newKeep.userId, addedAt = None) }
 
-    val oldEmails = oldRecipients.map(_.emails).getOrElse(Set.empty)
-    if (oldEmails != newKeep.recipients.emails) {
-      val newEmails = newKeep.recipients.emails -- oldEmails
-      newEmails.foreach { email => kteCommander.internKeepInEmail(newKeep, email, addedBy = None, addedAt = None) }
-    }
+    session.onTransactionSuccess { slackPusher.schedule(newKeep.recipients.libraries) }
 
     newKeep
   }
@@ -238,7 +227,7 @@ class KeepMutatorImpl @Inject() (
           title = k.title,
           note = k.note
         )
-        val copied = persistKeep(newKeep)
+        val copied = persistBrandNewKeep(newKeep)
         Right(copied)
     }
   }
