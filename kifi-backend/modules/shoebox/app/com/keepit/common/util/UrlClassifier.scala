@@ -12,7 +12,12 @@ object UrlClassifier {
       """https?://super\.me/p/.*""",
       """https?://mrk\.tv/.*""", //http://meerkatapp.co/
       """https?://instagr\.am/.*""",
+      """https?://*riffiti\.com/.*""", //download sites
+      """https?://ift\.tt/.*""", //IFTTT has lots of bad dead urls
+      """https?://dsh\.re/.*""", //screenshot sharing
       """https?://shar\.es/.*""",
+      """https?://fb\.me/.*""", //facebook shortner, looks very bad on the library
+      """https?://blab\.im/.*""", //some real time chat like periscope
       """https?://twitter\.com//.*""", //this one is a bit strange and may take out legit twitter articles. the core issue is people linking to other tweets that have nothing but the tweet and it looks bad
       """https?://runkeeper\.com/user/.*/activity/.*""",
       """https?://techmeme\.com/.*""",

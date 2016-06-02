@@ -96,7 +96,7 @@ class AdminTwitterWaitlistController @Inject() (
             twitterWaitlistRepo.save(entry.withState(TwitterWaitlistEntryStates.ANNOUNCED))
           }
         }
-        Ok(status.toString)
+        SeeOther("https://twitter.com/kifi/status/" + status.getId())
       case Failure(e) =>
         db.readWrite { implicit s =>
           twitterWaitlistRepo.getByUser(libraryRepo.get(libraryId).ownerId) map { entry =>

@@ -1,10 +1,10 @@
 package com.keepit.search.user
 
 import com.keepit.common.db.Id
+import com.keepit.common.util.IdFilterCompressor
 import com.keepit.model.User
 import com.keepit.search.index.Searcher
 import com.keepit.search.index.user._
-import com.keepit.search.util.IdFilterCompressor
 import com.keepit.typeahead.{ PrefixFilter, PrefixMatching }
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query

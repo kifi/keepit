@@ -1,5 +1,6 @@
 package com.keepit.eliza.notify
 
+import java.util.UUID
 import java.util.concurrent.atomic.AtomicLong
 
 import com.keepit.common.actor.{ FakeActorSystemModule, TestKitSupport }
@@ -20,6 +21,9 @@ import com.keepit.test.{ ElizaInjectionHelpers, ElizaTestInjector }
 import org.joda.time.DateTime
 import org.specs2.mutable.SpecificationLike
 
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
+
 class NotificationGroupingTest extends TestKitSupport with SpecificationLike with ElizaTestInjector with ElizaInjectionHelpers {
   val modules = List(
     FakeElizaStoreModule(),
@@ -36,17 +40,23 @@ class NotificationGroupingTest extends TestKitSupport with SpecificationLike wit
       withDb(modules: _*) { implicit injector =>
         val (user, rando) = (Id[User](1), Id[User](134))
         val lib = Id[Library](42)
-        val keepId = new AtomicLong()
+        val id = new AtomicLong()
         val now = inject[Clock].now
 
-        def keep(keptAt: DateTime) = LibraryNewKeep(
-          recipient = Recipient.fromUser(user),
-          time = now,
-          keptAt = keptAt,
-          keeperId = Some(rando),
-          keepId = Id[Keep](keepId.incrementAndGet()),
-          libraryId = lib
-        )
+        def keep(keptAt: DateTime) = {
+          val url = s"https://www.${UUID.randomUUID.toString}.com"
+          val uriId = Id[NormalizedURI](id.incrementAndGet())
+          val internedKeep = Await.result(shoebox.internKeep(rando, Set(user), Set(), uriId, url, None, None, None), Duration.Inf)
+
+          LibraryNewKeep(
+            recipient = Recipient.fromUser(user),
+            time = now,
+            keptAt = keptAt,
+            keeperId = internedKeep.owner,
+            keepId = internedKeep.id,
+            libraryId = lib
+          )
+        }
 
         val lotsOfOldKeepsCloseTogether = (1 to 10).map { x => keep(now.minusYears(2).plusMinutes(x)) }
         val lotsOfOldKeepsFarApart = (1 to 10).map { x => keep(now.minusYears(1).plusDays(x)) }

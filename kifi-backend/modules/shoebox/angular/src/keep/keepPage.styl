@@ -54,14 +54,17 @@ section-border-radius = 10px
 
 .kf-keep-page-sources-slack-image.kf-keep-page-sources-slack-image
 .kf-keep-page-sources-twitter-image.kf-keep-page-sources-twitter-image
-  width: 40px
-  height: 35px
-  margin-top: 10px
+  display: inline-block
+  width: 18px
+  height: 15px
+  margin-top: 0px
+  margin-right: 5px
   flex-shrink: 0
   align-self: flex-start
   background-repeat: no-repeat
 
 .kf-keep-page-sources-title
+  display: inline
   font-weight: semi-bold
   font-size: 16px
   color: #333
@@ -70,6 +73,13 @@ section-border-radius = 10px
   font-size: 14px
   color: #555
   margin: 5px 0
+
+.kf-keep-page-source-container:not(:last-child)
+  .kf-keep-page-sources-message
+    border-bottom-style: solid
+    border-bottom-width: 1px
+    border-color: #DDD
+    padding-bottom: 10px
 
 .kf-keep-page-who-pic-box
   display: inline-block

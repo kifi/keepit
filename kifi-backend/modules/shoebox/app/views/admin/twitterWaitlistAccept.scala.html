@@ -10,19 +10,27 @@
                 <p>@{result.left.get}</p>
             }
             case Right((syncState, libraryPath, primaryEmail)) => {
-                <h2>Twitter Handle <a href="https://twitter.com/@{syncState.twitterHandle}" target="_blank">Twitter page of @{syncState.twitterHandle}</a> successfully accepted!</h2>
+                <h2>Twitter Handle <a href="https://twitter.com/@{syncState.twitterHandle}" target="_blank">Twitter page of @{syncState.twitterHandle}</a></h2>
+
                 State: <b>@{syncState.state}</b><br/>
+
                 <ul>
-                  <li>@if(syncState.userId.isDefined){<a href="/admin/user/@{syncState.userId.get.id}" target="_blank">User @{syncState.userId.get.id}</a>} @if(primaryEmail.isDefined){@{primaryEmail.get}}</li>
+                  <li><a href="https://twitter.com/@{syncState.twitterHandle}" target="_blank">@{syncState.twitterHandle}</a></li>
                   <li><a href="https://www.kifi.com@{libraryPath}" target="_blank">Kifi Library</a></li>
-                  <li><a href="/admin/libraries/@{syncState.libraryId.id}" target="_blank">Lib Admin Page</a></li>
-                    <!--<a href="/admin/twitter/email?userId=@syncState.userId&syncStateId=@syncState.id.get" target="_blank">Send email</a></li-->
                 </ul>
+
                 <form action="@com.keepit.controllers.admin.routes.AdminTwitterWaitlistController.tweetAtUserLibrary(syncState.libraryId)" method="POST" class="form-inline">
                   <input type="Submit" value="Tweet at user">
                 </form>
+
+                <ul>
+                  <li>@if(syncState.userId.isDefined){<a href="/admin/user/@{syncState.userId.get.id}" target="_blank">User @{syncState.userId.get.id}</a>} @if(primaryEmail.isDefined){@{primaryEmail.get}}</li>
+                  <li><a href="/admin/libraries/@{syncState.libraryId.id}" target="_blank">Lib Admin Page</a></li>
+                    <!--<a href="/admin/twitter/email?userId=@syncState.userId&syncStateId=@syncState.id.get" target="_blank">Send email</a></li-->
+                </ul>
+
                 <form action="@com.keepit.controllers.admin.routes.AdminTwitterWaitlistController.markAsTwitted(syncState.userId.getOrElse(Id[User](-1)))" method="POST" class="form-inline">
-                  <input type="Submit" value="Mark As Twitted">
+                  <input type="Submit" value="Don't tweet and remove from the list">
                 </form>
 
             }

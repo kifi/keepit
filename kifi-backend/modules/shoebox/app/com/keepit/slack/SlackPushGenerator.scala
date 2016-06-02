@@ -8,12 +8,12 @@ import com.keepit.common.db.{ ExternalId, Id, SequenceNumber }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.BasicUserRepo
+import com.keepit.common.store.{ S3ImageConfig, StaticImageUrls }
 import com.keepit.common.strings._
 import com.keepit.common.time._
 import com.keepit.common.util.{ DescriptionElements, LinkElement }
 import com.keepit.discussion.{ CrossServiceMessage, Message }
 import com.keepit.eliza.ElizaServiceClient
-import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
 import com.keepit.slack.SlackPushGenerator.PushItem.{ KeepToPush, MessageToPush }
 import com.keepit.slack.models._
@@ -60,6 +60,12 @@ object SlackPushGenerator {
     def insensitive(smr: SlackMessageRequest) = ContextSensitiveSlackPush(asUser = Some(smr), asBot = smr)
     def generate(fn: Boolean => SlackMessageRequest) = ContextSensitiveSlackPush(asUser = Some(fn(true)), asBot = fn(false))
   }
+
+  def slackAuthorFromKifiUser(bu: BasicUser)(implicit imgConfig: S3ImageConfig): SlackAttachment.Author = SlackAttachment.Author(
+    name = bu.fullName,
+    link = Some(bu.path.absolute),
+    icon = Some("https:" + bu.picturePath.getImageUrl.value.stripPrefix("https:"))
+  )
 }
 
 class SlackPushGenerator @Inject() (
@@ -73,8 +79,8 @@ class SlackPushGenerator @Inject() (
   pathCommander: PathCommander,
   airbrake: AirbrakeNotifier,
   eliza: ElizaServiceClient,
-  val heimdalContextBuilder: HeimdalContextBuilderFactory,
-  implicit val executionContext: ExecutionContext)
+  private implicit val imageConfig: S3ImageConfig,
+  private implicit val executionContext: ExecutionContext)
     extends Logging {
 
   import SlackPushGenerator._
@@ -207,47 +213,57 @@ class SlackPushGenerator @Inject() (
     airbrake.verify(keep.recipients.libraries.contains(lib.id.get), s"Keep $keep is not in library $lib")
     import DescriptionElements._
 
-    val userStr = user.fold[String]("Someone")(_.firstName)
-    val userColor = user.map(u => if (u.externalId == jenUserId) LibraryColor.PURPLE else LibraryColor.byHash(Seq(keep.externalId.id, u.externalId.id)))
-
     val category = NotificationCategory.NonUser.NEW_COMMENT
     def keepWebLink(subaction: String) = LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(items.slackChannelId, category, Some(subaction))))
     def keepKifiLink(subaction: String) = LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(items.slackChannelId, category, Some(subaction))))
     def msgLink(subaction: String) = LinkElement(pathCommander.keepPageOnMessageViaSlack(keep, slackTeamId, msg.id).withQuery(SlackAnalytics.generateTrackingParams(items.slackChannelId, category, Some(subaction))))
 
-    val keepElement = {
+    val textAndLookHeres = CrossServiceMessage.splitOutLookHeres(msg.text)
+    val slackAuthor = user.map(slackAuthorFromKifiUser).getOrElse {
+      SlackAttachment.Author(name = "Someone", icon = Some(StaticImageUrls.KIFI_LOGO), link = None)
+    }
+
+    val msgText = DescriptionElements(textAndLookHeres.map {
+      case Left(str) => DescriptionElements(Hashtags.format(str))
+      case Right(Success((pointer, ref))) => pointer --> msgLink("lookHere")
+      case Right(Failure(fail)) => "look here" --> msgLink("lookHere")
+    })
+    val lookHereAttachments = textAndLookHeres.collect {
+      case Right(Success((pointer, ref))) =>
+        imageUrlRegex.findFirstIn(ref) match {
+          case Some(url) =>
+            SlackAttachment.simple(DescriptionElements(SlackEmoji.magnifyingGlass, pointer --> msgLink("lookHereImage"))).withImageUrl(url)
+          case None =>
+            SlackAttachment.simple(DescriptionElements(
+              SlackEmoji.magnifyingGlass, pointer --> msgLink("lookHere"), ": ",
+              DescriptionElements.unlines(ref.lines.toSeq.map(ln => DescriptionElements(s"_${ln}_")))
+            )).withFullMarkdown
+        }
+    }
+    val keepAttachment = {
       val numComments = msg.commentIndexOnKeep.map(n => n + 1 + (if (keep.note.exists(_.nonEmpty)) 1 else 0)).filter(_ > 1)
-      if (msg.sentBy.exists(_.left.exists(_ == Id(84792)))) log.info(s"[SPG-NUM-COMMENTS] msg ${msg.id} has idx ${msg.commentIndexOnKeep} and keep ${keep.id.get} has updatedAt ${keep.updatedAt} and note ${keep.note}, so numComments = $numComments")
-      DescriptionElements(
+      SlackAttachment.simple(DescriptionElements(
+        SlackEmoji.newspaper,
         s"_${keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH)}_",
         "  ",
         "View" --> keepWebLink("viewArticle"),
         "|",
         ("Reply" + numComments.map(n => s" ($n)").getOrElse("")) --> keepKifiLink("reply")
-      )
+      ))
     }
 
-    val textAndLookHeres = CrossServiceMessage.splitOutLookHeres(msg.text)
-
-    ContextSensitiveSlackPush.generate(asUser => SlackMessageRequest.fromKifi(
-      text = if (msg.isDeleted) "[comment has been deleted]"
-      else DescriptionElements.formatForSlack(DescriptionElements(Some(s"*$userStr:*").filterNot(_ => asUser), textAndLookHeres.map {
-        case Left(str) => DescriptionElements(Hashtags.format(str))
-        case Right(Success((pointer, ref))) => pointer --> msgLink("lookHere")
-        case Right(Failure(fail)) => "look here" --> msgLink("lookHere")
-      })),
-      attachments = textAndLookHeres.collect {
-        case Right(Success((pointer, ref))) =>
-          imageUrlRegex.findFirstIn(ref) match {
-            case Some(url) =>
-              SlackAttachment.simple(DescriptionElements(SlackEmoji.magnifyingGlass, pointer --> msgLink("lookHereImage"))).withImageUrl(url)
-            case None =>
-              SlackAttachment.simple(DescriptionElements(
-                SlackEmoji.magnifyingGlass, pointer --> msgLink("lookHere"), ": ",
-                DescriptionElements.unlines(ref.lines.toSeq.map(ln => DescriptionElements(s"_${ln}_")))
-              )).withFullMarkdown
-          }
-      } :+ SlackAttachment.simple(DescriptionElements(SlackEmoji.newspaper, keepElement))
-    ))
+    ContextSensitiveSlackPush.generate { asUser =>
+      if (asUser) {
+        SlackMessageRequest.fromKifi(
+          text = DescriptionElements.formatForSlack(msgText),
+          attachments = lookHereAttachments :+ keepAttachment
+        )
+      } else {
+        SlackMessageRequest.fromKifi(
+          text = "",
+          attachments = SlackAttachment.simple(msgText).withAuthor(slackAuthor) +: lookHereAttachments :+ keepAttachment
+        )
+      }
+    }
   }
 }

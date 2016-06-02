@@ -97,6 +97,12 @@ case class KeepRecipientsDiff(users: DeltaSet[Id[User]], libraries: DeltaSet[Id[
     libraries = DeltaSet.addOnly(libraries.added),
     emails = DeltaSet.addOnly(emails.added)
   )
+  def plusUser(u: Id[User]): KeepRecipientsDiff = this.copy(users = users.add(u))
+  def plusLibrary(l: Id[Library]): KeepRecipientsDiff = this.copy(libraries = libraries.add(l))
+  def plusEmail(e: EmailAddress): KeepRecipientsDiff = this.copy(emails = emails.add(e))
+  def minusUser(u: Id[User]): KeepRecipientsDiff = this.copy(users = users.remove(u))
+  def minusLibrary(l: Id[Library]): KeepRecipientsDiff = this.copy(libraries = libraries.remove(l))
+  def minusEmail(e: EmailAddress): KeepRecipientsDiff = this.copy(emails = emails.remove(e))
 }
 object KeepRecipientsDiff {
   def addUser(user: Id[User]) = KeepRecipientsDiff(users = DeltaSet.empty.add(user), libraries = DeltaSet.empty, emails = DeltaSet.empty)

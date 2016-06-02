@@ -82,6 +82,7 @@ object UserExperimentType {
   val DISCUSSION_FEED_FILTERS = UserExperimentType("discussion_feed_filters")
   val KEEP_PAGE_RHR = UserExperimentType("keep_page_rhr")
   val RHR_ALPHA_SORTING = UserExperimentType("rhr_alpha_sorting")
+  val ADD_KEEP_RECIPIENTS = UserExperimentType("add_keep_recipients")
 
   val _ALL = ADMIN :: AUTO_GEN :: FAKE :: BYPASS_ABUSE_CHECKS :: VISITED :: NO_SEARCH_EXPERIMENTS ::
     DEMO :: EXTENSION_LOGGING :: SHOW_HIT_SCORES :: SHOW_DISCUSSIONS ::
@@ -90,7 +91,7 @@ object UserExperimentType {
     ACTIVITY_EMAIL :: EXPLICIT_SOCIAL_POSTING :: RELATED_PAGE_INFO :: NEXT_GEN_RECOS ::
     RECO_FASTLANE :: RECO_SUBSAMPLE :: APPLY_RECO_FEEDBACK :: PLAIN_EMAIL :: SEARCH_LAB ::
     NEW_NOTIFS_SYSTEM :: CREATE_TEAM :: SLACK :: CUSTOM_LIBRARY_ORDERING ::
-    DISCUSSION_FEED_FILTERS :: KEEP_PAGE_RHR :: RHR_ALPHA_SORTING :: ANNOUNCE_NEW_TWITTER_LIBRARY :: Nil
+    DISCUSSION_FEED_FILTERS :: KEEP_PAGE_RHR :: RHR_ALPHA_SORTING :: ANNOUNCE_NEW_TWITTER_LIBRARY :: ADD_KEEP_RECIPIENTS :: Nil
 
   // only the ExperimentTypes in this list will be tracked as user properties in analytics
   val _TRACK_FOR_ANALYTICS = Set(EXPLICIT_SOCIAL_POSTING, RELATED_PAGE_INFO, ACTIVITY_EMAIL)

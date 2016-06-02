@@ -107,11 +107,11 @@ final class KeepVisibilityEvaluator(
   @inline private def isPublishedKeep(docId: Int) = publishedDocValues.get(docId) > 0
   @inline private def isRestrictedKeeper(docId: Int) = restrictedUserIds.findIndex(keeperId(docId)) >= 0
 
-  @inline private def isRelevant(keeperId: Long, libraryIds: LongBuffer, orgIds: LongBuffer): Boolean = {
-    (filter.userId < 0 || filter.userId == keeperId) && (filter.libraryIds.isEmpty || intersect(libraryIds)(filter.libraryIds)) && (filter.orgId < 0 || contains(orgIds)(filter.orgId))
+  @inline private def isRelevant(userIds: LongBuffer, libraryIds: LongBuffer, orgIds: LongBuffer): Boolean = {
+    (filter.userId < 0 || contains(userIds)(filter.userId)) && (filter.libraryIds.isEmpty || intersect(libraryIds)(filter.libraryIds)) && (filter.orgId < 0 || contains(orgIds)(filter.orgId))
   }
 
-  @inline def isRelevant(docId: Int): Boolean = noFilter || isRelevant(keeperId(docId), keepLibraryIds(docId), keepOrgIds(docId))
+  @inline def isRelevant(docId: Int): Boolean = noFilter || isRelevant(keepUserIds(docId), keepLibraryIds(docId), keepOrgIds(docId))
 
   def apply(docId: Int): Int = {
     if (noFilter || isRelevant(docId)) {
