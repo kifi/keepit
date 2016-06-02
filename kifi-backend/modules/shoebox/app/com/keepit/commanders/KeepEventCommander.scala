@@ -2,6 +2,7 @@ package com.keepit.commanders
 
 import com.google.inject.{ Inject, ImplementedBy, Singleton }
 import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.core.anyExtensionOps
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
@@ -16,7 +17,7 @@ import scala.concurrent.{ Future, ExecutionContext }
 
 @ImplementedBy(classOf[KeepEventCommanderImpl])
 trait KeepEventCommander {
-  def persistKeepEventAndUpdateEliza(keepId: Id[Keep], event: KeepEventData, source: Option[KeepEventSource], eventTime: Option[DateTime])(implicit session: RWSession): Future[Unit]
+  def persistKeepEventAndUpdateEliza(keepId: Id[Keep], event: KeepEventData, source: Option[KeepEventSource], eventTime: Option[DateTime])(implicit session: RWSession): Option[CommonAndBasicKeepEvent]
   def persistAndAssembleKeepEvent(keepId: Id[Keep], event: KeepEventData, source: Option[KeepEventSource], eventTime: Option[DateTime])(implicit session: RWSession): Option[CommonAndBasicKeepEvent]
 }
 
@@ -33,14 +34,17 @@ class KeepEventCommanderImpl @Inject() (
   implicit val publicIdConfig: PublicIdConfiguration)
     extends KeepEventCommander {
 
-  def persistKeepEventAndUpdateEliza(keepId: Id[Keep], event: KeepEventData, source: Option[KeepEventSource], eventTime: Option[DateTime])(implicit session: RWSession): Future[Unit] = {
-    persistAndAssembleKeepEvent(keepId, event, source, eventTime).map {
-      case CommonAndBasicKeepEvent(commonEvent, basicEvent) => event match {
-        case et: EditTitle => eliza.modifyRecipientsAndSendEvent(keepId, et.editedBy, KeepRecipientsDiff.addUser(et.editedBy), source, Some(basicEvent))
-        case mr: ModifyRecipients => eliza.modifyRecipientsAndSendEvent(keepId, mr.addedBy, mr.diff, source, Some(basicEvent))
-        case _ => Future.successful(())
+  def persistKeepEventAndUpdateEliza(keepId: Id[Keep], event: KeepEventData, source: Option[KeepEventSource], eventTime: Option[DateTime])(implicit session: RWSession): Option[CommonAndBasicKeepEvent] = {
+    persistAndAssembleKeepEvent(keepId, event, source, eventTime) tap {
+      case Some(CommonAndBasicKeepEvent(commonEvent, basicEvent)) => session.onTransactionSuccess {
+        event match {
+          case et: EditTitle => eliza.modifyRecipientsAndSendEvent(keepId, et.editedBy, KeepRecipientsDiff.addUser(et.editedBy), source, Some(basicEvent))
+          case mr: ModifyRecipients => eliza.modifyRecipientsAndSendEvent(keepId, mr.addedBy, mr.diff, source, Some(basicEvent))
+          case _ =>
+        }
       }
-    }.getOrElse(Future.successful(None))
+      case _ =>
+    }
   }
 
   def persistAndAssembleKeepEvent(keepId: Id[Keep], event: KeepEventData, source: Option[KeepEventSource], eventTime: Option[DateTime])(implicit session: RWSession): Option[CommonAndBasicKeepEvent] = {
@@ -68,9 +72,5 @@ class KeepEventCommanderImpl @Inject() (
     }
     if (eventOpt.isDefined) keepMutator.updateLastActivityAtIfLater(keepId, time)
     eventOpt
-  }
-
-  private def broadcastKeepEvent(keepId: Id[Keep], users: Set[Id[User]], event: BasicKeepEvent): Future[Unit] = {
-    Future.sequence(users.map(uid => eliza.sendKeepEvent(uid, Keep.publicId(keepId), event))).map(_ => ())
   }
 }
