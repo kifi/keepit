@@ -14,7 +14,7 @@ trait TwitterSyncStateRepo extends Repo[TwitterSyncState] {
   def getSyncsToUpdate(refreshWindow: DateTime)(implicit session: RSession): Seq[TwitterSyncState]
   def getByHandleAndLibraryId(handle: TwitterHandle, libId: Id[Library], target: SyncTarget)(implicit session: RSession): Option[TwitterSyncState]
   def getFirstHandleByLibraryId(libId: Id[Library])(implicit session: RSession): Option[TwitterHandle]
-  def getByHandleAndUserIdUsed(handle: TwitterHandle, userIdUsed: Id[User], target: SyncTarget)(implicit session: RSession): Option[TwitterSyncState]
+  def getByHandleAndUserIdUsed(handle: TwitterHandle, userIdUsed: Id[User])(implicit session: RSession): Option[TwitterSyncState]
   def getAllByHandle(handle: TwitterHandle)(implicit session: RSession): Seq[TwitterSyncState]
   def getByUserIdUsed(userIdUsed: Id[User])(implicit session: RSession): Seq[TwitterSyncState]
   def getByUserIds(userIdUsed: Set[Id[User]])(implicit session: RSession): Seq[TwitterSyncState]
@@ -73,10 +73,9 @@ class TwitterSyncStateRepoImpl @Inject() (
     }
   }
 
-  def getByHandleAndUserIdUsed(handle: TwitterHandle, userIdUsed: Id[User], target: SyncTarget)(implicit session: RSession): Option[TwitterSyncState] = {
+  def getByHandleAndUserIdUsed(handle: TwitterHandle, userIdUsed: Id[User])(implicit session: RSession): Option[TwitterSyncState] = {
     val all = (for { row <- rows if row.userId === userIdUsed && row.twitterHandle === handle } yield row).list
-    val targeted = all.filter(r => r.target == target).sortBy(_.id.get.id)
-    targeted.find(_.state == TwitterSyncStateStates.ACTIVE).orElse(targeted.headOption)
+    all.sortBy(_.id.get.id).find(r => r.target == SyncTarget.Tweets && r.state == TwitterSyncStateStates.ACTIVE).orElse(all.headOption)
   }
 
   def getAllByHandle(handle: TwitterHandle)(implicit session: RSession): Seq[TwitterSyncState] = {

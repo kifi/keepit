@@ -28,7 +28,7 @@ import scala.util.{ Try, Success }
 
 @ImplementedBy(classOf[TwitterWaitlistCommanderImpl])
 trait TwitterWaitlistCommander {
-  def createSyncOrWaitlist(userId: Id[User], target: SyncTarget): Either[String, Either[TwitterWaitlistEntry, TwitterSyncState]]
+  def createSyncOrWaitlist(userId: Id[User]): Either[String, Either[TwitterWaitlistEntry, TwitterSyncState]]
   def processQueue(): Unit
   def syncTwitterShow(handle: TwitterHandle, sui: SocialUserInfo, libraryId: Id[Library]): Future[Option[TwitterUserShow]]
 
@@ -61,12 +61,12 @@ class TwitterWaitlistCommanderImpl @Inject() (
   private val WAITLIST_MULTIPLIER = 3
 
   // Assumes users only ever have one sync. ErrorStr | Entry | Sync
-  def createSyncOrWaitlist(userId: Id[User], target: SyncTarget): Either[String, Either[TwitterWaitlistEntry, TwitterSyncState]] = {
+  def createSyncOrWaitlist(userId: Id[User]): Either[String, Either[TwitterWaitlistEntry, TwitterSyncState]] = {
     db.readWrite(attempts = 3) { implicit s =>
-      twitterSyncStateRepo.getByUserIdUsed(userId).find(_.target == target) match {
+      twitterSyncStateRepo.getByUserIdUsed(userId).headOption match {
         case Some(sync) =>
-          Left(Right(sync))
-        case None if target == SyncTarget.Tweets =>
+          Left(sync)
+        case None =>
           val handle = inferHandle(userId)
           val exitingWaitlist = twitterWaitlistRepo.getByUser(userId).find(_.state == TwitterWaitlistEntryStates.ACTIVE) match {
             case Some(wl) if wl.twitterHandle.isEmpty && handle.nonEmpty => Some(twitterWaitlistRepo.save(wl.copy(twitterHandle = handle)))
@@ -75,31 +75,17 @@ class TwitterWaitlistCommanderImpl @Inject() (
               None
             case other => other
           }
-          Right(Right(exitingWaitlist.getOrElse {
+          Right(exitingWaitlist.getOrElse {
             twitterWaitlistRepo.save(TwitterWaitlistEntry(userId = userId, twitterHandle = handle))
-          }))
-        case None =>
-          (for { handle <- inferHandle(userId); sui <- usersTwitterSui(userId) } yield {
-            (handle, sui)
-          }) match {
-            case Some(sh) => Right(Left(sh))
-            case None => Left(Left(s"User ($userId) must have an active SUI and known twitter handle to create a $target sync."))
-          }
+          })
       }
     } match {
-      // Creating tweets sync, waitlist works, requires handle to continue:
-      case Right(Right(waitlist)) if waitlist.twitterHandle.isDefined =>
-        createSyncFromWaitlist(waitlist.id.get).right.map(t => Right(t))
-      case Right(Right(waitlist)) =>
+      case Right(waitlist) if waitlist.twitterHandle.isDefined =>
+        createSync(waitlist.id.get).right.map(t => Right(t))
+      case Right(waitlist) =>
         Right(Left(waitlist))
-      // Favorites sync, requires handle:
-      case Right(Left(sh)) =>
-        createSync(userId, sh._2, sh._1, target, None).right.map(t => Right(t))
-      // Sync exists already:
-      case Left(Right(sync)) =>
+      case Left(sync) =>
         Right(Right(sync))
-      case Left(Left(error)) =>
-        Left(error)
     }
   }
 
@@ -114,7 +100,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
         }.take(10).toList // Not super efficient but fine for now, especially for testing
       }.map { p =>
         log.info(s"[processQueue] Creating sync for ${p.userId}")
-        createSyncFromWaitlist(p.id.get)
+        createSync(p.id.get)
       }
     }
   }
@@ -182,13 +168,13 @@ class TwitterWaitlistCommanderImpl @Inject() (
     val (entryOpt, suiOpt, syncOpt) = db.readWrite { implicit session =>
       val entryOpt = twitterWaitlistRepo.getByUserAndHandle(userId, handle)
       val suiOpt = socialUserInfoRepo.getByUser(userId).find(_.networkType == SocialNetworks.TWITTER)
-      val syncOpt = twitterSyncStateRepo.getByHandleAndUserIdUsed(handle, userId, SyncTarget.Tweets)
+      val syncOpt = twitterSyncStateRepo.getByHandleAndUserIdUsed(handle, userId)
       (entryOpt, suiOpt, syncOpt)
     }
 
     (entryOpt, suiOpt, syncOpt) match {
       case (Some(entry), Some(sui), None) if entry.state == TwitterWaitlistEntryStates.ACTIVE && sui.credentials.isDefined && sui.userId.isDefined =>
-        createSyncFromWaitlist(entry.id.get)
+        createSync(entry.id.get)
       case _ =>
         // invalid
         Left(s"Couldn't accept User $userId. Entry: $entryOpt, SocialUserInfo: $suiOpt, SyncState: $syncOpt")
@@ -206,60 +192,59 @@ class TwitterWaitlistCommanderImpl @Inject() (
   }
 
   private val refreshSocial = new RequestConsolidator[Id[SocialUserInfo], Unit](15.minutes)
-  private def createSyncFromWaitlist(entryId: Id[TwitterWaitlistEntry]) = {
+  // entry's user must have a valid Twitter SUI, otherwise this no-ops
+  private def createSync(entryId: Id[TwitterWaitlistEntry]): Either[String, TwitterSyncState] = {
     val (entry, suiAndHandle) = db.readOnlyMaster { implicit session =>
       val entry = twitterWaitlistRepo.get(entryId)
-      val suiAndHandle = if (entry.state == TwitterWaitlistEntryStates.ACTIVE) {
-        usersTwitterSui(entry.userId).map { sui =>
-          (sui, entry.twitterHandle.orElse(sui.username.map(TwitterHandle(_))))
+      val suiAndHandle = {
+        if (entry.state == TwitterWaitlistEntryStates.ACTIVE) {
+          usersTwitterSui(entry.userId).map { sui =>
+            (sui, entry.twitterHandle.orElse(sui.username.map(TwitterHandle(_))))
+          }
+        } else {
+          None
         }
-      } else {
-        None
       }
       (entry, suiAndHandle)
     }
+
     suiAndHandle match {
       case Some((sui, Some(handle))) if entry.state == TwitterWaitlistEntryStates.ACTIVE =>
-        createSync(entry.userId, sui, handle, SyncTarget.Tweets, Some(entry))
-      case Some((sui, None)) if sui.createdAt.isBefore(clock.now.minusMinutes(2)) && sui.createdAt.isAfter(clock.now.minusMinutes(33)) => // We don't know who this is. Try refetching again.
+        val addRequest = LibraryInitialValues(
+          name = s"@$handle’s Twitter Links",
+          visibility = LibraryVisibility.PUBLISHED,
+          slug = Some(s"$handle-twitter-links"),
+          kind = Some(LibraryKind.USER_CREATED), // bad!
+          description = Some(s"Interesting pages, articles, and links I've shared on Twitter: https://twitter.com/$handle"),
+          color = Some(LibraryColor.pickRandomLibraryColor()),
+          listed = Some(true)
+        )
+        implicit val context = heimdalContextBuilder.build
+        libraryCommander.createLibrary(addRequest, entry.userId).fold({ fail =>
+          Left(fail.message)
+        }, { lib =>
+          db.readWrite { implicit session =>
+            twitterWaitlistRepo.save(entry.copy(state = TwitterWaitlistEntryStates.ACCEPTED, twitterHandle = Some(handle)))
+          }
+          val sync = twitterSyncCommander.internTwitterSync(Some(entry.userId), lib.id.get, handle, SyncTarget.Tweets)
+          log.info(s"[createSync] Sync created for ${entry.userId}, ${handle.value}")
+
+          syncTwitterShow(handle, sui, lib.id.get).andThen {
+            case _ => // Always sync, even if show failed to update
+              twitterSyncCommander.syncOne(Some(sui), sync, sui.userId.get)
+          }
+
+          Right(sync)
+        })
+      case Some((sui, None)) if sui.createdAt.isBefore(clock.now.minusMinutes(2)) && entry.createdAt.isAfter(clock.now.minusMinutes(60)) => // We don't know who this is. Try refetching again.
         refreshSocial(sui.id.get) { _ =>
           log.info(s"[createSync] Attempting to refetch SUI for ${entry.id.get}, userId: ${entry.userId}")
           socialGraphPlugin.asyncFetch(sui, broadcastToOthers = true)
         }
         Left(s"[createSync] Nothing to do for ${entry.id.get}, userId: ${entry.userId} because we have no handle.")
       case _ =>
-        Left(s"[createSync] Nothing to do for ${entry.id.get}, userId: ${entry.userId}, handle: ${suiAndHandle.flatMap(_._2)}")
+        Left(s"[createSync] Nothing to do for ${entry.id.get}, userId: ${entry.userId}, handle: ${entry.twitterHandle}")
     }
-  }
-
-  private def createSync(userId: Id[User], sui: SocialUserInfo, handle: TwitterHandle, target: SyncTarget, entryOpt: Option[TwitterWaitlistEntry]): Either[String, TwitterSyncState] = {
-    val addRequest = LibraryInitialValues(
-      name = s"@${handle.value}’s Twitter Links",
-      visibility = LibraryVisibility.PUBLISHED,
-      slug = Some(s"${handle.value}-twitter-links"),
-      kind = Some(LibraryKind.USER_CREATED), // bad!
-      description = Some(s"Interesting pages, articles, and links I've shared on Twitter: https://twitter.com/${handle.value}"),
-      color = Some(LibraryColor.pickRandomLibraryColor()),
-      listed = Some(true)
-    )
-    implicit val context = heimdalContextBuilder.build
-    libraryCommander.createLibrary(addRequest, userId).fold({ fail =>
-      Left(fail.message)
-    }, { lib =>
-      entryOpt.foreach { entry =>
-        db.readWrite { implicit session =>
-          twitterWaitlistRepo.save(entry.copy(state = TwitterWaitlistEntryStates.ACCEPTED, twitterHandle = Some(handle)))
-        }
-      }
-      val sync = twitterSyncCommander.internTwitterSync(Some(userId), lib.id.get, handle, SyncTarget.Tweets)
-      log.info(s"[createSync] Sync created for $userId, ${handle.value}")
-      syncTwitterShow(handle, sui, lib.id.get).andThen {
-        case _ => // Always sync, even if show failed to update
-          twitterSyncCommander.syncOne(Some(sui), sync, sui.userId.get)
-      }
-
-      Right(sync)
-    })
   }
 
   // Move to TwitterSyncCommander so that we can call this periodically during syncs?
