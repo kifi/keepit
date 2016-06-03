@@ -19,7 +19,7 @@ import com.keepit.common.util.RightBias
 import com.keepit.common.util.RightBias._
 import com.keepit.model._
 import com.keepit.rover.RoverServiceClient
-import com.keepit.search.SearchServiceClient
+import com.keepit.search.{ SearchFilter, SearchServiceClient }
 import com.keepit.search.augmentation.{ AugmentableItem, LimitedAugmentationInfo }
 import com.keepit.shoebox.data.assemblers.KeepInfoAssemblerConfig.KeepViewAssemblyOptions
 import com.keepit.shoebox.data.keep._
@@ -258,6 +258,7 @@ class KeepInfoAssemblerImpl @Inject() (
     val (augmentationFut, summaryFut) = {
       val augmentation = search.augment(
         viewer,
+        SearchFilter.default, // todo(Léo/Ryan): Not sure whether I should make this part of KeepInfoAssemblerConfig since it's not made of straigthforward primitives
         config.hideOtherPublishedLibraries,
         config.numContextualKeeps,
         config.numContextualKeepers,

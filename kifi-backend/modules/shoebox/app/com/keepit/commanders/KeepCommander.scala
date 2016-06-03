@@ -26,7 +26,7 @@ import com.keepit.integrity.UriIntegrityHelpers
 import com.keepit.model._
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.rover.RoverServiceClient
-import com.keepit.search.SearchServiceClient
+import com.keepit.search.{ SearchFilter, SearchServiceClient }
 import com.keepit.search.augmentation.{ AugmentableItem, ItemAugmentationRequest }
 import com.keepit.shoebox.data.keep.{ KeepInfo, PartialKeepInfo }
 import com.keepit.slack.LibraryToSlackChannelPusher
@@ -412,7 +412,7 @@ class KeepCommanderImpl @Inject() (
       case Some(keepId) =>
         val keep = db.readOnlyMaster { implicit session => keepRepo.get(keepId) }
         val item = AugmentableItem(keep.uriId, Some(keep.id.get))
-        val futureAugmentationResponse = searchClient.augmentation(ItemAugmentationRequest.uniform(userId, item))
+        val futureAugmentationResponse = searchClient.augmentation(ItemAugmentationRequest.uniform(userId, SearchFilter.default, item))
         val existingNormalizedTags = db.readOnlyMaster { implicit session => tagCommander.getTagsForKeep(keep.id.get).map(_.normalized) }
         futureAugmentationResponse.map { response =>
           val suggestedTags = {

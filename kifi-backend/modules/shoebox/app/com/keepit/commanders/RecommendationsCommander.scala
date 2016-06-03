@@ -11,7 +11,7 @@ import com.keepit.common.store.S3ImageConfig
 import com.keepit.curator.model._
 import com.keepit.model._
 import com.keepit.rover.RoverServiceClient
-import com.keepit.search.SearchServiceClient
+import com.keepit.search.{ SearchFilter, SearchServiceClient }
 import com.keepit.search.augmentation.AugmentableItem
 import play.api.libs.json.Json
 
@@ -105,7 +105,7 @@ class RecommendationsCommander @Inject() (
     val uriId2Idx = uriIds.zipWithIndex.toMap
     val ret: Array[Option[UserAttribution]] = Array.fill(uriIds.size)(None)
 
-    search.augment(Some(userId), true, maxKeepsShown = 0, maxKeepersShown = 20, maxLibrariesShown = 15, maxTagsShown = 0, items = uriIds.map(AugmentableItem(_))).map { infos =>
+    search.augment(Some(userId), SearchFilter.default, true, maxKeepsShown = 0, maxKeepersShown = 20, maxLibrariesShown = 15, maxTagsShown = 0, items = uriIds.map(AugmentableItem(_))).map { infos =>
       (uriIds zip infos).foreach {
         case (uriId, info) =>
           val idx = uriId2Idx(uriId)

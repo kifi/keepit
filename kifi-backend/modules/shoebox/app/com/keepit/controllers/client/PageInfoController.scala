@@ -12,12 +12,13 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.json
 import com.keepit.common.json.SchemaReads
 import com.keepit.common.time._
+import com.keepit.common.util.PaginationContext
 import com.keepit.common.util.RightBias._
 import com.keepit.model._
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.shoebox.data.assemblers.KeepInfoAssemblerConfig.KeepViewAssemblyOptions
 import com.keepit.shoebox.data.assemblers.{ KeepInfoAssembler, KeepInfoAssemblerConfig }
-import com.keepit.shoebox.data.keep.{ NewPageInfo, NewKeepInfosForPage, PaginationContext }
+import com.keepit.shoebox.data.keep.{ NewKeepInfosForPage, NewPageInfo }
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
@@ -87,10 +88,10 @@ class PageInfoController @Inject() (
 
   private object GetKeepsByUri {
     import json.SchemaReads._
-    final case class Input(url: String, paginationContext: Option[PaginationContext], config: KeepViewAssemblyOptions)
+    final case class Input(url: String, paginationContext: Option[PaginationContext[Keep]], config: KeepViewAssemblyOptions)
     val schemaReads: SchemaReads[Input] = (
       (__ \ 'url).readWithSchema[String] and
-      (__ \ 'paginationContext).readNullableWithSchema[PaginationContext] and
+      (__ \ 'paginationContext).readNullableWithSchema[PaginationContext[Keep]] and
       (__ \ 'config).readNullableWithSchema(KeepInfoAssemblerConfig.useDefaultForMissing).map(_ getOrElse KeepInfoAssemblerConfig.default)
     )(Input.apply _)
     implicit val reads = schemaReads.reads
@@ -101,7 +102,7 @@ class PageInfoController @Inject() (
   def getKeepsByUri() = UserAction.async(parse.tolerantJson) { implicit request =>
     import GetKeepsByUri._
     request.body.asOpt[Input].fold(Future.successful(schemaHelper.loudHintResponse(request.body, schema))) { input =>
-      val seenIds = input.paginationContext.fold(Set.empty[Id[Keep]])(PaginationContext.toSet)
+      val seenIds = input.paginationContext.fold(Set.empty[Id[Keep]])(_.toSet)
       val uriIdOpt = db.readOnlyReplica { implicit s => uriInterner.getByUri(input.url).map(_.id.get) }
       val newIds = uriIdOpt.fold(Seq.empty[Id[Keep]]) { uriId =>
         db.readOnlyReplica { implicit s =>

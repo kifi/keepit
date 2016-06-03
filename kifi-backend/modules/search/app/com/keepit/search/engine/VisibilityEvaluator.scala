@@ -57,7 +57,7 @@ trait VisibilityEvaluator { self: DebugOption =>
       myFriendIds,
       restrictedUserIds,
       myOrgIds,
-      context,
+      context.filter,
       ownerIdDocValues,
       orgIdDocValues,
       visibilityDocValues)
@@ -167,18 +167,18 @@ final class LibraryVisibilityEvaluator(
     myFriendIds: LongArraySet,
     restrictedUserIds: LongArraySet,
     orgIds: LongArraySet,
-    context: SearchContext,
+    filter: SearchFilter,
     ownerIdDocValues: NumericDocValues,
     orgIdDocValues: NumericDocValues,
     visibilityDocValues: NumericDocValues) {
 
   private[this] val published = LibraryFields.Visibility.PUBLISHED
   private[this] val organization = LibraryFields.Visibility.ORGANIZATION
-  private val noFilter = (context.filter.libraryIds.isEmpty) && (context.filter.userId < 0) && (context.filter.orgId < 0) // optimization
+  private val noFilter = (filter.libraryIds.isEmpty) && (filter.userId < 0) && (filter.orgId < 0) // optimization
 
   @inline
   private def isRelevant(libId: Long, ownerId: Long, orgId: Long) = {
-    (context.filter.libraryIds.isEmpty || context.filter.libraryIds.findIndex(libId) >= 0) && (context.filter.userId < 0 || context.filter.userId == ownerId) && (context.filter.orgId < 0 || context.filter.orgId == orgId)
+    (filter.libraryIds.isEmpty || filter.libraryIds.findIndex(libId) >= 0) && (filter.userId < 0 || filter.userId == ownerId) && (filter.orgId < 0 || filter.orgId == orgId)
   }
 
   def isRelevant(docId: Int, libId: Long): Boolean = noFilter || {
