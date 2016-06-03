@@ -1,6 +1,7 @@
 @import (reference) 'lib_icons.less';
 @import (reference) 'symbol-sprite.less';
 @fgColor: #111111;
+@bgColor: #f6f6f6;
 @buttonBgColor: #67829c;
 @borderColor: #ccc;
 @recipientFgColor: black;
@@ -19,102 +20,35 @@
   border-bottom: 1px solid @borderColor;
 }
 
-.kifi-message-participants-1 {
+@participants-bar-height: 15px;
+.kifi-message-participants-togglebar {
+  position: absolute;
+  top: ~"calc(100% - @{participants-bar-height})";
+  right: 0;
+  left: 0;
+  z-index: -1;
+  height: @participants-bar-height;
+  border-bottom: 1px solid #ccc;
   text-align: center;
-  position: relative;
+  line-height: @participants-bar-height;
+  cursor: pointer;
+  background-color: @bgColor;
+  transform: translateY(0);
 
-  :not([data-kifi-participants="1"])>& {
-    display: none;
-  }
+  transition: transform .3s ease-in-out;
 }
-
-.kifi-message-participants-n {
-  position: relative;
-
-  [data-kifi-participants="1"]>& {
-    display: none;
-  }
+.kifi-message-participants-togglebar:before {
+  content: '•••';
 }
-
-.kifi-message-participants-title {
-  font-size: 13px;
-  margin-bottom: 6px;
-
-  .kifi-message-participants-n & {
-    color: @fgColor;
-    padding: 0 @itemPaddingX;
-  }
+.kifi-message-participants-togglebar:after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 20px;
 }
-.kifi-message-participants-title:empty + .kifi-message-participants-avatar-container {
-    margin-top: -5px;
-}
-.kifi-message-participant-1-add {
-  display: none;
-  border-top: 1px solid @borderColor;
-  text-align: center;
-
-  [data-kifi-participants="1"]>& {
-    display: block;
-  }
-}
-
-.kifi-message-participant-1-add-link {
-  display: inline-block;
-  width: 100%;
-  height: auto;
-  padding: 8px 0;
-  margin-bottom: -8px;
-  color: @fgColor!important;
-  font-size: 14px;
-
-  &::before {
-    content: '+';
-    display: inline-block;
-    margin-left: -4px;
-  }
-
-  &:hover, &:focus {
-    background-color: rgba(255,255,255,.6);
-  }
-  &:active {
-    background-color: rgba(0,0,0,.04);
-  }
-  &.kifi-active {
-    background-color: @dotBgColor;
-  }
-}
-
-.kifi-participant-count {
-  font-size: 1.1em;
-  color: @buttonBgColor;
-
-  &.kifi-highlight {
-    -webkit-animation-name: kifi-highlight-count;
-    animation-name: kifi-highlight-count;
-    -webkit-animation-duration: 5s;
-    animation-duration: 5s;
-  }
-}
-
-@-webkit-keyframes kifi-highlight-count {
-	0% {
-    color: @highlightColor;
-	}
-	100% {
-    color: @buttonBgColor;
-	}
-}
-@keyframes kifi-highlight-count {
-	0% {
-    color: @highlightColor;
-	}
-	100% {
-    color: @buttonBgColor;
-	}
-}
-
-.kifi-message-participant-name {
-  color: @recipientFgColor;
+.kifi-message-participants-show-togglebar .kifi-message-participants-togglebar {
+  transform: translateY(100%);
 }
 
 .kifi-message-participants-avatar-container {
@@ -122,13 +56,6 @@
   line-height: 0;
   white-space: nowrap;
   padding: 0 @itemPaddingX;
-  opacity: 1;
-  transition: opacity @duration/2 linear;
-
-  .kifi-message-participants.kifi-expanded & {
-    position: absolute;
-    opacity: 0;
-  }
 }
 
 .kifi-message-participants-avatars {
@@ -313,11 +240,17 @@
 }
 
 .kifi-message-participant-list-root {
-  position: relative;
-  height: 0;
+  position: absolute;
+  top: 0;
   width: 100%;
-  transition: height @duration ease;
+  height: 0;
   overflow: hidden;
+
+  border-bottom-left-radius: 5px;
+  border-bottom-right-radius: 5px;
+  box-shadow: 0px 9px 16px -7px rgba(0, 0, 0, 0.5);
+  background-color: @bgColor;
+  transition: height @duration ease;
 }
 
 .kifi-message-participant-list-wrapper {
@@ -342,18 +275,32 @@
 
 .kifi-message-participant-item {
   position: relative;
+  display: flex;
+  align-items: center;
   line-height: @listPicSize;
   padding: 2px @itemPaddingX;
   white-space: nowrap;
   font-size: 12px;
   font-weight: 500;
+}
+.kifi-message-participant-remove {
+  @url: %(@kifi-symbol-error, #fff, #fff, #fff);
+  display: inline-block;
+  width: 21px;
+  height: 21px;
+  margin-left: auto;
+  border-radius: 50%;
 
-  &.kifi-highlight {
-    -webkit-animation-name: kifi-highlight-backround;
-    animation-name: kifi-highlight-backround;
-    -webkit-animation-duration: 10s;
-    animation-duration: 10s;
-  }
+  background-color: #ddd;
+  background-size: 65% 65%;
+  background-repeat: no-repeat;
+  background-image: url(@url);
+  background-position: center center;
+
+  cursor: pointer;
+}
+.kifi-message-participant-remove:hover {
+  opacity: .6;
 }
 
 .kifi-message-participant-a {
@@ -375,11 +322,6 @@
   vertical-align: middle;
   border-radius: 50%;
   overflow: hidden;
-
-  .kifi-highlight>& {
-    animation-name: kifi-highlight-shadow;
-    animation-duration: 10s;
-  }
 }
 
 .kifi-message-participant-img {
@@ -394,32 +336,13 @@
   color: white;
 }
 
-@-webkit-keyframes kifi-highlight-backround {
-	0% {
-    background: tint(@highlightColor, 15%);
-	}
-	100% {
-    background: transparent;
-	}
-}
-
-@keyframes kifi-highlight-backround {
-	0% {
-    background: @highlightColor;
-	}
-	100% {
-    background: transparent;
-	}
-}
-
 .kifi-message-participant-list-hide {
   display: block;
   color: white;
   background: @buttonBgColor;
   border-radius: 2px !important;
   padding: 9px 0;
-  margin: 0 @itemPaddingX;
-  margin-top: 2px;
+  margin: 2px @itemPaddingX 8px;
   font-size: 12px;
   font-weight: 400;
   text-align: center;
@@ -435,30 +358,6 @@
   }
 }
 
-.kifi-message-show-participant {
-  display: table-cell;
-  width: 40px;
-  height: 29px;
-  border-left: 1px solid @borderColor;
-  vertical-align: middle;
-  text-align: center;
-  color: #A6B1BC!important;
-
-  &:before {
-    content: '•••';
-  }
-
-  &:hover, &:focus {
-    background-color: rgba(255,255,255,.6);
-  }
-  &:active {
-    background-color: rgba(0,0,0,.04);
-  }
-  &.kifi-active {
-    background-color: @dotBgColor;
-  }
-}
-
 .kifi-message-participant-dialog {
   box-sizing: border-box;
   position: absolute;
@@ -469,7 +368,7 @@
   border-bottom: 1px solid #aaa;
   border-bottom-left-radius: 7px;
   border-bottom-right-radius: 7px;
-  background-color: #F6F6F6;
+  background-color: @bgColor;
   box-shadow: 0 6px 5px -4px rgba(0, 0, 0, .3);
   color: #000;
 

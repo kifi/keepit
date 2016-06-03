@@ -1,22 +1,17 @@
-<div class="kifi-message-participants{{#isOverflowed}} kifi-overflow{{/isOverflowed}}" data-kifi-participants="{{participantCount}}">
-  <div class="kifi-message-participants-1">
-    <div class="kifi-message-participants-title">{{#keptInLibrary}}Comments{{/keptInLibrary}}{{^keptInLibrary}}Notes{{/keptInLibrary}}</div>
-  </div>
-  <div class="kifi-message-participants-n">
-    <div class="kifi-message-participants-title"></div>
+<div class="kifi-message-participants{{#isOverflowed}} kifi-overflow{{/isOverflowed}}">
+  <div class="kifi-message-participants-togglebar"></div>
     <div class="kifi-message-participants-avatar-container">
-      <ul class="kifi-message-participants-avatars">
-        {{#avatars}}
-          {{#user}}{{>message_avatar_user}}{{/user}}
-          {{#email}}{{>message_avatar_email}}{{/email}}
-          {{#library}}{{>message_avatar_library}}{{/library}}
-        {{/avatars}}
-        <li class="kifi-message-participants-avatars-actions">
-          <a class="kifi-message-participants-avatars-action kifi-message-participants-avatars-more" href="javascript:" data-elided="{{elidedCount}}"></a>
-          {{#canAddParticipants}}<a class="kifi-message-participants-avatars-action kifi-message-participants-avatars-add" href="javascript:"></a>{{/canAddParticipants}}
-        </li>
-      </ul>
-    </div>
+    <ul class="kifi-message-participants-avatars">
+      {{#avatars}}
+        {{#user}}{{>message_avatar_user}}{{/user}}
+        {{#email}}{{>message_avatar_email}}{{/email}}
+        {{#library}}{{>message_avatar_library}}{{/library}}
+      {{/avatars}}
+      <li class="kifi-message-participants-avatars-actions">
+        <a class="kifi-message-participants-avatars-action kifi-message-participants-avatars-more" href="javascript:" data-elided="{{elidedCount}}"></a>
+        {{#canAddParticipants}}<a class="kifi-message-participants-avatars-action kifi-message-participants-avatars-add" href="javascript:"></a>{{/canAddParticipants}}
+      </li>
+    </ul>
   </div>
   <div class="kifi-message-participant-list-root">
     <div class="kifi-message-participant-list-wrapper">
@@ -25,14 +20,13 @@
           {{#participants}}
             {{#user}}{{>message_participant_user}}{{/user}}
             {{#email}}{{>message_participant_email}}{{/email}}
-            {{#library}}{{>keep_box_lib}}{{/library}}
+            {{#library}}{{>message_participant_library}}{{/library}}
           {{/participants}}
         </ul>
       </div>
       <a class="kifi-message-participant-list-hide" href="javascript:">Hide</a>
     </div>
   </div>
-  <div class="kifi-message-participant-1-add"><a href="javascript:" class="kifi-message-participant-1-add-link">Add participants</a></div>
   <div class="kifi-message-participant-dialog">
     <input class="kifi-message-participant-dialog-input" type="text" placeholder="Type a library, name, or an email"/>
     <a class="kifi-message-participant-dialog-button" href="javascript:">Done</a>

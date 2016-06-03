@@ -153,11 +153,9 @@ var initFriendSearch = (function () {
       if (typeof res.nameParts[0] === 'string') {
         annotateNameParts(res);
       }
-      res.keep = res.keep || {};
-      res.keep.isSearchResult = true;
       res.extraInfo = 'Kifi library';
-      html = $(k.render('html/keeper/keep_box_lib', res, {'name_parts': 'name_parts'}));
-      html.addClass('kifi-ti-dropdown-item-token')
+      html = $('<li/>').addClass('kifi-ti-dropdown-item-token');
+      html.append($(k.render('html/keeper/keep_box_lib', res, {'name_parts': 'name_parts'})));
       return html.prop('outerHTML');
     } else if (res.kind === 'org') {
       pic = k.cdnBase + '/' + res.avatarPath;

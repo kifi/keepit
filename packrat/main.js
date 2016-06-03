@@ -763,34 +763,45 @@ api.port.on({
   },
   update_keepscussion_recipients: function (data, respond, tab) {
     var d = pageData[tab.nUri];
-    var newUsers = data.newUsers;
-    var newEmails = data.newEmails;
-    var newLibraries = data.newLibraries;
+    var newUsers = data.newUsers || [];
+    var newEmails = data.newEmails || [];
+    var newLibraries = data.newLibraries || [];
+    var removeUsers = data.removeUsers || [];
+    var removeEmails = data.removeEmails || [];
+    var removeLibraries = data.removeLibraries || [];
+
     var params = {
       libraries: {
-        add: newLibraries.map(getId),
-        remove: []
+        add: newLibraries,
+        remove: removeLibraries
       },
       users: {
-        add: newUsers.map(getId),
-        remove: []
+        add: newUsers,
+        remove: removeUsers
       },
       emails: {
-        add: newEmails.map(getId),
-        remove: []
+        add: newEmails,
+        remove: removeEmails
       },
       source: api.browser.name
     };
     var keep = keepData[data.keepId];
     var activity = activityData[data.keepId];
     var permissions = keep && keep.viewer && keep.viewer.permissions || [];
-
-    if (keep && permissions.indexOf('add_participants') === -1) {
+    var requestedAdd = (newUsers.length > 0 || newLibraries.length > 0 || newEmails.length > 0);
+    var requestedRemove = (removeUsers.length > 0 || removeLibraries.length > 0 || removeEmails.length > 0);
+    if (keep && (
+      (requestedAdd && permissions.indexOf('add_participants') === -1) ||
+      (requestedRemove && permissions.indexOf('remove_participants') === -1)
+    )) {
       return respond(false);
     }
 
-    ajax('POST', '/ext/keeps/' + data.keepId + '/recipients', params, respond.bind(null, true), respond.bind(null, false));
+    updateKeepReciepients(data.keepId, params)
+    .then(respond.bind(null, true))
+    .catch(respond.bind(null, false));
   },
+
   keeps_and_libraries_and_organizations_and_me_and_experiments: function (_, respond, tab) {
     var d = pageData[tab.nUri];
 
@@ -2978,6 +2989,12 @@ function sendKeepReply(keepId, data) {
 function sendKeep(data) {
   return new Promise(function (resolve, reject) {
     ajax('POST', '/api/1/keeps', data, resolve, reject)
+  });
+}
+
+function updateKeepReciepients(keepId, data) {
+  return new Promise(function (resolve, reject) {
+    ajax('POST', '/api/1/keeps/' + keepId + '/recipients', data, resolve, reject);
   });
 }
 
