@@ -5,9 +5,11 @@ import com.keepit.model._
 import org.joda.time.DateTime
 import play.api.libs.json._
 import com.keepit.common.json.TupleFormat
+import com.keepit.common.util.PaginationContext
+import com.keepit.search.SearchFilter
 import play.api.libs.functional.syntax._
 
-case class AugmentableItem(uri: Id[NormalizedURI], keepId: Option[Id[Keep]] = None)
+case class AugmentableItem(uri: Id[NormalizedURI], keepId: Option[Id[Keep]] = None, keepPagination: Option[PaginationContext[Keep]] = None)
 
 object AugmentableItem {
   implicit val format = Json.format[AugmentableItem]
@@ -64,11 +66,11 @@ case class AugmentationScores(
   def byTag(tag: Hashtag): Float = tagScores.getOrElse(tag, 0f)
 }
 
-case class AugmentationContext(userId: Id[User], corpus: Map[AugmentableItem, Float])
+case class AugmentationContext(userId: Id[User], filter: SearchFilter, corpus: Map[AugmentableItem, Float])
 
 object AugmentationContext {
   implicit val format = Json.format[AugmentationContext]
-  def uniform(userId: Id[User], items: Set[AugmentableItem]): AugmentationContext = AugmentationContext(userId, items.map(_ -> 1f).toMap)
+  def uniform(userId: Id[User], filter: SearchFilter, items: Set[AugmentableItem]): AugmentationContext = AugmentationContext(userId, filter, items.map(_ -> 1f).toMap)
 }
 
 object AugmentationScores {
@@ -80,9 +82,9 @@ case class ItemAugmentationRequest(items: Set[AugmentableItem], context: Augment
 
 object ItemAugmentationRequest {
   implicit val writes = Json.format[ItemAugmentationRequest]
-  def uniform(userId: Id[User], items: AugmentableItem*): ItemAugmentationRequest = {
+  def uniform(userId: Id[User], filter: SearchFilter, items: AugmentableItem*): ItemAugmentationRequest = {
     val itemSet = items.toSet
-    val context = AugmentationContext.uniform(userId, itemSet)
+    val context = AugmentationContext.uniform(userId, filter, itemSet)
     ItemAugmentationRequest(itemSet, context)
   }
 }

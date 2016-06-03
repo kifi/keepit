@@ -39,7 +39,7 @@ trait SearchControllerUtil {
       AugmentableItem(Id(hit.id), hit.keepId.map(Id[Keep](_)))
     }
     val previousItems = (kifiPlainResult.idFilter.map(Id[NormalizedURI](_)) -- items.map(_.uri)).map(AugmentableItem(_, None)).toSet
-    val context = AugmentationContext.uniform(userId, previousItems ++ items)
+    val context = AugmentationContext.uniform(userId, SearchFilter.default, previousItems ++ items)
     val augmentationRequest = ItemAugmentationRequest(items.toSet, context)
     augmentationCommander.getAugmentedItems(augmentationRequest).imap { augmentedItems => items.map(augmentedItems(_)) }
   }

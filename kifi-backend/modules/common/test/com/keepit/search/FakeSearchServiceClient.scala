@@ -97,7 +97,7 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, null, null
     val augmentationInfos = keeperInfos.map { case (keepers, keepersTotal) => LimitedAugmentationInfo(None, Seq.empty, 0, 0, keepers.map((_, now)), 0, keepersTotal, Seq.empty, 0, 0, Seq.empty, 0) }
     augmentationInfoData = Some(augmentationInfos)
   }
-  override def augment(userId: Option[Id[User]], hideOtherPublishedKeeps: Boolean, maxKeepsShown: Int, maxKeepersShown: Int, maxLibrariesShown: Int, maxTagsShown: Int, items: Seq[AugmentableItem]): Future[Seq[LimitedAugmentationInfo]] = {
+  override def augment(userId: Option[Id[User]], filter: SearchFilter, hideOtherPublishedKeeps: Boolean, maxKeepsShown: Int, maxKeepersShown: Int, maxLibrariesShown: Int, maxTagsShown: Int, items: Seq[AugmentableItem]): Future[Seq[LimitedAugmentationInfo]] = {
     Future.successful(augmentationInfoData getOrElse Seq.fill(items.length)(LimitedAugmentationInfo.empty))
   }
 }

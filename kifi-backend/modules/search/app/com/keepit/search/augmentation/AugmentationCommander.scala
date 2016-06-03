@@ -128,7 +128,7 @@ class AugmentationCommanderImpl @Inject() (
       restrictedUserIds = restrictedUsersArray,
       myLibraryIds = librariesArray,
       myOrgIds = organizationsArray,
-      SearchFilter.empty // todo(Léo / Ryan): could use this, warning: UserScope currently filters keeps by owner, not participant (easy change)
+      SearchFilter.default // todo(Léo / Ryan): could use this, warning: UserScope currently filters keeps by owner, not participant (easy change)
     )
 
     val futureAugmentationInfosByShard: Seq[Future[Map[AugmentableItem, FullAugmentationInfo]]] = items.groupBy(item => shards.find(_.contains(item.uri))).collect {

@@ -71,7 +71,7 @@ trait SearchServiceClient extends ServiceClient {
 
   def augmentation(request: ItemAugmentationRequest): Future[ItemAugmentationResponse]
 
-  def augment(userId: Option[Id[User]], hideOtherPublishedKeeps: Boolean, maxKeepsShown: Int, maxKeepersShown: Int, maxLibrariesShown: Int, maxTagsShown: Int, items: Seq[AugmentableItem]): Future[Seq[LimitedAugmentationInfo]]
+  def augment(userId: Option[Id[User]], filter: SearchFilter, hideOtherPublishedKeeps: Boolean, maxKeepsShown: Int, maxKeepersShown: Int, maxLibrariesShown: Int, maxTagsShown: Int, items: Seq[AugmentableItem]): Future[Seq[LimitedAugmentationInfo]]
 
   def call(instance: ServiceInstance, url: ServiceRoute, body: JsValue): Future[ClientResponse]
 }
@@ -123,7 +123,7 @@ class SearchServiceClientImpl(
       Future.successful(Seq.empty)
     } else {
       val items = uriIds.map(AugmentableItem(_))
-      val request = ItemAugmentationRequest.uniform(userId, items: _*)
+      val request = ItemAugmentationRequest.uniform(userId, SearchFilter.default, items: _*)
       augmentation(request).map { response =>
         items.map { item =>
           val info = response.infos(item)
@@ -283,11 +283,11 @@ class SearchServiceClientImpl(
     call(Search.internal.augmentation(), Json.toJson(request)).map(_.json.as[ItemAugmentationResponse])
   }
 
-  def augment(userId: Option[Id[User]], hideOtherPublishedKeeps: Boolean, maxKeepsShown: Int, maxKeepersShown: Int, maxLibrariesShown: Int, maxTagsShown: Int, items: Seq[AugmentableItem]): Future[Seq[LimitedAugmentationInfo]] = {
+  def augment(userId: Option[Id[User]], filter: SearchFilter, hideOtherPublishedKeeps: Boolean, maxKeepsShown: Int, maxKeepersShown: Int, maxLibrariesShown: Int, maxTagsShown: Int, items: Seq[AugmentableItem]): Future[Seq[LimitedAugmentationInfo]] = {
     if (items.isEmpty) Future.successful(Seq.empty[LimitedAugmentationInfo])
     else {
       // This should stay in sync with SearchController.augment
-      val payload = Json.obj("userId" -> userId, "hideOtherPublishedKeeps" -> hideOtherPublishedKeeps, "maxKeepsShown" -> maxKeepsShown, "maxKeepersShown" -> maxKeepersShown, "maxLibrariesShown" -> maxLibrariesShown, "maxTagsShown" -> maxTagsShown, "items" -> items)
+      val payload = Json.obj("userId" -> userId, "filter" -> filter, "hideOtherPublishedKeeps" -> hideOtherPublishedKeeps, "maxKeepsShown" -> maxKeepsShown, "maxKeepersShown" -> maxKeepersShown, "maxLibrariesShown" -> maxLibrariesShown, "maxTagsShown" -> maxTagsShown, "items" -> items)
       call(Search.internal.augment(), payload).map(_.json.as[Seq[LimitedAugmentationInfo]])
     }
   }

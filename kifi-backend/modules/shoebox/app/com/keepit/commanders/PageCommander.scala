@@ -1,11 +1,10 @@
 package com.keepit.commanders
 
 import com.keepit.common.CollectionHelpers
-import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
+import com.keepit.common.cache.{ CacheStatistics, FortyTwoCachePlugin, JsonCacheImpl, Key }
 import com.keepit.common.concurrent.PimpMyFuture._
 import com.google.inject.Inject
-
-import com.keepit.classify.{ NormalizedHostname, Domain, DomainRepo }
+import com.keepit.classify.{ Domain, DomainRepo, NormalizedHostname }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.RSession
@@ -18,14 +17,14 @@ import com.keepit.common.time._
 import com.keepit.curator.LibraryQualityHelper
 import com.keepit.model._
 import com.keepit.normalizer.NormalizedURIInterner
-import com.keepit.search.SearchServiceClient
+import com.keepit.search.{ SearchFilter, SearchServiceClient }
 import com.keepit.slack.SlackInfoCommander
 import com.keepit.social.BasicUser
 import com.keepit.common.logging.{ AccessLog, Logging }
 import org.joda.time.DateTime
 import com.keepit.common.core._
-
 import play.api.libs.json._
+
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.duration._
 import scala.util.{ Failure, Success }
@@ -189,6 +188,7 @@ class PageCommander @Inject() (
   private def augmentUriInfo(normUri: NormalizedURI, userId: Id[User]): Future[KeeperPagePartialInfo] = {
     val augmentFuture = searchClient.augment(
       userId = Some(userId),
+      filter = SearchFilter.default,
       hideOtherPublishedKeeps = false,
       maxKeepsShown = 10, // actually used to compute fewer sources
       maxKeepersShown = 5,

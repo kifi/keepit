@@ -1,7 +1,7 @@
 package com.keepit.commanders
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.commanders.gen.{ BasicULOBatchFetcher, BasicOrganizationGen, KeepActivityGen }
+import com.keepit.commanders.gen.{ BasicOrganizationGen, BasicULOBatchFetcher, KeepActivityGen }
 import com.keepit.common.akka.TimeoutFuture
 import com.keepit.common.core._
 import com.keepit.common.crypto.PublicIdConfiguration
@@ -18,7 +18,7 @@ import com.keepit.discussion.{ CrossServiceDiscussion, Discussion, Message }
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 import com.keepit.rover.RoverServiceClient
-import com.keepit.search.SearchServiceClient
+import com.keepit.search.{ SearchFilter, SearchServiceClient }
 import com.keepit.search.augmentation.{ AugmentableItem, LimitedAugmentationInfo }
 import com.keepit.shoebox.data.keep.{ BasicLibraryWithKeptAt, KeepInfo }
 import com.keepit.slack.models.SlackTeamId
@@ -82,7 +82,7 @@ class KeepDecoratorImpl @Inject() (
     else {
       val augmentationFuture = {
         val items = keeps.map { keep => AugmentableItem(keep.uriId) }
-        searchClient.augment(viewerIdOpt, showPublishedLibraries, KeepInfo.maxKeepsShown, KeepInfo.maxKeepersShown, KeepInfo.maxLibrariesShown, 0, items).imap(augmentationInfos => filterLibraries(augmentationInfos))
+        searchClient.augment(viewerIdOpt, SearchFilter.default, showPublishedLibraries, KeepInfo.maxKeepsShown, KeepInfo.maxKeepersShown, KeepInfo.maxLibrariesShown, 0, items).imap(augmentationInfos => filterLibraries(augmentationInfos))
       }
       val emailParticipantsByKeepFuture = eliza.getEmailParticipantsForKeeps(keepIds)
 

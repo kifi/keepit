@@ -97,7 +97,7 @@ class SearchController @Inject() (
 
   def searchUsersByName() = Action.async(parse.tolerantJson) { request =>
     val searchRequest = request.body.as[UserPrefixSearchRequest]
-    val contextFut = Future.successful(SearchContext(None, orderBy = SearchRanking.relevancy, filter = SearchFilter.empty, disablePrefixSearch = false, disableFullTextSearch = true))
+    val contextFut = Future.successful(SearchContext(None, orderBy = SearchRanking.relevancy, filter = SearchFilter.default, disablePrefixSearch = false, disableFullTextSearch = true))
     userSearchCommander.searchUsers(userId = searchRequest.userId, acceptLangs = searchRequest.acceptLangs, experiments = searchRequest.userExperiments, query = searchRequest.query, contextFuture = contextFut, maxHits = searchRequest.maxHits, explain = None).map { userSearchResult =>
       val userIdsAndScores = userSearchResult.hits.map(hit => UserPrefixSearchHit(hit.id, hit.score))
       Ok(Json.toJson(userIdsAndScores))
@@ -125,7 +125,7 @@ class SearchController @Inject() (
   def explainLibraryResult(query: String, userId: Id[User], libraryId: Id[Library], acceptLangs: String, debug: Option[String], disablePrefixSearch: Boolean, disableFullTextSearch: Boolean) = Action.async { request =>
     val userExperiments = Await.result(userExperimentCommander.getExperimentsByUser(userId), 5 seconds)
     val langs = acceptLangs.split(",").filter(_.nonEmpty)
-    val context = SearchContext(None, SearchRanking.default, SearchFilter.empty, disablePrefixSearch, disableFullTextSearch)
+    val context = SearchContext(None, SearchRanking.default, SearchFilter.default, disablePrefixSearch, disableFullTextSearch)
     librarySearchCommander.searchLibraries(userId, langs, userExperiments, query, Future.successful(context), 1, None, debug, Some(libraryId)).map { result =>
       Ok(html.admin.explainLibraryResult(userId, libraryId, result.explanation))
     }
@@ -134,7 +134,7 @@ class SearchController @Inject() (
   def explainUserResult(query: String, userId: Id[User], resultUserId: Id[User], acceptLangs: String, debug: Option[String], disablePrefixSearch: Boolean, disableFullTextSearch: Boolean) = Action.async { request =>
     val userExperiments = Await.result(userExperimentCommander.getExperimentsByUser(userId), 5 seconds)
     val langs = acceptLangs.split(",").filter(_.nonEmpty)
-    val context = SearchContext(None, SearchRanking.default, SearchFilter.empty, disablePrefixSearch, disableFullTextSearch)
+    val context = SearchContext(None, SearchRanking.default, SearchFilter.default, disablePrefixSearch, disableFullTextSearch)
     userSearchCommander.searchUsers(userId, langs, userExperiments, query, Future.successful(context), 1, None, debug, Some(resultUserId)).map { result =>
       Ok(html.admin.explainUserResult(userId, resultUserId, result.explanation))
     }
@@ -150,6 +150,7 @@ class SearchController @Inject() (
   def augment() = Action.async(parse.json) { implicit request =>
     // This should stay in sync with SearchServiceClient.augment
     val userId = (request.body \ "userId").asOpt[Id[User]]
+    val filter = (request.body \ "filter").asOpt[SearchFilter]
     val maxKeepsShown = (request.body \ "maxKeepsShown").as[Int]
     val maxKeepersShown = (request.body \ "maxKeepersShown").as[Int]
     val maxLibrariesShown = (request.body \ "maxLibrariesShown").as[Int]
@@ -157,7 +158,7 @@ class SearchController @Inject() (
     val items = (request.body \ "items").as[Seq[AugmentableItem]]
     val hideOtherPublishedKeeps = (request.body \ "hideOtherPublishedKeeps").asOpt[Boolean] orElse (request.body \ "showOtherPublishedKeeps").asOpt[Boolean].map(!_)
 
-    val itemAugmentationRequest = ItemAugmentationRequest.uniform(userId getOrElse SearchControllerUtil.nonUser, items: _*).copy(hideOtherPublishedKeeps = hideOtherPublishedKeeps)
+    val itemAugmentationRequest = ItemAugmentationRequest.uniform(userId getOrElse SearchControllerUtil.nonUser, filter getOrElse SearchFilter.default, items: _*).copy(hideOtherPublishedKeeps = hideOtherPublishedKeeps)
     augmentationCommander.getAugmentedItems(itemAugmentationRequest).map { augmentedItems =>
       val infos = items.map(augmentedItems(_).toLimitedAugmentationInfo(maxKeepsShown, maxKeepersShown, maxLibrariesShown, maxTagsShown))
       val result = Json.toJson(infos)
