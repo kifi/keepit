@@ -1,5 +1,8 @@
 package com.keepit.shoebox.path
 
+import javax.crypto.spec.IvParameterSpec
+
+import com.keepit.common.crypto.PublicIdGenerator
 import com.keepit.common.db.{ States, State, ModelWithState, Id }
 import com.keepit.common.path.Path
 import org.joda.time.DateTime
@@ -23,3 +26,8 @@ final case class ShortenedPath(
 }
 
 object ShortenedPathStates extends States[ShortenedPath]
+
+object ShortenedPath extends PublicIdGenerator[ShortenedPath] {
+  val publicIdIvSpec: IvParameterSpec = new IvParameterSpec(Array(-67, -41, -89, -42, 13, -18, -68, 35, 110, -24, -83, -47, 124, -32, -20, 37))
+  val publicIdPrefix = "sp"
+}
