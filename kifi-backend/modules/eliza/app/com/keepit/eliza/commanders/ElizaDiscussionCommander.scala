@@ -189,8 +189,8 @@ class ElizaDiscussionCommanderImpl @Inject() (
         keepId = csKeep.id,
         numMessages = 0
       ))
-      users.foreach(userId => userThreadRepo.intern(UserThread.forMessageThread(mt)(userId)))
-      csKeep.emails.foreach(email => nonUserThreadRepo.intern(NonUserThread.forMessageThread(mt)(EmailParticipant(email))))
+      users.foreach { userId => userThreadRepo.intern(UserThread.forMessageThread(mt)(userId)) }
+      csKeep.emails.foreach { email => nonUserThreadRepo.intern(NonUserThread.forMessageThread(mt)(email)) }
       (mt, true)
     }
   }

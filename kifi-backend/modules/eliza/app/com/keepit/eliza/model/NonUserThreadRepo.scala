@@ -16,6 +16,8 @@ import com.keepit.common.db.slick.StaticQueryFixed.interpolation
 @ImplementedBy(classOf[NonUserThreadRepoImpl])
 trait NonUserThreadRepo extends Repo[NonUserThread] {
   def intern(model: NonUserThread)(implicit session: RWSession): NonUserThread
+  def getByKeepAndEmail(keepId: Id[Keep], email: EmailAddress)(implicit session: RSession): Option[NonUserThread]
+
   def getKeepsByEmail(emailAddress: EmailAddress)(implicit session: RSession): Seq[Id[Keep]]
   def getNonUserThreadsForEmailing(lastNotifiedBefore: DateTime, threadUpdatedByOtherAfter: DateTime)(implicit session: RSession): Seq[NonUserThread]
   def getByKeepId(keepId: Id[Keep])(implicit session: RSession): Set[NonUserThread]
@@ -92,6 +94,10 @@ class NonUserThreadRepoImpl @Inject() (
 
   def getByKeepId(keepId: Id[Keep])(implicit session: RSession): Set[NonUserThread] = {
     getByKeepIds(Set(keepId)).getOrElse(keepId, Set.empty)
+  }
+
+  def getByKeepAndEmail(keepId: Id[Keep], email: EmailAddress)(implicit session: RSession): Option[NonUserThread] = {
+    activeRows.filter(r => r.keepId === keepId && r.emailAddress === email).firstOption
   }
 
   def getByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Set[NonUserThread]] = {

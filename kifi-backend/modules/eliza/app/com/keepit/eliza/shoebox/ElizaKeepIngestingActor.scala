@@ -70,9 +70,11 @@ class ElizaKeepIngestingActor @Inject() (
                   .minusEmails(deadEmails)
               )
           }
-          newUsers.foreach(u => userThreadRepo.intern(UserThread.forMessageThread(newThread)(u)))
-          deadUsers.foreach(u => userThreadRepo.getUserThread(u, keep.id).foreach(x => userThreadRepo.deactivate(x)))
-          newEmails.foreach(e => nuThreadRepo.intern(NonUserThread.forMessageThread(newThread)(EmailParticipant(e))))
+          newUsers.foreach { u => userThreadRepo.intern(UserThread.forMessageThread(newThread)(u)) }
+          newEmails.foreach { e => nuThreadRepo.intern(NonUserThread.forMessageThread(newThread)(e)) }
+
+          deadUsers.foreach { u => userThreadRepo.getUserThread(u, keep.id).foreach(x => userThreadRepo.deactivate(x)) }
+          deadEmails.foreach { e => nuThreadRepo.getByKeepAndEmail(keep.id, e).foreach(x => nuThreadRepo.deactivate(x)) }
       }
       systemValueRepo.setSequenceNumber(elizaKeepSeq, keeps.map(_.seq).max)
       log.info(s"Ingested ${keeps.length} keeps from Shoebox, fixed uri / recipients for ${threadsThatNeedFixing.length} of them")

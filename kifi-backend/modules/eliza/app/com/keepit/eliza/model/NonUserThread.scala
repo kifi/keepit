@@ -36,9 +36,9 @@ case class NonUserThread(
 object NonUserThreadStates extends States[NonUserThread]
 
 object NonUserThread {
-  def forMessageThread(mt: MessageThread)(nu: EmailParticipant) = NonUserThread(
+  def forMessageThread(mt: MessageThread)(email: EmailAddress) = NonUserThread(
     createdBy = mt.startedBy,
-    participant = nu,
+    participant = EmailParticipant(email),
     keepId = mt.keepId,
     uriId = Some(mt.uriId),
     notifiedCount = 0,
@@ -49,7 +49,6 @@ object NonUserThread {
 
 case class EmailParticipant(address: EmailAddress) {
   val identifier = address.address
-  val referenceId = Some(address.address)
   val kind = NonUserKinds.email
 
   def shortName = identifier
@@ -66,6 +65,4 @@ object EmailParticipant {
   def toBasicNonUser(nonUser: EmailParticipant) = {
     BasicNonUser(kind = nonUser.kind, id = nonUser.identifier, firstName = Some(nonUser.identifier), lastName = None, BasicNonUser.DefaultPictureName)
   }
-
-  def toEmailAddress(nonUser: EmailParticipant): Option[EmailAddress] = Some(nonUser.address)
 }

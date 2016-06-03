@@ -513,7 +513,7 @@ class MessagingCommanderImpl @Inject() (
             ))
           }
 
-          val diff = KeepRecipientsDiff(DeltaSet.addOnly(actuallyNewUsers.toSet), libraries = DeltaSet.empty, DeltaSet.addOnly(actuallyNewNonUsers.flatMap(EmailParticipant.toEmailAddress).toSet))
+          val diff = KeepRecipientsDiff(DeltaSet.addOnly(actuallyNewUsers.toSet), libraries = DeltaSet.empty, DeltaSet.addOnly(actuallyNewNonUsers.map(_.address).toSet))
 
           session.onTransactionSuccess {
             messagingAnalytics.addedParticipantsToConversation(adderUserId, actuallyNewUsers, actuallyNewNonUsers, thread, source, context)
