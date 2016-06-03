@@ -6,7 +6,7 @@ angular.module('kifi')
   '$document', '$templateCache', '$rootElement', '$timeout', '$window', '$compile', 'KEY', 'keepService', 'profileService', 'modalService', 'util',
   function($document, $templateCache, $rootElement, $timeout, $window, $compile, KEY, keepService, profileService, modalService, util) {
 
-    var numSuggestions = 4;
+    var numSuggestions = 5;
     var maxSuggestionsToShowEmail = 2;
     var desiredMarginTop = 45;
     var initialBottom = 20;
@@ -165,7 +165,6 @@ angular.module('kifi')
 
         scope.selectSuggestion = function(suggestion) {
           scope.selections.push(suggestion);
-          scope.typeahead = '';
           refreshSuggestions();
           resetInput();
         };
