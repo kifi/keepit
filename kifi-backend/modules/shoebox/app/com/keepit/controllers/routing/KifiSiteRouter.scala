@@ -12,11 +12,13 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.http._
 import com.keepit.common.mail.KifiMobileAppLinkFlag
 import com.keepit.common.net.{ Param, Query }
+import com.keepit.common.path.Path
 import com.keepit.controllers.core.PostRegIntent
 import com.keepit.controllers.website.{ AngularApp, DeepLinkRouter }
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal.{ TrackingNonUserKind, ContextStringData, HeimdalContextBuilderFactory, EventType, HeimdalContext, HeimdalContextBuilder, UserEvent, NonUserEvent, HeimdalServiceClient }
 import com.keepit.model._
+import com.keepit.shoebox.path.{ ShortenedPathRepo, ShortenedPath }
 import com.keepit.slack.models.{ SlackUserId, SlackTeamId }
 import com.keepit.social.{ IdentityHelpers, NonUserKinds }
 import play.api.libs.json.{ Json, JsObject }
@@ -42,6 +44,7 @@ class KifiSiteRouter @Inject() (
   libraryInfoCommander: LibraryInfoCommander,
   permissionCommander: PermissionCommander,
   libPathCommander: PathCommander,
+  shortenedPathRepo: ShortenedPathRepo,
   libraryMetadataCache: LibraryMetadataCache,
   userMetadataCache: UserMetadataCache,
   orgMetadataCache: OrgMetadataCache,
@@ -99,6 +102,17 @@ class KifiSiteRouter @Inject() (
         trackingParamsOpt.foreach(params => trackUrlRedirect(params))
         Redirect(confirmedUrl)
     }
+  }
+  def shortenedPathRedirect(sp: String) = MaybeUserAction { implicit request =>
+    val redir = ShortenedPath.decodePublicId(PublicId(sp)) match {
+      case Failure(fail) =>
+        airbrake.notify(s"Bad shortened path: $sp", fail)
+        Path.base
+      case Success(spId) => db.readOnlyMaster { implicit s =>
+        shortenedPathRepo.get(spId).path.relativeWithLeadingSlash
+      }
+    }
+    Redirect(redir)
   }
 
   private def trackUrlRedirect(trackingParams: Query)(implicit request: MaybeUserRequest[_]): Unit = {
