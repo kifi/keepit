@@ -107,7 +107,7 @@ class AugmentationCommanderImpl @Inject() (
         restrictedUsers <- futureRestrictedUsers
         libraries <- futureLibraries
         organizations <- futureOrganizations
-        allAugmentationInfos <- getAugmentationInfos(shards, userId, friends, restrictedUsers, libraries, organizations, items ++ context.corpus.keySet, hideOtherPublishedKeeps.exists(identity))
+        allAugmentationInfos <- getAugmentationInfos(shards, userId, friends, restrictedUsers, libraries, organizations, items ++ context.corpus.keySet, context.filter, hideOtherPublishedKeeps.exists(identity))
       } yield {
         val contextualAugmentationInfos = context.corpus.collect { case (item, weight) if allAugmentationInfos.contains(item) => (allAugmentationInfos(item) -> weight) }
         val contextualScores = computeAugmentationScores(contextualAugmentationInfos)
@@ -117,7 +117,7 @@ class AugmentationCommanderImpl @Inject() (
     }
   }
 
-  private def getAugmentationInfos(shards: Set[Shard[NormalizedURI]], userId: Id[User], friends: Set[Id[User]], restrictedUsers: Set[Id[User]], libraries: Set[Id[Library]], organizations: Set[Id[Organization]], items: Set[AugmentableItem], hideOtherPublishedKeeps: Boolean): Future[Map[AugmentableItem, FullAugmentationInfo]] = {
+  private def getAugmentationInfos(shards: Set[Shard[NormalizedURI]], userId: Id[User], friends: Set[Id[User]], restrictedUsers: Set[Id[User]], libraries: Set[Id[Library]], organizations: Set[Id[Organization]], items: Set[AugmentableItem], filter: SearchFilter, hideOtherPublishedKeeps: Boolean): Future[Map[AugmentableItem, FullAugmentationInfo]] = {
     val friendsArray = LongArraySet.fromSet(friends.map(_.id))
     val restrictedUsersArray = LongArraySet.fromSet(restrictedUsers.map(_.id))
     val librariesArray = LongArraySet.fromSet(libraries.map(_.id))
@@ -128,7 +128,7 @@ class AugmentationCommanderImpl @Inject() (
       restrictedUserIds = restrictedUsersArray,
       myLibraryIds = librariesArray,
       myOrgIds = organizationsArray,
-      SearchFilter.default // todo(Léo / Ryan): could use this, warning: UserScope currently filters keeps by owner, not participant (easy change)
+      filter
     )
 
     val futureAugmentationInfosByShard: Seq[Future[Map[AugmentableItem, FullAugmentationInfo]]] = items.groupBy(item => shards.find(_.contains(item.uri))).collect {
