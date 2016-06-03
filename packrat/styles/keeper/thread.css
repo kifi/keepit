@@ -11,6 +11,7 @@
 }
 .kifi-message-sent {
   display: flex;
+  flex-flow: row nowrap;
   justify-content: flex-start;
   align-items: center;
   margin: 0 9px;
@@ -156,6 +157,7 @@ span.kifi-message-pic-email {
 }
 .kifi-message-body {
   flex-grow: 1;
+  max-width: 250px;
   margin-left: 10px;
   word-wrap: break-word;
 }
