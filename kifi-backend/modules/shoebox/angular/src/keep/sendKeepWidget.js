@@ -3,10 +3,13 @@
 angular.module('kifi')
 
 .directive('kfSendKeepWidget', [
-  '$document', '$templateCache', '$rootElement', '$timeout', '$window', '$compile', 'KEY', 'keepService', 'modalService',
-  function($document, $templateCache, $rootElement, $timeout, $window, $compile, KEY, keepService, modalService) {
+  '$document', '$templateCache', '$rootElement', '$timeout', '$window', '$compile', 'KEY', 'keepService', 'profileService', 'modalService',
+  function($document, $templateCache, $rootElement, $timeout, $window, $compile, KEY, keepService, profileService, modalService) {
 
-    var NUM_SUGGESTIONS = 5;
+    var numSuggestions = 5;
+
+    var desiredMarginTop = 60;
+    var desiredShiftVertical = 30;
 
     return {
       restrict: 'A',
@@ -19,6 +22,8 @@ angular.module('kifi')
         var init;
         var filteredSuggestions = []; // ids of entities to filter from suggestions (keep.members + scope.selected)
 
+        scope.hasExperiment = profileService.me && profileService.me.experiments && profileService.me.experiments.indexOf('add_keep_recipients') !== -1;
+
         function listenForInit() {
           element.on('click', function () {
             initWidget();
@@ -30,6 +35,9 @@ angular.module('kifi')
         function initWidget() {
           scope.success = false;
           scope.sending = false;
+          scope.showCreateLibrary = false;
+          scope.init = false; // set to true once widget is ready to be shown
+
           scope.suggestions = [];
           scope.selections = [];
           init = false;
@@ -39,53 +47,75 @@ angular.module('kifi')
           scope.typeahead = '';
           currPage = 0;
 
-          refreshSuggestions(null, NUM_SUGGESTIONS);
+          refreshSuggestions(null, numSuggestions);
 
           widget = angular.element($templateCache.get('keep/sendKeepWidget.tpl.html'));
           $rootElement.find('html').append(widget);
           $compile(widget)(scope);
           widget.hide();
-
-          // Try to load the first batch of suggestions before calculating the widget position,
-          // if we can't, go with a height estimate
-          $timeout(function() {
-            var desiredMarginTop = 60;
-            var desiredShiftVertical = 30;
-
-            var elementOffsetTop = element.offset().top;
-            var distanceFromBottom = $window.innerHeight - elementOffsetTop;
-
-            var elementOffsetLeft = element.offset().left;
-            var distanceFromRight = $window.innerWidth - elementOffsetLeft;
-
-            // Place the widget such that 1) it's on the screen, and 2) does not obscure the keep members UI on the keep card.
-            // If the widget can be placed above the keep members chips, set the bottom to be above it.
-            // Else if the widget can be placed below the keep members chips, set the bottom s.t. the top is below it.
-            // Else, do our best by placing the widget in middle of the keep
-            var widgetHeight;
-
-            if (scope.suggestions.length) {
-              widgetHeight = widget.height();
-            } else {
-              var suggestionItem = widget.find('.kf-skw-suggestion'); // the No Results Found element
-              widgetHeight = widget.height() + ((NUM_SUGGESTIONS-3) * suggestionItem.height());
+          $timeout(setInitialPosition, 0);
+          scope.$watch('init', function () {
+            if (scope.init) {
+              $timeout(function () {
+                widget.show();
+              }, 0);
             }
-
-            var bottom = null;
-
-            if (elementOffsetTop - widgetHeight - desiredShiftVertical >= desiredMarginTop) {
-              bottom = distanceFromBottom + desiredShiftVertical;
-            } else if (distanceFromBottom - widgetHeight - desiredShiftVertical >= 0) {
-              bottom = distanceFromBottom - widgetHeight - desiredShiftVertical;
-            } else {
-              bottom = distanceFromBottom - (widgetHeight/2);
-            }
-
-            widget.css({ bottom: bottom + 'px', right: distanceFromRight  + 'px' });
-          }, 0);
-
+          });
 
           $document.on('mousedown', onClick);
+        }
+
+
+        function setInitialPosition() {
+
+          // try to load the first batch of suggestions before calculating the widget position,
+          // if we can't wait for the response, go with a height estimate
+
+          var elementOffsetTop = element.offset().top;
+          var distanceFromBottom = $window.innerHeight - elementOffsetTop;
+
+          var elementOffsetLeft = element.offset().left;
+          var distanceFromRight = $window.innerWidth - elementOffsetLeft;
+
+          // Place the widget such that 1) it's on the screen, and 2) does not obscure the keep members UI on the keep card.
+          // If the widget can be placed above the keep members chips, set the bottom to be above it.
+          // Else if the widget can be placed below the keep members chips, set the bottom s.t. the top is below it.
+          // Else, do our best by placing the widget in middle of the keep
+          var widgetHeight;
+
+          if (scope.suggestions.length) {
+            widgetHeight = widget.height();
+          } else {
+            var suggestionItem = widget.find('.kf-skw-suggestion'); // the No Results Found element
+            widgetHeight = widget.height() + ((numSuggestions-3) * suggestionItem.height());
+          }
+
+          var bottom = null;
+
+          if (elementOffsetTop - widgetHeight - desiredShiftVertical >= desiredMarginTop) {
+            bottom = distanceFromBottom + desiredShiftVertical;
+          } else if (distanceFromBottom - widgetHeight - desiredShiftVertical >= 0) {
+            bottom = distanceFromBottom - widgetHeight - desiredShiftVertical;
+          } else {
+            bottom = distanceFromBottom - (widgetHeight/2);
+          }
+
+          widget.css({ bottom: bottom + 'px', right: distanceFromRight  + 'px' });
+        }
+
+        function setCreateLibraryPosition() {
+          // rendering the create library page may increase the height of the widget,
+          // so make sure it's not overflowing on top
+
+          var widgetHeight = widget.height();
+          var widgetOffsetTop = widget.offset().top;
+          var distanceFromBottom = $window.innerHeight - widgetHeight - widgetOffsetTop;
+
+
+          if (widgetOffsetTop < desiredMarginTop) {
+            var bottom = distanceFromBottom - (desiredMarginTop - widgetOffsetTop);
+            widget.css({ bottom: bottom + 'px' });
+          }
         }
 
         function computeKeepMembers(keep) {
@@ -107,16 +137,6 @@ angular.module('kifi')
             scope.$apply(scope.removeWidget);
           }
         }
-
-        scope.removeWidget = function() {
-          scope.$error = false;
-          scope.typeahead = '';
-          scope.selections = [];
-          if (widget) {
-            widget.remove();
-          }
-          $document.off('mousedown', onClick);
-        };
 
         function refreshSuggestions(query, limit, offset) {
           return keepService.suggestRecipientsForKeep(query, limit, offset, null).then(function (resultData) {
@@ -168,14 +188,21 @@ angular.module('kifi')
           });
         }
 
-        scope.onClickSuggestion = function(suggestion) {
+        scope.removeWidget = function() {
+          if (widget) {
+            widget.remove();
+          }
+          $document.off('mousedown', onClick);
+        };
+
+        scope.selectSuggestion = function(suggestion) {
           scope.selections.push(suggestion);
           filteredSuggestions.push(suggestion.id || suggestion.email);
           suggestion.isSelected = true;
 
           if (widget.find('.kf-skw-suggestion').length === 1) {
             currPage++;
-            refreshSuggestions(scope.typeahead, NUM_SUGGESTIONS, currPage * NUM_SUGGESTIONS);
+            refreshSuggestions(scope.typeahead, numSuggestions, currPage * numSuggestions);
           }
 
           resetInput();
@@ -191,6 +218,42 @@ angular.module('kifi')
           selection.isSelected = false;
           resetInput();
         };
+
+        scope.onClickCreateLibrary = function() {
+          scope.showCreateLibrary = true;
+
+          $timeout(function() {
+            setCreateLibraryPosition();
+          }, 0);
+        };
+
+        scope.exitCreateLibrary = function() {
+          scope.showCreateLibrary = false;
+          resetInput();
+        };
+
+        scope.onceLibraryCreated = function(library) {
+          var suggestion = convertLibraryToSuggestion(library);
+          scope.selectSuggestion(suggestion);
+          scope.showCreateLibrary = false;
+          resetInput();
+        };
+
+        function convertLibraryToSuggestion(library) {
+          var me = profileService.me;
+          return {
+            collaborators: [],
+            color: library.color,
+            hasCollaborators: false,
+            id: library.id,
+            kind: 'library',
+            membership: library.membership,
+            name: library.name,
+            path: library.path,
+            spaceName: me.firstName + (me.lastName ? ' ' + me.lastName : ''),
+            visibility: library.visibility
+          };
+        }
 
         scope.processKeyEvent = function (event) {
           switch (event.keyCode) {
@@ -250,7 +313,7 @@ angular.module('kifi')
 
         scope.onTypeaheadInputChanged = function(query) {
           currPage = 0;
-          refreshSuggestions(query, NUM_SUGGESTIONS);
+          refreshSuggestions(query, numSuggestions);
           resizeInput();
         };
 
