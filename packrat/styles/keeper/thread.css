@@ -156,6 +156,7 @@ span.kifi-message-pic-email {
 }
 .kifi-message-body {
   flex-grow: 1;
+  max-width: 250px;
   margin-left: 10px;
   word-wrap: break-word;
 }
