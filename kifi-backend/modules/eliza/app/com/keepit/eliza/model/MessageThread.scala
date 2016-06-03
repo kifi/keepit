@@ -45,22 +45,21 @@ case class MessageThread(
   def withUriId(uriId: Id[NormalizedURI]): MessageThread = this.copy(uriId = uriId)
 
   def withParticipants(participants: MessageThreadParticipants) = this.copy(participants = participants)
-  def withParticipants(when: DateTime, userIds: Set[Id[User]], nonUsers: Set[NonUserParticipant] = Set.empty) = {
+  def withParticipants(when: DateTime, userIds: Set[Id[User]], nonUsers: Set[EmailParticipant] = Set.empty) = {
     val newUsers = userIds.map(_ -> when).toMap
     val newNonUsers = nonUsers.map(_ -> when).toMap
-    val newParticipants = MessageThreadParticipants(participants.userParticipants ++ newUsers, participants.nonUserParticipants ++ newNonUsers)
+    val newParticipants = MessageThreadParticipants(participants.userParticipants ++ newUsers, participants.emailParticipants ++ newNonUsers)
     this.copy(participants = newParticipants)
   }
   def withoutParticipant(userId: Id[User]) = {
-    val newParticpiants = MessageThreadParticipants(participants.userParticipants - userId, participants.nonUserParticipants)
+    val newParticpiants = MessageThreadParticipants(participants.userParticipants - userId, participants.emailParticipants)
     this.copy(participants = newParticpiants)
   }
 
   def withNumMessages(num: Int) = this.copy(numMessages = num)
 
   def containsUser(user: Id[User]): Boolean = participants.contains(user)
-  def containsNonUser(nonUser: NonUserParticipant): Boolean = participants.contains(nonUser)
-  def allParticipantsExcept(user: Id[User]): Set[Id[User]] = participants.allUsersExcept(user)
+  def containsNonUser(nonUser: EmailParticipant): Boolean = participants.contains(nonUser)
   def allParticipants: Set[Id[User]] = participants.allUsers
   def allEmails: Set[EmailAddress] = participants.allEmails
 

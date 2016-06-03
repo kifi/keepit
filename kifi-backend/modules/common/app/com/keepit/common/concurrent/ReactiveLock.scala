@@ -56,7 +56,7 @@ class ReactiveLock(numConcurrent: Int = 1, maxQueueSize: Option[Int] = None) {
         throw new Exception(s"Lock's queue size $taskQueueSize is at or more then max queue size $max. Rejecting task!")
       }
     }
-    val p = Promise[T]
+    val p = Promise[T]()
     taskQueue.add(QueuedItem[T](runner, p, ec))
     waitingCount.incrementAndGet()
     dispatch()

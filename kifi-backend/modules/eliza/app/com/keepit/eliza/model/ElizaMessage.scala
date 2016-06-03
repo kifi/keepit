@@ -21,9 +21,9 @@ import play.api.libs.functional.syntax._
 sealed trait MessageSender {
   def isSystem: Boolean = false
   def asUser: Option[Id[User]] = None
-  def asNonUser: Option[NonUserParticipant] = None
+  def asNonUser: Option[EmailParticipant] = None
 
-  def fold[T](systemF: => T, userF: Id[User] => T, nonUserF: NonUserParticipant => T): T = {
+  def fold[T](systemF: => T, userF: Id[User] => T, nonUserF: EmailParticipant => T): T = {
     asUser.map(userF).
       orElse { asNonUser.map(nup => nonUserF(nup)) }.
       getOrElse { systemF }
@@ -31,9 +31,7 @@ sealed trait MessageSender {
 
   def asRecipient: Option[Recipient] =
     if (isSystem) None
-    else asUser.map(userId => Recipient.fromUser(userId)) orElse asNonUser.collect {
-      case NonUserEmailParticipant(email) => Recipient.fromEmail(email)
-    }
+    else asUser.map(Recipient.fromUser) orElse asNonUser.map(ep => Recipient.fromEmail(ep.address))
 }
 
 object MessageSender {
@@ -43,7 +41,7 @@ object MessageSender {
       val kind: String = (json \ "kind").as[String]
       kind match {
         case "user" => JsSuccess(User(Id[com.keepit.model.User]((json \ "id").as[Long])))
-        case "nonUser" => JsSuccess(NonUser((json \ "nup").as[NonUserParticipant]))
+        case "nonUser" => JsSuccess(NonUser((json \ "nup").as[EmailParticipant]))
         case "system" => JsSuccess(System)
         case _ => JsError(kind)
       }
@@ -69,7 +67,7 @@ object MessageSender {
     override def asUser = Some(id)
   }
 
-  case class NonUser(nup: NonUserParticipant) extends MessageSender {
+  case class NonUser(nup: EmailParticipant) extends MessageSender {
     override def asNonUser = Some(nup)
   }
 
@@ -106,9 +104,7 @@ object SystemMessageData {
   def toKeepEvent(data: SystemMessageData): Option[KeepEventData] = data match {
     case StartWithEmails(addedBy, addedUsers, addedNonUsers) => None
     case AddParticipants(addedBy, addedUsers, addedNonUsers) =>
-      val emails = addedNonUsers.collect {
-        case NonUserEmailParticipant(email) => email
-      }.toSet
+      val emails = addedNonUsers.map(_.address).toSet
       Some(KeepEventData.ModifyRecipients(addedBy, KeepRecipientsDiff(users = DeltaSet.addOnly(addedUsers.toSet), libraries = DeltaSet.empty, emails = DeltaSet.addOnly(emails))))
     case AddLibraries(addedBy, addedLibraries) =>
       Some(KeepEventData.ModifyRecipients(addedBy, KeepRecipientsDiff(users = DeltaSet.empty, libraries = DeltaSet.addOnly(addedLibraries), emails = DeltaSet.empty)))
@@ -120,7 +116,7 @@ object SystemMessageData {
     case _: KeepEventData.EditTitle => None
     case mr: ModifyRecipients =>
       val KeepRecipientsDiff(usersDelta, _, emailsDelta) = mr.diff
-      val (usersAdded, emailsAdded) = (usersDelta.added.toSeq, emailsDelta.added.map(NonUserEmailParticipant).toSeq)
+      val (usersAdded, emailsAdded) = (usersDelta.added.toSeq, emailsDelta.added.map(EmailParticipant(_)).toSeq)
       Some(AddParticipants(mr.addedBy, usersAdded, emailsAdded))
   }
 
@@ -135,7 +131,7 @@ object SystemMessageData {
     case _ => "" // maybe want to static airbrake here
   }
 
-  private def generateParticipantsAddedText(kind: String, addedById: Id[User], addedUserIds: Seq[Id[User]], addedNonUsers: Seq[NonUserParticipant], basicUserById: Map[Id[User], BasicUser]): String = {
+  private def generateParticipantsAddedText(kind: String, addedById: Id[User], addedUserIds: Seq[Id[User]], addedNonUsers: Seq[EmailParticipant], basicUserById: Map[Id[User], BasicUser]): String = {
     val addedBy = basicUserById.get(addedById)
     val addedUsers = addedUserIds.flatMap(basicUserById.get)
     val addedUsersString = (addedUsers.map(_.fullName) ++ addedNonUsers.map(_.shortName)).toList match {
@@ -151,12 +147,12 @@ object SystemMessageData {
   }
 
   def publish(data: SystemMessageData, basicUserById: Map[Id[User], BasicUser]): JsArray = data match {
-    case AddParticipants(addedById, addedUserIds, addedNonUsers) => Json.arr(AddParticipants.kind, basicUserById.get(addedById), addedUserIds.flatMap(basicUserById.get(_).map(BasicUserLikeEntity(_))) ++ addedNonUsers.map(nup => BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nup))))
-    case StartWithEmails(addedById, addedUserIds, addedNonUsers) => Json.arr(StartWithEmails.kind, basicUserById.get(addedById), addedUserIds.flatMap(basicUserById.get(_).map(BasicUserLikeEntity(_))) ++ addedNonUsers.map(nup => BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nup))))
+    case AddParticipants(addedById, addedUserIds, addedNonUsers) => Json.arr(AddParticipants.kind, basicUserById.get(addedById), addedUserIds.flatMap(basicUserById.get(_).map(BasicUserLikeEntity(_))) ++ addedNonUsers.map(nup => BasicUserLikeEntity(EmailParticipant.toBasicNonUser(nup))))
+    case StartWithEmails(addedById, addedUserIds, addedNonUsers) => Json.arr(StartWithEmails.kind, basicUserById.get(addedById), addedUserIds.flatMap(basicUserById.get(_).map(BasicUserLikeEntity(_))) ++ addedNonUsers.map(nup => BasicUserLikeEntity(EmailParticipant.toBasicNonUser(nup))))
     case _ => Json.arr()
   }
 
-  case class AddParticipants(addedBy: Id[User], addedUsers: Seq[Id[User]], addedNonUsers: Seq[NonUserParticipant]) extends SystemMessageData(AddParticipants.kind)
+  case class AddParticipants(addedBy: Id[User], addedUsers: Seq[Id[User]], addedNonUsers: Seq[EmailParticipant]) extends SystemMessageData(AddParticipants.kind)
   object AddParticipants {
     val kind = "add_participants"
     val internalFormat = new Format[AddParticipants] {
@@ -165,8 +161,8 @@ object SystemMessageData {
       def reads(js: JsValue): JsResult[AddParticipants] = {
         js.asOpt[JsArray].map(_.value) match {
           case Some(Seq(JsString(AddParticipants.kind), JsString(addedBy), jsAdded: JsArray)) =>
-            implicit val eitherReads = EitherFormat(Id.format[User], NonUserParticipant.format)
-            jsAdded.asOpt[Seq[Either[Id[User], NonUserParticipant]]] match {
+            implicit val eitherReads = EitherFormat(Id.format[User], EmailParticipant.format)
+            jsAdded.asOpt[Seq[Either[Id[User], EmailParticipant]]] match {
               case None => JsError("can't parse AddParticipants.added")
               case Some(added) =>
                 val (users, nonUsers) = (added.collect { case user if user.isLeft => user.left.get }, added.collect { case nonUser if nonUser.isRight => nonUser.right.get })
@@ -178,7 +174,7 @@ object SystemMessageData {
     }
   }
 
-  case class StartWithEmails(addedBy: Id[User], addedUsers: Seq[Id[User]], addedNonUsers: Seq[NonUserParticipant]) extends SystemMessageData(StartWithEmails.kind)
+  case class StartWithEmails(addedBy: Id[User], addedUsers: Seq[Id[User]], addedNonUsers: Seq[EmailParticipant]) extends SystemMessageData(StartWithEmails.kind)
   object StartWithEmails {
     val kind = "start_with_emails"
     val internalFormat = new Format[StartWithEmails] {
@@ -187,8 +183,8 @@ object SystemMessageData {
       def reads(js: JsValue): JsResult[StartWithEmails] = {
         js.asOpt[JsArray].map(_.value) match {
           case Some(Seq(JsString(StartWithEmails.kind), JsString(addedBy), jsAdded: JsArray)) =>
-            implicit val eitherReads = EitherFormat(Id.format[User], NonUserParticipant.format)
-            jsAdded.asOpt[Seq[Either[Id[User], NonUserParticipant]]] match {
+            implicit val eitherReads = EitherFormat(Id.format[User], EmailParticipant.format)
+            jsAdded.asOpt[Seq[Either[Id[User], EmailParticipant]]] match {
               case None => JsError("can't parse StartWithEmails.added")
               case Some(added) =>
                 val (users, nonUsers) = (added.collect { case user if user.isLeft => user.left.get }, added.collect { case nonUser if nonUser.isRight => nonUser.right.get })
@@ -287,7 +283,7 @@ object ElizaMessage extends CommonClassLinker[ElizaMessage, Message] {
       seq,
       keepId,
       commentIndexOnKeep,
-      userSender.map(MessageSender.User(_)).getOrElse(nonUserSender.map(json => MessageSender.NonUser(json.as[NonUserParticipant])).getOrElse(MessageSender.System)),
+      userSender.map(MessageSender.User(_)).getOrElse(nonUserSender.map(json => MessageSender.NonUser(json.as[EmailParticipant])).getOrElse(MessageSender.System)),
       messageText,
       source,
       auxData,
@@ -328,7 +324,7 @@ object ElizaMessage extends CommonClassLinker[ElizaMessage, Message] {
       keep = message.keepId,
       commentIndexOnKeep = message.commentIndexOnKeep,
       sentAt = message.createdAt,
-      sentBy = message.from.fold(None, userId => Some(Left(userId)), nup => Some(Right(NonUserParticipant.toBasicNonUser(nup)))),
+      sentBy = message.from.fold(None, userId => Some(Left(userId)), nup => Some(Right(EmailParticipant.toBasicNonUser(nup)))),
       text = message.messageText,
       auxData = message.auxData.flatMap(SystemMessageData.toKeepEvent),
       source = message.source

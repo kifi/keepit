@@ -58,18 +58,12 @@ class NonUserThreadRepoImpl @Inject() (
     def * = (id.?, createdAt, updatedAt, createdBy, kind, emailAddress, keepId, uriId, notifiedCount, lastNotifiedAt, threadUpdatedByOtherAt, muted, state, accessToken) <> (rowToObj2 _, objToRow _)
 
     private def rowToObj2(t: (Option[Id[NonUserThread]], DateTime, DateTime, Id[User], NonUserKind, Option[EmailAddress], Id[Keep], Option[Id[NormalizedURI]], Int, Option[DateTime], Option[DateTime], Boolean, State[NonUserThread], ThreadAccessToken)): NonUserThread = {
-      val participant = t._5 match {
-        case NonUserKinds.email =>
-          NonUserEmailParticipant(t._6.get)
-      }
+      val participant = EmailParticipant(t._6.get)
       NonUserThread(id = t._1, createdAt = t._2, updatedAt = t._3, createdBy = t._4, participant = participant, keepId = t._7, uriId = t._8, notifiedCount = t._9, lastNotifiedAt = t._10, threadUpdatedByOtherAt = t._11, muted = t._12, state = t._13, accessToken = t._14)
     }
 
     private def objToRow(n: NonUserThread) = {
-      val (kind, emailAddress) = n.participant match {
-        case ep: NonUserEmailParticipant =>
-          (ep.kind, Option(ep.address))
-      }
+      val (kind, emailAddress) = (n.participant.kind, Option(n.participant.address))
       Option((n.id, n.createdAt, n.updatedAt, n.createdBy, kind, emailAddress, n.keepId, n.uriId, n.notifiedCount, n.lastNotifiedAt, n.threadUpdatedByOtherAt, n.muted, n.state, n.accessToken))
     }
   }
@@ -81,7 +75,7 @@ class NonUserThreadRepoImpl @Inject() (
 
   def intern(model: NonUserThread)(implicit session: RWSession): NonUserThread = {
     model.participant match {
-      case NonUserEmailParticipant(email) => activeRows.filter(r => r.kind === NonUserKinds.email && r.emailAddress === email).firstOption match {
+      case EmailParticipant(email) => activeRows.filter(r => r.kind === NonUserKinds.email && r.emailAddress === email).firstOption match {
         case Some(existingModel) if existingModel.isActive =>
           val updatedModel = existingModel.withUriId(model.uriId)
           if (updatedModel == existingModel) existingModel else save(updatedModel)

@@ -74,17 +74,10 @@ class MessagingController @Inject() (
       nonUserThreadRepo.getByAccessToken(ThreadAccessToken(accessToken)).map { nut =>
         userThreadRepo.intern(UserThread.fromNonUserThread(nut, userId))
         threadRepo.getByKeepId(nut.keepId).map { thread =>
-          val newParticipants = MessageThreadParticipants(thread.participants.userParticipants + (userId -> clock.now()), thread.participants.nonUserParticipants - nut.participant)
+          val newParticipants = MessageThreadParticipants(thread.participants.userParticipants + (userId -> clock.now()), thread.participants.emailParticipants - nut.participant)
           threadRepo.save(thread.withParticipants(newParticipants))
         }
-        nut.participant match {
-          case emailParticipant: NonUserEmailParticipant =>
-            // returns fields needed to create UserEmailAddress and KeepToUser models
-            Ok(Json.obj("emailAddress" -> emailParticipant.address, "addedBy" -> nut.createdBy))
-          case _ =>
-            airbrake.notify(s"unhandled NonUserParticipant $nut")
-            Ok(Json.obj("addedBy" -> nut.createdBy))
-        }
+        Ok(Json.obj("emailAddress" -> nut.participant.address, "addedBy" -> nut.createdBy))
       }.getOrElse(Ok)
     }
   }
