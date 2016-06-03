@@ -66,11 +66,11 @@ case class AugmentationScores(
   def byTag(tag: Hashtag): Float = tagScores.getOrElse(tag, 0f)
 }
 
-case class AugmentationContext(userId: Id[User], filter: SearchFilter, corpus: Map[AugmentableItem, Float])
+case class AugmentationContext(userId: Id[User], filter: Option[SearchFilter], corpus: Map[AugmentableItem, Float])
 
 object AugmentationContext {
   implicit val format = Json.format[AugmentationContext]
-  def uniform(userId: Id[User], filter: SearchFilter, items: Set[AugmentableItem]): AugmentationContext = AugmentationContext(userId, filter, items.map(_ -> 1f).toMap)
+  def uniform(userId: Id[User], filter: SearchFilter, items: Set[AugmentableItem]): AugmentationContext = AugmentationContext(userId, Some(filter), items.map(_ -> 1f).toMap)
 }
 
 object AugmentationScores {
