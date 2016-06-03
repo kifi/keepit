@@ -2,9 +2,11 @@ package com.keepit.model
 
 import com.keepit.common.db.Id
 import com.keepit.common.mail.EmailAddress
+import com.keepit.common.path.Path
 import com.keepit.common.store.ImagePath
 import com.keepit.discussion.Message
 import com.keepit.model.LibrarySpace.UserSpace
+import com.keepit.shoebox.path.ShortenedPathRepo
 import com.keepit.slack.models._
 import com.keepit.test.{ ShoeboxApplication, ShoeboxApplicationInjector }
 import org.specs2.mutable.Specification
@@ -191,6 +193,12 @@ class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
           ))
           slackPushForMessageRepo.get(saved.id.get) === saved
           saved
+        }
+
+        db.readWrite { implicit s =>
+          val p = Path("/brewstercorp/buffalo")
+          val sp = inject[ShortenedPathRepo].intern(p)
+          inject[ShortenedPathRepo].get(sp.id.get) === sp
         }
 
         1 === 1

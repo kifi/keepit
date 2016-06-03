@@ -12,12 +12,11 @@ sealed abstract class AbstractPath(private val value: String, private val query:
   def decode: Path
   def isEncoded: Boolean
 
-  def absolute: String = Path.base + relativeWithLeadingSlash + query.toUrlString
-
-  def relativeWithLeadingSlash: String = "/" + value.stripPrefix("/")
   def queryString: String = query.toUrlString
+  def relativeWithLeadingSlash: String = "/" + value.stripPrefix("/") + queryString
+  def absolute: String = Path.base + relativeWithLeadingSlash
 
-  override def toString: String = value
+  override def toString: String = relativeWithLeadingSlash
 
   def +(segment: String) = {
     val (segmentValue, segmentQuery) = {
