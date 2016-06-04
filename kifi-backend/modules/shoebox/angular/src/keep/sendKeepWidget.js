@@ -128,6 +128,7 @@ angular.module('kifi')
               scope.suggestions = nonMemberResults;
               if (widget) {
                 widget.show();
+                resetInput();
               }
             }
           });
