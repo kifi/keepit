@@ -92,6 +92,7 @@ case class TextElement(text: String, url: Option[String], hover: Option[Descript
   override def flatten = Seq(simplify)
   private def simplify = this.copy(url = url.filter(_.nonEmpty), hover = hover.filter(_.flatten.nonEmpty))
 
+  def -->(link: Path): TextElement = this.copy(url = Some(link.absolute))
   def -->(link: LinkElement): TextElement = this.copy(url = Some(link.url))
   def -->(hover: Hover): TextElement = this.copy(hover = Some(hover.elements))
 }
