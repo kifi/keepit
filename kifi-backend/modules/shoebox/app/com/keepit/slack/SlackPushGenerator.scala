@@ -387,7 +387,7 @@ class SlackPushGenerator @Inject() (
           val numComments = msg.commentIndexOnKeep.map(n => n + 1 + (if (keep.note.exists(_.nonEmpty)) 1 else 0)).filter(_ > 1)
           "Reply" + numComments.map(n => s" ($n)").getOrElse("")
         }
-        val title = s"_${keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH)}_"
+        val title = keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH)
         val Seq(viewLink, replyLink) = db.readWrite { implicit s =>
           Seq(keepWebLink("viewArticle"), keepKifiLink("reply")).map(link => LinkElement(pathCommander.shortened(pathCommander.shorten(link))))
         }
