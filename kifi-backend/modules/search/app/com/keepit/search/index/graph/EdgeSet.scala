@@ -69,7 +69,7 @@ trait DbIdSetEdgeSet[S, D] extends EdgeSet[S, D] {
       case (curSearcher, curDocIds) if (curSearcher eq searcher) =>
         curDocIds
       case _ =>
-        val mapper = searcher.indexReader.asAtomicReader.getIdMapper
+        val mapper = searcher.indexReader.asLeafReader.getIdMapper
         val docids = destIdSet.map { id => mapper.getDocId(id.id) }.filter { _ >= 0 }.toArray
         Arrays.sort(docids)
         cache = (searcher, docids)
@@ -104,7 +104,7 @@ trait DocIdSetEdgeSet[S, D] extends EdgeSet[S, D] {
   val searcher: Searcher
 
   private[this] lazy val lazyDestIdLongSet: Set[Long] = {
-    val mapper = searcher.indexReader.asAtomicReader.getIdMapper
+    val mapper = searcher.indexReader.asLeafReader.getIdMapper
     val res = new Array[Long](docids.length)
     var i = 0
     while (i < docids.length) {
@@ -133,7 +133,7 @@ trait LuceneBackedEdgeSet[S, D] extends EdgeSet[S, D] {
   val sourceFieldName: String
 
   private[this] lazy val lazyDestIdLongSet: Set[Long] = {
-    val mapper = searcher.indexReader.asAtomicReader.getIdMapper
+    val mapper = searcher.indexReader.asLeafReader.getIdMapper
     getDestDocIdSetIterator(searcher).map(docid => mapper.getId(docid)).toSet
   }
 
@@ -146,7 +146,7 @@ trait LuceneBackedEdgeSet[S, D] extends EdgeSet[S, D] {
   override def isEmpty = getDestDocIdSetIterator(searcher).isEmpty
 
   override def getDestDocIdSetIterator(searcher: Searcher): DocIdSetIterator = {
-    val td = searcher.indexReader.asAtomicReader.termDocsEnum(createSourceTerm)
+    val td = searcher.indexReader.asLeafReader.termDocsEnum(createSourceTerm)
     if (td != null) td else emptyDocIdSetIterator
   }
 

@@ -15,7 +15,7 @@ import scala.collection.mutable.ArrayBuffer
 
 class ProximityQueryTest extends Specification {
 
-  val config = new IndexWriterConfig(Version.LATEST, DefaultAnalyzer.defaultAnalyzer)
+  val config = new IndexWriterConfig(DefaultAnalyzer.defaultAnalyzer)
 
   val gapPenalty = SearchConfig.defaultConfig.asFloat("proximityGapPenalty")
 

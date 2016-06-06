@@ -1,7 +1,7 @@
 package com.keepit.search.engine.query
 
 import com.keepit.common.logging.Logging
-import org.apache.lucene.index.AtomicReaderContext
+import org.apache.lucene.index.LeafReaderContext
 import org.apache.lucene.index.DocsEnum
 import org.apache.lucene.index.DocsAndPositionsEnum
 import org.apache.lucene.index.Term
@@ -76,7 +76,7 @@ object QueryUtil extends Logging {
     }
   }
 
-  def termDocsEnum(context: AtomicReaderContext, term: Term, acceptDocs: Bits): DocsEnum = {
+  def termDocsEnum(context: LeafReaderContext, term: Term, acceptDocs: Bits): DocsEnum = {
     val fields = context.reader.fields()
     if (fields != null) {
       val terms = fields.terms(term.field())
@@ -90,7 +90,7 @@ object QueryUtil extends Logging {
     return null
   }
 
-  def termPositionsEnum(context: AtomicReaderContext, term: Term, acceptDocs: Bits): DocsAndPositionsEnum = {
+  def termPositionsEnum(context: LeafReaderContext, term: Term, acceptDocs: Bits): DocsAndPositionsEnum = {
     val fields = context.reader.fields()
     if (fields != null) {
       val terms = fields.terms(term.field())

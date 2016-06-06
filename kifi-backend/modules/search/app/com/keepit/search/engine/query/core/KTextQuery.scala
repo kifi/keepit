@@ -3,7 +3,7 @@ package com.keepit.search.engine.query.core
 import java.util.{ Set => JSet }
 
 import com.keepit.common.logging.Logging
-import org.apache.lucene.index.{ AtomicReaderContext, IndexReader, Term }
+import org.apache.lucene.index.{ LeafReaderContext, IndexReader, Term }
 import org.apache.lucene.search._
 import org.apache.lucene.util.Bits
 
@@ -81,7 +81,6 @@ class KTextQuery(val label: String) extends Query with ProjectableQuery with Log
 class KTextWeight(query: KTextQuery, subWeight: Weight) extends Weight with KWeight with Logging {
 
   override def getQuery() = query
-  override def scoresDocsOutOfOrder() = false
 
   override def getValueForNormalization(): Float = {
     val sub = if (subWeight != null) subWeight.getValueForNormalization() else 1.0f
@@ -94,7 +93,7 @@ class KTextWeight(query: KTextQuery, subWeight: Weight) extends Weight with KWei
     subWeight.normalize(norm, topLevelBoost * query.getBoost)
   }
 
-  override def explain(context: AtomicReaderContext, doc: Int): Explanation = {
+  override def explain(context: LeafReaderContext, doc: Int): Explanation = {
     val reader = context.reader
     val sc = scorer(context, reader.getLiveDocs);
     val exists = (sc != null && sc.advance(doc) == doc);
@@ -118,7 +117,7 @@ class KTextWeight(query: KTextQuery, subWeight: Weight) extends Weight with KWei
     out += ((this, 1.0f))
   }
 
-  override def scorer(context: AtomicReaderContext, acceptDocs: Bits): Scorer = {
+  override def scorer(context: LeafReaderContext, acceptDocs: Bits): Scorer = {
     subWeight.scorer(context, acceptDocs)
   }
 }

@@ -3,7 +3,7 @@ package com.keepit.search.engine.query.core
 import java.util.{ Set => JSet }
 
 import com.keepit.common.logging.Logging
-import org.apache.lucene.index.{ AtomicReaderContext, IndexReader, Term }
+import org.apache.lucene.index.{ LeafReaderContext, IndexReader, Term }
 import org.apache.lucene.search._
 import org.apache.lucene.util.Bits
 
@@ -41,19 +41,18 @@ class KWrapperQuery(private val subQuery: Query, val label: String) extends Quer
 class KWrapperWeight(query: KWrapperQuery, subWeight: Weight) extends Weight with KWeight with Logging {
 
   override def getQuery() = query
-  override def scoresDocsOutOfOrder() = false
 
   override def getValueForNormalization(): Float = subWeight.getValueForNormalization()
 
   override def normalize(norm: Float, topLevelBoost: Float): Unit = subWeight.normalize(norm, topLevelBoost)
 
-  override def explain(context: AtomicReaderContext, doc: Int): Explanation = subWeight.explain(context, doc)
+  override def explain(context: LeafReaderContext, doc: Int): Explanation = subWeight.explain(context, doc)
 
   def getWeights(out: ArrayBuffer[(Weight, Float)]): Unit = {
     out += ((this, 1.0f))
   }
 
-  override def scorer(context: AtomicReaderContext, acceptDocs: Bits): Scorer = {
+  override def scorer(context: LeafReaderContext, acceptDocs: Bits): Scorer = {
     subWeight.scorer(context, acceptDocs)
   }
 }

@@ -16,10 +16,10 @@ object ApplicationBuild extends Build {
   Version.writeVersionToFile()
 
   lazy val searchDependencies = Seq(
-    "org.apache.lucene" % "lucene-core" % "4.10.2",
-    "org.apache.lucene" % "lucene-analyzers-common" % "4.10.2",
-    "org.apache.lucene" % "lucene-analyzers-kuromoji" % "4.10.2",
-    "org.apache.lucene" % "lucene-analyzers-icu" % "4.10.2"
+    "org.apache.lucene" % "lucene-core" % "5.0.0",
+    "org.apache.lucene" % "lucene-analyzers-common" % "5.0.0",
+    "org.apache.lucene" % "lucene-analyzers-kuromoji" % "5.0.0",
+    "org.apache.lucene" % "lucene-analyzers-icu" % "5.0.0"
   )
 
   lazy val elizaDependencies = Seq(
@@ -59,7 +59,7 @@ object ApplicationBuild extends Build {
   lazy val graphDependencies = Seq()
 
   lazy val roverDependencies = Seq(
-    "org.apache.lucene" % "lucene-analyzers-common" % "4.10.2",
+    "org.apache.lucene" % "lucene-analyzers-common" % "5.0.0",
     "org.apache.tika" % "tika-parsers" % "1.5"
   )
 

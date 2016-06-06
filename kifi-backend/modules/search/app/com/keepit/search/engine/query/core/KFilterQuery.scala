@@ -1,6 +1,6 @@
 package com.keepit.search.engine.query.core
 
-import org.apache.lucene.index.{ AtomicReaderContext, Term }
+import org.apache.lucene.index.{ LeafReaderContext, Term }
 import org.apache.lucene.search._
 import org.apache.lucene.util.{ Bits, ToStringUtils }
 
@@ -21,9 +21,9 @@ abstract class KFilterQuery extends Query with ProjectableQuery {
 
     new Weight with KWeight {
 
-      override def explain(context: AtomicReaderContext, doc: Int): Explanation = underlying.explain(context, doc)
+      override def explain(context: LeafReaderContext, doc: Int): Explanation = underlying.explain(context, doc)
 
-      override def scorer(context: AtomicReaderContext, acceptDocs: Bits): Scorer = {
+      override def scorer(context: LeafReaderContext, acceptDocs: Bits): Scorer = {
         underlying.scorer(context, acceptDocs)
       }
 

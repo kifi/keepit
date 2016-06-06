@@ -2,7 +2,7 @@ package com.keepit.search.engine.query.core
 
 import com.keepit.common.logging.Logging
 import com.keepit.search.engine.query.{ BoostQuery, BoostWeight }
-import org.apache.lucene.index.AtomicReaderContext
+import org.apache.lucene.index.LeafReaderContext
 import org.apache.lucene.search._
 import org.apache.lucene.util.Bits
 
@@ -36,7 +36,7 @@ class KBoostWeight(override val query: KBoostQuery, override val searcher: Index
     boosterWeight.normalize(boosterNorm, 1.0f)
   }
 
-  override def explain(context: AtomicReaderContext, doc: Int) = {
+  override def explain(context: LeafReaderContext, doc: Int) = {
     val sc = scorer(context, context.reader.getLiveDocs)
     val exists = (sc != null && sc.advance(doc) == doc)
 
@@ -78,7 +78,7 @@ class KBoostWeight(override val query: KBoostQuery, override val searcher: Index
     result
   }
 
-  override def scorer(context: AtomicReaderContext, acceptDocs: Bits): Scorer = {
+  override def scorer(context: LeafReaderContext, acceptDocs: Bits): Scorer = {
     throw new UnsupportedOperationException()
   }
 

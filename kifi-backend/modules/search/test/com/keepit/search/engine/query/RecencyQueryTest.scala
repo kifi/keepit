@@ -15,7 +15,7 @@ import scala.math._
 
 class RecencyQueryTest extends Specification {
 
-  private[this] val config = new IndexWriterConfig(Version.LATEST, DefaultAnalyzer.defaultAnalyzer)
+  private[this] val config = new IndexWriterConfig(DefaultAnalyzer.defaultAnalyzer)
 
   private[this] var seen = Set.empty[Long]
   private[this] val rnd = new Random()

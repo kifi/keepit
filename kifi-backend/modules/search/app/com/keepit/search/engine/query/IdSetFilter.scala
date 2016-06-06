@@ -2,7 +2,7 @@ package com.keepit.search.engine.query
 
 import com.keepit.search.index.{ IdMapper, WrappedSubReader }
 import com.keepit.search.util.{ IntArrayBuilder, LongArraySet }
-import org.apache.lucene.index.AtomicReaderContext
+import org.apache.lucene.index.LeafReaderContext
 import org.apache.lucene.search.DocIdSet
 import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
@@ -11,7 +11,7 @@ import org.apache.lucene.util.Bits
 import java.util.Arrays
 
 class IdSetFilter(val ids: LongArraySet) extends Filter {
-  override def getDocIdSet(context: AtomicReaderContext, acceptDocs: Bits): DocIdSet = {
+  override def getDocIdSet(context: LeafReaderContext, acceptDocs: Bits): DocIdSet = {
     context.reader match {
       case reader: WrappedSubReader => getDocIdSet(reader.getIdMapper, acceptDocs)
       case _ => throw new IllegalArgumentException("the reader is not WrappedSubReader")
@@ -54,6 +54,8 @@ class IdSetFilter(val ids: LongArraySet) extends Filter {
           override def cost(): Long = ids.size.toLong
         }
       }
+
+      override def ramBytesUsed(): Long = 8 * ids.size.toLong
     }
   }
 }

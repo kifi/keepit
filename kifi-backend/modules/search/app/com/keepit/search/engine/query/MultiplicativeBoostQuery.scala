@@ -1,7 +1,7 @@
 package com.keepit.search.engine.query
 
 import com.keepit.common.logging.Logging
-import org.apache.lucene.index.AtomicReaderContext
+import org.apache.lucene.index.LeafReaderContext
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.Query
@@ -39,7 +39,7 @@ class MultiplicativeBoostWeight(override val query: MultiplicativeBoostQuery, ov
     boosterWeight.normalize(boosterNorm, 1.0f)
   }
 
-  override def explain(context: AtomicReaderContext, doc: Int) = {
+  override def explain(context: LeafReaderContext, doc: Int) = {
     val sc = scorer(context, context.reader.getLiveDocs)
     val exists = (sc != null && sc.advance(doc) == doc)
 
@@ -80,7 +80,7 @@ class MultiplicativeBoostWeight(override val query: MultiplicativeBoostQuery, ov
     result
   }
 
-  override def scorer(context: AtomicReaderContext, liveDocs: Bits): Scorer = {
+  override def scorer(context: LeafReaderContext, liveDocs: Bits): Scorer = {
     val textScorer = textWeight.scorer(context, liveDocs)
     if (textScorer == null) null
     else {

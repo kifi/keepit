@@ -33,13 +33,11 @@ class RecencyWeight(query: RecencyQuery, subWeight: Weight) extends Weight {
 
   private[this] val currentTimeMillis = System.currentTimeMillis()
 
-  override def scoresDocsOutOfOrder() = false
-
   override def getValueForNormalization() = 1.0f
 
   override def normalize(norm: Float, topLevelBoost: Float): Unit = {}
 
-  override def explain(context: AtomicReaderContext, doc: Int) = {
+  override def explain(context: LeafReaderContext, doc: Int) = {
     val sc = scorer(context, context.reader.getLiveDocs)
     val exists = (sc != null && sc.advance(doc) == doc)
 
@@ -59,7 +57,7 @@ class RecencyWeight(query: RecencyQuery, subWeight: Weight) extends Weight {
 
   def getQuery(): RecencyQuery = query
 
-  override def scorer(context: AtomicReaderContext, acceptDocs: Bits): Scorer = {
+  override def scorer(context: LeafReaderContext, acceptDocs: Bits): Scorer = {
     val subScorer = subWeight.scorer(context, acceptDocs)
     if (subScorer == null) null else {
       val docValues = context.reader.getNumericDocValues(query.timeStampField)

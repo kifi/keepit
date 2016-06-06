@@ -2,7 +2,7 @@ package com.keepit.search.engine.query.core
 
 import java.util.{ Set => JSet }
 
-import org.apache.lucene.index.{ AtomicReaderContext, IndexReader, Term }
+import org.apache.lucene.index.{ LeafReaderContext, IndexReader, Term }
 import org.apache.lucene.search._
 import org.apache.lucene.util.Bits
 
@@ -42,7 +42,7 @@ class NullWeight(query: NullQuery) extends Weight with KWeight {
 
   override def normalize(norm: Float, topLevelBoost: Float): Unit = {}
 
-  override def explain(context: AtomicReaderContext, doc: Int) = {
+  override def explain(context: LeafReaderContext, doc: Int) = {
     val result = new ComplexExplanation()
     result.setDescription("fixed score, doesn't match id %d".format(doc))
     result.setValue(0)
@@ -54,5 +54,5 @@ class NullWeight(query: NullQuery) extends Weight with KWeight {
     out += ((this, 0.0f))
   }
 
-  override def scorer(context: AtomicReaderContext, liveDocs: Bits): Scorer = null
+  override def scorer(context: LeafReaderContext, liveDocs: Bits): Scorer = null
 }

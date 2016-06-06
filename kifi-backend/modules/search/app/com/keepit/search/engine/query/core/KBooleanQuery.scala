@@ -1,6 +1,6 @@
 package com.keepit.search.engine.query.core
 
-import org.apache.lucene.index.{ AtomicReaderContext, IndexReader }
+import org.apache.lucene.index.{ LeafReaderContext, IndexReader }
 import org.apache.lucene.search.{ BooleanQuery, ComplexExplanation, Explanation, IndexSearcher, Query, Weight }
 
 import scala.collection.JavaConversions._
@@ -68,7 +68,7 @@ class KBooleanQuery() extends BooleanQuery(false) with ProjectableQuery {
         out ++= weightList
       }
 
-      override def explain(context: AtomicReaderContext, doc: Int): Explanation = {
+      override def explain(context: LeafReaderContext, doc: Int): Explanation = {
 
         val sumExpl = new ComplexExplanation()
         var sum = 0.0f

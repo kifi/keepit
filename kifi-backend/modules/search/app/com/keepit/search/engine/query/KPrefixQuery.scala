@@ -6,7 +6,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.search.engine.query.core.{ NullQuery, KWeight, ProjectableQuery }
 import com.keepit.search.index.Searcher
 import com.keepit.typeahead.{ PrefixFilter, PrefixMatching }
-import org.apache.lucene.index.{ BinaryDocValues, Term, AtomicReaderContext }
+import org.apache.lucene.index.{ BinaryDocValues, Term, LeafReaderContext }
 import org.apache.lucene.search.BooleanClause.Occur
 import org.apache.lucene.search._
 import org.apache.lucene.util.Bits
@@ -66,9 +66,9 @@ class KPrefixWeight(val query: KPrefixQuery, val searcher: IndexSearcher) extend
 
   def normalize(norm: Float, topLevelBoost: Float): Unit = booleanWeight.normalize(norm, topLevelBoost)
 
-  def explain(context: AtomicReaderContext, doc: Int) = booleanWeight.explain(context, doc)
+  def explain(context: LeafReaderContext, doc: Int) = booleanWeight.explain(context, doc)
 
-  override def scorer(context: AtomicReaderContext, acceptDocs: Bits): Scorer = {
+  override def scorer(context: LeafReaderContext, acceptDocs: Bits): Scorer = {
     val nameDocsValues = context.reader.getBinaryDocValues(query.nameValueField)
     val booleanScorer = booleanWeight.scorer(context, acceptDocs)
     val scorer = if (nameDocsValues == null || booleanScorer == null) null else new KPrefixScorer(this, booleanScorer, query.terms, nameDocsValues)

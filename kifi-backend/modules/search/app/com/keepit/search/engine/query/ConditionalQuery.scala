@@ -2,7 +2,7 @@ package com.keepit.search.engine.query
 
 import com.keepit.common.logging.Logging
 import com.keepit.search.index.Searcher
-import org.apache.lucene.index.AtomicReaderContext
+import org.apache.lucene.index.LeafReaderContext
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.ComplexExplanation
@@ -48,7 +48,6 @@ class ConditionalWeight(query: ConditionalQuery, searcher: Searcher) extends Wei
   val conditionWeight = query.condition.createWeight(searcher)
 
   override def getQuery() = query
-  override def scoresDocsOutOfOrder() = false
 
   override def getValueForNormalization() = {
     val sum = sourceWeight.getValueForNormalization
@@ -61,7 +60,7 @@ class ConditionalWeight(query: ConditionalQuery, searcher: Searcher) extends Wei
     conditionWeight.normalize(norm, topLevelBoost * query.getBoost())
   }
 
-  override def explain(context: AtomicReaderContext, doc: Int) = {
+  override def explain(context: LeafReaderContext, doc: Int) = {
     val reader = context.reader
     val sc = scorer(context, reader.getLiveDocs);
     val exists = (sc != null && sc.advance(doc) == doc);
@@ -104,7 +103,7 @@ class ConditionalWeight(query: ConditionalQuery, searcher: Searcher) extends Wei
     result
   }
 
-  override def scorer(context: AtomicReaderContext, acceptDocs: Bits): Scorer = {
+  override def scorer(context: LeafReaderContext, acceptDocs: Bits): Scorer = {
     val sourceScorer = sourceWeight.scorer(context, acceptDocs)
     if (sourceScorer == null) null
     else {

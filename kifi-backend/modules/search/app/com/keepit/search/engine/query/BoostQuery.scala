@@ -57,7 +57,6 @@ trait BoostWeight extends Weight {
   protected val boosterWeight: Weight = query.boosterQuery.createWeight(searcher)
 
   override def getQuery() = query
-  override def scoresDocsOutOfOrder() = false
 
   protected def queryNorm(sum: Float): Float = {
     var norm = searcher.getSimilarity.queryNorm(sum)

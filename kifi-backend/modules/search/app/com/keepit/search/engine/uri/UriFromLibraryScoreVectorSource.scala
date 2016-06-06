@@ -11,7 +11,7 @@ import com.keepit.search.index.graph.keep.KeepFields
 import com.keepit.search.index.{ Searcher, WrappedSubReader }
 import com.keepit.search.util.LongArraySet
 import com.keepit.search.util.join.{ DataBufferReader, DataBuffer, DataBufferWriter }
-import org.apache.lucene.index.{ AtomicReaderContext, Term }
+import org.apache.lucene.index.{ LeafReaderContext, Term }
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.{ Scorer, Query }
 import scala.collection.JavaConversions._
@@ -76,7 +76,7 @@ class UriFromLibraryScoreVectorSource(
     }
   }
 
-  private def indexReaderContexts: Seq[AtomicReaderContext] = { keepSearcher.indexReader.getContext.leaves }
+  private def indexReaderContexts: Seq[LeafReaderContext] = { keepSearcher.indexReader.getContext.leaves }
 
   private def loadWithScore(libId: Long, visibility: Int, taggedScores: Array[Int], size: Int, output: DataBuffer, writer: DataBufferWriter): Int = {
     val initialOutputSize = output.size
@@ -126,7 +126,7 @@ class UriFromLibraryScoreVectorSource(
       QueryProjector.project(query, searchFields)
     }
 
-    protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
+    protected def writeScoreVectors(readerContext: LeafReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
       val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
 
       // execute the query
