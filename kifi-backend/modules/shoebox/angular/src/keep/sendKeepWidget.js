@@ -15,10 +15,11 @@ angular.module('kifi')
       },
       link: function(scope, element) {
         var currPage = 0;
-        var widget = null;
+        var widget;
+        var init;
         var filteredSuggestions = []; // ids of entities to filter from suggestions (keep.members + scope.selected)
 
-        function init() {
+        function listenForInit() {
           element.on('click', function () {
             initWidget();
           });
@@ -31,6 +32,7 @@ angular.module('kifi')
           scope.sending = false;
           scope.suggestions = [];
           scope.selections = [];
+          init = false;
 
           filteredSuggestions = computeKeepMembers(scope.keep); // ids of keep.members + scope.selections to omit
 
@@ -126,7 +128,8 @@ angular.module('kifi')
               refreshSuggestions(query, limit, (offset || 0) + limit);
             } else {
               scope.suggestions = nonMemberResults;
-              if (widget) {
+              if (widget && !init) {
+                init = true;
                 widget.show();
                 resetInput();
               }
@@ -251,7 +254,7 @@ angular.module('kifi')
           resizeInput();
         };
 
-        init();
+        listenForInit();
       }
     };
   }
