@@ -29,6 +29,11 @@ object DeltaSet {
   def addOnly[T](items: Set[T]): DeltaSet[T] = DeltaSet.empty.addAll(items)
   def removeOnly[T](items: Set[T]): DeltaSet[T] = DeltaSet.empty.removeAll(items)
 
+  // Produce the minimal diff `m` such that `xs ++ m.added -- m.removed == xs ++ ds.added -- ds.removed`
+  // Mnemonic: "trim" the no-ops from `ds`.
+  // Example: trimForSet( DeltaSet(add = (2,4), remove = (3,5)), Set(1,2,3) ) === DeltaSet(add = (4), remove = (3))
+  def trimForSet[T](ds: DeltaSet[T], xs: Set[T]): DeltaSet[T] = DeltaSet.empty.addAll(ds.added -- xs).removeAll(xs intersect ds.removed)
+
   def fromSets[T](added: Option[Set[T]], removed: Option[Set[T]]): DeltaSet[T] = DeltaSet.addOnly(added.getOrElse(Set.empty)).removeAll(removed.getOrElse(Set.empty))
   def toSets[T](delta: DeltaSet[T]): (Option[Set[T]], Option[Set[T]]) = (Some(delta.added).filter(_.nonEmpty), Some(delta.removed).filter(_.nonEmpty))
   implicit def format[T](implicit tReads: Reads[T], tWrites: Writes[T]): Format[DeltaSet[T]] = (

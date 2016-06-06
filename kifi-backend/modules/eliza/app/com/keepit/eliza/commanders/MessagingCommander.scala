@@ -73,8 +73,7 @@ trait MessagingCommander {
   def unmuteThreadForNonUser(id: Id[NonUserThread]): Boolean
   def setUserThreadMuteState(userId: Id[User], keepId: Id[Keep], mute: Boolean)(implicit context: HeimdalContext): Boolean
   def setNonUserThreadMuteState(id: Id[NonUserThread], mute: Boolean): Boolean
-  def addParticipantsToThread(adderUserId: Id[User], keepId: Id[Keep], newUsers: Seq[Id[User]], emailContacts: Seq[BasicContact],
-    orgIds: Seq[Id[Organization]], source: Option[KeepEventSource])(implicit context: HeimdalContext): Future[(MessageThread, KeepRecipientsDiff)]
+  def modifyThreadParticipants(requester: Id[User], keepId: Id[Keep], users: DeltaSet[Id[User]], contacts: DeltaSet[BasicContact], source: Option[KeepEventSource])(implicit context: HeimdalContext): Future[(MessageThread, KeepRecipientsDiff)]
 
   def validateUsers(rawUsers: Seq[JsValue]): Seq[JsResult[ExternalId[User]]]
   def validateEmailContacts(rawNonUsers: Seq[JsValue]): Seq[JsResult[BasicContact]]
@@ -249,7 +248,7 @@ class MessagingCommanderImpl @Inject() (
     } yield {
       if (isNew) {
         db.readWrite { implicit s =>
-          checkEmailParticipantRateLimits(from, thread, nonUserRecipients)
+          checkEmailParticipantRateLimits(from, thread, nonUserRecipients.toSet)
           nonUserRecipients.foreach { nonUser =>
             nonUserThreadRepo.save(NonUserThread(
               createdBy = from,
@@ -308,9 +307,9 @@ class MessagingCommanderImpl @Inject() (
   private def sendMessage(from: MessageSender, initialThread: MessageThread, messageText: String, source: Option[MessageSource], urlOpt: Option[URI], nUriIdOpt: Option[Id[NormalizedURI]] = None, isNew: Option[Boolean] = None)(implicit time: CrossServiceTime, context: HeimdalContext): (MessageThread, ElizaMessage) = {
     from match {
       case MessageSender.User(id) =>
-        if (!initialThread.containsUser(id)) throw NotAuthorizedException(s"User $id not authorized to send message on thread ${initialThread.id.get}")
+        if (!initialThread.participants.contains(id)) throw NotAuthorizedException(s"User $id not authorized to send message on thread ${initialThread.id.get}")
       case MessageSender.NonUser(nup) =>
-        if (!initialThread.containsNonUser(nup)) throw NotAuthorizedException(s"Non-User $nup not authorized to send message on thread ${initialThread.id.get}")
+        if (!initialThread.participants.contains(nup)) throw NotAuthorizedException(s"Non-User $nup not authorized to send message on thread ${initialThread.id.get}")
       case MessageSender.System =>
         throw NotAuthorizedException("Wrong code path for system Messages.")
     }
@@ -423,7 +422,7 @@ class MessagingCommanderImpl @Inject() (
       }
     }
 
-    thread.allParticipants.foreach { userId =>
+    thread.participants.allUsers.foreach { userId =>
       notificationDeliveryCommander.sendNotificationForMessage(userId, message, thread, sender, threadActivity)
       notificationDeliveryCommander.sendPushNotificationForMessage(userId, message, sender, threadActivity)
     }
@@ -464,68 +463,29 @@ class MessagingCommanderImpl @Inject() (
   def getUserThreadOptByAccessToken(token: ThreadAccessToken): Option[UserThread] =
     db.readOnlyReplica { implicit session => userThreadRepo.getByAccessToken(token) }
 
-  // todo(cam): make this `editParticipantsOnThread` with inactivation behavior
-  def addParticipantsToThread(adderUserId: Id[User], keepId: Id[Keep],
-    newUsers: Seq[Id[User]], emailContacts: Seq[BasicContact], orgIds: Seq[Id[Organization]],
-    source: Option[KeepEventSource])(implicit context: HeimdalContext): Future[(MessageThread, KeepRecipientsDiff)] = {
-    val newUserParticipantsFuture = Future.successful(newUsers)
-    val newNonUserParticipantsFuture = constructEmailRecipients(adderUserId, emailContacts)
+  def modifyThreadParticipants(requester: Id[User], keepId: Id[Keep], users: DeltaSet[Id[User]], contacts: DeltaSet[BasicContact], source: Option[KeepEventSource])(implicit context: HeimdalContext): Future[(MessageThread, KeepRecipientsDiff)] = {
+    abookServiceClient.internKifiContacts(requester, contacts.all.toSeq: _*)
 
-    val newOrgParticipantsFuture = Future.sequence(orgIds.map { oid =>
-      shoebox.hasOrganizationMembership(oid, adderUserId).flatMap {
-        case true => shoebox.getOrganizationMembers(oid)
-        case false => Future.successful(Set.empty[Id[User]])
+    val (thread, diff) = db.readWrite { implicit session =>
+      val oldThread = threadRepo.getByKeepId(keepId).get
+      val actualUsers = DeltaSet.trimForSet(users, oldThread.participants.allUsers)
+      val actualEmails = DeltaSet.trimForSet(contacts.map(_.email), oldThread.participants.allEmails)
+      checkEmailParticipantRateLimits(requester, oldThread, contacts.added.map(c => EmailParticipant(c.email)))
+      if (!oldThread.participants.contains(requester)) {
+        throw NotAuthorizedException(s"User $requester not authorized to add participants to keep $keepId")
       }
-    }).map(_.flatten)
+      val thread = threadRepo.save(oldThread.withParticipants(oldThread.participants.diffed(actualUsers, actualEmails)))
+      actualUsers.added.foreach(uId => userThreadRepo.intern(UserThread.forMessageThread(thread)(user = uId)))
+      actualUsers.removed.foreach(uId => userThreadRepo.getUserThread(uId, keepId).foreach(userThreadRepo.deactivate))
+      actualEmails.added.foreach(email => nonUserThreadRepo.intern(NonUserThread.forMessageThread(thread)(email)))
+      actualEmails.removed.foreach(email => nonUserThreadRepo.getByKeepAndEmail(keepId, email).foreach(nonUserThreadRepo.deactivate))
+      val diff = KeepRecipientsDiff(actualUsers, libraries = DeltaSet.empty, actualEmails)
+      messageRepo.refreshCache(keepId)
 
-    val addedFut = for {
-      newUserParticipants <- newUserParticipantsFuture
-      newNonUserParticipants <- newNonUserParticipantsFuture
-      newOrgParticipants <- newOrgParticipantsFuture
-    } yield {
-      db.readWrite { implicit session =>
-
-        val oldThread = threadRepo.getByKeepId(keepId).get
-
-        checkEmailParticipantRateLimits(adderUserId, oldThread, newNonUserParticipants)
-
-        if (!oldThread.participants.contains(adderUserId)) {
-          throw NotAuthorizedException(s"User $adderUserId not authorized to add participants to keep $keepId")
-        }
-
-        val actuallyNewUsers = (newUserParticipants ++ newOrgParticipants).filterNot(oldThread.containsUser)
-        val actuallyNewNonUsers = newNonUserParticipants.filterNot(oldThread.containsNonUser)
-
-        if (actuallyNewNonUsers.isEmpty && actuallyNewUsers.isEmpty) (oldThread, KeepRecipientsDiff.empty)
-        else {
-          val thread = threadRepo.save(oldThread.withParticipants(clock.now, actuallyNewUsers.toSet, actuallyNewNonUsers.toSet))
-          actuallyNewUsers.foreach(pUserId => userThreadRepo.intern(UserThread.forMessageThread(thread)(user = pUserId)))
-          actuallyNewNonUsers.foreach { nup =>
-            nonUserThreadRepo.save(NonUserThread(
-              createdBy = adderUserId,
-              participant = nup,
-              keepId = thread.keepId,
-              uriId = Some(thread.uriId),
-              notifiedCount = 0,
-              lastNotifiedAt = None,
-              threadUpdatedByOtherAt = Some(thread.updatedAt),
-              muted = false
-            ))
-          }
-
-          val diff = KeepRecipientsDiff(DeltaSet.addOnly(actuallyNewUsers.toSet), libraries = DeltaSet.empty, DeltaSet.addOnly(actuallyNewNonUsers.map(_.address).toSet))
-
-          session.onTransactionSuccess {
-            messagingAnalytics.addedParticipantsToConversation(adderUserId, actuallyNewUsers, actuallyNewNonUsers, thread, source, context)
-            db.readOnlyMaster(implicit session => messageRepo.refreshCache(keepId))
-          }
-
-          (thread, diff)
-        }
-      }
+      (thread, diff)
     }
-
-    new SafeFuture[(MessageThread, KeepRecipientsDiff)](addedFut, Some("Adding Participants to Thread"))
+    messagingAnalytics.addedParticipantsToConversation(requester, diff.users.added.toSeq, diff.emails.added.toSeq.map(EmailParticipant(_)), thread, source, context)
+    Future.successful((thread, diff))
   }
 
   def setRead(userId: Id[User], messageId: Id[ElizaMessage])(implicit context: HeimdalContext): Unit = {
@@ -702,10 +662,10 @@ class MessagingCommanderImpl @Inject() (
     )
   }
 
-  private def checkEmailParticipantRateLimits(user: Id[User], thread: MessageThread, nonUsers: Seq[EmailParticipant])(implicit session: RSession): Unit = {
+  private def checkEmailParticipantRateLimits(user: Id[User], thread: MessageThread, nonUsers: Set[EmailParticipant])(implicit session: RSession): Unit = {
 
     // Check rate limit for this discussion
-    val distinctEmailRecipients = nonUsers.map(_.address).toSet
+    val distinctEmailRecipients = nonUsers.map(_.address)
     val existingEmailParticipants = thread.participants.allEmails
 
     val totalEmailParticipants = (existingEmailParticipants ++ distinctEmailRecipients).size

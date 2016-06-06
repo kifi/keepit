@@ -151,7 +151,7 @@ class MessagingTest extends Specification with ElizaTestInjector with ElizaInjec
         waitFor(notificationDeliveryCommander.getLatestSendableNotifications(user2, 1, includeUriSummary = false)).length === 1
         waitFor(notificationDeliveryCommander.getLatestSendableNotifications(user3, 1, includeUriSummary = false)).length === 0
 
-        messagingCommander.addParticipantsToThread(user1, thread.keepId, Seq(user3), Seq.empty, Seq.empty, source = None)
+        messagingCommander.modifyThreadParticipants(user1, thread.keepId, Seq(user3), Seq.empty, Seq.empty, source = None)
         inject[WatchableExecutionContext].drain()
         waitFor(notificationDeliveryCommander.getLatestSendableNotifications(user3, 1, includeUriSummary = false)).length === 1
       }

@@ -51,7 +51,7 @@ class MessageThreadRepoImpl @Inject() (
   }
   private def messageThreadToDbRow(mt: MessageThread) = {
     Some((
-      mt.id, mt.createdAt, mt.updatedAt, mt.state, mt.uriId, mt.url, mt.nUrl, mt.startedBy, mt.participants, mt.participantsHash, mt.pageTitle, mt.keepId, Option(mt.numMessages)
+      mt.id, mt.createdAt, mt.updatedAt, mt.state, mt.uriId, mt.url, mt.nUrl, mt.startedBy, mt.participants, mt.participants.hash, mt.pageTitle, mt.keepId, Option(mt.numMessages)
     ))
   }
 

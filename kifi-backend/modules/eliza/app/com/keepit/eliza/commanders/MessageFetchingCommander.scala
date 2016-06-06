@@ -35,8 +35,11 @@ class MessageFetchingCommander @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
 
   def getMessageWithBasicUser(msg: ElizaMessage, thread: MessageThread, basicUserById: Map[Id[User], BasicUser]): MessageWithBasicUser = {
-    val participants = thread.allParticipants.toSeq.map(u => BasicUserLikeEntity(basicUserById(u))) ++
-      thread.participants.emailParticipants.keySet.map(nup => BasicUserLikeEntity(EmailParticipant.toBasicNonUser(nup)))
+    val participants = {
+      val basicUsers = thread.participants.allUsers.toSeq.map(u => BasicUserLikeEntity(basicUserById(u)))
+      val basicEmails = thread.participants.emailParticipants.keySet.map(nup => BasicUserLikeEntity(EmailParticipant.toBasicNonUser(nup)))
+      basicUsers ++ basicEmails
+    }
 
     val from = msg.from match {
       case MessageSender.User(id) => BasicUserLikeEntity(basicUserById(id))
