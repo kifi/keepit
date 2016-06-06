@@ -185,6 +185,7 @@ class AuthHelper @Inject() (
     implicit val config: PublicIdConfiguration,
     resetPasswordEmailSender: ResetPasswordEmailSender,
     fortytwoConfig: FortyTwoConfig,
+    twitterWaitlistCommander: TwitterWaitlistCommander,
     mode: Mode) extends HeaderNames with Results with Status with Logging {
 
   private def hasSeenInstall(userId: Id[User]): Boolean = db.readOnlyMaster { implicit s =>
@@ -301,6 +302,7 @@ class AuthHelper @Inject() (
         }
         "/teams/new"
       case JoinTwitterWaitlist =>
+        twitterWaitlistCommander.createSyncOrWaitlist(userId, SyncTarget.Tweets)
         "/twitter/thanks"
       case NoIntent => homeOrInstall
     }
@@ -316,20 +318,19 @@ class AuthHelper @Inject() (
     intent match {
       case JoinTwitterWaitlist => // Nothing for now
       case _ => // Anything BUT twitter waitlist
-        db.readWrite(attempts = 3) { implicit session =>
-          userEmailAddressRepo.getByAddressAndUser(user.id.get, emailAddress) foreach { emailAddr =>
-            userEmailAddressCommander.setAsPrimaryEmail(emailAddr)
+        if (mode == Prod) { // Do not sent the email in dev
+          SafeFuture {
+            userCommander.sendWelcomeEmail(user.id.get, withVerification = !emailConfirmedAlready, Some(emailAddress))
           }
-          if (mode == Prod) {
-            // Do not sent the email in dev
-            SafeFuture {
-              userCommander.sendWelcomeEmail(user.id.get, withVerification = !emailConfirmedAlready, Some(emailAddress))
-            }
-          }
-          val completedSignupEvent = UserEvent(user.id.get, context, UserEventTypes.COMPLETED_SIGNUP)
-          heimdal.trackEvent(completedSignupEvent)
         }
     }
+
+    db.readWrite(attempts = 3) { implicit session =>
+      userEmailAddressRepo.getByAddressAndUser(user.id.get, emailAddress) foreach { emailAddr =>
+        userEmailAddressCommander.setAsPrimaryEmail(emailAddr)
+      }
+    }
+    heimdal.trackEvent(UserEvent(user.id.get, context, UserEventTypes.COMPLETED_SIGNUP))
 
     val uri = processIntent(user.id.get, intent)
     request.session.get("kcid").foreach(saveKifiCampaignId(user.id.get, _))

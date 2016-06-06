@@ -77,7 +77,7 @@ class AdminTwitterWaitlistController @Inject() (
 
   def updateLibraryFromTwitterProfile(handle: String, userId: Id[User]) = AdminUserAction.async { request =>
     db.readOnlyReplica { implicit session =>
-      twitterSyncStateRepo.getByHandleAndUserIdUsed(TwitterHandle(handle), userId).map { sync =>
+      twitterSyncStateRepo.getByHandleAndUserIdUsed(TwitterHandle(handle), userId, SyncTarget.Tweets).map { sync =>
         (sync, socialUserInfoRepo.getByUser(userId).find(s => s.networkType == SocialNetworks.TWITTER && s.username.isDefined))
       }
     }.collect {

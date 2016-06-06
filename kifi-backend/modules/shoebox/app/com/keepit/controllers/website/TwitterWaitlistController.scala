@@ -169,7 +169,7 @@ class TwitterWaitlistController @Inject() (
         if (twitterSui.isEmpty) {
           Redirect("/link/twitter?intent=waitlist").withSession(session + (SecureSocial.OriginalUrlKey -> "/twitter/thanks"))
         } else {
-          commander.createSyncOrWaitlist(ur.userId) match {
+          commander.createSyncOrWaitlist(ur.userId, SyncTarget.Tweets) match {
             case Left(error) =>
               log.warn(s"[thanksForTwitterWaitlist] ${ur.userId} Error when creating sync, $error")
               oldBehavior(ur.userId, twitterSui.get)
