@@ -107,7 +107,7 @@ class AugmentationCommanderImpl @Inject() (
         restrictedUsers <- futureRestrictedUsers
         libraries <- futureLibraries
         organizations <- futureOrganizations
-        allAugmentationInfos <- getAugmentationInfos(shards, userId, friends, restrictedUsers, libraries, organizations, items ++ context.corpus.keySet, context.filter getOrElse SearchFilter.default, hideOtherPublishedKeeps.exists(identity))
+        allAugmentationInfos <- getAugmentationInfos(shards, userId, friends, restrictedUsers, libraries, organizations, items ++ context.corpus.keySet, context.filter, hideOtherPublishedKeeps.exists(identity))
       } yield {
         val contextualAugmentationInfos = context.corpus.collect { case (item, weight) if allAugmentationInfos.contains(item) => (allAugmentationInfos(item) -> weight) }
         val contextualScores = computeAugmentationScores(contextualAugmentationInfos)
