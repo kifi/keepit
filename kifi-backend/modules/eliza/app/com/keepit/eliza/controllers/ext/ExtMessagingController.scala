@@ -41,7 +41,7 @@ class ExtMessagingController @Inject() (
       (o \ "text").as[String].trim,
       (o \ "source").asOpt[MessageSource]
     )
-    val (validUserRecipients, validEmailRecipients, validOrgRecipients) = messagingCommander.parseRecipients((o \ "recipients").as[Seq[JsValue]]) // XXXX
+    val (validUserRecipients, validEmailRecipients) = messagingCommander.parseRecipients((o \ "recipients").as[Seq[JsValue]]) // XXXX
 
     val url = (o \ "url").as[String]
 
@@ -53,7 +53,7 @@ class ExtMessagingController @Inject() (
       contextBuilder += ("guided", true)
     }
 
-    messagingCommander.sendMessageAction(title, text, source, validUserRecipients, validEmailRecipients, validOrgRecipients, url, request.userId, contextBuilder.build).map {
+    messagingCommander.sendMessageAction(title, text, source, validUserRecipients, validEmailRecipients, url, request.userId, contextBuilder.build).map {
       case (message, threadInfo, messages) =>
         Ok(Json.obj(
           "id" -> message.pubId,
@@ -61,11 +61,7 @@ class ExtMessagingController @Inject() (
           "createdAt" -> message.createdAt,
           "threadInfo" -> ElizaThreadInfo.writesThreadInfo.writes(threadInfo),
           "messages" -> messages.reverse))
-    }.recover {
-      case ex: Exception if ex.getMessage == "insufficient_org_permissions" =>
-        Forbidden(Json.obj("error" -> "insufficient_org_permissions"))
     }
-
   }
 
   def sendMessageReplyAction(pubKeepId: PublicId[Keep]) = UserAction.async(parse.tolerantJson) { request =>

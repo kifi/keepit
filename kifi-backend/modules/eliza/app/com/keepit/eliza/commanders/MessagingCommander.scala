@@ -2,6 +2,7 @@ package com.keepit.eliza.commanders
 
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.abook.ABookServiceClient
+import com.keepit.common.core.eitherExtensionOps
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.DBSession.RSession
@@ -56,7 +57,7 @@ trait MessagingCommander {
   def sendMessageWithNonUserThread(nut: NonUserThread, messageText: String, source: Option[MessageSource], urlOpt: Option[URI])(implicit time: CrossServiceTime, context: HeimdalContext): (MessageThread, ElizaMessage)
   def sendMessageWithUserThread(userThread: UserThread, messageText: String, source: Option[MessageSource], urlOpt: Option[URI])(implicit time: CrossServiceTime, context: HeimdalContext): (MessageThread, ElizaMessage)
   def sendMessage(from: Id[User], thread: MessageThread, messageText: String, source: Option[MessageSource], urlOpt: Option[URI])(implicit time: CrossServiceTime, context: HeimdalContext): (MessageThread, ElizaMessage)
-  def sendMessageAction(title: Option[String], text: String, source: Option[MessageSource], userExtRecipients: Seq[ExternalId[User]], nonUserRecipients: Seq[BasicContact], validOrgRecipients: Seq[PublicId[Organization]],
+  def sendMessageAction(title: Option[String], text: String, source: Option[MessageSource], userExtRecipients: Seq[ExternalId[User]], nonUserRecipients: Seq[BasicContact],
     url: String, userId: Id[User], initContext: HeimdalContext)(implicit time: CrossServiceTime): Future[(ElizaMessage, ElizaThreadInfo, Seq[MessageWithBasicUser])]
   def getNonUserThreadOpt(id: Id[NonUserThread]): Option[NonUserThread]
   def getNonUserThreadOptByAccessToken(token: ThreadAccessToken): Option[NonUserThread]
@@ -77,7 +78,7 @@ trait MessagingCommander {
 
   def validateUsers(rawUsers: Seq[JsValue]): Seq[JsResult[ExternalId[User]]]
   def validateEmailContacts(rawNonUsers: Seq[JsValue]): Seq[JsResult[BasicContact]]
-  def parseRecipients(rawRecipients: Seq[JsValue]): (Seq[ExternalId[User]], Seq[BasicContact], Seq[PublicId[Organization]])
+  def parseRecipients(rawRecipients: Seq[JsValue]): (Seq[ExternalId[User]], Seq[BasicContact])
 }
 
 class MessagingCommanderImpl @Inject() (
@@ -585,7 +586,6 @@ class MessagingCommanderImpl @Inject() (
     source: Option[MessageSource],
     userExtRecipients: Seq[ExternalId[User]],
     nonUserRecipients: Seq[BasicContact],
-    validOrgRecipients: Seq[PublicId[Organization]],
     url: String,
     userId: Id[User],
     initContext: HeimdalContext)(implicit time: CrossServiceTime): Future[(ElizaMessage, ElizaThreadInfo, Seq[MessageWithBasicUser])] = {
@@ -594,48 +594,25 @@ class MessagingCommanderImpl @Inject() (
     val userRecipientsFuture = shoebox.getUserIdsByExternalIds(userExtRecipients.toSet).map(_.values.toSeq)
     val nonUserRecipientsFuture = constructEmailRecipients(userId, nonUserRecipients)
 
-    val orgIds = validOrgRecipients.map(o => Organization.decodePublicId(o)).filter(_.isSuccess).map(_.get)
-
-    val canSendToOrgs = shoebox.getUserPermissionsByOrgId(orgIds.toSet, userId).map { permissionsByOrgId =>
-      orgIds.forall { orgId =>
-        val ok = permissionsByOrgId(orgId).contains(OrganizationPermission.GROUP_MESSAGING)
-        if (!ok) airbrake.notify(s"user $userId was able to send to org $orgId without permissions!")
-        ok
-      }
-    }
-
     val moreContext = new HeimdalContextBuilder()
-    val orgParticipantsFuture = Future.sequence(orgIds.map { oid =>
-      shoebox.getOrganizationMembers(oid)
-    }).map(_.flatten)
-
-    if (orgIds.nonEmpty) moreContext += ("messagedAllOrgId", Random.shuffle(orgIds).head.toString)
-
     implicit val context = moreContext.addExistingContext(initContext).build
 
-    val resFut =
-      canSendToOrgs.flatMap { canSend =>
-        if (!canSend) throw new Exception("insufficient_org_permissions")
-        else {
-          for {
-            userRecipients <- userRecipientsFuture
-            nonUserRecipients <- nonUserRecipientsFuture
-            orgParticipants <- orgParticipantsFuture
-            (thread, message) <- sendNewMessage(userId, userRecipients ++ orgParticipants, nonUserRecipients, url, title, text, source)
-            messagesWithBasicUser <- basicMessageCommander.getThreadMessagesWithBasicUser(thread)
-            Seq(threadInfo) <- buildThreadInfos(userId, Seq(thread), url)
-          } yield {
-            val actions = userRecipients.map(id => (Left(id), "message")) ++ nonUserRecipients.map {
-              case EmailParticipant(address) => (Right(address), "message")
-            }
-            shoebox.addInteractions(userId, actions)
-
-            val tDiff = currentDateTime.getMillis - tStart.getMillis
-            statsd.timing(s"messaging.newMessage", tDiff, ONE_IN_HUNDRED)
-            (message, threadInfo, messagesWithBasicUser)
-          }
-        }
+    val resFut = for {
+      userRecipients <- userRecipientsFuture
+      nonUserRecipients <- nonUserRecipientsFuture
+      (thread, message) <- sendNewMessage(userId, userRecipients, nonUserRecipients, url, title, text, source)
+      messagesWithBasicUser <- basicMessageCommander.getThreadMessagesWithBasicUser(thread)
+      Seq(threadInfo) <- buildThreadInfos(userId, Seq(thread), url)
+    } yield {
+      val actions = userRecipients.map(id => (Left(id), "message")) ++ nonUserRecipients.map {
+        case EmailParticipant(address) => (Right(address), "message")
       }
+      shoebox.addInteractions(userId, actions)
+
+      val tDiff = currentDateTime.getMillis - tStart.getMillis
+      statsd.timing(s"messaging.newMessage", tDiff, ONE_IN_HUNDRED)
+      (message, threadInfo, messagesWithBasicUser)
+    }
     resFut
   }
 
@@ -644,22 +621,15 @@ class MessagingCommanderImpl @Inject() (
     case obj if (obj \ "kind").as[String] == "email" => (obj \ "email").as[BasicContact]
   })
 
-  def parseRecipients(rawRecipients: Seq[JsValue]): (Seq[ExternalId[User]], Seq[BasicContact], Seq[PublicId[Organization]]) = {
-    val rawCategorized = rawRecipients.flatMap {
-      case JsString(id) if id.startsWith("o") => Organization.validatePublicId(id).toOption
-      case JsString(id) if id.length == 36 => ExternalId.asOpt[User](id)
-      case recip: JsObject if (recip \ "kind").asOpt[String].contains("user") => (recip \ "id").asOpt[ExternalId[User]]
-      case recip: JsObject if (recip \ "kind").asOpt[String].contains("org") => (recip \ "id").asOpt[PublicId[Organization]]
-      case recip: JsObject if (recip \ "kind").asOpt[String].contains("email") => (recip \ "email").asOpt[BasicContact]
+  def parseRecipients(rawRecipients: Seq[JsValue]): (Seq[ExternalId[User]], Seq[BasicContact]) = {
+    rawRecipients.flatMap {
+      case JsString(id) if id.length == 36 => ExternalId.asOpt[User](id).map(Left(_))
+      case recip: JsObject if (recip \ "kind").asOpt[String].contains("user") => (recip \ "id").asOpt[ExternalId[User]].map(Left(_))
+      case recip: JsObject if (recip \ "kind").asOpt[String].contains("email") => (recip \ "email").asOpt[BasicContact].map(Right(_))
       case unknown =>
         log.warn(s"[validateRecipients] Could not determine what ${Json.stringify(unknown)} is supposed to be.")
         None
-    }
-    (
-      rawCategorized.collect { case userId: ExternalId[User] @unchecked => userId },
-      rawCategorized.collect { case bc: BasicContact => bc },
-      rawCategorized.collect { case orgId: PublicId[Organization] @unchecked => orgId }
-    )
+    }.partitionEithers
   }
 
   private def checkEmailParticipantRateLimits(user: Id[User], thread: MessageThread, nonUsers: Set[EmailParticipant])(implicit session: RSession): Unit = {

@@ -108,14 +108,13 @@ class SharedWsMessagingController @Inject() (
           case JsArray(elems) => elems
           case _ => (data \ "users").asOpt[Seq[JsValue]].getOrElse(Seq.empty) ++ (data \ "nonUsers").asOpt[Seq[JsValue]].getOrElse(Seq.empty)
         }
-        val (users, emailContacts, orgs) = messagingCommander.parseRecipients(input)
-        if (users.nonEmpty || emailContacts.nonEmpty || orgs.nonEmpty) {
+        val (users, emailContacts) = messagingCommander.parseRecipients(input)
+        if (users.nonEmpty || emailContacts.nonEmpty) {
           implicit val context = authenticatedWebSocketsContextBuilder(socket).build
           Keep.decodePublicIdStr(keepIdStr).foreach { keepId =>
             for {
               userIds <- shoebox.getUserIdsByExternalIds(users.toSet).map(_.values.toList)
-              orgIds <- Future.successful(orgs.flatMap(pubId => Organization.decodePublicId(pubId).toOption))
-            } discussionCommander.editParticipantsOnKeepForOldElizaClients(keepId, socket.userId, userIds, emailContacts, orgIds, KeepEventSource.fromStr(socket.userAgent))
+            } discussionCommander.editParticipantsOnKeepForOldElizaClients(keepId, socket.userId, userIds, emailContacts, KeepEventSource.fromStr(socket.userAgent))
           }
         }
     },
