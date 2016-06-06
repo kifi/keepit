@@ -19,7 +19,7 @@ angular.module('kifi')
         var init;
         var filteredSuggestions = []; // ids of entities to filter from suggestions (keep.members + scope.selected)
 
-        function init() {
+        function listenForInit() {
           element.on('click', function () {
             initWidget();
           });
@@ -254,7 +254,7 @@ angular.module('kifi')
           resizeInput();
         };
 
-        init();
+        listenForInit();
       }
     };
   }
