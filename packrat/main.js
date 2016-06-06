@@ -519,6 +519,17 @@ var socketHandlers = {
 
     var keep = keepData[keepId];
     if (keep) {
+      if (keep.recipients.users.length > users.length && !users.some(idIs(me.id))) {
+        removeNotification(keepId);
+        forEachTabAtLocator('/messages/' + keepId, function (tab) {
+          api.tabs.emit(tab, 'show_pane', {
+            trigger: 'evictedAutoNavigate',
+            locator: getDefaultPaneLocator(),
+            redirected: false
+          }, {queue: 1});
+        });
+        return;
+      }
       keep.recipients.users = users;
       keep.recipients.emails = emails;
       keep.recipients.libraries = libraries;
@@ -1809,6 +1820,7 @@ function removeNotification(threadId) {
 
   delete notificationsById[threadId];
   delete threadReadAt[threadId];
+  delete keepData[threadId];
 
   tellVisibleTabsNoticeCountIfChanged();
 }
@@ -2396,7 +2408,7 @@ function gotPageThreads(uri, nUri, threads, numTotal) {
 }
 
 function isSent(th) {
-  return th.firstAuthor != null && th.participants[th.firstAuthor].id === me.id;
+  return th.firstAuthor != null && th.participants[th.firstAuthor] && th.participants[th.firstAuthor].id === me.id;
 }
 
 function isUnread(th) {
