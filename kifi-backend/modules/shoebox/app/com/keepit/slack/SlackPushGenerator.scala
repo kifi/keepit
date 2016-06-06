@@ -178,11 +178,11 @@ class SlackPushGenerator @Inject() (
     def pushForMessage(msg: CrossServiceMessage, keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], user: Option[BasicUser])(implicit items: PushItems): ContextSensitiveSlackPush
   }
   def keepAsSlackMessage(keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], user: Option[BasicUser])(implicit items: PushItems): ContextSensitiveSlackPush = {
-    val generator = if (items.slackTeamId == KifiSlackApp.BrewstercorpTeamId) ExperimentalGenerator else ProductionGenerator
+    val generator = if (KifiSlackApp.experimentTeams.contains(items.slackTeamId)) ExperimentalGenerator else ProductionGenerator
     generator.pushForKeep(keep, lib, slackTeamId, attribution, user)
   }
   def messageAsSlackMessage(msg: CrossServiceMessage, keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], user: Option[BasicUser])(implicit items: PushItems): ContextSensitiveSlackPush = {
-    val generator = if (items.slackTeamId == KifiSlackApp.BrewstercorpTeamId) ExperimentalGenerator else ProductionGenerator
+    val generator = if (KifiSlackApp.experimentTeams.contains(items.slackTeamId)) ExperimentalGenerator else ProductionGenerator
     generator.pushForMessage(msg, keep, lib, slackTeamId, attribution, user)
   }
 
@@ -296,17 +296,20 @@ class SlackPushGenerator @Inject() (
     override def pushForKeep(keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], user: Option[BasicUser])(implicit items: PushItems): ContextSensitiveSlackPush = {
       import DescriptionElements._
       val category = NotificationCategory.NonUser.NEW_KEEP
-      def keepWebLink(subaction: String) = LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(items.slackChannelId, category, Some(subaction))))
-      def keepKifiLink(subaction: String) = LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(items.slackChannelId, category, Some(subaction))))
+      def keepWebLink(subaction: String) = pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(items.slackChannelId, category, Some(subaction)))
+      def keepKifiLink(subaction: String) = pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(items.slackChannelId, category, Some(subaction)))
       val userStr = user.fold[String]("Someone")(_.firstName)
 
       val slackAuthor = user.map(slackAuthorFromKifiUser).getOrElse {
         SlackAttachment.Author(name = "Someone", icon = Some(StaticImageUrls.KIFI_LOGO), link = None)
       }
       val (keepMainAttachment, keepFooterAttachment) = {
-        val title = s"_${keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH)}_"
-        val bigElement = DescriptionElements(title, "  ", "View" --> keepWebLink("viewArticle"), "|", "Reply" --> keepKifiLink("reply"))
-        val tinyElement = DescriptionElements(title --> keepWebLink("viewArticle"), " • ", "Reply" --> keepKifiLink("reply"))
+        val title = keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH)
+        val Seq(viewLink, replyLink) = db.readWrite { implicit s =>
+          Seq(keepWebLink("viewArticle"), keepKifiLink("reply")).map(link => LinkElement(pathCommander.shortened(pathCommander.shorten(link))))
+        }
+        val bigElement = DescriptionElements(s"_${title}_", "  ", "View" --> viewLink, "|", "Reply" --> replyLink)
+        val tinyElement = DescriptionElements(title --> viewLink, " • ", "Reply" --> replyLink)
         val bigAttachment = SlackAttachment.simple(DescriptionElements(SlackEmoji.newspaper, bigElement))
         val tinyAttachment = SlackAttachment.footer(DescriptionElements(SlackEmoji.newspaper, tinyElement))
         (bigAttachment, tinyAttachment)
