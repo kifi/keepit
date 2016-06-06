@@ -229,10 +229,7 @@ class MessageThreadNotificationBuilderImpl @Inject() (
           val orderedParticipants = allParticipants.sortBy(x => x.fold(nu => (nu.firstName.getOrElse(""), nu.lastName.getOrElse("")), u => (u.firstName, u.lastName)))
           val indexOfFirstAuthor = orderedParticipants.zipWithIndex.collectFirst {
             case (Right(user), idx) if threadStarter.exists(_.right.exists(_.externalId == user.externalId)) => idx
-          }.getOrElse {
-            airbrake.notify(s"Thread starter is not one of the participants for keep $keepId")
-            0
-          }
+          }.getOrElse(0)
           val pubKeepId = Keep.publicId(keepId)
           val locator = MessageThread.locator(pubKeepId)
           MessageThreadNotification(
