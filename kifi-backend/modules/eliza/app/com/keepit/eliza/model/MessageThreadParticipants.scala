@@ -3,6 +3,7 @@ package com.keepit.eliza.model
 import com.keepit.common.db._
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time.{ DateTimeJsonFormat, _ }
+import com.keepit.common.util.DeltaSet
 import com.keepit.model.User
 import org.joda.time.DateTime
 import play.api.libs.json._
@@ -13,10 +14,17 @@ case class MessageThreadParticipants(userParticipants: Map[Id[User], DateTime], 
   def contains(user: Id[User]): Boolean = userParticipants.contains(user)
   def contains(nonUser: EmailParticipant): Boolean = emailParticipants.contains(nonUser)
 
-  def plusUsers(users: Set[Id[User]]) = this.copy(userParticipants = userParticipants -- users)
-  def plusEmails(emails: Set[EmailAddress]) = this.copy(emailParticipants = emailParticipants -- emails.map(EmailParticipant(_)))
-  def minusUsers(users: Set[Id[User]]) = this.copy(userParticipants = userParticipants -- users)
-  def minusEmails(emails: Set[EmailAddress]) = this.copy(emailParticipants = emailParticipants -- emails.map(EmailParticipant(_)))
+  // Note that `diffed` is written such that adding/removing is idempotent. Removing is obvious,
+  // but idempotent addition relies on the right-biased ++ operator on Maps
+  def diffed(users: DeltaSet[Id[User]], emails: DeltaSet[EmailAddress]) = this.copy(
+    userParticipants = users.added.map(_ -> currentDateTime).toMap ++ userParticipants -- users.removed,
+    emailParticipants = emails.added.map(e => EmailParticipant(e) -> currentDateTime).toMap ++ emailParticipants -- emails.removed.map(EmailParticipant(_))
+  )
+  def plusUsers(users: Set[Id[User]]) = this.diffed(users = DeltaSet.addOnly(users), emails = DeltaSet.empty)
+  def plusUser(user: Id[User]) = this.plusUsers(Set(user))
+  def plusEmails(emails: Set[EmailAddress]) = this.diffed(users = DeltaSet.empty, emails = DeltaSet.addOnly(emails))
+  def minusUsers(users: Set[Id[User]]) = this.diffed(users = DeltaSet.removeOnly(users), emails = DeltaSet.empty)
+  def minusEmails(emails: Set[EmailAddress]) = this.diffed(users = DeltaSet.empty, emails = DeltaSet.removeOnly(emails))
 
   lazy val size = userParticipants.size + emailParticipants.size
   lazy val allUsers = userParticipants.keySet

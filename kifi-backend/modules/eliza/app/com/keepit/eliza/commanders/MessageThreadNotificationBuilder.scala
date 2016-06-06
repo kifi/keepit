@@ -273,7 +273,7 @@ class MessageThreadNotificationBuilderImpl @Inject() (
 
     for {
       basicUserById <- precomputedInfo.flatMap(_.basicUserById).map(Future.successful)
-        .getOrElse(shoebox.getBasicUsers(thread.allParticipants.toSeq))
+        .getOrElse(shoebox.getBasicUsers(thread.participants.allUsers.toSeq))
     } yield {
       userIds.map { userId =>
         val authorActivityInfos = threadActivity.filter(_.lastActive.isDefined)
@@ -284,7 +284,11 @@ class MessageThreadNotificationBuilderImpl @Inject() (
         }
         val MessageCount(numMessages, numUnread) = messageCountByUser(userId)
 
-        val participants = thread.allParticipants.map(uid => BasicUserLikeEntity.user(basicUserById(uid))) ++ thread.allEmails.map(email => BasicUserLikeEntity.nonUser(BasicNonUser.fromEmail(email)))
+        val participants = {
+          val basicUsers = thread.participants.allUsers.map(uid => BasicUserLikeEntity.user(basicUserById(uid)))
+          val basicEmails = thread.participants.allEmails.map(email => BasicUserLikeEntity.nonUser(BasicNonUser.fromEmail(email)))
+          basicUsers ++ basicEmails
+        }
 
         userId -> MessageThreadNotification(
           thread = thread,

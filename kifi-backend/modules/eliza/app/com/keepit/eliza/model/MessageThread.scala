@@ -28,7 +28,6 @@ case class MessageThread(
   keepId: Id[Keep],
   numMessages: Int)
     extends Model[MessageThread] with ModelWithState[MessageThread] {
-  def participantsHash: Int = participants.hash
   def pubKeepId(implicit publicIdConfig: PublicIdConfiguration): PublicId[Keep] = Keep.publicId(keepId)
   def deepLocator(implicit publicIdConfig: PublicIdConfiguration): DeepLocator = MessageThread.locator(pubKeepId)
 
@@ -36,32 +35,14 @@ case class MessageThread(
 
   def withId(id: Id[MessageThread]): MessageThread = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt = updateTime)
-  def withStartedBy(owner: Id[User]) = if (participants.contains(owner)) {
-    this.copy(startedBy = owner)
-  } else {
-    this.withParticipants(currentDateTime, Set(owner)).copy(startedBy = owner)
-  }
+  def withStartedBy(owner: Id[User]) = this.copy(
+    startedBy = owner,
+    participants = participants.plusUser(owner)
+  )
   def withKeepId(newKeepId: Id[Keep]): MessageThread = this.copy(keepId = newKeepId)
   def withUriId(uriId: Id[NormalizedURI]): MessageThread = this.copy(uriId = uriId)
-
   def withParticipants(participants: MessageThreadParticipants) = this.copy(participants = participants)
-  def withParticipants(when: DateTime, userIds: Set[Id[User]], nonUsers: Set[EmailParticipant] = Set.empty) = {
-    val newUsers = userIds.map(_ -> when).toMap
-    val newNonUsers = nonUsers.map(_ -> when).toMap
-    val newParticipants = MessageThreadParticipants(participants.userParticipants ++ newUsers, participants.emailParticipants ++ newNonUsers)
-    this.copy(participants = newParticipants)
-  }
-  def withoutParticipant(userId: Id[User]) = {
-    val newParticpiants = MessageThreadParticipants(participants.userParticipants - userId, participants.emailParticipants)
-    this.copy(participants = newParticpiants)
-  }
-
   def withNumMessages(num: Int) = this.copy(numMessages = num)
-
-  def containsUser(user: Id[User]): Boolean = participants.contains(user)
-  def containsNonUser(nonUser: EmailParticipant): Boolean = participants.contains(nonUser)
-  def allParticipants: Set[Id[User]] = participants.allUsers
-  def allEmails: Set[EmailAddress] = participants.allEmails
 
   def sanitizeForDelete = this.copy(state = MessageThreadStates.INACTIVE)
 }
