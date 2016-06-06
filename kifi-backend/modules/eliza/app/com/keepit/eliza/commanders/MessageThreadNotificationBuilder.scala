@@ -213,7 +213,7 @@ class MessageThreadNotificationBuilderImpl @Inject() (
 
         val author = messageOpt.map(_.from).collect {
           case MessageSender.User(id) => BasicUserLikeEntity(basicUserByIdMap(id))
-          case MessageSender.NonUser(nup) => BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nup))
+          case MessageSender.NonUser(nup) => BasicUserLikeEntity(EmailParticipant.toBasicNonUser(nup))
         } orElse threadStarter
 
         val authorActivityInfos = threadActivity.filter(_.lastActive.isDefined)

@@ -57,9 +57,24 @@ class ElizaKeepIngestingActor @Inject() (
         case (keep, thread) =>
           val newUsers = keep.users -- thread.participants.allUsers
           val newEmails = keep.emails -- thread.participants.allEmails
-          val newThread = threadRepo.save(thread.withParticipants(clock.now, newUsers, newEmails.map(NonUserEmailParticipant)).withUriId(keep.uriId))
-          newUsers.map(u => userThreadRepo.intern(UserThread.forMessageThread(newThread)(u)))
-          newEmails.map(e => nuThreadRepo.intern(NonUserThread.forMessageThread(newThread)(NonUserEmailParticipant(e))))
+          val deadUsers = thread.participants.allUsers -- keep.users
+          val deadEmails = thread.participants.allEmails -- keep.emails
+          val newThread = threadRepo.save {
+            thread
+              .withUriId(keep.uriId)
+              .withParticipants(
+                thread.participants
+                  .plusUsers(newUsers)
+                  .minusUsers(deadUsers)
+                  .plusEmails(newEmails)
+                  .minusEmails(deadEmails)
+              )
+          }
+          newUsers.foreach { u => userThreadRepo.intern(UserThread.forMessageThread(newThread)(u)) }
+          newEmails.foreach { e => nuThreadRepo.intern(NonUserThread.forMessageThread(newThread)(e)) }
+
+          deadUsers.foreach { u => userThreadRepo.getUserThread(u, keep.id).foreach(x => userThreadRepo.deactivate(x)) }
+          deadEmails.foreach { e => nuThreadRepo.getByKeepAndEmail(keep.id, e).foreach(x => nuThreadRepo.deactivate(x)) }
       }
       systemValueRepo.setSequenceNumber(elizaKeepSeq, keeps.map(_.seq).max)
       log.info(s"Ingested ${keeps.length} keeps from Shoebox, fixed uri / recipients for ${threadsThatNeedFixing.length} of them")

@@ -6,14 +6,14 @@ import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.keepit.common.db._
 import com.keepit.model.{ Keep, User, NormalizedURI }
-import play.api.libs.json.{ JsString, JsObject, JsError, JsValue, Format }
+import play.api.libs.json._
 
 case class NonUserThread(
     id: Option[Id[NonUserThread]] = None,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     createdBy: Id[User],
-    participant: NonUserParticipant,
+    participant: EmailParticipant,
     keepId: Id[Keep],
     uriId: Option[Id[NormalizedURI]],
     notifiedCount: Int,
@@ -36,9 +36,9 @@ case class NonUserThread(
 object NonUserThreadStates extends States[NonUserThread]
 
 object NonUserThread {
-  def forMessageThread(mt: MessageThread)(nu: NonUserParticipant) = NonUserThread(
+  def forMessageThread(mt: MessageThread)(email: EmailAddress) = NonUserThread(
     createdBy = mt.startedBy,
-    participant = nu,
+    participant = EmailParticipant(email),
     keepId = mt.keepId,
     uriId = Some(mt.uriId),
     notifiedCount = 0,
@@ -47,55 +47,22 @@ object NonUserThread {
   )
 }
 
-sealed trait NonUserParticipant {
-  val identifier: String
-  val referenceId: Option[String]
-  val kind: NonUserKind
-
-  override def toString() = identifier.toString
-
-  def shortName: String
-  def fullName: String
-}
-object NonUserParticipant {
-  implicit val format = new Format[NonUserParticipant] {
-    // fields are shortened for overhead reasons
-    def reads(json: JsValue) = {
-      // k == "kind"
-      // i == "identifier"
-      // r == "referenceId"
-      (json \ "k").validate[String].flatMap {
-        case NonUserKinds.email.name => for {
-          email <- (json \ "i").validate[EmailAddress]
-        } yield NonUserEmailParticipant(email)
-        case unsupportedKind => JsError(s"Unsupported NonUserKind: $unsupportedKind")
-      }
-    }
-    def writes(p: NonUserParticipant): JsValue = {
-      JsObject(Seq(Some("k" -> JsString(p.kind.name)), Some("i" -> JsString(p.identifier)), p.referenceId.map(r => "r" -> JsString(r))).flatten)
-    }
-  }
-
-  def toBasicNonUser(nonUser: NonUserParticipant) = {
-    // todo: Add other data, like econtact data
-    BasicNonUser(kind = nonUser.kind, id = nonUser.identifier, firstName = Some(nonUser.identifier), lastName = None, BasicNonUser.DefaultPictureName)
-  }
-
-  def fromBasicNonUser(nonUser: BasicNonUser) = nonUser.kind match {
-    case NonUserKinds.email => NonUserEmailParticipant(EmailAddress(nonUser.id))
-  }
-
-  def toEmailAddress(nonUser: NonUserParticipant): Option[EmailAddress] = nonUser match {
-    case NonUserEmailParticipant(email) => Some(email)
-    case _ => None
-  }
-}
-
-case class NonUserEmailParticipant(address: EmailAddress) extends NonUserParticipant {
+case class EmailParticipant(address: EmailAddress) {
   val identifier = address.address
-  val referenceId = Some(address.address)
   val kind = NonUserKinds.email
 
   def shortName = identifier
   def fullName = identifier
+
+  override def toString = identifier.toString
+}
+object EmailParticipant {
+  implicit val format: Format[EmailParticipant] = Format(
+    Reads { json => (json \ "i").validate[EmailAddress].map(email => EmailParticipant(email)) },
+    Writes { p => Json.obj("i" -> JsString(p.identifier)) }
+  )
+
+  def toBasicNonUser(nonUser: EmailParticipant) = {
+    BasicNonUser(kind = nonUser.kind, id = nonUser.identifier, firstName = Some(nonUser.identifier), lastName = None, BasicNonUser.DefaultPictureName)
+  }
 }

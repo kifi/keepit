@@ -185,7 +185,7 @@ class MessagingAnalytics @Inject() (
     }
   }
 
-  def addedParticipantsToConversation(userId: Id[User], newUserParticipants: Seq[Id[User]], newNonUserParticipants: Seq[NonUserParticipant], thread: MessageThread, source: Option[KeepEventSource], existingContext: HeimdalContext) = {
+  def addedParticipantsToConversation(userId: Id[User], newUserParticipants: Seq[Id[User]], newNonUserParticipants: Seq[EmailParticipant], thread: MessageThread, source: Option[KeepEventSource], existingContext: HeimdalContext) = {
     val addedAt = currentDateTime
     SafeFuture {
       val contextBuilder = new HeimdalContextBuilder

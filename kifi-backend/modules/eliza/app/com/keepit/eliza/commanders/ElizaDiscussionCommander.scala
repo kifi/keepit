@@ -64,7 +64,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
     val users = emsgs.flatMap(_.from.asUser)
     val nonUsers = emsgs.flatMap(_.from.asNonUser)
     val basicUsersFut = shoebox.getBasicUsers(users)
-    val basicNonUsersFut = Future.successful(nonUsers.map(nu => nu -> NonUserParticipant.toBasicNonUser(nu)).toMap)
+    val basicNonUsersFut = Future.successful(nonUsers.map(nu => nu -> EmailParticipant.toBasicNonUser(nu)).toMap)
     for {
       basicUsers <- basicUsersFut
       basicNonUsers <- basicNonUsersFut
@@ -139,8 +139,8 @@ class ElizaDiscussionCommanderImpl @Inject() (
     db.readOnlyMaster { implicit session =>
       nonUserThreadRepo.getByKeepIds(keepIds)
     }.mapValues {
-      _.map(t => (t.participant, t.createdBy, t.createdAt)).collect {
-        case (NonUserEmailParticipant(address), addedBy, addedAt) => address -> (addedBy, addedAt)
+      _.map(t => (t.participant, t.createdBy, t.createdAt)).map {
+        case (EmailParticipant(address), addedBy, addedAt) => address -> (addedBy, addedAt)
       }.toMap
     }
   }
@@ -185,12 +185,12 @@ class ElizaDiscussionCommanderImpl @Inject() (
         nUrl = csKeep.url,
         pageTitle = csKeep.title,
         startedBy = csKeep.owner getOrElse owner,
-        participants = MessageThreadParticipants(users),
+        participants = MessageThreadParticipants.fromSets(users),
         keepId = csKeep.id,
         numMessages = 0
       ))
-      users.foreach(userId => userThreadRepo.intern(UserThread.forMessageThread(mt)(userId)))
-      csKeep.emails.foreach(email => nonUserThreadRepo.intern(NonUserThread.forMessageThread(mt)(NonUserEmailParticipant(email))))
+      users.foreach { userId => userThreadRepo.intern(UserThread.forMessageThread(mt)(userId)) }
+      csKeep.emails.foreach { email => nonUserThreadRepo.intern(NonUserThread.forMessageThread(mt)(email)) }
       (mt, true)
     }
   }
@@ -311,7 +311,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
 
           val sender = lastMsg.from match {
             case MessageSender.User(id) => Some(BasicUserLikeEntity(basicUserById(id)))
-            case MessageSender.NonUser(nup) => Some(BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nup)))
+            case MessageSender.NonUser(nup) => Some(BasicUserLikeEntity(EmailParticipant.toBasicNonUser(nup)))
             case _ => None
           }
 

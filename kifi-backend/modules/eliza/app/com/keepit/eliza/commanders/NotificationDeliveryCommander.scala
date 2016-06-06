@@ -103,10 +103,8 @@ class NotificationDeliveryCommanderImpl @Inject() (
     implicit val executionContext: ExecutionContext) extends NotificationDeliveryCommander with Logging {
 
   def updateEmailParticipantThreads(thread: MessageThread, newMessage: ElizaMessage): Unit = {
-    val emailParticipants = thread.participants.allNonUsers.collect { case emailParticipant: NonUserEmailParticipant => emailParticipant.address }
-    val emailSenderOption = newMessage.from.asNonUser.collect {
-      case emailSender: NonUserEmailParticipant => emailSender.address
-    }
+    val emailParticipants = thread.participants.allEmails
+    val emailSenderOption = newMessage.from.asNonUser.map(_.address)
     val emailRecipients = emailParticipants -- emailSenderOption
     if (emailRecipients.nonEmpty) {
       db.readWrite { implicit session =>
@@ -133,7 +131,7 @@ class NotificationDeliveryCommanderImpl @Inject() (
         val theTitle: String = thread.pageTitle.getOrElse("New conversation")
         val participants: Seq[BasicUserLikeEntity] =
           basicUsers.values.toSeq.map(u => BasicUserLikeEntity(u)) ++
-            thread.participants.allNonUsers.toSeq.map(nu => BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nu)))
+            thread.participants.allNonUsers.toSeq.map(nu => BasicUserLikeEntity(EmailParticipant.toBasicNonUser(nu)))
         val notificationJson = Json.obj(
           "id" -> basicEvent.id,
           "time" -> basicEvent.timestamp,

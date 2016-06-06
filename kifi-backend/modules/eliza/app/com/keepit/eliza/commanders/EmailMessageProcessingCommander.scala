@@ -22,7 +22,7 @@ class EmailMessageProcessingCommander @Inject() (
 
   def readIncomingMessages(): Unit = {
     mailNotificationReplyQueue.nextWithLock(1 minute).onComplete {
-      case Success(result) => {
+      case Success(result) =>
         try {
           result.map { sqsMessage =>
             sqsMessage.consume { message =>
@@ -47,11 +47,9 @@ class EmailMessageProcessingCommander @Inject() (
         } finally {
           readIncomingMessages()
         }
-      }
-      case Failure(t) => {
+      case Failure(t) =>
         log.info("RConn: Queue call failed")
         airbrake.notify("Failed reading incoming messages from queue", t)
-      }
     }
   }
 

@@ -237,7 +237,7 @@ class UriIntegrityPluginImpl @Inject() (
 
 @Singleton
 class UriIntegrityHelpers @Inject() (keepRepo: KeepRepo) extends Logging {
-  def improveKeepSafely(uri: NormalizedURI, keep: Keep)(implicit session: RWSession): Keep = {
+  def improveKeepSafely(uri: NormalizedURI, keep: Keep): Keep = {
     require(keep.uriId == uri.id.get, "URI and Keep don't match.")
     val keepWithTitle = if (keep.title.isEmpty) keep.withTitle(uri.title) else keep
     if (HttpRedirect.isShortenedUrl(keepWithTitle.url)) {

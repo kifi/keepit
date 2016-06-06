@@ -2,11 +2,11 @@ package com.keepit.eliza.util
 
 import com.keepit.common.db.Id
 import com.keepit.common.mail.EmailAddress
-import com.keepit.eliza.model.NonUserEmailParticipant
+import com.keepit.eliza.model.EmailParticipant
 import com.keepit.eliza.model.SystemMessageData.{ AddParticipants, StartWithEmails }
 import com.keepit.model.User
 import org.specs2.mutable.Specification
-import play.api.libs.json.{ Json, JsValue }
+import play.api.libs.json.Json
 
 class ElizaMessageFormatterTest extends Specification {
   "MessageFormatter.toText" should {
@@ -170,8 +170,8 @@ class ElizaMessageFormatterTest extends Specification {
     "use SystemMessageData reads and writes for ElizaMessage.auxData" in {
       val startWithEmailsString = """["start_with_emails","93",[13,{"k":"email","i":"5321567@fuks.co.il","r":"364320"}]]"""
       val addParticipantsString = """["add_participants","35713",[106201,{"k":"email","i":"cam+test@kifi.com","r":"cam+test@kifi.com"}]]"""
-      Json.parse(startWithEmailsString).asOpt[StartWithEmails](StartWithEmails.internalFormat) must beSome(StartWithEmails(addedBy = Id[User](93), addedUsers = Seq(Id[User](13)), addedNonUsers = Seq(NonUserEmailParticipant(EmailAddress("5321567@fuks.co.il")))))
-      Json.parse(addParticipantsString).asOpt[AddParticipants](AddParticipants.internalFormat) must beSome(AddParticipants(addedBy = Id[User](35713), addedUsers = Seq(Id[User](106201)), addedNonUsers = Seq(NonUserEmailParticipant(EmailAddress("cam+test@kifi.com")))))
+      Json.parse(startWithEmailsString).asOpt[StartWithEmails](StartWithEmails.internalFormat) must beSome(StartWithEmails(addedBy = Id[User](93), addedUsers = Seq(Id[User](13)), addedNonUsers = Seq(EmailParticipant(EmailAddress("5321567@fuks.co.il")))))
+      Json.parse(addParticipantsString).asOpt[AddParticipants](AddParticipants.internalFormat) must beSome(AddParticipants(addedBy = Id[User](35713), addedUsers = Seq(Id[User](106201)), addedNonUsers = Seq(EmailParticipant(EmailAddress("cam+test@kifi.com")))))
     }
   }
 }

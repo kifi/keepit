@@ -130,7 +130,7 @@ class MessagingCommanderImpl @Inject() (
         }.toMap
 
         val nonUsers = thread.participants.allNonUsers
-          .map(nu => BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nu))).toSeq
+          .map(nu => BasicUserLikeEntity(EmailParticipant.toBasicNonUser(nu))).toSeq
 
         val basicUsers = thread.participants.allUsers
           .map(u => BasicUserLikeEntity(userId2BasicUser(u))).toSeq
@@ -189,13 +189,13 @@ class MessagingCommanderImpl @Inject() (
     }
   }
 
-  private def constructNonUserRecipients(userId: Id[User], nonUsers: Seq[BasicContact]): Future[Seq[NonUserParticipant]] = {
+  private def constructEmailRecipients(userId: Id[User], nonUsers: Seq[BasicContact]): Future[Seq[EmailParticipant]] = {
     abookServiceClient.internKifiContacts(userId, nonUsers: _*).map { richContacts =>
-      richContacts.map(richContact => NonUserEmailParticipant(richContact.email))
+      richContacts.map(richContact => EmailParticipant(richContact.email))
     }
   }
 
-  private def updateMessageSearchHistoryWithEmailAddresses(userId: Id[User], nups: Seq[NonUserParticipant]) = {
+  private def updateMessageSearchHistoryWithEmailAddresses(userId: Id[User], nups: Seq[EmailParticipant]) = {
     SafeFuture("adding email address to message search history") {
       db.readWrite { implicit session =>
         val history = messageSearchHistoryRepo.getOrCreate(userId)
@@ -206,15 +206,15 @@ class MessagingCommanderImpl @Inject() (
     }
   }
 
-  private def getOrCreateThread(from: Id[User], userParticipants: Seq[Id[User]], nonUserRecipients: Seq[NonUserParticipant], url: String, nUriId: Id[NormalizedURI], nUrl: String, titleOpt: Option[String], source: Option[KeepSource]): Future[(MessageThread, Boolean)] = {
-    val mtParticipants = MessageThreadParticipants(userParticipants.toSet, nonUserRecipients.toSet)
+  private def getOrCreateThread(from: Id[User], userParticipants: Seq[Id[User]], nonUserRecipients: Seq[EmailParticipant], url: String, nUriId: Id[NormalizedURI], nUrl: String, titleOpt: Option[String], source: Option[KeepSource]): Future[(MessageThread, Boolean)] = {
+    val mtParticipants = MessageThreadParticipants.fromSets(userParticipants.toSet, nonUserRecipients.toSet)
     val matches = db.readOnlyMaster { implicit s =>
       threadRepo.getByUriAndParticipants(nUriId, mtParticipants)
     }
     matches.headOption match {
       case Some(mt) => Future.successful(mt, false)
       case None =>
-        shoebox.internKeep(from, userParticipants.toSet, nonUserRecipients.collect { case NonUserEmailParticipant(address) => address }.toSet, nUriId, url, titleOpt, None, source).map { csKeep =>
+        shoebox.internKeep(from, userParticipants.toSet, nonUserRecipients.map { case EmailParticipant(address) => address }.toSet, nUriId, url, titleOpt, None, source).map { csKeep =>
           db.readWrite { implicit s =>
             val thread = threadRepo.save(MessageThread(
               uriId = nUriId,
@@ -231,7 +231,7 @@ class MessagingCommanderImpl @Inject() (
         }
     }
   }
-  def sendNewMessage(from: Id[User], userRecipients: Seq[Id[User]], nonUserRecipients: Seq[NonUserParticipant], url: String, titleOpt: Option[String], messageText: String, source: Option[MessageSource])(implicit time: CrossServiceTime, context: HeimdalContext): Future[(MessageThread, ElizaMessage)] = {
+  def sendNewMessage(from: Id[User], userRecipients: Seq[Id[User]], nonUserRecipients: Seq[EmailParticipant], url: String, titleOpt: Option[String], messageText: String, source: Option[MessageSource])(implicit time: CrossServiceTime, context: HeimdalContext): Future[(MessageThread, ElizaMessage)] = {
     updateMessageSearchHistoryWithEmailAddresses(from, nonUserRecipients)
     val userParticipants = (from +: userRecipients).distinct
 
@@ -341,12 +341,12 @@ class MessagingCommanderImpl @Inject() (
     val participantSet = thread.participants.allUsers
     val nonUserParticipantsSet = thread.participants.allNonUsers
     val id2BasicUser = Await.result(shoebox.getBasicUsers(participantSet.toSeq), 1.seconds) // todo: remove await
-    val basicNonUserParticipants = nonUserParticipantsSet.map(NonUserParticipant.toBasicNonUser)
+    val basicNonUserParticipants = nonUserParticipantsSet.map(EmailParticipant.toBasicNonUser)
       .map(nu => BasicUserLikeEntity(nu))
 
     val sender = message.from match {
       case MessageSender.User(id) => Some(BasicUserLikeEntity(id2BasicUser(id)))
-      case MessageSender.NonUser(nup) => Some(BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nup)))
+      case MessageSender.NonUser(nup) => Some(BasicUserLikeEntity(EmailParticipant.toBasicNonUser(nup)))
       case _ => None
     }
 
@@ -360,7 +360,7 @@ class MessagingCommanderImpl @Inject() (
       thread.nUrl,
       message.from match {
         case MessageSender.User(id) => BasicUserLikeEntity(id2BasicUser(id))
-        case MessageSender.NonUser(nup) => BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nup))
+        case MessageSender.NonUser(nup) => BasicUserLikeEntity(EmailParticipant.toBasicNonUser(nup))
         case _ => BasicUserLikeEntity(BasicUser(ExternalId[User]("42424242-4242-4242-4242-000000000001"), "Kifi", "", "0.jpg", Username("sssss")))
       },
       participantSet.toSeq.map(u => BasicUserLikeEntity(id2BasicUser(u))) ++ basicNonUserParticipants
@@ -368,7 +368,7 @@ class MessagingCommanderImpl @Inject() (
 
     val author = message.from match {
       case MessageSender.User(id) => BasicAuthor.fromUser(id2BasicUser(id))
-      case MessageSender.NonUser(nup) => BasicAuthor.fromNonUser(NonUserParticipant.toBasicNonUser(nup))
+      case MessageSender.NonUser(nup) => BasicAuthor.fromNonUser(EmailParticipant.toBasicNonUser(nup))
       case _ => BasicAuthor.Fake
     }
 
@@ -469,7 +469,7 @@ class MessagingCommanderImpl @Inject() (
     newUsers: Seq[Id[User]], emailContacts: Seq[BasicContact], orgIds: Seq[Id[Organization]],
     source: Option[KeepEventSource])(implicit context: HeimdalContext): Future[(MessageThread, KeepRecipientsDiff)] = {
     val newUserParticipantsFuture = Future.successful(newUsers)
-    val newNonUserParticipantsFuture = constructNonUserRecipients(adderUserId, emailContacts)
+    val newNonUserParticipantsFuture = constructEmailRecipients(adderUserId, emailContacts)
 
     val newOrgParticipantsFuture = Future.sequence(orgIds.map { oid =>
       shoebox.hasOrganizationMembership(oid, adderUserId).flatMap {
@@ -513,7 +513,7 @@ class MessagingCommanderImpl @Inject() (
             ))
           }
 
-          val diff = KeepRecipientsDiff(DeltaSet.addOnly(actuallyNewUsers.toSet), libraries = DeltaSet.empty, DeltaSet.addOnly(actuallyNewNonUsers.flatMap(NonUserParticipant.toEmailAddress).toSet))
+          val diff = KeepRecipientsDiff(DeltaSet.addOnly(actuallyNewUsers.toSet), libraries = DeltaSet.empty, DeltaSet.addOnly(actuallyNewNonUsers.map(_.address).toSet))
 
           session.onTransactionSuccess {
             messagingAnalytics.addedParticipantsToConversation(adderUserId, actuallyNewUsers, actuallyNewNonUsers, thread, source, context)
@@ -632,7 +632,7 @@ class MessagingCommanderImpl @Inject() (
     val tStart = currentDateTime
 
     val userRecipientsFuture = shoebox.getUserIdsByExternalIds(userExtRecipients.toSet).map(_.values.toSeq)
-    val nonUserRecipientsFuture = constructNonUserRecipients(userId, nonUserRecipients)
+    val nonUserRecipientsFuture = constructEmailRecipients(userId, nonUserRecipients)
 
     val orgIds = validOrgRecipients.map(o => Organization.decodePublicId(o)).filter(_.isSuccess).map(_.get)
 
@@ -665,8 +665,8 @@ class MessagingCommanderImpl @Inject() (
             messagesWithBasicUser <- basicMessageCommander.getThreadMessagesWithBasicUser(thread)
             Seq(threadInfo) <- buildThreadInfos(userId, Seq(thread), url)
           } yield {
-            val actions = userRecipients.map(id => (Left(id), "message")) ++ nonUserRecipients.collect {
-              case NonUserEmailParticipant(address) => (Right(address), "message")
+            val actions = userRecipients.map(id => (Left(id), "message")) ++ nonUserRecipients.map {
+              case EmailParticipant(address) => (Right(address), "message")
             }
             shoebox.addInteractions(userId, actions)
 
@@ -702,11 +702,11 @@ class MessagingCommanderImpl @Inject() (
     )
   }
 
-  private def checkEmailParticipantRateLimits(user: Id[User], thread: MessageThread, nonUsers: Seq[NonUserParticipant])(implicit session: RSession): Unit = {
+  private def checkEmailParticipantRateLimits(user: Id[User], thread: MessageThread, nonUsers: Seq[EmailParticipant])(implicit session: RSession): Unit = {
 
     // Check rate limit for this discussion
-    val distinctEmailRecipients = nonUsers.collect { case emailParticipant: NonUserEmailParticipant => emailParticipant.address }.toSet
-    val existingEmailParticipants = thread.participants.allNonUsers.collect { case emailParticipant: NonUserEmailParticipant => emailParticipant.address }
+    val distinctEmailRecipients = nonUsers.map(_.address).toSet
+    val existingEmailParticipants = thread.participants.allEmails
 
     val totalEmailParticipants = (existingEmailParticipants ++ distinctEmailRecipients).size
     val newEmailParticipants = totalEmailParticipants - existingEmailParticipants.size

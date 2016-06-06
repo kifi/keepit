@@ -36,11 +36,11 @@ class MessageFetchingCommander @Inject() (
 
   def getMessageWithBasicUser(msg: ElizaMessage, thread: MessageThread, basicUserById: Map[Id[User], BasicUser]): MessageWithBasicUser = {
     val participants = thread.allParticipants.toSeq.map(u => BasicUserLikeEntity(basicUserById(u))) ++
-      thread.participants.nonUserParticipants.keySet.map(nup => BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nup)))
+      thread.participants.emailParticipants.keySet.map(nup => BasicUserLikeEntity(EmailParticipant.toBasicNonUser(nup)))
 
     val from = msg.from match {
       case MessageSender.User(id) => BasicUserLikeEntity(basicUserById(id))
-      case MessageSender.NonUser(nup) => BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nup))
+      case MessageSender.NonUser(nup) => BasicUserLikeEntity(EmailParticipant.toBasicNonUser(nup))
       case MessageSender.System => BasicUserLikeEntity(BasicUser(ExternalId[User]("42424242-4242-4242-4242-000000000001"), "Kifi", "", "0.jpg", Username("sssss")))
     }
 
