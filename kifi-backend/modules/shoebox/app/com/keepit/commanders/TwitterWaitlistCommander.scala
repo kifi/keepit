@@ -83,7 +83,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
             (handle, sui)
           }) match {
             case Some(sh) => Right(Left(sh))
-            case None => Left(Left(s"User ($userId) must have an active SUI and known twitter handle to create a $target sync."))
+            case None => Left(Left("twitter_not_authed"))
           }
       }
     } match {

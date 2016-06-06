@@ -219,4 +219,22 @@ class TwitterWaitlistController @Inject() (
     }
   }
 
+  def createSync(target: Option[String]) = UserAction { request =>
+    val syncTarget = target match {
+      case Some(SyncTarget.Favorites.value) => SyncTarget.Favorites
+      case _ => SyncTarget.Tweets
+    }
+    commander.createSyncOrWaitlist(request.userId, syncTarget) match {
+      case Left(err) =>
+        BadRequest(Json.obj("error" -> "failed", "msg" -> err))
+      case Right(Left(wait)) =>
+        Accepted(Json.obj("pending" -> true))
+      case Right(Right(sync)) =>
+        val library = db.readOnlyReplica { implicit session =>
+          libraryRepo.get(sync.libraryId)
+        }
+        Ok(Json.obj("complete" -> true, "url" -> libPathCommander.getPathForLibrary(library), "handle" -> sync.twitterHandle))
+    }
+  }
+
 }
