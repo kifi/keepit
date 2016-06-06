@@ -19,7 +19,7 @@ angular.module('kifi')
 
         // This option is temporarily treated as a boolean in the UI, although it probably won't be
         // in the near future.
-        $scope.orgMemberAccessWrite = $scope.library.orgMemberAccess === 'read_only' ? false : true;
+        $scope.orgMemberAccessWrite = ($scope.library || {}).orgMemberAccess === 'read_only' ? false : true;
 
         $scope.isUserOrgMember = (profileService.me.orgs.length > 0);
 

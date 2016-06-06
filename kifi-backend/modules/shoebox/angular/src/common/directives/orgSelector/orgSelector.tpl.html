@@ -15,9 +15,9 @@
   >
     <img ng-src="{{ libraryOwner|pic:100 }}" />
     <h1>{{libraryOwner|name}}</h1>
-    <!-- show the upsell if the selected space is an org, and not if I'm an org member who has permission to move org libraries. -->
+    <!-- show the upsell if the library is not in-creation, the selected space is an org, and not if I'm an org member who has permission to move org libraries. -->
     <span
-      ng-if="spaceIsOrg(space.destination) && !((space.destination.viewer.membership && space.destination.viewer.membership.role !== 'admin') && space.destination.viewer.permissions.indexOf(ORG_PERMISSION.REMOVE_LIBRARIES) !== -1)"
+      ng-if="library.id && spaceIsOrg(space.destination) && !((space.destination.viewer.membership && space.destination.viewer.membership.role !== 'admin') && space.destination.viewer.permissions.indexOf(ORG_PERMISSION.REMOVE_LIBRARIES) !== -1)"
       kf-upsell
       position="right"
       on-click="onClickUpsellRelocate()"
