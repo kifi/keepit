@@ -190,15 +190,13 @@ class AuthCommander @Inject() (
         alternative
       } else sfi.email
 
-      val pInfo = sfi.password.map { p =>
-        currentHasher.hash(p)
-      }
+      val pInfo = sfi.password.map { p => currentHasher.hash(p) }
 
       val (emailPassIdentity, userId) = saveUserPasswordIdentity(None, email = email, passwordInfoOpt = pInfo, firstName = sfi.firstName, lastName = sfi.lastName, isComplete = true)
 
       saveUserIdentity(socialIdentity.withUserId(userId)) // SocialUserInfo is claimed here
 
-      val user = db.readWrite { implicit session =>
+      val user = db.readWrite(attempts = 3) { implicit session =>
         val userPreUsername = userRepo.get(userId)
         handleCommander.autoSetUsername(userPreUsername) getOrElse userPreUsername
       }
@@ -207,6 +205,13 @@ class AuthCommander @Inject() (
       val cropAttributes = parseCropForm(sfi.picHeight, sfi.picWidth, sfi.cropX, sfi.cropY, sfi.cropSize) tap (r => log.info(s"Cropped attributes for ${user.id.get}: " + r))
       sfi.picToken.map { token =>
         s3ImageStore.copyTempFileToUserPic(user.id.get, user.externalId, token, cropAttributes)
+      }
+
+      db.readWrite(attempts = 3) { implicit session =>
+        socialIdentity.identity match {
+          case tw: TwitterIdentity => userValueRepo.setValue(userId, UserValueName.TWITTER_SYNC_PROMO, "show_sync")
+          case other => // Nothing to do.
+        }
       }
 
       SafeFuture { inviteCommander.markPendingInvitesAsAccepted(userId, inviteExtIdOpt) }
@@ -254,7 +259,7 @@ class AuthCommander @Inject() (
 
       val (newIdentity, _) = saveUserPasswordIdentity(Some(userId), email = email, passwordInfoOpt = Some(passwordInfo), firstName = efi.firstName, lastName = efi.lastName, isComplete = true)
 
-      val user = db.readWrite { implicit session =>
+      val user = db.readWrite(attempts = 3) { implicit session =>
         val userPreUsername = userRepo.get(userId)
         handleCommander.autoSetUsername(userPreUsername) getOrElse userPreUsername
       }

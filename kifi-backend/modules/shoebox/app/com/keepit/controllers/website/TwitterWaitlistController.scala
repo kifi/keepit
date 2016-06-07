@@ -28,6 +28,7 @@ class TwitterWaitlistController @Inject() (
     twitterSyncStateRepo: TwitterSyncStateRepo,
     libraryRepo: LibraryRepo,
     clock: Clock,
+    userValueRepo: UserValueRepo,
     implicit val ec: ExecutionContext) extends UserActions with ShoeboxServiceController {
 
   def twitterWaitlistLandingRedirectHack() = twitterWaitlistLanding()
@@ -101,54 +102,6 @@ class TwitterWaitlistController @Inject() (
     }
   }
 
-  private def pollDbForTwitterHandle(userId: Id[User], iterations: Int): Future[Option[TwitterHandle]] = {
-    /*
-     * This is not good code, but appears to be necessary because initially, when a social
-     * account is brought in, the SocialUserInfo record is not complete. Namely, it's missing
-     * the profileUrl field. Only after our system syncs with the social network do we get this.
-     * Unfortunately, in this code path, it's nearly always too fast, so it's empty. However,
-     * we need the handle here. So we poll the db every 600 ms (up to `iterations` times) looking for it.
-     * We aggressively log if we can't get it fast enough.
-     *
-     * What we should do:
-     *   1) Handle creation of SocialUserInfo records ourselves, filling them to our heart's desire.
-     *   2) Minimize dependency on SecureSocial's static approach. It won't work much longer.
-     */
-    def checkStatusOfTwitterUser() = {
-      db.readOnlyMaster { implicit session =>
-        socialRepo.getByUsers(Seq(userId)).find(_.networkType == SocialNetworks.TWITTER).flatMap { tsui =>
-          if (tsui.state == SocialUserInfoStates.CREATED) {
-            log.info(s"[checkStatusOfTwitterUser] Still waiting on ${tsui.networkType}/${tsui.socialId}")
-            None // pending sync, keep polling
-          } else if (tsui.state == SocialUserInfoStates.FETCHED_USING_SELF && tsui.getProfileUrl.isDefined) { // done
-            log.info(s"[checkStatusOfTwitterUser] Got it for ${tsui.networkType}/${tsui.socialId}")
-            Some(Right(tsui.getProfileUrl.map(url => TwitterHandle(url.substring(url.lastIndexOf('/') + 1))).get))
-          } else { // other
-            log.info(s"[checkStatusOfTwitterUser] Couldn't get handle of ${tsui.networkType}/${tsui.socialId}")
-            Some(Left(()))
-          }
-        }
-      }
-    }
-
-    var times = 0
-    def timeoutF = play.api.libs.concurrent.Promise.timeout(None, 700)
-    def pollCheck(): Future[Option[TwitterHandle]] = {
-      timeoutF.flatMap { _ =>
-        checkStatusOfTwitterUser() match {
-          case None if times < iterations =>
-            times += 1
-            pollCheck()
-          case None | Some(Left(_)) => // Timed out or weird error
-            Future.successful(None)
-          case Some(Right(res)) => // Got handle!
-            Future.successful(Some(res))
-        }
-      }
-    }
-    pollCheck()
-  }
-
   def thanksForTwitterWaitlistRedirectHack = thanksForTwitterWaitlist
 
   def thanksForTwitterWaitlist = MaybeUserAction { implicit request =>
@@ -172,13 +125,15 @@ class TwitterWaitlistController @Inject() (
           commander.createSyncOrWaitlist(ur.userId, SyncTarget.Tweets) match {
             case Left(error) =>
               log.warn(s"[thanksForTwitterWaitlist] ${ur.userId} Error when creating sync, $error")
-              oldBehavior(ur.userId, twitterSui.get)
+              db.readWrite { implicit s => userValueRepo.setValue(ur.userId, UserValueName.TWITTER_SYNC_PROMO, "show_sync") }
               MarketingSiteRouter.marketingSite("twitter-confirmation")
             case Right(Right(sync)) if syncIsReady(sync) =>
               log.info(s"[thanksForTwitterWaitlist] ${ur.userId} Had a sync, redirecting $sync")
+              db.readWrite { implicit s => userValueRepo.clearValue(ur.userId, UserValueName.TWITTER_SYNC_PROMO) }
               redirectToLibrary(existingSync.get.libraryId)
             case Right(waitOrNewSync) =>
               log.info(s"[thanksForTwitterWaitlist] ${ur.userId} now on waitlist $waitOrNewSync")
+              db.readWrite { implicit s => userValueRepo.setValue(ur.userId, UserValueName.TWITTER_SYNC_PROMO, "in_progress") }
               MarketingSiteRouter.marketingSite("twitter-confirmation")
           }
         }
@@ -200,22 +155,25 @@ class TwitterWaitlistController @Inject() (
     Redirect(libPathCommander.getPathForLibrary(library))
   }
 
-  private def oldBehavior(userId: Id[User], twitterSui: SocialUserInfo) = {
-    pollDbForTwitterHandle(userId, iterations = 75).map { twRes =>
-      twRes match {
-        case Some(handle) =>
-          commander.addUserToWaitlist(userId, Some(handle))
-        case None => // we failed :(
-          log.warn(s"Couldn't get twitter handle in time, we'll try again. userId: ${userId.id}. They want to be waitlisted.")
-          socialGraphPlugin.asyncFetch(twitterSui).onComplete { _ =>
-            pollDbForTwitterHandle(userId, iterations = 75).onComplete {
-              case Success(Some(handle)) =>
-                commander.addUserToWaitlist(userId, Some(handle))
-              case fail => // we failed :(
-                airbrakeNotifier.notify(s"Couldn't get twitter handle in time, failed retry. userId: ${userId.id}. They want to be waitlisted. $fail")
-            }
-          }
-      }
+  def createSync(target: Option[String]) = UserAction { request =>
+    val syncTarget = target match {
+      case Some(SyncTarget.Favorites.value) => SyncTarget.Favorites
+      case _ => SyncTarget.Tweets
+    }
+    commander.createSyncOrWaitlist(request.userId, syncTarget) match {
+      case Left(err) =>
+        BadRequest(Json.obj("error" -> "failed", "msg" -> err))
+      case Right(Left(wait)) =>
+        Accepted(Json.obj("pending" -> true, "handle" -> wait.twitterHandle.map(_.value)))
+      case Right(Right(sync)) =>
+        val library = db.readOnlyReplica { implicit session =>
+          libraryRepo.get(sync.libraryId)
+        }
+        if (library.keepCount > 0) {
+          Ok(Json.obj("complete" -> true, "url" -> libPathCommander.getPathForLibrary(library), "handle" -> sync.twitterHandle.value))
+        } else {
+          Ok(Json.obj("complete" -> false, "url" -> libPathCommander.getPathForLibrary(library), "handle" -> sync.twitterHandle.value))
+        }
     }
   }
 
