@@ -807,12 +807,16 @@ api.port.on({
       libraries = unique(libraries, getId);
 
       var recentLibIds = loadRecentLibs();
-      if (guideData && guideData.library && recentLibIds.indexOf(guideData.library.id) < 0) {
-        var i = libraries.findIndex(idIs(guideData.library.id));
-        if (i >= 0) {
-          libraries = libraries.splice(i, 1).concat(libraries);  // list guided library first
+      if (guideData) {
+        var guideLibId = (guideData.library &&  guideData.library.id) || mySysLibIds[0];
+        if (guideLibId) {
+          var i = libraries.findIndex(idIs(guideLibId));
+          if (i >= 0) {
+            libraries = libraries.splice(i, 1).concat(libraries);  // list guided library first
+          }
         }
       }
+
       libraries.filter(idIsIn(mySysLibIds)).forEach(setProp('system', true));
       libraries.filter(idIsIn(recentLibIds)).forEach(setProp('recent', true));
       var keeps = d ? d.keeps : [];
@@ -1057,6 +1061,7 @@ api.port.on({
     (pageData[tab.nUri] || {}).shown = true;
     logEvent('slider', 'sliderShown', data.urls);
     if (data.action) {
+      getDefaultLibraries(); // prime the cache
       tracker.track('user_expanded_keeper', {action: data.action});
     }
   },
@@ -2254,7 +2259,6 @@ function kifify(tab) {
     }
     kififyWithPageData(tab, d);
   } else {
-    getDefaultLibraries(); // prime the cache
     ajax('POST', '/ext/page', {url: url}, gotPageDetailsFor.bind(null, url, tab), function fail(xhr) {
       if (xhr.status === 403) {
         clearSession();
@@ -3070,6 +3074,7 @@ function authenticate(callback, retryMs) {
   function done(data) {
     log('[authenticate:done] reason: %s session: %o', api.loadReason, data);
     unstore('logout');
+    getDefaultLibraries(); // prime the cache
 
     api.toggleLogging(data.experiments.indexOf('extension_logging') >= 0);
     me = standardizeUser(data.user, data.orgs);
