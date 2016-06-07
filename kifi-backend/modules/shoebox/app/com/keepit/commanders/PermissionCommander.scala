@@ -274,8 +274,8 @@ class PermissionCommanderImpl @Inject() (
           }
           viewerIsDirectlyConnectedToKeep || viewerCanAddMessageViaLibrary
         }
-        val canAddLibraries = canAddMessage
-        val canAddParticipants = canAddMessage
+        val canAddLibraries = userIdOpt.isDefined && canAddMessage
+        val canAddParticipants = userIdOpt.isDefined && canAddMessage
         val canDeleteOwnMessages = true
         val canDeleteOtherMessages = {
           val viewerOwnsTheKeep = userIdOpt containsTheSameValueAs k.userId
