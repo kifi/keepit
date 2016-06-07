@@ -338,7 +338,8 @@ class UserController @Inject() (
       SLACK_INT_PROMO,
       SLACK_UPSELL_WIDGET,
       SHOW_SLACK_CREATE_TEAM_POPUP,
-      HIDE_EXTENSION_UPSELL
+      HIDE_EXTENSION_UPSELL,
+      TWITTER_SYNC_PROMO
     )
   }
 

@@ -207,6 +207,11 @@ class AuthCommander @Inject() (
         s3ImageStore.copyTempFileToUserPic(user.id.get, user.externalId, token, cropAttributes)
       }
 
+      socialIdentity.identity match {
+        case tw: TwitterIdentity => userValueRepo.setValue(userId, UserValueName.TWITTER_SYNC_PROMO, "show_sync")
+        case other => // Nothing to do.
+      }
+
       SafeFuture { inviteCommander.markPendingInvitesAsAccepted(userId, inviteExtIdOpt) }
 
       (user, emailPassIdentity)

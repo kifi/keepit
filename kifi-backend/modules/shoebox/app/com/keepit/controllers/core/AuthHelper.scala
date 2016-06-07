@@ -302,7 +302,10 @@ class AuthHelper @Inject() (
         }
         "/teams/new"
       case JoinTwitterWaitlist =>
-        twitterWaitlistCommander.createSyncOrWaitlist(userId, SyncTarget.Tweets)
+        twitterWaitlistCommander.createSyncOrWaitlist(userId, SyncTarget.Tweets) match {
+          case Right(sync) => userValueRepo.setValue(userId, UserValueName.TWITTER_SYNC_PROMO, "in_progress")
+          case Left(err) => userValueRepo.setValue(userId, UserValueName.TWITTER_SYNC_PROMO, "show_sync")
+        }
         "/twitter/thanks"
       case NoIntent => homeOrInstall
     }
@@ -331,9 +334,9 @@ class AuthHelper @Inject() (
       }
     }
     heimdal.trackEvent(UserEvent(user.id.get, context, UserEventTypes.COMPLETED_SIGNUP))
+    request.session.get("kcid").foreach(saveKifiCampaignId(user.id.get, _))
 
     val uri = processIntent(user.id.get, intent)
-    request.session.get("kcid").foreach(saveKifiCampaignId(user.id.get, _))
     log.info(s"[authCookies] remaining cookies=${request.cookies}")
     val discardedCookies = Seq("inv").map(n => DiscardingCookie(n)) ++ PostRegIntent.discardingCookies
 
