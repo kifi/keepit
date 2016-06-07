@@ -79,20 +79,12 @@ angular.module('kifi')
           // rendering the create library page may increase the height of the widget,
           // so make sure it's not overflowing on top
 
-
           var widgetOffsetTop = widget.offset().top;
 
           if (widgetOffsetTop < desiredMarginTop) {
-            var scrollElement = element.parents('.kf-body-container-content');
-            var mainScrollTop = scrollElement.scrollTop();
-
-            if (mainScrollTop > (widgetOffsetTop*-1 + desiredMarginTop)) {
-              scrollElement.scrollTop(mainScrollTop + widgetOffsetTop - desiredMarginTop);
-            } else {
-              var shiftDown = (desiredMarginTop - widgetOffsetTop);
-              var bottom = parseInt(widget.css('bottom').slice(0,-2), 10);
-              widget.css({ bottom: (bottom - shiftDown) + 'px' });
-            }
+            var shiftDown = (desiredMarginTop - widgetOffsetTop);
+            var bottom = parseInt(widget.css('bottom').slice(0,-2), 10);
+            widget.css({ bottom: (bottom - shiftDown) + 'px' });
           }
         }
 
@@ -117,18 +109,23 @@ angular.module('kifi')
         }
 
         function refreshSuggestions(query, limit, offset) {
-          return keepService.suggestRecipientsForKeep(query, limit, offset, typeaheadFilter).then(function (resultData) {
+          query = query || '';
+          limit = limit || numSuggestions;
+          offset = offset || 0;
+          return keepService.suggestRecipientsForKeep(query || '', limit, offset, typeaheadFilter).then(function (resultData) {
             var nonMemberResults = resultData.results.filter(function(suggestion) {
               return filteredSuggestions.indexOf(suggestion.id || suggestion.email) === -1;
             });
 
             if (nonMemberResults.length === 0 && resultData.mayHaveMore) {
-              refreshSuggestions(query, limit, (offset || 0) + limit);
+              refreshSuggestions(query, limit, offset + limit);
             } else {
               scope.suggestions = nonMemberResults;
               if (widget && !scope.init) {
                 scope.init = true;
                 resetInput();
+              } else {
+                $timeout(adjustWidgetPosition, 50);
               }
             }
           });
@@ -176,12 +173,8 @@ angular.module('kifi')
           scope.selections.push(suggestion);
           filteredSuggestions.push(suggestion.id || suggestion.email);
           suggestion.isSelected = true;
-
-          if (widget.find('.kf-skw-suggestion').length === 1) {
-            currPage++;
-            refreshSuggestions(scope.typeahead, numSuggestions, currPage * numSuggestions);
-          }
-
+          scope.typeahead = '';
+          refreshSuggestions();
           resetInput();
         };
 
@@ -201,7 +194,7 @@ angular.module('kifi')
 
           $timeout(function() {
             adjustWidgetPosition();
-          }, 0);
+          }, 100);
         };
 
         scope.exitCreateLibrary = function() {
