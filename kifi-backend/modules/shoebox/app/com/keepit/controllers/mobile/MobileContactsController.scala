@@ -33,42 +33,9 @@ class MobileContactsController @Inject() (
   def searchForAllContacts(query: Option[String], limit: Option[Int]) = UserAction.async { request =>
     val typeaheadF = typeaheadCommander.searchForContactResults(request.userId, query.getOrElse(""), limit, includeSelf = false)
 
-    val orgsToInclude = {
-      val basicOrgs = db.readOnlyReplica { implicit s =>
-        val orgsUserIsIn = orgMemberRepo.getAllByUserId(request.userId).map(_.organizationId)
-          .filter { orgId =>
-            permissionCommander.getOrganizationPermissions(orgId, Some(request.userId)).contains(OrganizationPermission.GROUP_MESSAGING)
-          }
-        basicOrganizationGen.getBasicOrganizations(orgsUserIsIn.toSet).values
-      }
-      val orgsToShow = query.getOrElse("") match {
-        case "" => basicOrgs
-        case orgQ =>
-          def sanitize(s: String) = s.trim.toLowerCase.split("\\P{L}+").toSet
-          val query = sanitize(orgQ)
-          basicOrgs.filter { o =>
-            val lowerOrg = o.name.toLowerCase
-            query.forall(qterm => lowerOrg.contains(qterm))
-          }
-      }
-      orgsToShow.map { org =>
-        // This is a superset of a UserContact. I can't use that type because it forces ExternalId[User]
-        Json.obj(
-          "name" -> (org.name + " Members"),
-          "id" -> org.orgId,
-          "pictureName" -> ("../../../../" + org.avatarPath.path: String), // one weird trick
-          "kind" -> "org",
-          "avatarPath" -> (org.avatarPath.path: String),
-          "handle" -> org.handle
-        )
-      }.toList
-    }
-
     typeaheadF.map { res =>
-      val orgCount = orgsToInclude.length
-      val contactsToShow = limit.getOrElse(res.length + orgCount) - orgCount
-
-      val res1 = orgsToInclude ++ res.take(contactsToShow).collect {
+      val contactsToShow = limit.getOrElse(res.length)
+      val res1 = res.take(contactsToShow).collect {
         case u: UserContactResult => Json.toJson(u)
         case e: EmailContactResult => Json.toJson(e)
       }
