@@ -31,7 +31,7 @@ trait ElizaDiscussionCommander {
   def syncAddParticipants(keepId: Id[Keep], event: KeepEventData.ModifyRecipients, source: Option[KeepEventSource]): Future[Unit]
   def getEmailParticipantsForKeeps(keepIds: Set[Id[Keep]]): Map[Id[Keep], Map[EmailAddress, (Id[User], DateTime)]]
   def sendMessage(userId: Id[User], txt: String, keepId: Id[Keep], source: Option[MessageSource])(implicit time: CrossServiceTime, context: HeimdalContext): Future[Message]
-  def editParticipantsOnKeepForOldElizaClients(keepId: Id[Keep], editor: Id[User], newUsers: Seq[Id[User]], newNonUsers: Seq[BasicContact], orgs: Seq[Id[Organization]], source: Option[KeepEventSource])(implicit context: HeimdalContext): Future[Boolean]
+  def editParticipantsOnKeepForOldElizaClients(keepId: Id[Keep], editor: Id[User], newUsers: Seq[Id[User]], newNonUsers: Seq[BasicContact], source: Option[KeepEventSource])(implicit context: HeimdalContext): Future[Boolean]
   def modifyRecipientsForKeep(keepId: Id[Keep], userAttribution: Id[User], diff: KeepRecipientsDiff, source: Option[KeepEventSource])(implicit ctxt: HeimdalContext): Future[(MessageThread, KeepRecipientsDiff)]
   def muteThread(userId: Id[User], keepId: Id[Keep])(implicit context: HeimdalContext): Future[Boolean]
   def unmuteThread(userId: Id[User], keepId: Id[Keep])(implicit context: HeimdalContext): Future[Boolean]
@@ -249,7 +249,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
   }
 
   // path for modifying participants from old clients: client --> eliza (thread updates) -> shoebox (keep event updates) -> eliza (event notifications)
-  def editParticipantsOnKeepForOldElizaClients(keepId: Id[Keep], editor: Id[User], newUsers: Seq[Id[User]], newNonUsers: Seq[BasicContact], orgs: Seq[Id[Organization]], source: Option[KeepEventSource])(implicit context: HeimdalContext): Future[Boolean] = {
+  def editParticipantsOnKeepForOldElizaClients(keepId: Id[Keep], editor: Id[User], newUsers: Seq[Id[User]], newNonUsers: Seq[BasicContact], source: Option[KeepEventSource])(implicit context: HeimdalContext): Future[Boolean] = {
     implicit val context = HeimdalContext.empty
     for {
       thread <- getOrCreateMessageThreadWithUser(keepId, editor)

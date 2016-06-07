@@ -2,30 +2,26 @@ package com.keepit.eliza.controllers.mobile
 
 import com.google.inject.Inject
 import com.keepit.common.controller.{ ElizaServiceController, UserActions, UserActionsHelper }
-import com.keepit.common.core.eitherExtensionOps
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
-import com.keepit.common.db.{ Id, ExternalId }
+import com.keepit.common.db.ExternalId
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.http._
 import com.keepit.common.mail.BasicContact
 import com.keepit.common.net.{ URISanitizer, UserAgent }
 import com.keepit.common.time._
-import com.keepit.common.http._
-import com.keepit.discussion.{ MessageSource, DiscussionFail, Message }
+import com.keepit.discussion.{ DiscussionFail, Message, MessageSource }
 import com.keepit.eliza.commanders._
-import com.keepit.model.BasicKeepEvent.BasicKeepEventId.MessageId
-import scala.collection._
 import com.keepit.heimdal._
-import com.keepit.model.{ KeepEventSource, Keep, Organization, User }
+import com.keepit.model.BasicKeepEvent.BasicKeepEventId.MessageId
+import com.keepit.model.{ Keep, KeepEventSource, User }
 import com.keepit.notify.model.Recipient
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.{ BasicUser, BasicUserLikeEntity }
 import com.kifi.macros.json
+import play.api.libs.json._
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
-
-//import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{ JsArray, JsObject, JsString, _ }
 
 class MobileMessagingController @Inject() (
     discussionCommander: ElizaDiscussionCommander,
@@ -150,7 +146,7 @@ class MobileMessagingController @Inject() (
       (o \ "text").as[String].trim,
       (o \ "source").asOpt[MessageSource]
     )
-    val (validUserRecipients, validEmailRecipients, validOrgRecipients) = messagingCommander.parseRecipients((o \ "recipients").as[Seq[JsValue]]) // XXXX
+    val (validUserRecipients, validEmailRecipients) = messagingCommander.parseRecipients((o \ "recipients").as[Seq[JsValue]]) // XXXX
     val url = (o \ "url").as[String]
 
     val context = {
@@ -159,7 +155,7 @@ class MobileMessagingController @Inject() (
       contextBuilder.build
     }
 
-    messagingCommander.sendMessageAction(title, text, source, validUserRecipients, validEmailRecipients, validOrgRecipients, url, request.userId, context).map {
+    messagingCommander.sendMessageAction(title, text, source, validUserRecipients, validEmailRecipients, url, request.userId, context).map {
       case (message, threadInfo, messages) =>
         Ok(Json.obj(
           "id" -> message.pubId,
@@ -167,9 +163,6 @@ class MobileMessagingController @Inject() (
           "createdAt" -> message.createdAt,
           "threadInfo" -> ElizaThreadInfo.writesThreadInfo.writes(threadInfo.copy(url = URISanitizer.sanitize(threadInfo.url), nUrl = threadInfo.nUrl.map(URISanitizer.sanitize))),
           "messages" -> messages.reverse.map(message => message.copy(url = URISanitizer.sanitize(message.url)))))
-    }.recover {
-      case ex: Exception if ex.getMessage == "insufficient_org_permissions" =>
-        Forbidden(Json.obj("error" -> "insufficient_org_permissions"))
     }
   }
 
@@ -346,22 +339,16 @@ class MobileMessagingController @Inject() (
     Ok("")
   }
 
-  // users is a string because orgs come in through that field
-  @json case class AddParticipants(users: Set[String], emails: Seq[BasicContact])
+  @json case class AddParticipants(users: Set[ExternalId[User]], emails: Seq[BasicContact])
   def addParticipantsToThreadV2(pubKeepId: PublicId[Keep]) = UserAction.async(parse.tolerantJson) { request =>
     (Keep.decodePublicId(pubKeepId), request.body.asOpt[AddParticipants]) match {
       case (Success(keepId), Some(addReq)) =>
         val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
         val source = request.userAgentOpt.flatMap(KeepEventSource.fromUserAgent)
         contextBuilder += ("source", "mobile")
-
-        val (extUserIds, orgIds) = addReq.users.flatMap {
-          case extIdStr if extIdStr.length == 36 => ExternalId.asOpt[User](extIdStr).map(Left(_))
-          case orgIdStr if orgIdStr.startsWith("o") => Organization.decodePublicId(PublicId(orgIdStr)).toOption.map(Right(_))
-        }.toSeq.partitionEithers
         for {
-          userIds <- shoebox.getUserIdsByExternalIds(extUserIds.toSet).map(_.values.toList)
-          _ <- discussionCommander.editParticipantsOnKeepForOldElizaClients(keepId, request.userId, userIds, addReq.emails, orgIds, source)(contextBuilder.build)
+          userIds <- shoebox.getUserIdsByExternalIds(addReq.users).map(_.values.toList)
+          _ <- discussionCommander.editParticipantsOnKeepForOldElizaClients(keepId, request.userId, userIds, addReq.emails, source)(contextBuilder.build)
         } yield Ok
       case _ => Future.successful(BadRequest("invalid_keep_id"))
     }
@@ -376,13 +363,13 @@ class MobileMessagingController @Inject() (
         contextBuilder += ("source", "mobile")
         //assuming the client does the proper checks!
         val validEmails = emailContacts.split(",").toList.map(_.trim).filter(_.nonEmpty).map { email => BasicContact.fromString(email).get }
-        val (extUserIds, orgIds) = users.split(",").toList.map(_.trim).filter(_.nonEmpty).flatMap {
-          case extIdStr if extIdStr.length == 36 => ExternalId.asOpt[User](extIdStr).map(Left(_))
-          case orgIdStr if orgIdStr.startsWith("o") => Organization.decodePublicId(PublicId(orgIdStr)).toOption.map(Right(_))
-        }.partitionEithers
+        val extUserIds = users.split(",").toList.map(_.trim).filter(_.nonEmpty).flatMap {
+          case extIdStr if extIdStr.length == 36 => ExternalId.asOpt[User](extIdStr)
+          case _ => None
+        }
         for {
           userIds <- shoebox.getUserIdsByExternalIds(extUserIds.toSet).map(_.values.toList)
-          _ <- discussionCommander.editParticipantsOnKeepForOldElizaClients(keepId, request.userId, userIds, validEmails, orgIds, source)(contextBuilder.build)
+          _ <- discussionCommander.editParticipantsOnKeepForOldElizaClients(keepId, request.userId, userIds, validEmails, source)(contextBuilder.build)
         } yield Ok("")
       case Failure(_) => Future.successful(BadRequest("invalid_keep_id"))
     }
