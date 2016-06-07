@@ -259,7 +259,7 @@ class AuthCommander @Inject() (
 
       val (newIdentity, _) = saveUserPasswordIdentity(Some(userId), email = email, passwordInfoOpt = Some(passwordInfo), firstName = efi.firstName, lastName = efi.lastName, isComplete = true)
 
-      val user = db.readWrite { implicit session =>
+      val user = db.readWrite(attempts = 3) { implicit session =>
         val userPreUsername = userRepo.get(userId)
         handleCommander.autoSetUsername(userPreUsername) getOrElse userPreUsername
       }
