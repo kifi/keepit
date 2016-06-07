@@ -22,6 +22,10 @@ angular.module('kifi')
         var init;
         var filteredSuggestions = []; // ids of entities to filter from suggestions (keep.members + scope.selected)
 
+        var canAddParticipants = scope.keep.permissions && scope.keep.permissions.indexOf('add_participants') !== -1;
+        var canAddLibraries = scope.keep.permissions && scope.keep.permissions.indexOf('add_libraries') !== -1;
+        var typeaheadFilter = (canAddParticipants ? ['user', 'email'] : []).concat(canAddLibraries ? ['library'] : []).join(',');
+
         scope.hasExperiment = profileService.me && profileService.me.experiments && profileService.me.experiments.indexOf('add_keep_recipients') !== -1;
 
         function listenForInit() {
@@ -113,7 +117,7 @@ angular.module('kifi')
         }
 
         function refreshSuggestions(query, limit, offset) {
-          return keepService.suggestRecipientsForKeep(query, limit, offset, null).then(function (resultData) {
+          return keepService.suggestRecipientsForKeep(query, limit, offset, typeaheadFilter).then(function (resultData) {
             var nonMemberResults = resultData.results.filter(function(suggestion) {
               return filteredSuggestions.indexOf(suggestion.id || suggestion.email) === -1;
             });
