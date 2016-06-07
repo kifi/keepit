@@ -6,7 +6,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.search.engine.query.core.{ NullQuery, KWeight, ProjectableQuery }
 import com.keepit.search.index.Searcher
 import com.keepit.typeahead.{ PrefixFilter, PrefixMatching }
-import org.apache.lucene.index.{ BinaryDocValues, Term, AtomicReaderContext }
+import org.apache.lucene.index.{ BinaryDocValues, Term, LeafReaderContext }
 import org.apache.lucene.search.BooleanClause.Occur
 import org.apache.lucene.search._
 import org.apache.lucene.util.Bits
@@ -29,7 +29,7 @@ class KPrefixQuery(val prefixField: String, val nameValueField: String, val term
 
   override def toString(s: String) = s"KPrefixQuery($prefixField-$nameValueField: ${terms.mkString(" & ")})"
 
-  override def createWeight(searcher: IndexSearcher): Weight = new KPrefixWeight(this, searcher)
+  override def createWeight(searcher: IndexSearcher, needsScores: Boolean): Weight = new KPrefixWeight(this, searcher, needsScores)
 
   override def extractTerms(out: JSet[Term]): Unit = terms.foreach(termString => out.add(new Term(prefixField, termString)))
 
@@ -37,7 +37,7 @@ class KPrefixQuery(val prefixField: String, val nameValueField: String, val term
 
 }
 
-class KPrefixWeight(val query: KPrefixQuery, val searcher: IndexSearcher) extends Weight with KWeight {
+class KPrefixWeight(val query: KPrefixQuery, val searcher: IndexSearcher, needsScores: Boolean) extends Weight(query) with KWeight {
 
   val booleanWeight = {
     val maxPrefixLength = searcher match {
@@ -57,18 +57,16 @@ class KPrefixWeight(val query: KPrefixQuery, val searcher: IndexSearcher) extend
         booleanQuery.add(termQuery, Occur.MUST)
       }
     }
-    booleanQuery.createWeight(searcher)
+    booleanQuery.createWeight(searcher, needsScores)
   }
-
-  def getQuery(): KPrefixQuery = query
 
   def getValueForNormalization() = booleanWeight.getValueForNormalization
 
   def normalize(norm: Float, topLevelBoost: Float): Unit = booleanWeight.normalize(norm, topLevelBoost)
 
-  def explain(context: AtomicReaderContext, doc: Int) = booleanWeight.explain(context, doc)
+  def explain(context: LeafReaderContext, doc: Int) = booleanWeight.explain(context, doc)
 
-  override def scorer(context: AtomicReaderContext, acceptDocs: Bits): Scorer = {
+  override def scorer(context: LeafReaderContext, acceptDocs: Bits): Scorer = {
     val nameDocsValues = context.reader.getBinaryDocValues(query.nameValueField)
     val booleanScorer = booleanWeight.scorer(context, acceptDocs)
     val scorer = if (nameDocsValues == null || booleanScorer == null) null else new KPrefixScorer(this, booleanScorer, query.terms, nameDocsValues)

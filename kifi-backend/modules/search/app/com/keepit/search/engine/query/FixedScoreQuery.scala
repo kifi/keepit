@@ -1,7 +1,7 @@
 package com.keepit.search.engine.query
 
 import com.keepit.search.engine.query.core.ProjectableQuery
-import org.apache.lucene.index.{ Term, AtomicReaderContext, IndexReader }
+import org.apache.lucene.index.{ Term, LeafReaderContext, IndexReader }
 import org.apache.lucene.search._
 import org.apache.lucene.util.Bits
 import java.util.{ Set => JSet }
@@ -20,7 +20,7 @@ class FixedScoreQuery(val subQuery: Query) extends Query with ProjectableQuery {
     if (rewrittenSub eq subQuery) this else new FixedScoreQuery(rewrittenSub)
   }
 
-  override def createWeight(searcher: IndexSearcher): Weight = new FixedScoreWeight(this, searcher)
+  override def createWeight(searcher: IndexSearcher, needsScores: Boolean): Weight = new FixedScoreWeight(this, searcher, needsScores)
 
   override def clone(): Query = new FixedScoreQuery(subQuery.clone())
 
@@ -38,17 +38,15 @@ class FixedScoreQuery(val subQuery: Query) extends Query with ProjectableQuery {
   }
 }
 
-class FixedScoreWeight(query: FixedScoreQuery, searcher: IndexSearcher) extends Weight {
+class FixedScoreWeight(query: FixedScoreQuery, searcher: IndexSearcher, needsScores: Boolean) extends Weight(query) {
 
-  private[this] val subWeight = query.subQuery.createWeight(searcher)
-
-  override def getQuery(): Query = query
+  private[this] val subWeight = query.subQuery.createWeight(searcher, needsScores)
 
   override def getValueForNormalization() = query.getBoost()
 
   override def normalize(norm: Float, topLevelBoost: Float): Unit = subWeight.normalize(norm, topLevelBoost)
 
-  override def explain(context: AtomicReaderContext, doc: Int) = {
+  override def explain(context: LeafReaderContext, doc: Int) = {
     val sc = scorer(context, context.reader.getLiveDocs)
     val exists = (sc != null && sc.advance(doc) == doc)
 
@@ -68,7 +66,7 @@ class FixedScoreWeight(query: FixedScoreQuery, searcher: IndexSearcher) extends 
     result
   }
 
-  override def scorer(context: AtomicReaderContext, liveDocs: Bits): Scorer = {
+  override def scorer(context: LeafReaderContext, liveDocs: Bits): Scorer = {
     val subScorer = subWeight.scorer(context, liveDocs)
     if (subScorer == null) null else new FixedScoreScorer(this, subScorer, query.getBoost)
   }

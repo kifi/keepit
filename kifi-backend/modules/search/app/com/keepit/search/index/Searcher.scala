@@ -36,7 +36,7 @@ class Searcher(val indexReader: WrappedIndexReader, val maxPrefixLength: Int, va
   def findPrimaryIds(term: Term, buf: LongArrayBuilder = new LongArrayBuilder): LongArrayBuilder = {
     foreachReader { reader =>
       val idMapper = reader.getIdMapper
-      val td = reader.termDocsEnum(term)
+      val td = reader.postings(term)
       if (td != null) {
         var doc = td.nextDoc()
         while (doc != NO_MORE_DOCS) {
@@ -51,7 +51,7 @@ class Searcher(val indexReader: WrappedIndexReader, val maxPrefixLength: Int, va
   def findSecondaryIds(term: Term, idField: String, buf: LongArrayBuilder = new LongArrayBuilder): LongArrayBuilder = {
     foreachReader { reader =>
       val idValues = reader.getNumericDocValues(idField)
-      val td = reader.termDocsEnum(term)
+      val td = reader.postings(term)
       if (td != null) {
         var doc = td.nextDoc()
         while (doc != NO_MORE_DOCS) {
@@ -71,7 +71,7 @@ class Searcher(val indexReader: WrappedIndexReader, val maxPrefixLength: Int, va
 
   def has(term: Term): Boolean = {
     foreachReader { reader =>
-      val td = reader.termDocsEnum(term)
+      val td = reader.postings(term)
       if (td != null) {
         val doc = td.nextDoc()
         if (doc != NO_MORE_DOCS) return true
@@ -80,13 +80,8 @@ class Searcher(val indexReader: WrappedIndexReader, val maxPrefixLength: Int, va
     false
   }
 
-  def createWeight(query: Query): Weight = {
-    val rewrittenQuery = rewrite(query)
-    if (rewrittenQuery != null) createNormalizedWeight(rewrittenQuery) else null
-  }
-
   def search(query: Query)(f: (Scorer, WrappedSubReader) => Unit) {
-    search(createWeight(query: Query))(f)
+    search(createNormalizedWeight(query: Query, true))(f)
   }
 
   def search(weight: Weight)(f: (Scorer, WrappedSubReader) => Unit) {
@@ -110,7 +105,7 @@ class Searcher(val indexReader: WrappedIndexReader, val maxPrefixLength: Int, va
     }
   }
 
-  def findDocIdAndAtomicReaderContext(id: Long): Option[(Int, AtomicReaderContext)] = {
+  def findDocIdAndLeafReaderContext(id: Long): Option[(Int, LeafReaderContext)] = {
     indexReader.getContext.leaves.foreach { subReaderContext =>
       val subReader = subReaderContext.reader.asInstanceOf[WrappedSubReader]
       val liveDocs = subReader.getLiveDocs
@@ -123,14 +118,14 @@ class Searcher(val indexReader: WrappedIndexReader, val maxPrefixLength: Int, va
   def getStringDocValue(field: String, id: Long): Option[String] = getDecodedDocValue(field, id)(new String(_, _, _, StandardCharsets.UTF_8))
 
   def getDecodedDocValue[T](field: String, id: Long)(implicit decode: (Array[Byte], Int, Int) => T): Option[T] = {
-    findDocIdAndAtomicReaderContext(id).flatMap {
+    findDocIdAndLeafReaderContext(id).flatMap {
       case (docid, context) =>
         val reader = context.reader
         getDecodedDocValue(field, reader, docid)(decode)
     }
   }
 
-  def getDecodedDocValue[T](field: String, reader: AtomicReader, docid: Int)(implicit decode: (Array[Byte], Int, Int) => T): Option[T] = {
+  def getDecodedDocValue[T](field: String, reader: LeafReader, docid: Int)(implicit decode: (Array[Byte], Int, Int) => T): Option[T] = {
     val docValues = reader.getBinaryDocValues(field)
     if (docValues != null) {
       val ref = docValues.get(docid)
@@ -141,7 +136,7 @@ class Searcher(val indexReader: WrappedIndexReader, val maxPrefixLength: Int, va
   }
 
   def getLongDocValue(field: String, id: Long): Option[Long] = {
-    findDocIdAndAtomicReaderContext(id).flatMap {
+    findDocIdAndLeafReaderContext(id).flatMap {
       case (docid, context) =>
         val reader = context.reader
         val docValues = reader.getNumericDocValues(field)
@@ -154,11 +149,11 @@ class Searcher(val indexReader: WrappedIndexReader, val maxPrefixLength: Int, va
   }
 
   def explain(query: Query, id: Long): Explanation = {
-    findDocIdAndAtomicReaderContext(id) match {
+    findDocIdAndLeafReaderContext(id) match {
       case Some((docid, context)) =>
         val rewrittenQuery = rewrite(query)
         if (rewrittenQuery != null) {
-          val weight = createNormalizedWeight(rewrittenQuery)
+          val weight = createNormalizedWeight(rewrittenQuery, true)
           weight.explain(context, docid)
         } else {
           new Explanation(0.0f, "rewrittten query is null")

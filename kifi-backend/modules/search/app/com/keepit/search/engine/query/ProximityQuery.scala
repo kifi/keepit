@@ -3,10 +3,7 @@ package com.keepit.search.engine.query
 import com.keepit.search.engine.query.QueryUtil._
 import com.keepit.search.util.LocalAlignment
 import com.keepit.search.util.LocalAlignment._
-import org.apache.lucene.index.AtomicReaderContext
-import org.apache.lucene.index.DocsAndPositionsEnum
-import org.apache.lucene.index.IndexReader
-import org.apache.lucene.index.Term
+import org.apache.lucene.index._
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Scorer
 import org.apache.lucene.search.Weight
@@ -19,6 +16,7 @@ import org.apache.lucene.util.PriorityQueue
 import org.apache.lucene.util.ToStringUtils
 import java.lang.{ Float => JFloat }
 import java.util.{ Set => JSet }
+
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
 import scala.math._
@@ -59,7 +57,7 @@ object ProximityQuery extends Logging {
 
 class ProximityQuery(val terms: Seq[Seq[Term]], val phrases: Set[(Int, Int)] = Set(), val phraseBoost: Float, val gapPenalty: Float, val powerFactor: Float) extends Query {
 
-  override def createWeight(searcher: IndexSearcher): Weight = new ProximityWeight(this)
+  override def createWeight(searcher: IndexSearcher, needsScores: Boolean): Weight = new ProximityWeight(this, needsScores)
 
   override def rewrite(reader: IndexReader): Query = this
 
@@ -80,7 +78,7 @@ class ProximityQuery(val terms: Seq[Seq[Term]], val phrases: Set[(Int, Int)] = S
   override def hashCode(): Int = terms.hashCode() + JFloat.floatToRawIntBits(getBoost())
 }
 
-class ProximityWeight(query: ProximityQuery) extends Weight {
+class ProximityWeight(query: ProximityQuery, needsScores: Boolean) extends Weight(query) {
 
   private[this] var value = 0.0f
 
@@ -105,8 +103,6 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
 
   def getCalibrationValue = value / maxRawScore
 
-  override def scoresDocsOutOfOrder() = false
-
   override def getValueForNormalization() = {
     val boost = query.getBoost()
     boost * boost
@@ -116,7 +112,7 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
     value = query.getBoost * norm * topLevelBoost
   }
 
-  override def explain(context: AtomicReaderContext, doc: Int) = {
+  override def explain(context: LeafReaderContext, doc: Int) = {
     val sc = scorer(context, context.reader.getLiveDocs);
     val exists = (sc != null && sc.advance(doc) == doc);
     val termsString = query.terms.map { t => if (t.size == 1) t.head.toString else t.mkString("(", ",", ")") }.mkString(",")
@@ -152,9 +148,7 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
     result
   }
 
-  def getQuery() = query
-
-  override def scorer(context: AtomicReaderContext, acceptDocs: Bits): Scorer = {
+  override def scorer(context: LeafReaderContext, acceptDocs: Bits): Scorer = {
     val buf = new ArrayBuffer[PositionAndId](termIdMap.size)
     termIdMap.foreach {
       case (equivTerms, id) =>
@@ -176,7 +170,7 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
  * posLeft = number of unvisited term positions in current document
  * mask : reflects the position of the term in query.
  */
-private[query] final class PositionAndId(tp: DocsAndPositionsEnum, val id: TermId) {
+private[query] final class PositionAndId(tp: PostingsEnum, val id: TermId) {
   var doc = -1
   var pos = -1
 

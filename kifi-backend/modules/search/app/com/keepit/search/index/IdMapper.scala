@@ -1,6 +1,6 @@
 package com.keepit.search.index
 
-import org.apache.lucene.index.AtomicReader
+import org.apache.lucene.index.LeafReader
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import com.keepit.search.util.ReverseArrayMapper
 
@@ -11,7 +11,7 @@ abstract class IdMapper {
 }
 
 object ArrayIdMapper {
-  def apply(indexReader: AtomicReader) = {
+  def apply(indexReader: LeafReader) = {
     val maxDoc = indexReader.maxDoc()
     val liveDocs = indexReader.getLiveDocs()
     val idArray = new Array[Long](maxDoc)
