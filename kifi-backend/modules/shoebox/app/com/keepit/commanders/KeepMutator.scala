@@ -131,9 +131,9 @@ class KeepMutatorImpl @Inject() (
       precomputedLibraries
     } else libraryRepo.getActiveByIds(newKeep.recipients.libraries).values
 
-    libraries.foreach { lib => ktlCommander.internKeepInLibrary(newKeep, lib, addedBy = newKeep.userId) }
-    newKeep.recipients.users.foreach { userId => ktuCommander.internKeepInUser(newKeep, userId, addedBy = newKeep.userId, addedAt = None) }
-    newKeep.recipients.emails.foreach { email => kteCommander.internKeepInEmail(newKeep, email, addedBy = newKeep.userId, addedAt = None) }
+    libraries.foreach { lib => ktlCommander.internKeepInLibrary(newKeep, lib, addedBy = newKeep.userId, addedAt = newKeep.createdAt) }
+    newKeep.recipients.users.foreach { userId => ktuCommander.internKeepInUser(newKeep, userId, addedBy = newKeep.userId, addedAt = Some(newKeep.createdAt)) }
+    newKeep.recipients.emails.foreach { email => kteCommander.internKeepInEmail(newKeep, email, addedBy = newKeep.userId, addedAt = Some(newKeep.createdAt)) }
 
     session.onTransactionSuccess { slackPusher.schedule(newKeep.recipients.libraries) }
 
@@ -147,7 +147,7 @@ class KeepMutatorImpl @Inject() (
       diff.emails.added.foreach { added => kteCommander.internKeepInEmail(newKeep, added, userAttribution) }
       diff.emails.removed.foreach { removed => kteCommander.removeKeepFromEmail(newKeep.id.get, removed) }
       libraryRepo.getActiveByIds(diff.libraries.added).values.foreach { newLib =>
-        ktlCommander.internKeepInLibrary(newKeep, newLib, userAttribution)
+        ktlCommander.internKeepInLibrary(newKeep, newLib, userAttribution, addedAt = clock.now)
       }
       diff.libraries.removed.foreach { removed => ktlCommander.removeKeepFromLibrary(newKeep.id.get, removed) }
       session.onTransactionSuccess {
@@ -207,7 +207,7 @@ class KeepMutatorImpl @Inject() (
 
   def moveKeep(k: Keep, toLibrary: Library, userId: Id[User])(implicit session: RWSession): Either[LibraryError, Keep] = {
     ktlCommander.removeKeepFromAllLibraries(k.id.get)
-    ktlCommander.internKeepInLibrary(k, toLibrary, addedBy = Some(userId))
+    ktlCommander.internKeepInLibrary(k, toLibrary, addedBy = Some(userId), addedAt = clock.now)
     Right(keepRepo.save(k.withLibraries(Set(toLibrary.id.get))))
   }
   def copyKeep(k: Keep, toLibrary: Library, userId: Id[User], withSource: Option[KeepSource] = None)(implicit session: RWSession): Either[LibraryError, Keep] = {
