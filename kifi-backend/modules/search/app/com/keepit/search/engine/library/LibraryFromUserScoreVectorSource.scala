@@ -78,7 +78,7 @@ class LibraryFromUserScoreVectorSource(
 
       val idMapper = reader.getIdMapper
 
-      val td = reader.termDocsEnum(new Term(LibraryFields.ownerField, userId.toString))
+      val td = reader.postings(new Term(LibraryFields.ownerField, userId.toString))
       if (td != null) {
         var docId = td.nextDoc()
         while (docId < NO_MORE_DOCS) {

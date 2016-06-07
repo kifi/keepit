@@ -1,10 +1,10 @@
 package com.keepit.search.index.phrase
 
-import org.apache.lucene.index.Term
-import org.apache.lucene.index.DocsAndPositionsEnum
+import org.apache.lucene.index.{ DocsAndPositionsEnum, PostingsEnum, Term }
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.util.PriorityQueue
 import com.google.inject.{ Inject, Singleton }
+
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ListBuffer
 import scala.math._
@@ -37,7 +37,7 @@ class PhraseDetector @Inject() (indexer: PhraseIndexer) {
       var prevWord: Word = null
       while (index < numTerms) {
         val t = pterms(index)
-        val tp = subReaderContext.reader.termPositionsEnum(t)
+        val tp = subReaderContext.reader.postings(t, PostingsEnum.POSITIONS)
         if (tp == null) { // found a gap here
           findPhrases(pq, f) // pq will be cleared after execution
           prevWord = null
@@ -96,7 +96,7 @@ class PhraseDetector @Inject() (indexer: PhraseIndexer) {
     if (wordCnt > 1 || (start.nextWord != null && start.nextWord.doc == doc)) start else null // need at least two words
   }
 
-  private class Word(val index: Int, val freq: Int, tp: DocsAndPositionsEnum, val prevWord: Word) {
+  private class Word(val index: Int, val freq: Int, tp: PostingsEnum, val prevWord: Word) {
 
     var nextWord: Word = null
 

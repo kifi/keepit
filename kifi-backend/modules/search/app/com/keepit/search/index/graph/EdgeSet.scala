@@ -146,7 +146,7 @@ trait LuceneBackedEdgeSet[S, D] extends EdgeSet[S, D] {
   override def isEmpty = getDestDocIdSetIterator(searcher).isEmpty
 
   override def getDestDocIdSetIterator(searcher: Searcher): DocIdSetIterator = {
-    val td = searcher.indexReader.asLeafReader.termDocsEnum(createSourceTerm)
+    val td = searcher.indexReader.asLeafReader.postings(createSourceTerm)
     if (td != null) td else emptyDocIdSetIterator
   }
 

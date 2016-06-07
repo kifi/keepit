@@ -1,15 +1,13 @@
 package com.keepit.search.engine.query
 
 import com.keepit.common.logging.Logging
-import org.apache.lucene.index.LeafReaderContext
-import org.apache.lucene.index.DocsEnum
-import org.apache.lucene.index.DocsAndPositionsEnum
-import org.apache.lucene.index.Term
+import org.apache.lucene.index._
 import org.apache.lucene.search._
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.util.Bits
 import org.apache.lucene.util.BytesRef
 import java.util.{ HashSet => JHashSet }
+
 import scala.collection.JavaConversions._
 
 object QueryUtil extends Logging {
@@ -76,35 +74,21 @@ object QueryUtil extends Logging {
     }
   }
 
-  def termDocsEnum(context: LeafReaderContext, term: Term, acceptDocs: Bits): DocsEnum = {
+  def termPositionsEnum(context: LeafReaderContext, term: Term, acceptDocs: Bits): PostingsEnum = {
     val fields = context.reader.fields()
     if (fields != null) {
       val terms = fields.terms(term.field())
       if (terms != null) {
         val termsEnum = terms.iterator(null)
         if (termsEnum.seekExact(term.bytes())) {
-          return termsEnum.docs(acceptDocs, null)
+          return termsEnum.postings(acceptDocs, null, PostingsEnum.POSITIONS)
         }
       }
     }
     return null
   }
 
-  def termPositionsEnum(context: LeafReaderContext, term: Term, acceptDocs: Bits): DocsAndPositionsEnum = {
-    val fields = context.reader.fields()
-    if (fields != null) {
-      val terms = fields.terms(term.field())
-      if (terms != null) {
-        val termsEnum = terms.iterator(null)
-        if (termsEnum.seekExact(term.bytes())) {
-          return termsEnum.docsAndPositions(acceptDocs, null)
-        }
-      }
-    }
-    return null
-  }
-
-  object EmptyDocsAndPositionsEnum extends DocsAndPositionsEnum {
+  object EmptyDocsAndPositionsEnum extends PostingsEnum {
     override def docID() = NO_MORE_DOCS
     override def freq() = 0
     override def nextDoc(): Int = NO_MORE_DOCS
@@ -117,6 +101,6 @@ object QueryUtil extends Logging {
   }
 
   def emptyDocIdSetIterator: DocIdSetIterator = EmptyDocsAndPositionsEnum
-  def emptyDocsEnum: DocsEnum = EmptyDocsAndPositionsEnum
-  def emptyDocsAndPositionsEnum: DocsAndPositionsEnum = EmptyDocsAndPositionsEnum
+  def emptyDocsEnum: PostingsEnum = EmptyDocsAndPositionsEnum
+  def emptyDocsAndPositionsEnum: PostingsEnum = EmptyDocsAndPositionsEnum
 }

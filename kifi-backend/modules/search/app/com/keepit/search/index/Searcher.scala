@@ -36,7 +36,7 @@ class Searcher(val indexReader: WrappedIndexReader, val maxPrefixLength: Int, va
   def findPrimaryIds(term: Term, buf: LongArrayBuilder = new LongArrayBuilder): LongArrayBuilder = {
     foreachReader { reader =>
       val idMapper = reader.getIdMapper
-      val td = reader.termDocsEnum(term)
+      val td = reader.postings(term)
       if (td != null) {
         var doc = td.nextDoc()
         while (doc != NO_MORE_DOCS) {
@@ -51,7 +51,7 @@ class Searcher(val indexReader: WrappedIndexReader, val maxPrefixLength: Int, va
   def findSecondaryIds(term: Term, idField: String, buf: LongArrayBuilder = new LongArrayBuilder): LongArrayBuilder = {
     foreachReader { reader =>
       val idValues = reader.getNumericDocValues(idField)
-      val td = reader.termDocsEnum(term)
+      val td = reader.postings(term)
       if (td != null) {
         var doc = td.nextDoc()
         while (doc != NO_MORE_DOCS) {
@@ -71,7 +71,7 @@ class Searcher(val indexReader: WrappedIndexReader, val maxPrefixLength: Int, va
 
   def has(term: Term): Boolean = {
     foreachReader { reader =>
-      val td = reader.termDocsEnum(term)
+      val td = reader.postings(term)
       if (td != null) {
         val doc = td.nextDoc()
         if (doc != NO_MORE_DOCS) return true

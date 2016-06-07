@@ -89,7 +89,7 @@ class UriFromLibraryScoreVectorSource(
       val idMapper = reader.getIdMapper
       val uriIdDocValues = reader.getNumericDocValues(KeepFields.uriIdField)
 
-      val td = reader.termDocsEnum(new Term(KeepFields.libraryField, libId.toString))
+      val td = reader.postings(new Term(KeepFields.libraryField, libId.toString))
       if (td != null) {
         var docId = td.nextDoc()
         while (docId < NO_MORE_DOCS) {

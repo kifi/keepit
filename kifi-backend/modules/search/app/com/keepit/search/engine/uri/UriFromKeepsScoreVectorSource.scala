@@ -91,7 +91,7 @@ class UriFromKeepsScoreVectorSource(
   private def loadDiscoverableURIs(keepVisibilityEvaluator: KeepVisibilityEvaluator, idFilter: LongArraySet, reader: WrappedSubReader, idMapper: IdMapper, uriIdDocValues: NumericDocValues, writer: DataBufferWriter, output: DataBuffer): Unit = {
     def loadWithNoScore(term: Term, visibility: Int): Int = {
       val v = visibility | Visibility.HAS_SECONDARY_ID
-      val td = reader.termDocsEnum(term)
+      val td = reader.postings(term)
       val initialOutputSize = output.size
       if (td != null) {
         var docId = td.nextDoc()

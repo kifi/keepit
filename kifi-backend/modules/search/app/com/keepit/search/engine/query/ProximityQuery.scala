@@ -3,10 +3,7 @@ package com.keepit.search.engine.query
 import com.keepit.search.engine.query.QueryUtil._
 import com.keepit.search.util.LocalAlignment
 import com.keepit.search.util.LocalAlignment._
-import org.apache.lucene.index.LeafReaderContext
-import org.apache.lucene.index.DocsAndPositionsEnum
-import org.apache.lucene.index.IndexReader
-import org.apache.lucene.index.Term
+import org.apache.lucene.index._
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Scorer
 import org.apache.lucene.search.Weight
@@ -19,6 +16,7 @@ import org.apache.lucene.util.PriorityQueue
 import org.apache.lucene.util.ToStringUtils
 import java.lang.{ Float => JFloat }
 import java.util.{ Set => JSet }
+
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
 import scala.math._
@@ -172,7 +170,7 @@ class ProximityWeight(query: ProximityQuery, needsScores: Boolean) extends Weigh
  * posLeft = number of unvisited term positions in current document
  * mask : reflects the position of the term in query.
  */
-private[query] final class PositionAndId(tp: DocsAndPositionsEnum, val id: TermId) {
+private[query] final class PositionAndId(tp: PostingsEnum, val id: TermId) {
   var doc = -1
   var pos = -1
 

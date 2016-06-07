@@ -78,7 +78,7 @@ object LibraryMembershipIndexable {
     libraryMembershipSearcher.foreachReader { reader =>
       val userIdValues = reader.getNumericDocValues(userIdField)
       val accessValues = reader.getNumericDocValues(accessField)
-      val td = reader.termDocsEnum(libraryTerm)
+      val td = reader.postings(libraryTerm)
       if (td != null) {
         var doc = td.nextDoc()
         while (doc != NO_MORE_DOCS) {
