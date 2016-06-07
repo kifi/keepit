@@ -29,7 +29,7 @@
                 }else{
                     <a href="/admin/twitter/accept?handle=@{entry._1.twitterHandle}&userId=@{entry._1.userId.id}" target="_blank">Accept</a>
                 }</td>
-                <td>@{entry._2.map(_.lastFetchedAt).flatten.map(_.toString).getOrElse("Never")}</td>
+                <td>@{entry._2.map(_.lastFetchedAt).flatten.map(_.toString()).getOrElse("Never")}</td>
             </tr>
         }
     </table>
