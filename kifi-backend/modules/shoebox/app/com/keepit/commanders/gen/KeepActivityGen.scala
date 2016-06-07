@@ -147,7 +147,8 @@ object KeepActivityGen {
         val basicAddedByBF = BatchFetchable.user(adder)
         val headerBF = {
           val actionElementBF = Seq(
-            specialCaseForMovedLibrary(diff)
+            specialCaseForMovedLibrary(diff),
+            specialCaseForUserLeaving(diff, adder)
           ).flatten.headOption getOrElse generalRecipientsDiff(diff)
           val userElementBF = basicAddedByBF.map { basicAddedBy => basicAddedBy.map(fromBasicUser).getOrElse(fromText("Someone")) }
           (userElementBF and actionElementBF).tupled.map {
@@ -187,6 +188,10 @@ object KeepActivityGen {
         case (from, to) => DescriptionElements("moved this from", from, "to", to)
       }
     }
+    else None
+  }
+  def specialCaseForUserLeaving(diff: KeepRecipientsDiff, mutator: Id[User]): Option[BatchFetchable[DescriptionElements]] = {
+    if (diff.libraries.isEmpty && diff.emails.isEmpty && diff.users == DeltaSet.removeOnly(Set(mutator))) Some(BatchFetchable.trivial(DescriptionElements("left")))
     else None
   }
   def generalRecipientsDiff(diff: KeepRecipientsDiff)(implicit s3config: S3ImageConfig, airbrake: AirbrakeNotifier): BatchFetchable[DescriptionElements] = {
