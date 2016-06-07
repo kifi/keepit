@@ -59,7 +59,7 @@ object ProximityQuery extends Logging {
 
 class ProximityQuery(val terms: Seq[Seq[Term]], val phrases: Set[(Int, Int)] = Set(), val phraseBoost: Float, val gapPenalty: Float, val powerFactor: Float) extends Query {
 
-  override def createWeight(searcher: IndexSearcher): Weight = new ProximityWeight(this)
+  override def createWeight(searcher: IndexSearcher, needsScores: Boolean): Weight = new ProximityWeight(this, needsScores)
 
   override def rewrite(reader: IndexReader): Query = this
 
@@ -80,7 +80,7 @@ class ProximityQuery(val terms: Seq[Seq[Term]], val phrases: Set[(Int, Int)] = S
   override def hashCode(): Int = terms.hashCode() + JFloat.floatToRawIntBits(getBoost())
 }
 
-class ProximityWeight(query: ProximityQuery) extends Weight {
+class ProximityWeight(query: ProximityQuery, needsScores: Boolean) extends Weight(query) {
 
   private[this] var value = 0.0f
 
@@ -149,8 +149,6 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
     }
     result
   }
-
-  def getQuery() = query
 
   override def scorer(context: LeafReaderContext, acceptDocs: Bits): Scorer = {
     val buf = new ArrayBuffer[PositionAndId](termIdMap.size)

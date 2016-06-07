@@ -21,7 +21,7 @@ trait ScoreVectorSourceLike extends ScoreVectorSource with Logging with DebugOpt
 
   def prepare(query: Query, matchWeightNormalizer: MatchWeightNormalizer): Unit = {
     weights.clear()
-    val weight = searcher.createWeight(preprocess(query))
+    val weight = searcher.createNormalizedWeight(preprocess(query), true)
     if (weight != null) {
       weight.asInstanceOf[KWeight].getWeights(weights)
     }

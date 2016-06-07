@@ -51,7 +51,7 @@ class RecencyQueryTest extends Specification {
   "scores recent documents higher" in {
     val searcher = new IndexSearcher(reader)
     val query = new RecencyQuery(new MatchAllDocsQuery(), "createdAt", 1.0f, range / 2)
-    val weight = searcher.createNormalizedWeight(query)
+    val weight = searcher.createNormalizedWeight(query, true)
     val scorer = weight.scorer(readerContext, reader.getLiveDocs)
 
     val idDocValues = reader.getNumericDocValues("id")
@@ -71,7 +71,7 @@ class RecencyQueryTest extends Specification {
     val boostStrength = 0.5f
     val searcher = new IndexSearcher(reader)
     val query = new RecencyQuery(new MatchAllDocsQuery(), "createdAt", boostStrength, range / 2)
-    val weight = searcher.createNormalizedWeight(query)
+    val weight = searcher.createNormalizedWeight(query, true)
     val scorer = weight.scorer(readerContext, reader.getLiveDocs)
 
     val idDocValues = reader.getNumericDocValues("id")

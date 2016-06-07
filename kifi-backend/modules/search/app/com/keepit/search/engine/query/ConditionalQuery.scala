@@ -17,7 +17,7 @@ import java.util.{ Set => JSet }
 
 class ConditionalQuery(val source: Query, val condition: Query) extends Query {
 
-  override def createWeight(searcher: IndexSearcher): Weight = new ConditionalWeight(this, searcher.asInstanceOf[Searcher])
+  override def createWeight(searcher: IndexSearcher, needsScores: Boolean): Weight = new ConditionalWeight(this, searcher.asInstanceOf[Searcher], needsScores)
 
   override def rewrite(reader: IndexReader): Query = {
     val rewrittenSrc = source.rewrite(reader)
@@ -42,12 +42,10 @@ class ConditionalQuery(val source: Query, val condition: Query) extends Query {
   override def hashCode(): Int = source.hashCode() + condition.hashCode()
 }
 
-class ConditionalWeight(query: ConditionalQuery, searcher: Searcher) extends Weight with Logging {
+class ConditionalWeight(query: ConditionalQuery, searcher: Searcher, needsScores: Boolean) extends Weight(query) with Logging {
 
-  val sourceWeight = query.source.createWeight(searcher)
-  val conditionWeight = query.condition.createWeight(searcher)
-
-  override def getQuery() = query
+  val sourceWeight = query.source.createWeight(searcher, needsScores)
+  val conditionWeight = query.condition.createWeight(searcher, needsScores)
 
   override def getValueForNormalization() = {
     val sum = sourceWeight.getValueForNormalization

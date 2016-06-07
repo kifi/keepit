@@ -15,7 +15,7 @@ import org.apache.lucene.util.Bits
 
 class MultiplicativeBoostQuery(override val textQuery: Query, override val boosterQuery: Query, val boosterStrength: Float) extends BoostQuery {
 
-  override def createWeight(searcher: IndexSearcher): Weight = new MultiplicativeBoostWeight(this, searcher)
+  override def createWeight(searcher: IndexSearcher, needsScores: Boolean): Weight = new MultiplicativeBoostWeight(this, searcher, needsScores)
 
   override protected val name = "MultiplicativeBoost"
 
@@ -24,7 +24,7 @@ class MultiplicativeBoostQuery(override val textQuery: Query, override val boost
   }
 }
 
-class MultiplicativeBoostWeight(override val query: MultiplicativeBoostQuery, override val searcher: IndexSearcher) extends BoostWeight with Logging {
+class MultiplicativeBoostWeight(query: MultiplicativeBoostQuery, searcher: IndexSearcher, needsScores: Boolean) extends BoostWeight(query, searcher, needsScores) with Logging {
 
   val boosterStrength = query.boosterStrength
 

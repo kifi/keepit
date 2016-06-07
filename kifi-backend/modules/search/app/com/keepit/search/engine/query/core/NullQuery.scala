@@ -16,7 +16,7 @@ class NullQuery() extends Query {
 
   override def rewrite(reader: IndexReader): Query = this
 
-  override def createWeight(searcher: IndexSearcher): Weight = new NullWeight(this)
+  override def createWeight(searcher: IndexSearcher, needsScores: Boolean): Weight = new NullWeight(this)
 
   override def clone(): Query = new NullQuery()
 
@@ -34,9 +34,7 @@ class NullQuery() extends Query {
   }
 }
 
-class NullWeight(query: NullQuery) extends Weight with KWeight {
-
-  override def getQuery(): Query = query
+class NullWeight(query: NullQuery) extends Weight(query) with KWeight {
 
   override def getValueForNormalization() = query.getBoost()
 

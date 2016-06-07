@@ -29,7 +29,7 @@ class KPrefixQuery(val prefixField: String, val nameValueField: String, val term
 
   override def toString(s: String) = s"KPrefixQuery($prefixField-$nameValueField: ${terms.mkString(" & ")})"
 
-  override def createWeight(searcher: IndexSearcher): Weight = new KPrefixWeight(this, searcher)
+  override def createWeight(searcher: IndexSearcher, needsScores: Boolean): Weight = new KPrefixWeight(this, searcher, needsScores)
 
   override def extractTerms(out: JSet[Term]): Unit = terms.foreach(termString => out.add(new Term(prefixField, termString)))
 
@@ -37,7 +37,7 @@ class KPrefixQuery(val prefixField: String, val nameValueField: String, val term
 
 }
 
-class KPrefixWeight(val query: KPrefixQuery, val searcher: IndexSearcher) extends Weight with KWeight {
+class KPrefixWeight(val query: KPrefixQuery, val searcher: IndexSearcher, needsScores: Boolean) extends Weight(query) with KWeight {
 
   val booleanWeight = {
     val maxPrefixLength = searcher match {
@@ -57,10 +57,8 @@ class KPrefixWeight(val query: KPrefixQuery, val searcher: IndexSearcher) extend
         booleanQuery.add(termQuery, Occur.MUST)
       }
     }
-    booleanQuery.createWeight(searcher)
+    booleanQuery.createWeight(searcher, needsScores)
   }
-
-  def getQuery(): KPrefixQuery = query
 
   def getValueForNormalization() = booleanWeight.getValueForNormalization
 

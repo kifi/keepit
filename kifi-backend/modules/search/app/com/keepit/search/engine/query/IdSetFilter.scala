@@ -11,6 +11,8 @@ import org.apache.lucene.util.Bits
 import java.util.Arrays
 
 class IdSetFilter(val ids: LongArraySet) extends Filter {
+  override def toString(field: String): String = s"IdSetFilter"
+
   override def getDocIdSet(context: LeafReaderContext, acceptDocs: Bits): DocIdSet = {
     context.reader match {
       case reader: WrappedSubReader => getDocIdSet(reader.getIdMapper, acceptDocs)

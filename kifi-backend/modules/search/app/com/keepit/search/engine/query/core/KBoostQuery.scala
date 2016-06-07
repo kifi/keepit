@@ -10,7 +10,7 @@ import scala.collection.mutable.ArrayBuffer
 
 class KBoostQuery(override val textQuery: Query, override val boosterQuery: Query, val boosterStrength: Float) extends BoostQuery with ProjectableQuery {
 
-  override def createWeight(searcher: IndexSearcher): Weight = new KBoostWeight(this, searcher)
+  override def createWeight(searcher: IndexSearcher, needsScores: Boolean): Weight = new KBoostWeight(this, searcher, needsScores)
 
   override protected val name = "KBoost"
 
@@ -21,7 +21,7 @@ class KBoostQuery(override val textQuery: Query, override val boosterQuery: Quer
   }
 }
 
-class KBoostWeight(override val query: KBoostQuery, override val searcher: IndexSearcher) extends BoostWeight with KWeight with Logging {
+class KBoostWeight(query: KBoostQuery, searcher: IndexSearcher, needsScores: Boolean) extends BoostWeight(query, searcher, needsScores) with KWeight with Logging {
 
   val boosterStrength = query.boosterStrength
 

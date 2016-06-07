@@ -17,8 +17,8 @@ class KWrapperQuery(private val subQuery: Query, val label: String) extends Quer
     new KWrapperQuery(if (q != null) q else new NullQuery, label)
   }
 
-  override def createWeight(searcher: IndexSearcher): Weight = {
-    new KWrapperWeight(this, subQuery.createWeight(searcher))
+  override def createWeight(searcher: IndexSearcher, needsScores: Boolean): Weight = {
+    new KWrapperWeight(this, subQuery.createWeight(searcher, needsScores))
   }
 
   override def rewrite(reader: IndexReader): Query = {
@@ -38,9 +38,7 @@ class KWrapperQuery(private val subQuery: Query, val label: String) extends Quer
   override def hashCode(): Int = subQuery.hashCode()
 }
 
-class KWrapperWeight(query: KWrapperQuery, subWeight: Weight) extends Weight with KWeight with Logging {
-
-  override def getQuery() = query
+class KWrapperWeight(query: KWrapperQuery, subWeight: Weight) extends Weight(query) with KWeight with Logging {
 
   override def getValueForNormalization(): Float = subWeight.getValueForNormalization()
 

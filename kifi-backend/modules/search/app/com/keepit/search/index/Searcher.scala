@@ -80,13 +80,8 @@ class Searcher(val indexReader: WrappedIndexReader, val maxPrefixLength: Int, va
     false
   }
 
-  def createWeight(query: Query): Weight = {
-    val rewrittenQuery = rewrite(query)
-    if (rewrittenQuery != null) createNormalizedWeight(rewrittenQuery) else null
-  }
-
   def search(query: Query)(f: (Scorer, WrappedSubReader) => Unit) {
-    search(createWeight(query: Query))(f)
+    search(createNormalizedWeight(query: Query, true))(f)
   }
 
   def search(weight: Weight)(f: (Scorer, WrappedSubReader) => Unit) {
@@ -158,7 +153,7 @@ class Searcher(val indexReader: WrappedIndexReader, val maxPrefixLength: Int, va
       case Some((docid, context)) =>
         val rewrittenQuery = rewrite(query)
         if (rewrittenQuery != null) {
-          val weight = createNormalizedWeight(rewrittenQuery)
+          val weight = createNormalizedWeight(rewrittenQuery, true)
           weight.explain(context, docid)
         } else {
           new Explanation(0.0f, "rewrittten query is null")

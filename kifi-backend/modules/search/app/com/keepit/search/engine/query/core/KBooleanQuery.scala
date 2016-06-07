@@ -1,7 +1,7 @@
 package com.keepit.search.engine.query.core
 
-import org.apache.lucene.index.{ LeafReaderContext, IndexReader }
-import org.apache.lucene.search.{ BooleanQuery, ComplexExplanation, Explanation, IndexSearcher, Query, Weight }
+import org.apache.lucene.index.{ IndexReader, LeafReaderContext }
+import org.apache.lucene.search._
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
@@ -43,8 +43,8 @@ class KBooleanQuery() extends BooleanQuery(false) with ProjectableQuery {
     clone
   }
 
-  override def createWeight(searcher: IndexSearcher) = {
-    new BooleanWeight(searcher, false) with KWeight {
+  override def createWeight(searcher: IndexSearcher, needsScores: Boolean) = {
+    new BooleanWeight(this, searcher, needsScores, false) with KWeight {
       private[this] val weightList = new ArrayBuffer[(Weight, Float)]
       private[this] val normalizationValue: Float = {
         var sum = 0.0d

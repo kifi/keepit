@@ -16,18 +16,16 @@ abstract class KFilterQuery extends Query with ProjectableQuery {
 
   def project(fields: Set[String]): Query = this
 
-  override def createWeight(searcher: IndexSearcher): Weight = {
-    val underlying = subQuery.createWeight(searcher)
+  override def createWeight(searcher: IndexSearcher, needsScores: Boolean): Weight = {
+    val underlying = subQuery.createWeight(searcher, needsScores)
 
-    new Weight with KWeight {
+    new Weight(this) with KWeight {
 
       override def explain(context: LeafReaderContext, doc: Int): Explanation = underlying.explain(context, doc)
 
       override def scorer(context: LeafReaderContext, acceptDocs: Bits): Scorer = {
         underlying.scorer(context, acceptDocs)
       }
-
-      override def getQuery(): Query = underlying.getQuery()
 
       override def getValueForNormalization(): Float = underlying.getValueForNormalization()
 

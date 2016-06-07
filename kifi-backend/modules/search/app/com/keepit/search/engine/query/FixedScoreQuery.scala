@@ -20,7 +20,7 @@ class FixedScoreQuery(val subQuery: Query) extends Query with ProjectableQuery {
     if (rewrittenSub eq subQuery) this else new FixedScoreQuery(rewrittenSub)
   }
 
-  override def createWeight(searcher: IndexSearcher): Weight = new FixedScoreWeight(this, searcher)
+  override def createWeight(searcher: IndexSearcher, needsScores: Boolean): Weight = new FixedScoreWeight(this, searcher, needsScores)
 
   override def clone(): Query = new FixedScoreQuery(subQuery.clone())
 
@@ -38,11 +38,9 @@ class FixedScoreQuery(val subQuery: Query) extends Query with ProjectableQuery {
   }
 }
 
-class FixedScoreWeight(query: FixedScoreQuery, searcher: IndexSearcher) extends Weight {
+class FixedScoreWeight(query: FixedScoreQuery, searcher: IndexSearcher, needsScores: Boolean) extends Weight(query) {
 
-  private[this] val subWeight = query.subQuery.createWeight(searcher)
-
-  override def getQuery(): Query = query
+  private[this] val subWeight = query.subQuery.createWeight(searcher, needsScores)
 
   override def getValueForNormalization() = query.getBoost()
 

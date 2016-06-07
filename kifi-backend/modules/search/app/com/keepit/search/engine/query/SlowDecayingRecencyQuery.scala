@@ -10,7 +10,7 @@ import scala.math._
 
 class SlowDecayingRecencyQuery(val subQuery: Query, val timeStampField: String, val recencyBoostStrength: Float, val halfDecayMillis: Float) extends Query {
 
-  override def createWeight(searcher: IndexSearcher): Weight = new SlowDecayingRecencyWeight(this, subQuery.createWeight(searcher))
+  override def createWeight(searcher: IndexSearcher, needsScores: Boolean): Weight = new SlowDecayingRecencyWeight(this, subQuery.createWeight(searcher, needsScores))
 
   override def rewrite(reader: IndexReader): Query = {
     val rewrittenSubQuery = subQuery.rewrite(reader)
@@ -29,7 +29,7 @@ class SlowDecayingRecencyQuery(val subQuery: Query, val timeStampField: String, 
   override def hashCode(): Int = subQuery.hashCode() ^ halfDecayMillis.toInt ^ JFloat.floatToRawIntBits(getBoost())
 }
 
-class SlowDecayingRecencyWeight(query: SlowDecayingRecencyQuery, subWeight: Weight) extends Weight {
+class SlowDecayingRecencyWeight(query: SlowDecayingRecencyQuery, subWeight: Weight) extends Weight(query) {
 
   private[this] val currentTimeMillis = System.currentTimeMillis()
 
@@ -54,8 +54,6 @@ class SlowDecayingRecencyWeight(query: SlowDecayingRecencyQuery, subWeight: Weig
     }
     result
   }
-
-  def getQuery(): SlowDecayingRecencyQuery = query
 
   override def scorer(context: LeafReaderContext, acceptDocs: Bits): Scorer = {
     val subScorer = subWeight.scorer(context, acceptDocs)

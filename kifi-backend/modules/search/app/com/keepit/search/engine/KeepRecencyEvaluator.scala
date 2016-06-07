@@ -19,7 +19,7 @@ trait KeepRecencyEvaluator { self: DebugOption =>
     new RecencyQuery(new MatchAllDocsQuery(), KeepFields.lastActivityAt, recencyBoostStrength, halfDecayMillis)
   }
 
-  private[this] lazy val recencyWeight: Weight = searcher.createWeight(recencyQuery)
+  private[this] lazy val recencyWeight: Weight = searcher.createNormalizedWeight(recencyQuery, true)
 
   protected def getRecencyScorer(readerContext: LeafReaderContext): RecencyScorer = {
     // use MatchAllBits to avoid delete check. this is safe because RecencyScorer is used passively.
@@ -32,7 +32,7 @@ trait KeepRecencyEvaluator { self: DebugOption =>
     new RecencyQuery(new MatchAllDocsQuery(), KeepFields.lastActivityAt, recencyBoostStrength, halfDecayMillis)
   }
 
-  private[this] lazy val slowDecayingRecencyWeight: Weight = searcher.createWeight(slowDecayingRecencyQuery)
+  private[this] lazy val slowDecayingRecencyWeight: Weight = searcher.createNormalizedWeight(slowDecayingRecencyQuery, true)
 
   protected def getSlowDecayingRecencyScorer(readerContext: LeafReaderContext): RecencyScorer = {
     // use MatchAllBits to avoid delete check. this is safe because RecencyScorer is used passively.

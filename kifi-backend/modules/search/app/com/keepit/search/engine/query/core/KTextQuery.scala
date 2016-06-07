@@ -47,8 +47,8 @@ class KTextQuery(val label: String) extends Query with ProjectableQuery with Log
     projectedQuery
   }
 
-  override def createWeight(searcher: IndexSearcher): Weight = {
-    val subWeight = subQuery.createWeight(searcher)
+  override def createWeight(searcher: IndexSearcher, needsScores: Boolean): Weight = {
+    val subWeight = subQuery.createWeight(searcher, needsScores)
     if (subWeight != null) new KTextWeight(this, subWeight) else null
   }
 
@@ -78,9 +78,7 @@ class KTextQuery(val label: String) extends Query with ProjectableQuery with Log
   def isEmpty: Boolean = { totalSubQueryCnt == 0 }
 }
 
-class KTextWeight(query: KTextQuery, subWeight: Weight) extends Weight with KWeight with Logging {
-
-  override def getQuery() = query
+class KTextWeight(query: KTextQuery, subWeight: Weight) extends Weight(query) with KWeight with Logging {
 
   override def getValueForNormalization(): Float = {
     val sub = if (subWeight != null) subWeight.getValueForNormalization() else 1.0f
