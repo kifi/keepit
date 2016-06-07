@@ -95,13 +95,21 @@ minWidthForBoxed = maxWidthForNarrowKeep + 1px
         border-radius: (keepRectBorderRadius + 2px) (keepRectBorderRadius + 2px) keepRectBorderRadius keepRectBorderRadius
 
 .kf-keep-card-library-chip
+.kf-keep-card-email-chip
   border-radius: 3px
   font-size: 12px
   max-width: 120px
-  background: gray
   display: inline-flex
   padding: 2px 6px
   color: white
+
+  > span
+    overflow: hidden
+    text-overflow: ellipsis
+    white-space: nowrap
+
+.kf-keep-card-library-chip
+  background: gray
 
   > svg
     width: 15px
@@ -110,17 +118,15 @@ minWidthForBoxed = maxWidthForNarrowKeep + 1px
     flex-shrink: 0
     fill: white
 
-  > span
-    overflow: hidden
-    text-overflow: ellipsis
-    white-space: nowrap
-
   > img
     width: 12px
     height: 12px
     flex-shrink: 0;
     margin-top: 1.5px
     margin-right: 5px
+
+.kf-keep-card-email-chip
+  background: linkBlueColor
 
 .kf-keep-header
   border-bottom: 1px solid defaultBorderColor
