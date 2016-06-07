@@ -118,7 +118,7 @@ angular.module('kifi')
             });
 
             if (nonMemberResults.length === 0 && resultData.mayHaveMore) {
-              refreshSuggestions(query, limit, (offset || 0) + limit);
+              refreshSuggestions(query, limit, offset + limit);
             } else {
               scope.suggestions = nonMemberResults;
               if (widget && !scope.init) {
@@ -173,12 +173,8 @@ angular.module('kifi')
           scope.selections.push(suggestion);
           filteredSuggestions.push(suggestion.id || suggestion.email);
           suggestion.isSelected = true;
-
-          if (widget.find('.kf-skw-suggestion').length === 1) {
-            currPage++;
-            refreshSuggestions(scope.typeahead, numSuggestions, currPage * numSuggestions);
-          }
-
+          scope.typeahead = '';
+          refreshSuggestions();
           resetInput();
         };
 
