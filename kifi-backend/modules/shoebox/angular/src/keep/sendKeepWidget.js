@@ -6,10 +6,8 @@ angular.module('kifi')
   '$document', '$templateCache', '$rootElement', '$timeout', '$window', '$compile', 'KEY', 'keepService', 'profileService', 'modalService',
   function($document, $templateCache, $rootElement, $timeout, $window, $compile, KEY, keepService, profileService, modalService) {
 
-    var numSuggestions = 5;
-
-    var desiredMarginTop = 60;
-    var desiredShiftVertical = 30;
+    var numSuggestions = 4;
+    var desiredMarginTop = 45;
 
     return {
       restrict: 'A',
@@ -75,30 +73,26 @@ angular.module('kifi')
           var distanceFromBottom = $window.innerHeight - elementOffsetTop;
 
           var elementOffsetLeft = element.offset().left;
-          var distanceFromRight = $window.innerWidth - elementOffsetLeft;
 
           // Place the widget such that 1) it's on the screen, and 2) does not obscure the keep members UI on the keep card.
           // If the widget can be placed above the keep members chips, set the bottom to be above it.
           // Else if the widget can be placed below the keep members chips, set the bottom s.t. the top is below it.
           // Else, do our best by placing the widget in middle of the keep
-          var widgetHeight;
 
-          if (scope.suggestions.length) {
-            widgetHeight = widget.height();
-          } else {
-            var suggestionItem = widget.find('.kf-skw-suggestion'); // the No Results Found element
-            widgetHeight = widget.height() + ((numSuggestions-3) * suggestionItem.height());
-          }
+          var suggestionItem = widget.find('.kf-skw-suggestion'); // the No Results Found element
+          var widgetHeight = (numSuggestions+3) * suggestionItem.height();
 
-          var bottom = null;
+          var bottom;
 
-          if (elementOffsetTop - widgetHeight - desiredShiftVertical >= desiredMarginTop) {
-            bottom = distanceFromBottom + desiredShiftVertical;
-          } else if (distanceFromBottom - widgetHeight - desiredShiftVertical >= 0) {
-            bottom = distanceFromBottom - widgetHeight - desiredShiftVertical;
+          if (elementOffsetTop - widgetHeight >= desiredMarginTop) {
+            bottom = distanceFromBottom;
+          } else if (distanceFromBottom - widgetHeight >= 0) {
+            bottom = distanceFromBottom - widgetHeight;
           } else {
             bottom = distanceFromBottom - (widgetHeight/2);
           }
+
+          var distanceFromRight = $window.innerWidth - elementOffsetLeft;
 
           widget.css({ bottom: bottom + 'px', right: distanceFromRight  + 'px' });
         }
