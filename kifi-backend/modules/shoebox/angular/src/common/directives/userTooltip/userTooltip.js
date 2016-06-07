@@ -25,6 +25,7 @@ angular.module('kifi')
       scope: {
         user: '=kfUserTooltip',
         library: '=',
+        email: '=',
         desc: '@'
       },
       link: function (scope, element) {
@@ -57,8 +58,9 @@ angular.module('kifi')
             return;
           }
           if (!tooltip) {
-            tooltip = angular.element($templateCache.get(scope.library ?
-              'common/directives/userTooltip/userLibTooltip.tpl.html' :
+            tooltip = angular.element($templateCache.get(
+              scope.library ? 'common/directives/userTooltip/userLibTooltip.tpl.html' :
+              scope.email ? 'common/directives/userTooltip/userEmailTooltip.tpl.html' :
               'common/directives/userTooltip/userTooltip.tpl.html'));
             element.append(tooltip);
             $compile(tooltip)(scope);

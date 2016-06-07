@@ -156,7 +156,7 @@ angular.module('kifi')
             } else if (selection.kind === 'library') {
               scope.keep.members.libraries.push({ 'library': selection });
             } else if (selection.kind === 'email') {
-              scope.keep.members.emails.push({ 'email': selection });
+              scope.keep.members.emails.push(selection);
             }
           });
         }
