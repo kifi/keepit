@@ -31,11 +31,12 @@ object SlackPushGenerator {
   val imageUrlRegex = """^https?://[^\s]*\.(png|jpg|jpeg|gif)""".r
   val jenUserId = ExternalId[User]("ae139ae4-49ad-4026-b215-1ece236f1322")
 
-  sealed abstract class PushItem(val time: DateTime, val userAttribution: Option[Id[User]])
+  // In the case of an exact tie on _.time: digests first, then keeps, then messages
+  sealed abstract class PushItem(val time: DateTime, val userAttribution: Option[Id[User]], val nice: Int)
   object PushItem {
-    case class Digest(since: DateTime) extends PushItem(since, None)
-    case class KeepToPush(k: Keep, ktl: KeepToLibrary) extends PushItem(ktl.addedAt, ktl.addedBy)
-    case class MessageToPush(k: Keep, msg: CrossServiceMessage) extends PushItem(msg.sentAt, msg.sentBy.flatMap(_.left.toOption))
+    case class Digest(since: DateTime) extends PushItem(since, None, 0)
+    case class KeepToPush(k: Keep, ktl: KeepToLibrary) extends PushItem(ktl.addedAt, ktl.addedBy, 1)
+    case class MessageToPush(k: Keep, msg: CrossServiceMessage) extends PushItem(msg.sentAt, msg.sentBy.flatMap(_.left.toOption), 2)
   }
   case class PushItems(
       oldKeeps: Seq[KeepToPush],
@@ -52,7 +53,7 @@ object SlackPushGenerator {
     def sortedNewItems: Seq[PushItem] = {
       val items: Seq[PushItem] = newKeeps ++ newMsgs
       if (items.length > MAX_ITEMS_TO_PUSH) Seq(PushItem.Digest(newKeeps.map(_.ktl.addedAt).minOpt getOrElse newMsgs.map(_.msg.sentAt).min))
-      else items.sortBy(_.time)
+      else items.sortBy(i => (i.time, i.nice))
     }
   }
 

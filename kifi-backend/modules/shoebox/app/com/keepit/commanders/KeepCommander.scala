@@ -17,7 +17,7 @@ import com.keepit.common.performance._
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.time._
-import com.keepit.common.util.RightBias
+import com.keepit.common.util.{ Ord, RightBias }
 import com.keepit.common.util.RightBias.FromOption
 import com.keepit.discussion.{ Message, MessageSource }
 import com.keepit.eliza.ElizaServiceClient
@@ -260,7 +260,7 @@ class KeepCommanderImpl @Inject() (
       (keep, isNew) <- Future.fromTry(db.readWrite { implicit s => keepInterner.internKeepByRequest(internReq) })
       msgOpt <- Author.kifiUserId(internReq.author).fold(Future.successful(Option.empty[Message])) { user =>
         internReq.note.fold(Future.successful(Option.empty[Message])) { note =>
-          implicit val time = CrossServiceTime(clock.now)
+          implicit val time = CrossServiceTime(Ord.max(clock.now, keep.createdAt))
           eliza.sendMessageOnKeep(user, note, keep.id.get, source = MessageSource.fromKeepSource(internReq.source)).imap(Some(_))
         }
       }
