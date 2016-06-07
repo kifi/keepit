@@ -55,7 +55,6 @@ angular.module('kifi')
         var justScrolled = false;
         var removeTimeout = null;
         var resetJustScrolledTimeout = null;
-        var submitting = false;
         var allLibraries = [];
         var widgetLibraries = [];
         var libraryNameSearch = null;
@@ -415,69 +414,15 @@ angular.module('kifi')
           }, 0);
         };
 
-        scope.createLibrary = function (library) {
-          if (submitting || !library.name) {
-            return;
-          }
-
-          scope.$error.name = libraryService.getLibraryNameError(library.name);
-          if (scope.$error.name) {
-            return;
-          }
-          scope.$error = {};
-
-          // Create an owner object that declares the type (user/org) for backend.
-          var owner;
-          // If the location is an org
-          if (scope.libraryProps.selectedOrgId) {
-            owner = {
-              org: scope.libraryProps.selectedOrgId
-            };
-          }
-
-          library.slug = util.generateSlug(library.name);
-          library.visibility = library.visibility || 'published';
-          library.space = owner;
-
-          libraryService.createLibrary(library, true).then(function (res) {
-            libraryService.fetchLibraryInfos(true).then(function () {
-              scope.$evalAsync(function () {
-                invokeWidgetCallbacks(_.find(libraryService.getOwnInfos(), {id: res.data.library.id}));
-              });
+        scope.onceLibraryCreated = function(library) {
+          libraryService.fetchLibraryInfos(true).then(function () {
+            scope.$evalAsync(function () {
+              invokeWidgetCallbacks(_.find(libraryService.getOwnInfos(), {id: library.id}));
             });
-
-            removeWidget();
-          })['catch'](function (err) {
-            var error = err.data && err.data.error;
-            switch (error) {
-              case 'library name already exists for user':  // deprecated
-              case 'library_name_exists':
-                scope.$error.general = 'You already have a library with this name';
-                break;
-              case 'invalid library name':  // deprecated
-              case 'invalid_name':
-                scope.$error.general = 'You already have a library with this name';
-                break;
-              default:
-                scope.$error.general = 'Hmm, something went wrong. Try again later?';
-                break;
-            }
-          })['finally'](function () {
-            submitting = false;
           });
+
+          removeWidget();
         };
-
-
-        //
-        // Watches and listeners.
-        //
-        scope.$watch('newLibrary.name', function (newVal, oldVal) {
-          if (newVal !== oldVal) {
-            // Clear the error popover when the user changes the name field.
-            scope.$error.name = null;
-          }
-        });
-
 
         init();
       }

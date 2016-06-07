@@ -7,6 +7,20 @@
   text-align: left
   z-index: 2
   width: 300px
+  font-size: 12px
+
+  .org-selector-org
+    height: 40px
+
+    h1
+      font-size: 12px
+
+.kf-skw-send-body.ng-enter
+  transition: all .5s linear
+  opacity: 0
+
+.kf-skw-send-body.ng-enter.ng-enter-active
+  opacity: 1
 
 .kf-skw-header
   display: flex
@@ -23,6 +37,7 @@
   height: 16px
   width: 16px
   margin-left: auto
+  cursor: pointer
 
   &:hover
     fill: white
@@ -32,12 +47,38 @@
     fill: grey
     opacity: 1
 
+.kf-skw-suggestions
+  &:last-child
+    border-bottom: none
+
+.kf-skw-lib-create-container
+  display: inline-flex
+  align-items: center
+  height: 50px
+  width: 100%
+  cursor: pointer
+  font-weight: 600
+  border-bottom: 1px solid lightGrey
+
+  &:hover
+    background-color: #fafafa
+
+.kf-skw-lib-create-icon
+  margin-left: 8px
+  width: 32px
+  height: 32px
+  transform: scale(.7)
+
+.kf-skw-lib-create-txt
+  font-size: 12px
+  color: alpha(black, .75)
+  margin-left: 10px
+
 .kf-skw-input-container
   display: flex
   flex-wrap: wrap
   background-color: #fcfcfc
   padding: 10px
-  border-top: 1px solid lightGrey
 
 .kf-skw-recipient-container
   display: inline-flex

@@ -38,7 +38,7 @@ class MessagingIndexCommander @Inject() (
     val threadId = thread.id.get
     val userParticipants: Seq[Id[User]] = thread.participants.allUsers.toSeq
     val participantBasicUsersFuture = shoebox.getBasicUsers(userParticipants)
-    val participantBasicNonUsers = thread.participants.allNonUsers.map(nu => BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nu)))
+    val participantBasicNonUsers = thread.participants.allNonUsers.map(nu => BasicUserLikeEntity(EmailParticipant.toBasicNonUser(nu)))
 
     val messages: Seq[ElizaMessage] = db.readOnlyReplica { implicit session =>
       messageRepo.get(keepId, 0)

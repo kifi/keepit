@@ -22,27 +22,28 @@
       ></svg>
       <span class="kf-library-visibility-selector-caption">Public</span>
       <span
-        ng-if="spaceIsOrg(space) && space.config && !(space.membership.role === 'member' && space.config.settings.publish_libraries.setting === ORG_SETTING_VALUE.MEMBER)"
+        ng-if="spaceIsOrg(space) && space.config && !(space.viewer.membership.role === 'member' && space.config.settings.publish_libraries.setting === ORG_SETTING_VALUE.MEMBER)"
         kf-upsell
         on-click="onClickUpsellPublic()"
         on-hover="onHoverUpsellPublic()"
       >
-      <span ng-if="!space.config.showUpsells">
-        <span ng-if="(space.viewer.membership && space.viewer.membership.role === 'admin') && space.config.settings.publish_libraries.setting === ORG_SETTING_VALUE.MEMBER">
-          Any member can make libraries public. Edit this in <a class="kf-link" ui-sref="orgProfile.settings.team({ handle: space.handle })">settings</a>
+        <span ng-if="!space.config.showUpsells">
+          <span ng-if="(space.viewer.membership && space.viewer.membership.role === 'admin') && space.config.settings.publish_libraries.setting === ORG_SETTING_VALUE.MEMBER">
+            Any member can make libraries public. Edit this in <a class="kf-link" ui-sref="orgProfile.settings.team({ handle: space.handle })">settings</a>
+          </span>
+          <span ng-if="(space.viewer.membership && space.viewer.membership.role === 'admin') && space.config.settings.publish_libraries.setting === ORG_SETTING_VALUE.ADMIN">
+            Only admins can make libraries public. Edit this in <a class="kf-link" ui-sref="orgProfile.settings.team({ handle: space.handle })">settings</a>
+          </span>
+          <span ng-if="(space.viewer.membership && space.viewer.membership.role === 'admin') && space.config.settings.publish_libraries.setting === ORG_SETTING_VALUE.DISABLED">
+            No one can make your team's libraries public. Edit this in <a class="kf-link" ui-sref="orgProfile.settings.team({ handle: space.handle })">settings</a>
+          </span>
+          <span ng-if="(space.viewer.membership && space.viewer.membership.role === 'member') && (space.config.settings.publish_libraries.setting === ORG_SETTING_VALUE.DISABLED || space.config.settings.publish_libraries.setting === ORG_SETTING_VALUE.ADMIN)">
+            Public libraries are disabled for {{ space.name }}. Edit this in <a class="kf-link" ui-sref="orgProfile.settings.team({ handle: space.handle })">settings</a>
+          </span>
         </span>
-        <span ng-if="(space.viewer.membership && space.viewer.membership.role === 'admin') && space.config.settings.publish_libraries.setting === ORG_SETTING_VALUE.ADMIN">
-          Only admins can make libraries public. Edit this in <a class="kf-link" ui-sref="orgProfile.settings.team({ handle: space.handle })">settings</a>
+        <span ng-if="space.config.showUpsells">
+          Restrict who can make libraries public by <a class="kf-link" ui-sref="orgProfile.settings.plan({ handle: space.handle, upgrade: true})">upgrading your plan</a>.
         </span>
-        <span ng-if="(space.viewer.membership && space.viewer.membership.role === 'admin') && space.config.settings.publish_libraries.setting === ORG_SETTING_VALUE.DISABLED">
-          No one can make your team's libraries public. Edit this in <a class="kf-link" ui-sref="orgProfile.settings.team({ handle: space.handle })">settings</a>
-        </span>
-        <span ng-if="(space.viewer.membership && space.viewer.membership.role === 'member') && (space.config.settings.publish_libraries.setting === ORG_SETTING_VALUE.DISABLED || space.config.settings.publish_libraries.setting === ORG_SETTING_VALUE.ADMIN)">
-          Public libraries are disabled for {{ space.name }}. Edit this in <a class="kf-link" ui-sref="orgProfile.settings.team({ handle: space.handle })">settings</a>
-        </span>
-      </span>
-      <span ng-if="space.config.showUpsells">
-        Restrict who can make libraries public by <a class="kf-link" ui-sref="orgProfile.settings.plan({ handle: space.handle, upgrade: true})">upgrading your plan</a>.
       </span>
     </label>
     <label class="kf-triptych kf-library-visibility-selector-team"

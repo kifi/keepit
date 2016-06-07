@@ -5,7 +5,7 @@ import java.net.URLEncoder
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.net.{ Query, Param }
 import com.keepit.common.path.Path
@@ -13,6 +13,7 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.discussion.Message
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
+import com.keepit.shoebox.path.{ ShortenedPath, ShortenedPathRepo }
 import com.keepit.slack.models.{ SlackTeamMembership, SlackUserId, SlackTeamId }
 import com.keepit.social.BasicUser
 
@@ -22,6 +23,7 @@ class PathCommander @Inject() (
     libRepo: LibraryRepo,
     orgRepo: OrganizationRepo,
     basicUserRepo: BasicUserRepo,
+    shortenedPathRepo: ShortenedPathRepo,
     implicit val config: PublicIdConfiguration) {
 
   /**
@@ -107,6 +109,9 @@ class PathCommander @Inject() (
   def ownKeepsFeedPage: Path = Path(s"/?filter=own")
   def ownKeepsFeedPageViaSlack(slackTeamId: SlackTeamId): Path = Path(s"s/${slackTeamId.value}/feed/own")
   def startWithSlackPath(slackTeamId: Option[SlackTeamId], extraScopes: Option[String]): Path = Path(com.keepit.controllers.core.routes.AuthController.startWithSlack(slackTeamId, extraScopes).url)
+
+  def shortened(sp: ShortenedPath): Path = Path(s"/sp/${ShortenedPath.publicId(sp.id.get).id}")
+  def shorten(path: Path)(implicit session: RWSession): ShortenedPath = shortenedPathRepo.intern(path)
 
   /**
    * I'd prefer if you just didn't use these routes

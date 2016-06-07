@@ -12,6 +12,8 @@ object UrlClassifier {
       """https?://super\.me/p/.*""",
       """https?://mrk\.tv/.*""", //http://meerkatapp.co/
       """https?://instagr\.am/.*""",
+      """https?://.*\.amazonaws\.com/.*""", // like https://s3.amazonaws.com/uncatagorized/Joel+Geier+-+Confronting+the+Right+What+Works+What+Doesn%27t+and+Why.mp3
+      """https?://yfrog\.com/.*""", // like http://yfrog.com/nuahrypj
       """https?://*riffiti\.com/.*""", //download sites
       """https?://ift\.tt/.*""", //IFTTT has lots of bad dead urls
       """https?://dsh\.re/.*""", //screenshot sharing

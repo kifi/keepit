@@ -16,7 +16,7 @@ import com.keepit.curator.model._
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model._
 import com.keepit.search.augmentation._
-import com.keepit.search.{ SearchServiceClient, FakeSearchServiceClient, FakeSearchServiceClientModule }
+import com.keepit.search.{ FakeSearchServiceClient, FakeSearchServiceClientModule, SearchFilter, SearchServiceClient }
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ShoeboxTestInjector
 import com.keepit.model.KeepFactory._
@@ -31,7 +31,7 @@ import org.specs2.mutable.Specification
 import com.keepit.model.LibraryMembershipFactory._
 import com.keepit.model.LibraryMembershipFactoryHelper._
 
-import scala.concurrent.{ Future, Await }
+import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration.Duration
 import play.api.libs.json._
 
@@ -52,7 +52,7 @@ class RecommendationsCommanderTest extends Specification with ShoeboxTestInjecto
       librariesTotal = 1,
       tags = Seq(),
       tagsOmitted = 0)
-    override def augment(userId: Option[Id[User]], showPublishedLibraries: Boolean, maxKeepsShown: Int, maxKeepersShown: Int, maxLibrariesShown: Int, maxTagsShown: Int, items: Seq[AugmentableItem]): Future[Seq[LimitedAugmentationInfo]] = {
+    override def augment(userId: Option[Id[User]], filter: SearchFilter, showPublishedLibraries: Boolean, maxKeepsShown: Int, maxKeepersShown: Int, maxLibrariesShown: Int, maxTagsShown: Int, items: Seq[AugmentableItem]): Future[Seq[LimitedAugmentationInfo]] = {
       Future.successful(Seq(info))
     }
   }

@@ -9,6 +9,7 @@ import com.keepit.common.service.IpAddress
 import com.keepit.common.mail.{ EmailAddress, _ }
 import com.keepit.common.math.ProbabilityDensity
 import com.keepit.common.net.UserAgent
+import com.keepit.common.path.Path
 import com.keepit.common.store.ImagePath
 import com.keepit.common.time._
 import com.keepit.common.util.DollarAmount
@@ -64,6 +65,7 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   implicit val electronicMailCategoryMapper = MappedColumnType.base[ElectronicMailCategory, String](_.category, ElectronicMailCategory.apply)
   implicit val userAgentMapper = MappedColumnType.base[UserAgent, String](_.userAgent, UserAgent.apply)
   implicit val emailAddressMapper = MappedColumnType.base[EmailAddress, String](_.address, EmailAddress.apply)
+  implicit val pathMapper = MappedColumnType.base[Path, String](_.relativeWithLeadingSlash, Path(_))
   implicit val seqEmailAddressMapper = MappedColumnType.base[Seq[EmailAddress], String](v => v.map { e => e.address } mkString (","), v => v.trim match {
     case "" => Nil
     case trimmed => trimmed.split(",") map { addr => EmailAddress(addr.trim) }

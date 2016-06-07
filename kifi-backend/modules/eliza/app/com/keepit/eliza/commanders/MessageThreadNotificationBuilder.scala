@@ -213,7 +213,7 @@ class MessageThreadNotificationBuilderImpl @Inject() (
 
         val author = messageOpt.map(_.from).collect {
           case MessageSender.User(id) => BasicUserLikeEntity(basicUserByIdMap(id))
-          case MessageSender.NonUser(nup) => BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nup))
+          case MessageSender.NonUser(nup) => BasicUserLikeEntity(EmailParticipant.toBasicNonUser(nup))
         } orElse threadStarter
 
         val authorActivityInfos = threadActivity.filter(_.lastActive.isDefined)
@@ -229,10 +229,7 @@ class MessageThreadNotificationBuilderImpl @Inject() (
           val orderedParticipants = allParticipants.sortBy(x => x.fold(nu => (nu.firstName.getOrElse(""), nu.lastName.getOrElse("")), u => (u.firstName, u.lastName)))
           val indexOfFirstAuthor = orderedParticipants.zipWithIndex.collectFirst {
             case (Right(user), idx) if threadStarter.exists(_.right.exists(_.externalId == user.externalId)) => idx
-          }.getOrElse {
-            airbrake.notify(s"Thread starter is not one of the participants for keep $keepId")
-            0
-          }
+          }.getOrElse(0)
           val pubKeepId = Keep.publicId(keepId)
           val locator = MessageThread.locator(pubKeepId)
           MessageThreadNotification(
@@ -276,7 +273,7 @@ class MessageThreadNotificationBuilderImpl @Inject() (
 
     for {
       basicUserById <- precomputedInfo.flatMap(_.basicUserById).map(Future.successful)
-        .getOrElse(shoebox.getBasicUsers(thread.allParticipants.toSeq))
+        .getOrElse(shoebox.getBasicUsers(thread.participants.allUsers.toSeq))
     } yield {
       userIds.map { userId =>
         val authorActivityInfos = threadActivity.filter(_.lastActive.isDefined)
@@ -287,7 +284,11 @@ class MessageThreadNotificationBuilderImpl @Inject() (
         }
         val MessageCount(numMessages, numUnread) = messageCountByUser(userId)
 
-        val participants = thread.allParticipants.map(uid => BasicUserLikeEntity.user(basicUserById(uid))) ++ thread.allEmails.map(email => BasicUserLikeEntity.nonUser(BasicNonUser.fromEmail(email)))
+        val participants = {
+          val basicUsers = thread.participants.allUsers.map(uid => BasicUserLikeEntity.user(basicUserById(uid)))
+          val basicEmails = thread.participants.allEmails.map(email => BasicUserLikeEntity.nonUser(BasicNonUser.fromEmail(email)))
+          basicUsers ++ basicEmails
+        }
 
         userId -> MessageThreadNotification(
           thread = thread,

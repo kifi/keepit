@@ -9,6 +9,7 @@ import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.common.db.Id
 import com.keepit.common.store.FakeElizaStoreModule
 import com.keepit.common.time.{ CrossServiceTime, DEFAULT_DATE_TIME_ZONE, currentDateTime }
+import com.keepit.common.util.DeltaSet
 import com.keepit.eliza.commanders._
 import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.eliza.model._
@@ -151,7 +152,7 @@ class MessagingTest extends Specification with ElizaTestInjector with ElizaInjec
         waitFor(notificationDeliveryCommander.getLatestSendableNotifications(user2, 1, includeUriSummary = false)).length === 1
         waitFor(notificationDeliveryCommander.getLatestSendableNotifications(user3, 1, includeUriSummary = false)).length === 0
 
-        messagingCommander.addParticipantsToThread(user1, thread.keepId, Seq(user3), Seq.empty, Seq.empty, source = None)
+        messagingCommander.modifyThreadParticipants(user1, thread.keepId, DeltaSet.addOnly(Set(user3)), DeltaSet.empty, source = None)
         inject[WatchableExecutionContext].drain()
         waitFor(notificationDeliveryCommander.getLatestSendableNotifications(user3, 1, includeUriSummary = false)).length === 1
       }

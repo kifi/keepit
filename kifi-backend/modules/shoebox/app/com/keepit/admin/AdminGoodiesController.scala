@@ -13,6 +13,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
+import com.keepit.shoebox.path.ShortenedPath
 import com.keepit.slack.models.{ SlackChannelRepo, SlackMessageRequest }
 import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
 import play.api.libs.iteratee.{ Enumerator, Concurrent }
@@ -63,6 +64,7 @@ class AdminGoodiesController @Inject() (
     // This just forces registration. Probably not necessary if they're actually being used, but hey.
     Library.publicId(Id(1))
     Organization.publicId(Id(1))
+    ShortenedPath.publicId(Id(1))
   }
 
   def externalIdById(name: String, id: Long) = AdminUserPage { implicit request =>

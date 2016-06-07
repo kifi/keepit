@@ -8,6 +8,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.model._
+import org.joda.time.DateTime
 
 import scala.util.control.NoStackTrace
 import scala.util.{ Failure, Success, Try }
@@ -25,7 +26,7 @@ object KeepToLibraryFail {
 
 @ImplementedBy(classOf[KeepToLibraryCommanderImpl])
 trait KeepToLibraryCommander {
-  def internKeepInLibrary(keep: Keep, library: Library, addedBy: Option[Id[User]])(implicit session: RWSession): KeepToLibrary
+  def internKeepInLibrary(keep: Keep, library: Library, addedBy: Option[Id[User]], addedAt: DateTime)(implicit session: RWSession): KeepToLibrary
   def removeKeepFromLibrary(keepId: Id[Keep], libraryId: Id[Library])(implicit session: RWSession): Try[Unit]
   def removeKeepFromAllLibraries(keepId: Id[Keep])(implicit session: RWSession): Unit
   def deactivate(ktl: KeepToLibrary)(implicit session: RWSession): Unit
@@ -48,7 +49,7 @@ class KeepToLibraryCommanderImpl @Inject() (
   airbrake: AirbrakeNotifier)
     extends KeepToLibraryCommander with Logging {
 
-  def internKeepInLibrary(keep: Keep, library: Library, addedBy: Option[Id[User]])(implicit session: RWSession): KeepToLibrary = {
+  def internKeepInLibrary(keep: Keep, library: Library, addedBy: Option[Id[User]], addedAt: DateTime)(implicit session: RWSession): KeepToLibrary = {
     ktlRepo.getByKeepIdAndLibraryId(keep.id.get, library.id.get, excludeStateOpt = None) match {
       case Some(existingKtl) if existingKtl.isActive => existingKtl
       case inactiveKtlOpt =>
@@ -56,7 +57,7 @@ class KeepToLibraryCommanderImpl @Inject() (
           keepId = keep.id.get,
           libraryId = library.id.get,
           addedBy = addedBy,
-          addedAt = clock.now,
+          addedAt = addedAt,
           uriId = keep.uriId,
           visibility = library.visibility,
           organizationId = library.organizationId,

@@ -102,7 +102,7 @@ class DiscussionCommanderImpl @Inject() (
       val keepPermissions = db.readOnlyReplica(implicit s => permissionCommander.getKeepPermissions(keepId, Some(userId)))
       val errs: Stream[DiscussionFail] = Stream(
         (diff.users.added.nonEmpty && !keepPermissions.contains(KeepPermission.ADD_PARTICIPANTS)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS,
-        (diff.users.removed.nonEmpty && !keepPermissions.contains(KeepPermission.REMOVE_PARTICIPANTS)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS,
+        (diff.users.removed.exists(_ != userId) && !keepPermissions.contains(KeepPermission.REMOVE_PARTICIPANTS)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS,
         (diff.libraries.added.nonEmpty && !keepPermissions.contains(KeepPermission.ADD_LIBRARIES)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS,
         (diff.libraries.removed.nonEmpty && !keepPermissions.contains(KeepPermission.REMOVE_LIBRARIES)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS
       ).collect { case (true, fail) => fail }

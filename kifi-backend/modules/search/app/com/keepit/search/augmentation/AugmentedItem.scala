@@ -1,11 +1,12 @@
 package com.keepit.search.augmentation
 
 import com.keepit.common.db.Id
-import com.keepit.model.{ Organization, NormalizedURI, Library, User }
+import com.keepit.model._
 import com.keepit.search.index.Searcher
 import com.keepit.search.index.graph.library.LibraryIndexable
 import com.keepit.slack.models.SlackTeamId
-import scala.collection.mutable.{ ListBuffer }
+
+import scala.collection.mutable.ListBuffer
 import com.keepit.common.CollectionHelpers
 
 class AugmentedItem(userId: Id[User], allFriends: Set[Id[User]], allOrganizations: Set[Id[Organization]], val allSlackTeamIds: Set[SlackTeamId], allLibraries: Set[Id[Library]], scores: AugmentationScores, librarySearcher: Searcher)(item: AugmentableItem, info: FullAugmentationInfo) {
@@ -51,9 +52,14 @@ class AugmentedItem(userId: Id[User], allFriends: Set[Id[User]], allOrganization
 
   def toLimitedAugmentationInfo(maxKeepsShown: Int, maxKeepersShown: Int, maxLibrariesShown: Int, maxTagsShown: Int) = {
 
-    val keep = primaryKeep
-    val keepsShown = keeps.take(maxKeepsShown)
-    val keepsOmitted = keeps.size - keepsShown.size
+    // todo(Léo): either pass PaginationContext here or move these parameters into AugmentableItem
+    val paginatedKeepIds = item.keepPagination.map(_.toSet) getOrElse Set.empty
+    def includeKeep(keep: KeepDocument): Boolean = !paginatedKeepIds.contains(keep.id)
+
+    val keep = primaryKeep.filter(includeKeep)
+    val includedKeeps = keeps.filter(includeKeep)
+    val keepsShown = includedKeeps.take(maxKeepsShown)
+    val keepsOmitted = includedKeeps.size - keepsShown.size
 
     val keepersShown = relatedKeepers.take(maxKeepersShown)
     val keepersOmitted = relatedKeepers.size - keepersShown.size

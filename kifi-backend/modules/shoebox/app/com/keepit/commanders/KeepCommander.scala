@@ -17,7 +17,7 @@ import com.keepit.common.performance._
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.time._
-import com.keepit.common.util.RightBias
+import com.keepit.common.util.{ Ord, RightBias }
 import com.keepit.common.util.RightBias.FromOption
 import com.keepit.discussion.{ Message, MessageSource }
 import com.keepit.eliza.ElizaServiceClient
@@ -26,7 +26,7 @@ import com.keepit.integrity.UriIntegrityHelpers
 import com.keepit.model._
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.rover.RoverServiceClient
-import com.keepit.search.SearchServiceClient
+import com.keepit.search.{ SearchFilter, SearchServiceClient }
 import com.keepit.search.augmentation.{ AugmentableItem, ItemAugmentationRequest }
 import com.keepit.shoebox.data.keep.{ KeepInfo, PartialKeepInfo }
 import com.keepit.slack.LibraryToSlackChannelPusher
@@ -260,7 +260,7 @@ class KeepCommanderImpl @Inject() (
       (keep, isNew) <- Future.fromTry(db.readWrite { implicit s => keepInterner.internKeepByRequest(internReq) })
       msgOpt <- Author.kifiUserId(internReq.author).fold(Future.successful(Option.empty[Message])) { user =>
         internReq.note.fold(Future.successful(Option.empty[Message])) { note =>
-          implicit val time = CrossServiceTime(clock.now)
+          implicit val time = CrossServiceTime(Ord.max(clock.now, keep.createdAt))
           eliza.sendMessageOnKeep(user, note, keep.id.get, source = MessageSource.fromKeepSource(internReq.source)).imap(Some(_))
         }
       }
@@ -412,7 +412,7 @@ class KeepCommanderImpl @Inject() (
       case Some(keepId) =>
         val keep = db.readOnlyMaster { implicit session => keepRepo.get(keepId) }
         val item = AugmentableItem(keep.uriId, Some(keep.id.get))
-        val futureAugmentationResponse = searchClient.augmentation(ItemAugmentationRequest.uniform(userId, item))
+        val futureAugmentationResponse = searchClient.augmentation(ItemAugmentationRequest.uniform(userId, SearchFilter.default, item))
         val existingNormalizedTags = db.readOnlyMaster { implicit session => tagCommander.getTagsForKeep(keep.id.get).map(_.normalized) }
         futureAugmentationResponse.map { response =>
           val suggestedTags = {

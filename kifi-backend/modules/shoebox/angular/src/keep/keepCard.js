@@ -288,8 +288,7 @@ angular.module('kifi')
           scope.showActivityEvents = keep.activity;
           scope.showOriginLibrary = scope.currentPageOrigin !== 'libraryPage' &&
             keep.library && keep.library.visibility !== 'discoverable' && keep.library.kind === 'system_secret';
-          var experiments = profileService.me.experiments;
-          scope.showAddRecipients = experiments && experiments.indexOf('add_keep_recipients') !== -1;
+          scope.showAddRecipients = keep.permissions.indexOf('add_participants') !== -1;
           // Don't change until the link is updated to be a bit more secure:
           scope.galleryView = scope.forceGalleryView || !profileService.prefs.use_minimal_keep_card;
           scope.globalGalleryView = scope.galleryView;
