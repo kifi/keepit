@@ -8,6 +8,8 @@ angular.module('kifi')
 
     var numSuggestions = 4;
     var desiredMarginTop = 45;
+    var initialBottom = 20;
+    var initialRight = -20;
 
     return {
       restrict: 'A',
@@ -48,14 +50,15 @@ angular.module('kifi')
           refreshSuggestions(null, numSuggestions);
 
           widget = angular.element($templateCache.get('keep/sendKeepWidget.tpl.html'));
-          $rootElement.find('html').append(widget);
+          element.parents('.kf-keep').append(widget);
           $compile(widget)(scope);
           widget.hide();
-          $timeout(setInitialPosition, 0);
+          setInitialPosition();
           scope.$watch('init', function () {
             if (scope.init) {
               $timeout(function () {
                 widget.show();
+                adjustWidgetPosition();
               }, 0);
             }
           });
@@ -65,50 +68,27 @@ angular.module('kifi')
 
 
         function setInitialPosition() {
-
-          // try to load the first batch of suggestions before calculating the widget position,
-          // if we can't wait for the response, go with a height estimate
-
-          var elementOffsetTop = element.offset().top;
-          var distanceFromBottom = $window.innerHeight - elementOffsetTop;
-
-          var elementOffsetLeft = element.offset().left;
-
-          // Place the widget such that 1) it's on the screen, and 2) does not obscure the keep members UI on the keep card.
-          // If the widget can be placed above the keep members chips, set the bottom to be above it.
-          // Else if the widget can be placed below the keep members chips, set the bottom s.t. the top is below it.
-          // Else, do our best by placing the widget in middle of the keep
-
-          var suggestionItem = widget.find('.kf-skw-suggestion'); // the No Results Found element
-          var widgetHeight = (numSuggestions+3) * suggestionItem.height();
-
-          var bottom;
-
-          if (elementOffsetTop - widgetHeight >= desiredMarginTop) {
-            bottom = distanceFromBottom;
-          } else if (distanceFromBottom - widgetHeight >= 0) {
-            bottom = distanceFromBottom - widgetHeight;
-          } else {
-            bottom = distanceFromBottom - (widgetHeight/2);
-          }
-
-          var distanceFromRight = $window.innerWidth - elementOffsetLeft;
-
-          widget.css({ bottom: bottom + 'px', right: distanceFromRight  + 'px' });
+          widget.css({ bottom: initialBottom + 'px', right: initialRight  + 'px' });
         }
 
-        function setCreateLibraryPosition() {
+        function adjustWidgetPosition() {
           // rendering the create library page may increase the height of the widget,
           // so make sure it's not overflowing on top
 
-          var widgetHeight = widget.height();
-          var widgetOffsetTop = widget.offset().top;
-          var distanceFromBottom = $window.innerHeight - widgetHeight - widgetOffsetTop;
 
+          var widgetOffsetTop = widget.offset().top;
 
           if (widgetOffsetTop < desiredMarginTop) {
-            var bottom = distanceFromBottom - (desiredMarginTop - widgetOffsetTop);
-            widget.css({ bottom: bottom + 'px' });
+            var scrollElement = element.parents('.kf-body-container-content');
+            var mainScrollTop = scrollElement.scrollTop();
+
+            if (mainScrollTop > (widgetOffsetTop*-1 + desiredMarginTop)) {
+              scrollElement.scrollTop(mainScrollTop + widgetOffsetTop - desiredMarginTop);
+            } else {
+              var shiftDown = (desiredMarginTop - widgetOffsetTop);
+              var bottom = parseInt(widget.css('bottom').slice(0,-2), 10);
+              widget.css({ bottom: (bottom - shiftDown) + 'px' });
+            }
           }
         }
 
@@ -142,9 +122,8 @@ angular.module('kifi')
               refreshSuggestions(query, limit, (offset || 0) + limit);
             } else {
               scope.suggestions = nonMemberResults;
-              if (widget && !init) {
-                init = true;
-                widget.show();
+              if (widget && !scope.init) {
+                scope.init = true;
                 resetInput();
               }
             }
@@ -217,12 +196,14 @@ angular.module('kifi')
           scope.showCreateLibrary = true;
 
           $timeout(function() {
-            setCreateLibraryPosition();
+            adjustWidgetPosition();
           }, 0);
         };
 
         scope.exitCreateLibrary = function() {
           scope.showCreateLibrary = false;
+          setInitialPosition();
+          $timeout(adjustWidgetPosition, 0);
           resetInput();
         };
 
@@ -230,6 +211,8 @@ angular.module('kifi')
           var suggestion = convertLibraryToSuggestion(library);
           scope.selectSuggestion(suggestion);
           scope.showCreateLibrary = false;
+          setInitialPosition();
+          $timeout(adjustWidgetPosition, 0);
           resetInput();
         };
 
