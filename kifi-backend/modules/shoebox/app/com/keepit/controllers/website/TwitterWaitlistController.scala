@@ -125,15 +125,15 @@ class TwitterWaitlistController @Inject() (
           commander.createSyncOrWaitlist(ur.userId, SyncTarget.Tweets) match {
             case Left(error) =>
               log.warn(s"[thanksForTwitterWaitlist] ${ur.userId} Error when creating sync, $error")
-              userValueRepo.setValue(ur.userId, UserValueName.TWITTER_SYNC_PROMO, "show_sync")
+              db.readWrite { implicit s => userValueRepo.setValue(ur.userId, UserValueName.TWITTER_SYNC_PROMO, "show_sync") }
               MarketingSiteRouter.marketingSite("twitter-confirmation")
             case Right(Right(sync)) if syncIsReady(sync) =>
               log.info(s"[thanksForTwitterWaitlist] ${ur.userId} Had a sync, redirecting $sync")
-              userValueRepo.clearValue(ur.userId, UserValueName.TWITTER_SYNC_PROMO)
+              db.readWrite { implicit s => userValueRepo.clearValue(ur.userId, UserValueName.TWITTER_SYNC_PROMO) }
               redirectToLibrary(existingSync.get.libraryId)
             case Right(waitOrNewSync) =>
               log.info(s"[thanksForTwitterWaitlist] ${ur.userId} now on waitlist $waitOrNewSync")
-              userValueRepo.setValue(ur.userId, UserValueName.TWITTER_SYNC_PROMO, "in_progress")
+              db.readWrite { implicit s => userValueRepo.setValue(ur.userId, UserValueName.TWITTER_SYNC_PROMO, "in_progress") }
               MarketingSiteRouter.marketingSite("twitter-confirmation")
           }
         }

@@ -302,9 +302,13 @@ class AuthHelper @Inject() (
         }
         "/teams/new"
       case JoinTwitterWaitlist =>
-        twitterWaitlistCommander.createSyncOrWaitlist(userId, SyncTarget.Tweets) match {
-          case Right(sync) => userValueRepo.setValue(userId, UserValueName.TWITTER_SYNC_PROMO, "in_progress")
-          case Left(err) => userValueRepo.setValue(userId, UserValueName.TWITTER_SYNC_PROMO, "show_sync")
+        val joinResult = twitterWaitlistCommander.createSyncOrWaitlist(userId, SyncTarget.Tweets)
+
+        db.readWrite { implicit s =>
+          joinResult match {
+            case Right(sync) => userValueRepo.setValue(userId, UserValueName.TWITTER_SYNC_PROMO, "in_progress")
+            case Left(err) => userValueRepo.setValue(userId, UserValueName.TWITTER_SYNC_PROMO, "show_sync")
+          }
         }
         "/twitter/thanks"
       case NoIntent => homeOrInstall
