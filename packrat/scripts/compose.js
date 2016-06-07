@@ -280,8 +280,9 @@ k.compose = k.compose || (function() {
         return;
       }
       var options = $form.data('options');
-      var text;
-      if (!options.allowEmpty && ($form.hasClass('kifi-empty') || !(text = editor.markdown()))) {
+      var text = editor.markdown() || null;
+      var isEmpty = ($form.hasClass('kifi-empty') || !text);
+      if (isEmpty && !options.allowEmpty) {
         editor.$el.focus();
         return;
       }
