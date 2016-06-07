@@ -190,15 +190,13 @@ class AuthCommander @Inject() (
         alternative
       } else sfi.email
 
-      val pInfo = sfi.password.map { p =>
-        currentHasher.hash(p)
-      }
+      val pInfo = sfi.password.map { p => currentHasher.hash(p) }
 
       val (emailPassIdentity, userId) = saveUserPasswordIdentity(None, email = email, passwordInfoOpt = pInfo, firstName = sfi.firstName, lastName = sfi.lastName, isComplete = true)
 
       saveUserIdentity(socialIdentity.withUserId(userId)) // SocialUserInfo is claimed here
 
-      val user = db.readWrite { implicit session =>
+      val user = db.readWrite(attempts = 3) { implicit session =>
         val userPreUsername = userRepo.get(userId)
         handleCommander.autoSetUsername(userPreUsername) getOrElse userPreUsername
       }

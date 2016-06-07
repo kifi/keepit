@@ -89,6 +89,7 @@ object UserValueName {
   val SLACK_UPSELL_WIDGET = UserValueName("slack_upsell_widget")
   val SHOW_SLACK_CREATE_TEAM_POPUP = UserValueName("show_slack_create_team_popup")
   val HIDE_EXTENSION_UPSELL = UserValueName("hide_extension_upsell")
+  val TWITTER_SYNC_PROMO = UserValueName("twitter_sync_promo") // show_sync, in_progress
 
   val LAST_SMS_SENT = UserValueName("last_sms_sent")
 

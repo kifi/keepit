@@ -83,7 +83,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
             (handle, sui)
           }) match {
             case Some(sh) => Right(Left(sh))
-            case None => Left(Left("twitter_not_authed"))
+            case None => Left(Left("twitter_not_synced"))
           }
       }
     } match {

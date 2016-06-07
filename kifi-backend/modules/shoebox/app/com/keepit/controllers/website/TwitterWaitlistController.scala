@@ -228,12 +228,16 @@ class TwitterWaitlistController @Inject() (
       case Left(err) =>
         BadRequest(Json.obj("error" -> "failed", "msg" -> err))
       case Right(Left(wait)) =>
-        Accepted(Json.obj("pending" -> true))
+        Accepted(Json.obj("pending" -> true, "handle" -> wait.twitterHandle.map(_.value)))
       case Right(Right(sync)) =>
         val library = db.readOnlyReplica { implicit session =>
           libraryRepo.get(sync.libraryId)
         }
-        Ok(Json.obj("complete" -> true, "url" -> libPathCommander.getPathForLibrary(library), "handle" -> sync.twitterHandle))
+        if (library.keepCount > 0) {
+          Ok(Json.obj("complete" -> true, "url" -> libPathCommander.getPathForLibrary(library), "handle" -> sync.twitterHandle.value))
+        } else {
+          Ok(Json.obj("complete" -> false, "url" -> libPathCommander.getPathForLibrary(library), "handle" -> sync.twitterHandle.value))
+        }
     }
   }
 
