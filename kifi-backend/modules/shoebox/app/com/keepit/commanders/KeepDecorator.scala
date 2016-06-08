@@ -46,6 +46,7 @@ class KeepDecoratorImpl @Inject() (
   keepRepo: KeepRepo,
   ktlRepo: KeepToLibraryRepo,
   ktuRepo: KeepToUserRepo,
+  kteRepo: KeepToEmailRepo,
   eventRepo: KeepEventRepo,
   keepImageCommander: KeepImageCommander,
   libraryCardCommander: LibraryCardCommander,
@@ -84,10 +85,11 @@ class KeepDecoratorImpl @Inject() (
         val items = keeps.map { keep => AugmentableItem(keep.uriId) }
         searchClient.augment(viewerIdOpt, SearchFilter.default, showPublishedLibraries, KeepInfo.maxKeepsShown, KeepInfo.maxKeepersShown, KeepInfo.maxLibrariesShown, 0, items).imap(augmentationInfos => filterLibraries(augmentationInfos))
       }
-      val emailParticipantsByKeepFuture = eliza.getEmailParticipantsForKeeps(keepIds)
-
-      val (ktusByKeep, ktlsByKeep, eventsByKeep) = db.readOnlyMaster { implicit s =>
-        (ktuRepo.getAllByKeepIds(keeps.map(_.id.get).toSet), ktlRepo.getAllByKeepIds(keepIds), eventRepo.getForKeeps(keepIds, limit = Some(maxMessagesShown), excludeKinds = KeepEventKind.hideForNow))
+      val (ktusByKeep, ktlsByKeep, ktesByKeep, eventsByKeep) = db.readOnlyMaster { implicit s =>
+        (ktuRepo.getAllByKeepIds(keeps.map(_.id.get).toSet),
+          ktlRepo.getAllByKeepIds(keepIds),
+          kteRepo.getAllByKeepIds(keepIds),
+          eventRepo.getForKeeps(keepIds, limit = Some(maxMessagesShown), excludeKinds = KeepEventKind.hideForNow))
       }
 
       val pageInfosFuture = getKeepSummaries(keeps, idealImageSize)
@@ -122,7 +124,6 @@ class KeepDecoratorImpl @Inject() (
 
       val entitiesFutures = for {
         augmentationInfos <- augmentationFuture
-        emailParticipantsByKeep <- emailParticipantsByKeepFuture
         discussionsByKeep <- discussionsByKeepFut
       } yield {
         val (usersFromEvents, libsFromEvents) = KeepEvent.idsInvolved(eventsByKeep.values.flatten)
@@ -146,7 +147,7 @@ class KeepDecoratorImpl @Inject() (
           val keepers = keeps.flatMap(_.userId).toSet // is this needed? need to double check, it may be redundant
           val ktuUsers = ktusByKeep.values.flatten.map(_.userId) // may need to use .take(someLimit) for performance
           val msgUsers = discussionsByKeep.values.flatMap(_.messages.flatMap(_.sentBy.flatMap(_.left.toOption))).toSet
-          val emailParticipantsAddedBy = emailParticipantsByKeep.values.flatMap(_.values.map(_._1))
+          val emailParticipantsAddedBy = ktesByKeep.values.flatMap(_.flatMap(_.addedBy)).toSet
           db.readOnlyMaster { implicit s => basicUserRepo.loadAll(keepersShown ++ libraryContributorsShown ++ libraryOwners ++ keepers ++ ktuUsers ++ msgUsers ++ emailParticipantsAddedBy ++ usersFromEvents) } //cached
         }
 
@@ -176,7 +177,6 @@ class KeepDecoratorImpl @Inject() (
         additionalSourcesByUriId <- additionalSourcesFuture
         (idToBasicUser, idToBasicLibrary, idToLibraryCard, idToBasicOrg) <- entitiesFutures
         discussionsByKeep <- discussionsWithStrictTimeout
-        emailParticipantsByKeep <- emailParticipantsByKeepFuture
       } yield {
         val keepsInfo = (keeps, augmentationInfos, pageInfos).zipped.flatMap {
           case (keep, augmentationInfoForKeep, pageInfoForKeep) =>
@@ -210,10 +210,9 @@ class KeepDecoratorImpl @Inject() (
                 }
               }.sortBy(_.addedAt)
 
-              val emails = emailParticipantsByKeep.getOrElse(keepId, Map.empty).map {
-                case (emailAddress, (addedBy, addedAt)) =>
-                  KeepMember.Email(emailAddress, addedAt, idToBasicUser.get(addedBy))
-              }.toSeq.sortBy(_.addedAt)
+              val emails = ktesByKeep.getOrElse(keepId, Seq.empty).map { kte =>
+                KeepMember.Email(kte.emailAddress, kte.addedAt, kte.addedBy.flatMap(idToBasicUser.get))
+              }.sortBy(_.addedAt)
 
               KeepMembers(libraries, users, emails)
             }
