@@ -51,7 +51,7 @@ class SlackAuthRouter @Inject() (
     val redir = db.readOnlyMaster { implicit s =>
       slackTeamRepo.getBySlackTeamId(slackTeamId).flatMap(_.organizationId).map(orgRepo.get).filter(_.isActive).map { org =>
         val target = PathCommander.browserExtension.absolute
-        weWantThisUserToAuthWithSlack(request.userIdOpt, org, slackTeamId) match {
+        weWantThisUserToAuthWithSlack(request.userIdOpt, org.id.get, slackTeamId) match {
           case true => redirectThroughSlackAuth(org, slackTeamId, target)
           case false => Redirect(target)
         }
@@ -72,7 +72,7 @@ class SlackAuthRouter @Inject() (
           case None => airbrake.notify(s"[inactive-org] slackTeam=${slackTeamId.value} references inactive org=${orgId.id}")
           case _ =>
         }
-        _ <- Some(true) if weWantThisUserToAuthWithSlack(request.userIdOpt, org, slackTeamId)
+        _ <- Some(true) if weWantThisUserToAuthWithSlack(request.userIdOpt, org.id.get, slackTeamId)
       } yield redirectThroughSlackAuth(org, slackTeamId, userPath, userId = Some(extId))) orElse userPathOpt.map(Redirect(_))
     }.getOrElse(notFound(request))
   }
@@ -81,7 +81,7 @@ class SlackAuthRouter @Inject() (
     val redir = db.readOnlyMaster { implicit s =>
       Organization.decodePublicId(pubId).toOption.flatMap(orgId => Some(orgRepo.get(orgId)).filter(_.isActive)).map { org =>
         val target = pathCommander.orgPage(org).absolute
-        weWantThisUserToAuthWithSlack(request.userIdOpt, org, slackTeamId) match {
+        weWantThisUserToAuthWithSlack(request.userIdOpt, org.id.get, slackTeamId) match {
           case true => redirectThroughSlackAuth(org, slackTeamId, target)
           case false => Redirect(target)
         }
@@ -93,7 +93,7 @@ class SlackAuthRouter @Inject() (
     val redir = db.readOnlyMaster { implicit s =>
       Organization.decodePublicId(pubId).toOption.flatMap(orgId => Some(orgRepo.get(orgId)).filter(_.isActive)).map { org =>
         val target = pathCommander.orgIntegrationsPage(org).absolute + "#slack-settings-" // Carlos magic to smooth-scroll to the settings part
-        weWantThisUserToAuthWithSlack(request.userIdOpt, org, slackTeamId) match {
+        weWantThisUserToAuthWithSlack(request.userIdOpt, org.id.get, slackTeamId) match {
           case true => redirectThroughSlackAuth(org, slackTeamId, target)
           case false => Redirect(target)
         }
@@ -108,7 +108,7 @@ class SlackAuthRouter @Inject() (
         val target = pathCommander.libraryPage(lib).absolute
         (for {
           org <- lib.organizationId.map(orgRepo.get).filter(_.isActive)
-          _ <- Some(true) if weWantThisUserToAuthWithSlack(request.userIdOpt, org, slackTeamId)
+          _ <- Some(true) if weWantThisUserToAuthWithSlack(request.userIdOpt, org.id.get, slackTeamId)
         } yield redirectThroughSlackAuth(org, slackTeamId, target, libraryId = Some(pubId))) getOrElse Redirect(target)
       }
     }
@@ -120,7 +120,7 @@ class SlackAuthRouter @Inject() (
       val target = pathCommander.ownKeepsFeedPage.absolute
       (for {
         org <- slackTeamRepo.getBySlackTeamId(slackTeamId).flatMap(_.organizationId).map(orgRepo.get).filter(_.isActive)
-        _ <- Some(true) if weWantThisUserToAuthWithSlack(request.userIdOpt, org, slackTeamId)
+        _ <- Some(true) if weWantThisUserToAuthWithSlack(request.userIdOpt, org.id.get, slackTeamId)
       } yield redirectThroughSlackAuth(org, slackTeamId, target)) getOrElse Redirect(target)
     }
   }
@@ -133,26 +133,18 @@ class SlackAuthRouter @Inject() (
         def keepPageUrl = pathCommander.pathForKeep(keep).absolute
         val permissions = permissionCommander.getKeepPermissions(keep.id.get, requesterId)
 
-        if (permissions.contains(KeepPermission.VIEW_KEEP)) Some {
-          // Authorized keep
-          val noExtUrl = if (viewArticle) keep.url else keepPageUrl
-          if (permissions.contains(KeepPermission.ADD_MESSAGE)) {
-            Ok(html.maybeExtDeeplink(DeepLinkRedirect(url = keep.url, externalLocator = Some(s"/messages/${pubId.id}")), noExtUrl = noExtUrl))
-          } else {
-            // todo: we should be able to open the thread in the extension in read-only mode
-            Redirect(noExtUrl)
-          }
+        if (viewArticle) Some {
+          if (permissions.contains(KeepPermission.VIEW_KEEP) && permissions.contains(KeepPermission.ADD_MESSAGE)) Ok(html.maybeExtDeeplink(DeepLinkRedirect(url = keep.url, externalLocator = Some(s"/messages/${pubId.id}")), noExtUrl = keep.url))
+          else Redirect(keep.url) // todo: we should be able to open the ext in read-only mode // todo: should this leak keep.url or should we defer to the hash?
         }
-        else {
-          // Unauthorized keep
-          if (viewArticle) Some(Redirect(keep.url)) // todo: should this leak the keep.url or should we defer to the url hash?
-          else for {
-            slackTeam <- slackTeamRepo.getBySlackTeamId(slackTeamId)
-            orgId <- slackTeam.organizationId
-          } yield {
+        else for {
+          slackTeam <- slackTeamRepo.getBySlackTeamId(slackTeamId)
+          orgId <- slackTeam.organizationId
+        } yield {
+          if (weWantThisUserToAuthWithSlack(requesterId, orgId, slackTeamId)) {
             val org = orgRepo.get(orgId)
             redirectThroughSlackAuth(org, slackTeamId, keepPageUrl, keepId = Some(pubId))
-          }
+          } else Redirect(keepPageUrl)
         }
       }
     } yield found
@@ -181,13 +173,13 @@ class SlackAuthRouter @Inject() (
     Redirect(PathCommander.home.absolute)
   }
 
-  private def weWantThisUserToAuthWithSlack(userIdOpt: Option[Id[User]], org: Organization, slackTeamId: SlackTeamId)(implicit session: RSession): Boolean = {
+  private def weWantThisUserToAuthWithSlack(userIdOpt: Option[Id[User]], orgId: Id[Organization], slackTeamId: SlackTeamId)(implicit session: RSession): Boolean = {
     userIdOpt match {
       case None => true // always hand non-users over to the frontend to ask them to log in or sign up
       case Some(userId) => // if they're logged in AND they can't access the page in question AND signing up with slack would help
         slackTeamRepo.getBySlackTeamId(slackTeamId).exists { slackTeam =>
-          val orgIsConnectedToThisSlackTeam = slackTeam.organizationId.safely.contains(org.id.get)
-          val userIsNotInThisOrg = orgMembershipRepo.getByOrgIdAndUserId(org.id.get, userId).isEmpty
+          val orgIsConnectedToThisSlackTeam = slackTeam.organizationId.safely.contains(orgId)
+          val userIsNotInThisOrg = orgMembershipRepo.getByOrgIdAndUserId(orgId, userId).isEmpty
           val userHasNotGivenUsTheirSlackInfo = slackTeamMembershipRepo.getByUserIdAndSlackTeam(userId, slackTeamId).isEmpty
           orgIsConnectedToThisSlackTeam && (userIsNotInThisOrg && userHasNotGivenUsTheirSlackInfo)
         }
