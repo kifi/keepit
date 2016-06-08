@@ -19,7 +19,8 @@ object ApplicationBuild extends Build {
     "org.apache.lucene" % "lucene-core" % "5.1.0",
     "org.apache.lucene" % "lucene-analyzers-common" % "5.1.0",
     "org.apache.lucene" % "lucene-analyzers-kuromoji" % "5.1.0",
-    "org.apache.lucene" % "lucene-analyzers-icu" % "5.1.0"
+    "org.apache.lucene" % "lucene-analyzers-icu" % "5.1.0",
+    "org.apache.lucene" % "lucene-backward-codecs" % "5.1.0"
   )
 
   lazy val elizaDependencies = Seq(
