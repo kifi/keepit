@@ -4,7 +4,7 @@
 // @require scripts/html/keeper/message_participants.js
 // @require scripts/html/keeper/message_participant_email.js
 // @require scripts/html/keeper/message_participant_user.js
-// @require scripts/html/keeper/message_participant_icon.js
+// @require scripts/html/keeper/message_participant_library.js
 // @require scripts/html/keeper/message_avatar_email.js
 // @require scripts/html/keeper/message_avatar_user.js
 // @require scripts/html/keeper/message_avatar_library.js
@@ -15,6 +15,8 @@
 // @require scripts/lib/antiscroll.min.js
 // @require scripts/formatting.js
 // @require scripts/friend_search.js
+// @require scripts/progress.js
+// @require scripts/keep_box.js
 // @require scripts/render.js
 // @require scripts/kifi_util.js
 // @require scripts/prevent_ancestor_scroll.js
@@ -39,6 +41,7 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
     'message_avatar_email': 'message_avatar_email',
     'message_avatar_library': 'message_avatar_library',
     'message_participant_user': 'message_participant_user',
+    'message_participant_library': 'message_participant_library',
     'message_participant_email': 'message_participant_email',
     'keep_box_lib': 'keep_box_lib'
   };
@@ -140,8 +143,21 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
           });
           this.toggleAddDialog();
         }.bind(this))
+        .on('click', '.kifi-message-participant-dialog-create', function () {
+          var progressBar = this.get$('.kifi-message-participant-dialog-create + .kifi-progress-parent');
+          var openPromise = k.keepBox.createLibrary(this.getKeep(), 'recipient', 'mouse');
+          k.progress.emptyAndShow(progressBar, openPromise);
+        }.bind(this))
         .on('click', '.kifi-message-participant-list-hide', this.toggleParticipants.bind(this))
+        .on('mousedown', '.kifi-message-participants-togglebar', this.toggleParticipants.bind(this))
         .on('click', '.kifi-message-participant-dialog-button', submitAddParticipants)
+        .on('click', '.kifi-message-participant-remove', function (e) {
+          var parent = e.target.parentElement;
+          var id = parent && parent.dataset.id;
+          this.removeParticipant(id);
+        }.bind(this))
+        .on('mouseover', this.showTogglebar.bind(this))
+        .on('mouseout', this.hideTogglebar.bind(this))
         .on('keydown', '.kifi-message-participant-dialog', function (e) {
           if (e.which === 13 && e.originalEvent.isTrusted !== false) {
             submitAddParticipants();
@@ -149,7 +165,7 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
         });
 
         this.getParent$()
-        .on('click', '.kifi-message-show-participant,.kifi-message-participants-avatars-more', this.toggleParticipants.bind(this));
+        .on('click', '.kifi-message-participants-avatars-more', this.toggleParticipants.bind(this));
 
         win.setTimeout(addDocListeners.bind(this));
       };
@@ -208,9 +224,8 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
      */
     render: function (name) {
       switch (name) {
-      case 'button':
-        return this.renderButton();
-        //case 'option':
+      // case 'button':
+      // case 'option':
       case 'content':
         return this.renderContent();
       }
@@ -254,34 +269,20 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
       var participants = this.getParticipants();
       var avatars = this.renderAvatars();
       var keep = this.getKeep();
-      var keepLibraries = (keep && keep.recipients && keep.recipients.libraries) || [];
       var elidedCount = Math.max(0, participants.length - avatars.length);
-      var canAddParticipants = (keep && keep.viewer && keep.viewer.permissions && ~keep.viewer.permissions.indexOf('add_participants'));
-
-      // This count is no longer an accurate "number" of participants.
-      var participantCount = participants.filter(function (user) {
-        return user.id !== k.me.id;
-      }).length + 1 + (keepLibraries.length ? 1 : 0);
-
-      var other = participants.length <= 2 ? participants.filter(function (user) {
-        return user.id !== k.me.id;
-      })[0] : null;
-
-      var author = (keep && keep.author);
-      var attr = (author && author.id !== k.me.id ? author : other);
-      var keptInLibrary = keepLibraries.length > 0;
+      var permissions = (keep && keep.viewer && keep.viewer.permissions);
+      var canAddParticipants = (~permissions.indexOf('add_participants'));
+      var canRemoveLibraries = (~permissions.indexOf('remove_libraries'));
+      var canRemoveParticipants = (~permissions.indexOf('remove_participants'));
 
       return {
-        author: author,
-        authorName: author.name,
-        participantName: attr ? this.getFullName(attr) : '',
         isOverflowed: this.isOverflowed(),
-        participantCount: participantCount,
         elidedCount: elidedCount,
-        keptInLibrary: keptInLibrary,
         avatars: avatars,
         participants: this.renderParticipants(),
-        canAddParticipants: canAddParticipants
+        canAddParticipants: canAddParticipants,
+        canRemoveLibraries: canRemoveLibraries,
+        canRemoveParticipants: canRemoveParticipants
       };
     },
     /**
@@ -291,15 +292,6 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
      */
     renderContent: function () {
       return $(k.render('html/keeper/message_participants', this.getView(), partials));
-    },
-
-    /**
-     * Renders and returns a 'Add Participants' button.
-     *
-     * @return {string} Add participant icon html
-     */
-    renderButton: function () {
-      return $(k.render('html/keeper/message_participant_icon', this.getView(), partials));
     },
 
     /**
@@ -380,12 +372,20 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
      * Expands the participant list.
      */
     expandParticipants: function () {
-      var $wrapper = this.get$('.kifi-message-participant-list-root'),
-        list = $wrapper.children()[0];
+      var $wrapper = this.get$('.kifi-message-participant-list-root');
+      var list = $wrapper.children()[0];
+      var $this = this.get$();
 
       this.parent.shadePane();
-
-      this.get$().addClass('kifi-expanded');
+      this.hideTogglebar();
+      $this.addClass('kifi-expanded').on('transitionend', updateHeight);
+      function updateHeight() {
+        $this.off('transitionend', updateHeight);
+        $wrapper.height(list.offsetHeight);
+      }
+      setTimeout(function () {
+        $this.off('transitionend', updateHeight);
+      }, 1000);
 
       $wrapper.height(list.offsetHeight);
     },
@@ -398,6 +398,17 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
       this.get$('.kifi-message-participant-list-root').height(0);
 
       this.parent.unshadePane();
+    },
+
+    showTogglebar: function () {
+      var $this = this.get$();
+      if (!this.isExpanded() && !this.isDialogOpened()) {
+        $this.addClass('kifi-message-participants-show-togglebar');
+      }
+    },
+
+    hideTogglebar: function () {
+      this.get$().removeClass('kifi-message-participants-show-togglebar');
     },
 
     updateParticipantsHeight: function () {
@@ -473,14 +484,14 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
       });
 
       if (participants.length > 0) {
-        this.sendModifyKeep(users, emails, libraries)
+        this.sendModifyKeep(users.map(getId), emails.map(getId), libraries.map(getId))
         .then(function () {
           var keep = this.getKeep();
           keep.recipients.users = keep.recipients.users.concat(users);
           keep.recipients.emails = keep.recipients.emails.concat(emails);
           keep.recipients.libraries = keep.recipients.libraries.concat(libraries);
           this.parent.refresh();
-          this.addParticipant.apply(this, participants);
+          this.addParticipant.apply(this, keep.recipients.users.concat(keep.recipients.emails).concat(keep.recipients.libraries));
         }.bind(this))
         .catch(function () {
           var $toShake = this.get$();
@@ -498,22 +509,72 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
       this.toggleAddDialog();
     },
 
+    removeParticipant: function (id) {
+      var participants = this.getParticipants().filter(function (o) { return o.id === id; });
+      var users = participants.filter(function (p) { return !p.email && p.id[0] !== 'l'; }).map(getId);
+      var emails = participants.filter(function (p) { return p.email; }).map(getId);
+      var libraries = participants.filter(function (p) { return p.id && p.id[0] === 'l' && p.id.indexOf('@') === -1; }).map(getId);
+      var toRemove = users.concat(emails).concat(libraries);
+
+      api.port.emit('track_pane_click', {
+        type: 'discussion',
+        action: 'removed_participants',
+        users: users.length,
+        libraries: libraries.length,
+        emails: emails.length,
+        totalParticipantsSelected: participants.length
+      });
+
+      if (participants.length > 0) {
+        this.sendModifyKeep(null, null, null, users, emails, libraries)
+        .then(function () {
+          var participants = this.getParticipants();
+          toRemove.forEach(function (id) {
+            var index = participants.findIndex(idIs(id));
+            if (index !== -1) {
+              participants.splice(index, 1);
+            }
+          });
+          var keep = this.getKeep();
+          keep.recipients.users = keep.recipients.users.filter(function (o) { return users.indexOf(o.id) === -1; });
+          keep.recipients.emails = keep.recipients.emails.filter(function (o) { return emails.indexOf(o.id) === -1; });
+          keep.recipients.libraries = keep.recipients.libraries.filter(function (o) { return libraries.indexOf(o.id) === -1; });
+          this.updateView();
+        }.bind(this))
+        .catch(function () {
+          var $toShake = this.get$();
+          $toShake
+          .on('animationend', function onEnd() {
+            $toShake.off('animationend', onEnd);
+            $toShake.removeClass('kifi-shake');
+          }.bind(this))
+          .addClass('kifi-shake');
+        }.bind(this));
+      }
+    },
+
     getKeep: function () {
       return this.parent.keep;
     },
 
-    sendModifyKeep: function (users, emails, libraries) {
+    sendModifyKeep: function (users, emails, libraries, removeUsers, removeEmails, removeLibraries) {
       var deferred = Q.defer();
       users = users || [];
+      removeUsers = removeUsers || [];
       emails = emails || [];
+      removeEmails = removeEmails || [];
       libraries = libraries || [];
+      removeLibraries = removeLibraries || [];
 
       var keep = this.getKeep();
       api.port.emit('update_keepscussion_recipients', {
         keepId: keep.id,
         newUsers: users,
+        removeUsers: removeUsers,
         newEmails: emails,
+        removeEmails: removeEmails,
         newLibraries: libraries,
+        removeLibraries: removeLibraries
       }, function (success) {
         if (success) {
           deferred.resolve();
@@ -545,14 +606,16 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
         this.hideAddDialog();
       } else {
         this.showAddDialog();
+        this.hideTogglebar();
         this.collapseParticipants();
       }
     },
 
     addParticipant: function () {
       var participants = this.getParticipants();
+      var originalLength = participants.length;
       var args = Array.prototype.slice.call(arguments);
-      var count = 0;
+      var modified = false;
 
       for (var i = 0, len = arguments.length, participant, participantId; i < len; i++) {
         participant = args[i];
@@ -560,13 +623,25 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
         if (participantId && !participants.some(idIs(participantId))) {
           participant.highlight = true;
           participants.unshift(participant);
-          count++;
+          modified = true;
         }
       }
 
-      if (count) {
+      if (originalLength > args.length) {
+        var i = 0;
+        while (i < participants.length) {
+          if (!args.some(idIs(participants[i].id))) {
+            participants.splice(i, 1);
+            modified = true;
+          } else {
+            i++;
+          }
+        }
+      }
+
+      if (modified) {
         this.updateView();
-        this.highlightParticipantsWithIds(args.filter(function (a) { return a.highlight; }).map(mapId));
+        this.highlightParticipantsWithIds(args.filter(function (a) { return a.highlight; }).map(getId));
       }
 
       args.forEach(function (a) {
@@ -585,10 +660,7 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
     updateView: function () {
       var view = this.getView();
       var $el = this.get$();
-      $el.attr('data-kifi-participants', view.participantCount);
       $el.toggleClass('kifi-overflow', view.isOverflowed);
-      $el.find('.kifi-message-participant-name').text(view.participantName);
-      $el.find('.kifi-participant-count').text(view.participantCount);
       $el.find('[data-elided]').attr('data-elided', view.elidedCount);
       var renderedAvatars = view.avatars.map(function (a) {
         a = a.email || a.user || a.library;
@@ -596,8 +668,10 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
         return $(k.render(template, a));
       });
       var renderedParticipants = view.participants.map(function (p) {
-        p = p.email || p.user || p.library;
-        var template = (p.isEmail ? 'html/keeper/message_participant_email' : p.isUser ? 'html/keeper/message_participant_user' : 'html/keeper/keep_box_lib');
+        p = simpleClone(p.email || p.user || p.library);
+        var template = (p.isEmail ? 'html/keeper/message_participant_email' : p.isUser ? 'html/keeper/message_participant_user' : 'html/keeper/message_participant_library');
+        p.canRemoveLibraries = view.canRemoveLibraries;
+        p.canRemoveParticipants = view.canRemoveParticipants;
         return $(k.render(template, p));
       });
       var avatarList = $el.find('.kifi-message-participants-avatars');
@@ -606,10 +680,6 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
       $el.find('.kifi-message-participant-list-inner').empty().append(renderedParticipants);
       this.updateParticipantsHeight();
       this.$list.data('antiscroll').refresh();
-    },
-
-    updateCount: function (count) {
-      return this.get$('.kifi-participant-count').text(count);
     },
 
     handleEsc: function (e) {
@@ -662,7 +732,11 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
     return function (o) { return o.id === id; };
   }
 
-  function mapId(o) {
+  function getId(o) {
     return o.id;
+  }
+
+  function simpleClone(o) {
+    return JSON.parse(JSON.stringify(o));
   }
 })(jQuery, this);

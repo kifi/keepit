@@ -1,4 +1,5 @@
-<li class="kifi-message-participant-item">
+<li class="kifi-message-participant-item" data-id="{{id}}">
   <span class="kifi-message-participant-email-image kifi-participant-background-{{color}}">{{initial}}</span>
   <span>{{email}}</span>
+  {{#canRemoveParticipants}}<button class="kifi-message-participant-remove"></button>{{/canRemoveParticipants}}
 </li>

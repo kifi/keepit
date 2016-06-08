@@ -168,6 +168,14 @@
     // Tokens in the list (for checking dupes)
     var tokens = [];
 
+    var lastMousedownElement = null;
+
+    document.addEventListener('mousedown', documentMousedown, true);
+
+    function documentMousedown(e) {
+      lastMousedownElement = e.target;
+    }
+
     // Create a new text input
     var $tokenInput = $('<input type="text" autocomplete="off" autocapitalize="off"/>')
       .attr('placeholder', settings.placeholder)
@@ -179,9 +187,12 @@
         $tokenList.addClass(classes.listFocused);
       })
       .blur(function () {
+        var $this = $(this);
+        var $blurContainer = $this.closest('.' + settings.classPrefix + 'blur-container')[0];
+        var clickedOutsideList = !($blurContainer && $blurContainer.contains(lastMousedownElement));
         if (selectedDropdownItem && settings.onBlur && settings.onBlur.call($hiddenInput, $.data(selectedDropdownItem, 'tokenInput')) !== false) {
           handleItemChosen(selectedDropdownItem);
-        } else {
+        } else if (clickedOutsideList) {
           var val = this.value;
           if (val && settings.allowFreeTagging) {
             addFreeTags();
@@ -490,6 +501,7 @@
 
     this.destroy = function () {
       this.clear();
+      document.removeEventListener('mousedown', documentMousedown, true);
       $tokenList.remove();
       $dropdown.remove();
       $hiddenInput.show();
