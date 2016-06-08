@@ -13,10 +13,14 @@ angular.module('kifi')
           case 'get_guide':
             triggerGuide();
             break;
+          case 'guide_end':
+            $rootScope.$emit('guideEnd');
+            break;
           case 'import_bookmarks':
             if (data.count > 0) {
               $rootScope.$emit('showGlobalModal', 'importBookmarks', {msgEvent: event});
             }
+            $rootScope.$emit('guideEnd');
             break;
           case 'update_keeps':
           case 'update_tags':

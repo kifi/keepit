@@ -275,15 +275,19 @@ angular.module('kifi')
       }
     });
 
-    $window.addEventListener('message', function (msg) {
-      if (msg.type === 'guide_end' && profileService.prefs.twitter_sync_promo) {
-        tryToTriggerTwitterPromo();
-      }
+    var deregisterGuideEnd = $rootScope.$on('guideEnd', function () {
+      $timeout(tryToTriggerTwitterPromo, 1000);
+      deregisterGuideEnd();
     });
+    var deregisterModalClosed = $rootScope.$on('modalClosed', function () {
+      $timeout(tryToTriggerTwitterPromo, 1000);
+    });
+    $scope.$on('$destroy', deregisterGuideEnd);
+    $scope.$on('$destroy', deregisterModalClosed);
 
     function tryToTriggerTwitterPromo() {
       var guide = angular.element('.kifi-guide-4-stage, .kifi-guide-0-stage').length;
-      if (!guide) {
+      if (!guide && !modalService.isDialogOpen()) {
         if (profileService.prefs.twitter_sync_promo === 'show_sync') {
           modalService.open({
             template: 'twitter/twitterSyncDialogModal.tpl.html',
@@ -295,6 +299,7 @@ angular.module('kifi')
             scope: $scope
           });
         }
+        deregisterModalClosed();
       }
     }
 
