@@ -62,6 +62,8 @@ k.guide.step4 = k.guide.step4 || function () {
         api.port.emit('count_bookmarks', function (n) {
           window.postMessage({type: 'import_bookmarks', count: n}, location.origin);
         });
+      } else {
+        window.postMessage({type: 'guide_end'}, location.origin);
       }
     }
   }
