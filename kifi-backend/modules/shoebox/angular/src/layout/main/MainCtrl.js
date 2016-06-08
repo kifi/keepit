@@ -252,7 +252,8 @@ angular.module('kifi')
     }
 
     profileService.fetchPrefs().then(function() {
-      if (!profileService.prefs.auto_show_guide && profileService.prefs.twitter_sync_promo) {
+      var guideWillRun = installService.installedVersion && profileService.prefs.auto_show_guide;
+      if (!guideWillRun && profileService.prefs.twitter_sync_promo) {
         $timeout(tryToTriggerTwitterPromo, 1000);
       }
     });
