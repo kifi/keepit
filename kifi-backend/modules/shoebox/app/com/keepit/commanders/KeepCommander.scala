@@ -7,12 +7,13 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.common.cache.TransactionalCaching.Implicits._
 import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.core._
-import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.performance._
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageConfig
@@ -65,6 +66,7 @@ trait KeepCommander {
   // Tagging
   def searchTags(userId: Id[User], query: String, limit: Option[Int]): Future[Seq[HashtagHit]]
   def suggestTags(userId: Id[User], keepIdOpt: Option[Id[Keep]], query: Option[String], limit: Int): Future[Seq[(Hashtag, Seq[(Int, Int)])]]
+  def suggestRecipients(userId: Id[User], keepIdOpt: Option[Id[Keep]], query: Option[String], offset: Int, limit: Int, requestedSet: Set[TypeaheadRequest]): Future[Seq[TypeaheadSearchResult]]
 
   // Destroying
   def unkeepOneFromLibrary(keepId: ExternalId[Keep], libId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[String, PartialKeepInfo]
@@ -82,8 +84,9 @@ class KeepCommanderImpl @Inject() (
     globalKeepCountCache: GlobalKeepCountCache,
     keepRepo: KeepRepo,
     ktlRepo: KeepToLibraryRepo,
-    ktlCommander: KeepToLibraryCommander,
     ktuRepo: KeepToUserRepo,
+    kteRepo: KeepToEmailRepo,
+    ktlCommander: KeepToLibraryCommander,
     ktuCommander: KeepToUserCommander,
     kteCommander: KeepToEmailCommander,
     keepMutator: KeepMutator,
@@ -103,6 +106,7 @@ class KeepCommanderImpl @Inject() (
     basicOrganizationGen: BasicOrganizationGen,
     libraryMembershipRepo: LibraryMembershipRepo,
     hashtagTypeahead: HashtagTypeahead,
+    typeaheadCommander: TypeaheadCommander,
     keepDecorator: KeepDecorator,
     twitterPublishingCommander: TwitterPublishingCommander,
     permissionCommander: PermissionCommander,
@@ -433,6 +437,24 @@ class KeepCommanderImpl @Inject() (
     query.map(_.trim).filter(_.nonEmpty) match {
       case Some(validQuery) => searchTagsForKeep(userId, keepIdOpt, validQuery, Some(limit)).map(_.map(hit => (hit.tag, hit.matches)))
       case None => suggestTagsForKeep(userId, keepIdOpt, Some(limit)).map(_.map((_, Seq.empty[(Int, Int)])))
+    }
+  }
+
+  def suggestRecipients(userId: Id[User], keepIdOpt: Option[Id[Keep]], query: Option[String], offset: Int, limit: Int, requestedSet: Set[TypeaheadRequest]): Future[Seq[TypeaheadSearchResult]] = {
+    val (usersToExclude: Set[ExternalId[User]], emailsToExclude: Set[EmailAddress], librariesToExclude: Set[PublicId[Library]]) = keepIdOpt.map { keepId =>
+      db.readOnlyReplica { implicit s =>
+        (userRepo.getUsers(ktuRepo.getAllByKeepId(keepId).map(_.userId)).values.map(_.externalId).toSet,
+          kteRepo.getAllByKeepId(keepId).map(_.emailAddress).toSet,
+          ktlRepo.getAllByKeepId(keepId).map(ktl => Library.publicId(ktl.libraryId)).toSet)
+      }
+    }.getOrElse((Set.empty, Set.empty, Set.empty))
+    val excludeSize = usersToExclude.size + emailsToExclude.size + librariesToExclude.size
+    typeaheadCommander.searchAndSuggestKeepRecipients(userId, query getOrElse "", limitOpt = Some(limit + excludeSize), dropOpt = Some(offset), requested = requestedSet).imap { result =>
+      result.filterNot {
+        case u: UserContactResult => usersToExclude.contains(u.id)
+        case e: EmailContactResult => emailsToExclude.contains(e.email)
+        case l: LibraryResult => librariesToExclude.contains(l.id)
+      }.take(limit)
     }
   }
 
