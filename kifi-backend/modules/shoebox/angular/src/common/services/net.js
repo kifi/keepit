@@ -128,7 +128,10 @@ angular.module('kifi')
       getMessagesForKeepDiscussion: get(shoebox, '/keeps/:id/messages?limit=:limit&fromId=:fromId'), // ?limit={{number}}&fromId={{Option(String))}}
       deleteMessageFromKeepDiscussion: post(shoebox, '/keeps/:id/messages/delete'),
       markDiscussionAsRead: post(shoebox, '/keeps/markAsRead'),
-      suggestRecipientsForKeep: get(api, '/1/keeps/suggestRecipients', 60)
+      suggestRecipientsForKeep: get(api, '/1/keeps/suggestRecipients', 60),
+
+      // twitter
+      twitterSync: post(shoebox, '/twitterSync')
     };
 
     function get(base, pathSpec, cacheSec) {
