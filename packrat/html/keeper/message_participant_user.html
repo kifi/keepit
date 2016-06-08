@@ -3,5 +3,6 @@
     <img src="{{cdnBase}}/users/{{id}}/pics/100/{{pictureName}}" class="kifi-message-participant-img"/>
     {{firstName}} {{lastName}}
   </a>
-  {{^isMe}}{{#canRemoveParticipants}}<button class="kifi-message-participant-remove"></button>{{/canRemoveParticipants}}{{/isMe}}
+  {{#canRemoveParticipants}}<button class="kifi-message-participant-remove"></button>{{/canRemoveParticipants}}
+  {{^canRemoveParticipants}}{{#isMe}}<button class="kifi-message-participant-remove"></button>{{/isMe}}{{/canRemoveParticipants}}
 </li>

@@ -15,6 +15,8 @@
 // @require scripts/lib/antiscroll.min.js
 // @require scripts/formatting.js
 // @require scripts/friend_search.js
+// @require scripts/progress.js
+// @require scripts/keep_box.js
 // @require scripts/render.js
 // @require scripts/kifi_util.js
 // @require scripts/prevent_ancestor_scroll.js
@@ -140,6 +142,11 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
             countAtClick: this.getParticipants().length
           });
           this.toggleAddDialog();
+        }.bind(this))
+        .on('click', '.kifi-message-participant-dialog-create', function () {
+          var progressBar = this.get$('.kifi-message-participant-dialog-create + .kifi-progress-parent');
+          var openPromise = k.keepBox.createLibrary(this.getKeep(), 'recipient', 'mouse');
+          k.progress.emptyAndShow(progressBar, openPromise);
         }.bind(this))
         .on('click', '.kifi-message-participant-list-hide', this.toggleParticipants.bind(this))
         .on('mousedown', '.kifi-message-participants-togglebar', this.toggleParticipants.bind(this))

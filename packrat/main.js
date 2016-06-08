@@ -774,6 +774,7 @@ api.port.on({
   },
   update_keepscussion_recipients: function (data, respond, tab) {
     var d = pageData[tab.nUri];
+    var keepId = data.keepId;
     var newUsers = data.newUsers || [];
     var newEmails = data.newEmails || [];
     var newLibraries = data.newLibraries || [];
@@ -796,19 +797,32 @@ api.port.on({
       },
       source: api.browser.name
     };
-    var keep = keepData[data.keepId];
-    var activity = activityData[data.keepId];
+    var removingSelf = (removeUsers.indexOf(me.id) !== -1);
+
+    var keep = keepData[keepId];
+    var activity = activityData[keepId];
     var permissions = keep && keep.viewer && keep.viewer.permissions || [];
     var requestedAdd = (newUsers.length > 0 || newLibraries.length > 0 || newEmails.length > 0);
     var requestedRemove = (removeUsers.length > 0 || removeLibraries.length > 0 || removeEmails.length > 0);
-    if (keep && (
+    if (keep && !removingSelf && (
       (requestedAdd && permissions.indexOf('add_participants') === -1) ||
       (requestedRemove && permissions.indexOf('remove_participants') === -1)
     )) {
       return respond(false);
     }
 
-    updateKeepReciepients(data.keepId, params)
+    if (removingSelf) {
+      removeNotification(keepId);
+      forEachTabAtLocator('/messages/' + keepId, function (tab) {
+        api.tabs.emit(tab, 'show_pane', {
+          trigger: 'evictedAutoNavigate',
+          locator: getDefaultPaneLocator(),
+          redirected: false
+        }, {queue: 1});
+      });
+    }
+
+    updateKeepReciepients(keepId, params)
     .then(respond.bind(null, true))
     .catch(respond.bind(null, false));
   },
