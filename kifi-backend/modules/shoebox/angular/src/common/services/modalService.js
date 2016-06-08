@@ -47,7 +47,7 @@ angular.module('kifi')
         });
         $modal.remove();
       }
-      $rootScope.$emit('modalClosed')
+      $rootScope.$emit('modalClosed');
     }
 
     function openGenericErrorModal(opts) {
@@ -57,7 +57,7 @@ angular.module('kifi')
     }
 
     function isDialogOpen() {
-      return modals.length > 0
+      return modals.length > 0;
     }
 
     return {

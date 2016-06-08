@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .factory('extensionLiaison', [
-  '$window', '$rootScope',
-  function ($window, $rootScope) {
+  '$window', '$rootScope', '$timeout', 'modalService',
+  function ($window, $rootScope, $timeout, modalService) {
 
     $window.addEventListener('message', function (event) {
       $rootScope.$apply(function () {
@@ -19,8 +19,17 @@ angular.module('kifi')
           case 'import_bookmarks':
             if (data.count > 0) {
               $rootScope.$emit('showGlobalModal', 'importBookmarks', {msgEvent: event});
+              var deregisterModalClosed = $rootScope.$on('modalClosed', function () {
+                $timeout(function() {
+                  if (!modalService.isDialogOpen()) {
+                    deregisterModalClosed();
+                    $rootScope.$emit('guideEnd');
+                  }
+                }, 1000);
+              });
+            } else {
+              $rootScope.$emit('guideEnd');
             }
-            $rootScope.$emit('guideEnd');
             break;
           case 'update_keeps':
           case 'update_tags':

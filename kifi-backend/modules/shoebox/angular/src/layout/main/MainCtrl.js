@@ -279,15 +279,12 @@ angular.module('kifi')
       $timeout(tryToTriggerTwitterPromo, 1000);
       deregisterGuideEnd();
     });
-    var deregisterModalClosed = $rootScope.$on('modalClosed', function () {
-      $timeout(tryToTriggerTwitterPromo, 1000);
-    });
+
     $scope.$on('$destroy', deregisterGuideEnd);
-    $scope.$on('$destroy', deregisterModalClosed);
 
     function tryToTriggerTwitterPromo() {
       var guide = angular.element('.kifi-guide-4-stage, .kifi-guide-0-stage').length;
-      if (!guide && !modalService.isDialogOpen()) {
+      if (!guide) {
         if (profileService.prefs.twitter_sync_promo === 'show_sync') {
           modalService.open({
             template: 'twitter/twitterSyncDialogModal.tpl.html',
@@ -299,7 +296,6 @@ angular.module('kifi')
             scope: $scope
           });
         }
-        deregisterModalClosed();
       }
     }
 
