@@ -134,16 +134,19 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
 
         this.get$()
         .on('click', '.kifi-message-participant-avatar>a,.kifi-message-participant-a', this.openUserProfile.bind(this))
-        .on('click', '.kifi-message-participants-avatars-add,.kifi-message-participant-1-add', function (e) {
+        .on('click', '.kifi-message-participants-avatars-add', function (e) {
           api.port.emit('track_pane_click', {
             type: 'discussion',
             action: 'add_participants',
-            subaction: e.target.classList.contains('kifi-message-participant-1-add') ? 'bar' : 'inline',
             countAtClick: this.getParticipants().length
           });
           this.toggleAddDialog();
         }.bind(this))
         .on('click', '.kifi-message-participant-dialog-create', function () {
+          api.port.emit('track_pane_click', {
+            type: 'discussion',
+            action: 'add_new_library'
+          });
           var progressBar = this.get$('.kifi-message-participant-dialog-create + .kifi-progress-parent');
           var openPromise = k.keepBox.createLibrary(this.getKeep(), 'recipient', 'mouse');
           k.progress.emptyAndShow(progressBar, openPromise);
