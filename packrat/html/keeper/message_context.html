@@ -5,7 +5,7 @@
         class="kifi-message-context-controls-title"
         name="keep_title"
         value="{{title}}"
-        placeholder="Add a title..."
+        placeholder="{{#editPermission}}Add a title...{{/editPermission}}{{^editPermission}}Untitled{{/editPermission}}"
         {{^editPermission}}disabled{{/editPermission}}
       />
       <div class="kifi-message-context-controls-location kifi-message-context-elide">{{location}}</div>
