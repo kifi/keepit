@@ -25,7 +25,6 @@ angular.module('kifi')
         var canAddLibraries = scope.keep.permissions && scope.keep.permissions.indexOf('add_libraries') !== -1;
         var typeaheadFilter = (canAddParticipants ? ['user', 'email'] : []).concat(canAddLibraries ? ['library'] : []).join(',');
 
-        scope.hasExperiment = profileService.me && profileService.me.experiments && profileService.me.experiments.indexOf('add_keep_recipients') !== -1;
         scope.maxSuggestionsToShowEmail = maxSuggestionsToShowEmail;
 
         function listenForInit() {
