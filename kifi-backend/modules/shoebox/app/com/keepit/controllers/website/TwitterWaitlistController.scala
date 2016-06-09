@@ -164,7 +164,16 @@ class TwitterWaitlistController @Inject() (
       case Left(err) =>
         BadRequest(Json.obj("error" -> "failed", "msg" -> err))
       case Right(Left(wait)) =>
-        Accepted(Json.obj("pending" -> true, "handle" -> wait.twitterHandle.map(_.value)))
+        val twitterSui = db.readOnlyMaster { implicit session =>
+          socialRepo.getByUser(request.userId).find { s =>
+            s.networkType == SocialNetworks.TWITTER && (s.state == SocialUserInfoStates.FETCHED_USING_SELF || s.state == SocialUserInfoStates.CREATED)
+          }
+        }
+        if (twitterSui.isEmpty) {
+          Accepted(Json.obj("pending" -> true, "handle" -> wait.twitterHandle.map(_.value), "auth" -> "/twitter/request"))
+        } else {
+          Accepted(Json.obj("pending" -> true, "handle" -> wait.twitterHandle.map(_.value)))
+        }
       case Right(Right(sync)) =>
         val library = db.readOnlyReplica { implicit session =>
           libraryRepo.get(sync.libraryId)
