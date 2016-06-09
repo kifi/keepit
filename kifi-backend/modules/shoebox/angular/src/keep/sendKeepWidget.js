@@ -158,7 +158,7 @@ angular.module('kifi')
           }
         }
 
-        function updateSelectionsOnKeep() {
+        function updateKeepMembers() {
           scope.selections.forEach(function(selection) {
             if (selection.kind === 'user') {
               scope.keep.members.users.push({ 'user': selection });
@@ -276,7 +276,7 @@ angular.module('kifi')
             .then(function() {
               scope.sending = false;
               scope.success = true;
-              updateSelectionsOnKeep();
+              updateKeepMembers();
               $timeout(scope.removeWidget, 1000);
             })
             ['catch'](function() {

@@ -167,9 +167,7 @@
            kf-user-tooltip="::participant"
            ng-repeat="addedUser in keep.members.users | limitTo: maxMembersPerEntity"
            ng-init="participant = addedUser.user"></a>
-        <span class="kf-feed-tooltip-target kf-keep-card-email-chip" kf-user-tooltip email="email" ng-repeat="email in keep.members.emails | limitTo: maxMembersPerEntity">
-          <span ng-bind="email.email"></span>
-        </span>
+        <span class="kf-feed-tooltip-target kf-keep-card-email-chip" kf-user-tooltip email="email" ng-repeat="email in keep.members.emails | limitTo: maxMembersPerEntity" ng-bind="email.email[0].toUpperCase()"></span>
          <span class="kf-keep-card-participants-more"
                ng-if="totalMemberCount > (maxMembersPerEntity * 3)">
           <span ng-bind-template="+{{(leftoverMembers.length)|number}}"></span>
