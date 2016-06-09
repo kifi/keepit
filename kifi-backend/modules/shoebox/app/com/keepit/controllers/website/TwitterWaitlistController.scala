@@ -117,7 +117,7 @@ class TwitterWaitlistController @Inject() (
               (s.state == SocialUserInfoStates.FETCHED_USING_SELF ||
                 s.state == SocialUserInfoStates.CREATED)
           }
-          val existingSync = twitterSyncStateRepo.getByUserIdUsed(ur.userId).sortBy(_.id).reverse.headOption
+          val existingSync = twitterSyncStateRepo.getByUserIdUsed(ur.userId).filter(_.target == syncTarget).sortBy(r => (sui.exists(_.username.exists(_ == r.twitterHandle.value)), r.id)).reverse.headOption
           (sui, existingSync)
         }
         if (twitterSui.isEmpty) {
