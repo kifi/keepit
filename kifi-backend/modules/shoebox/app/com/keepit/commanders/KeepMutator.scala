@@ -36,7 +36,7 @@ trait KeepMutator {
   def setKeepOwner(keep: Keep, newOwner: Id[User])(implicit session: RWSession): Keep
   def updateLastActivityAtIfLater(keepId: Id[Keep], lastActivityAt: DateTime)(implicit session: RWSession): Keep
   def moveKeep(k: Keep, toLibrary: Library, userId: Id[User])(implicit session: RWSession): Either[LibraryError, Keep]
-  def copyKeep(k: Keep, toLibrary: Library, userId: Id[User], withSource: Option[KeepSource] = None)(implicit session: RWSession): Either[LibraryError, Keep]
+  def copyKeep(k: Keep, toLibrary: Library, userId: Id[User], withSource: Option[KeepSource] = None, oldAttribution: Option[RawSourceAttribution])(implicit session: RWSession): Either[LibraryError, Keep]
   def deactivateKeep(keep: Keep)(implicit session: RWSession): Unit
   def refreshLibraries(keepId: Id[Keep])(implicit session: RWSession): Keep
   def refreshParticipants(keepId: Id[Keep])(implicit session: RWSession): Keep
@@ -210,7 +210,7 @@ class KeepMutatorImpl @Inject() (
     ktlCommander.internKeepInLibrary(k, toLibrary, addedBy = Some(userId), addedAt = clock.now)
     Right(keepRepo.save(k.withLibraries(Set(toLibrary.id.get))))
   }
-  def copyKeep(k: Keep, toLibrary: Library, userId: Id[User], withSource: Option[KeepSource] = None)(implicit session: RWSession): Either[LibraryError, Keep] = {
+  def copyKeep(k: Keep, toLibrary: Library, userId: Id[User], withSource: Option[KeepSource] = None, oldAttribution: Option[RawSourceAttribution])(implicit session: RWSession): Either[LibraryError, Keep] = {
     val currentKeeps = keepRepo.getByUriAndLibrariesHash(k.uriId, Set(toLibrary.id.get))
     currentKeeps match {
       case existingKeep +: _ =>
@@ -228,6 +228,12 @@ class KeepMutatorImpl @Inject() (
           note = k.note
         )
         val copied = persistBrandNewKeep(newKeep)
+
+        keepSourceRepo.intern(copied.id.get, oldAttribution.filter {
+          case _: RawKifiAttribution => false
+          case _ => true
+        }.getOrElse(RawKifiAttribution(userId, copied.note, copied.recipients, copied.source)))
+
         Right(copied)
     }
   }
