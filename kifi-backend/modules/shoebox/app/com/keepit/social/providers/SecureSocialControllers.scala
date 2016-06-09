@@ -90,7 +90,7 @@ object ProviderController extends Controller with Logging {
           }
         } catch {
           case ex: AccessDeniedException => {
-            log.error(s"[handleAuth][$provider] Access Denied for user logging in")
+            log.error(s"[handleAuth][$provider] Access Denied for user logging in", ex)
             Redirect(RoutesHelper.login()).flashing("error" -> Messages("securesocial.login.accessDenied"))
           }
 
