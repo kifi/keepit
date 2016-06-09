@@ -1,13 +1,14 @@
-<div class="kf-send-keep-widget" ng-click="onClick()">
+<div class="kf-send-keep-widget" kf-wheel-stop ng-click="onClick()" ng-keydown="processKeyEvent($event)">
   <div class="kf-skw-send-body" ng-hide="showCreateLibrary">
     <div class="kf-skw-header">
       <header class="kf-skw-header-txt">Send</header>
       <svg class="kf-skw-close symbol-sprite" kf-symbol-sprite icon="error" ng-click="removeWidget()">
     </div>
 
-    <ul class="kf-skw-suggestions">
-      <li ng-repeat="suggestion in suggestions" ng-click="selectSuggestion(suggestion)">
-        <div ng-include="'keep/sendKeepSuggestionItem.tpl.html'"></div>
+    <ul class="kf-skw-suggestions" smart-scroll kf-wheel-allow scroll-distance="'40%'" scroll-next="fetchSuggestions()">
+      <li ng-repeat="suggestion in suggestions" ng-click="selectSuggestion(suggestion)"
+          ng-class="{'highlighted': suggestion.isHighlighted }" ng-mouseenter="onHoverSuggestion(suggestion)" ng-mouseleave="onUnhoverSuggestion(suggestion)">
+        <div class="kf-skw-suggestion" ng-include="'keep/sendKeepSuggestionItem.tpl.html'"></div>
       </li>
       <li class="kf-skw-suggestion" ng-if="suggestions.length <= 2">
         <div class="kf-skw-suggestion-img-container">
@@ -48,7 +49,7 @@
           <span class="kf-skw-recipient-remove" ng-click="removeSelection(selection)">x</span>
         </span>
       </span>
-      <input class="kf-skw-input" ng-model="typeahead" ng-change="onTypeaheadInputChanged(typeahead)" ng-keydown="processKeyEvent($event)" autofocus="autofocus" placeholder="{{ selections.length ? '' : 'Enter a user, library, or email...' }}">
+      <input class="kf-skw-input" ng-model="typeahead" ng-change="onTypeaheadInputChanged()" autofocus="autofocus" placeholder="{{ selections.length ? '' : 'Enter a user, library, or email...' }}">
       <div class="kf-skw-input-shadow" contenteditable="true"></div>
       <div class="kf-skw-loading-spinner" kf-loading-spinner hide="!sending"></div>
       <div class="kf-skw-success-txt" ng-if="!sending && success">Success!</div>

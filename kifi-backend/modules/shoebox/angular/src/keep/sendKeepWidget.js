@@ -3,13 +3,12 @@
 angular.module('kifi')
 
 .directive('kfSendKeepWidget', [
-  '$document', '$templateCache', '$rootElement', '$timeout', '$window', '$compile', 'KEY', 'keepService', 'profileService', 'modalService', 'util',
-  function($document, $templateCache, $rootElement, $timeout, $window, $compile, KEY, keepService, profileService, modalService, util) {
+  '$document', '$templateCache', '$rootElement', '$timeout', '$window', '$compile', 'keepService', 'profileService', 'modalService', 'KEY', 'Paginator', 'util',
+  function($document, $templateCache, $rootElement, $timeout, $window, $compile, keepService, profileService, modalService, KEY, Paginator, util) {
 
     var numSuggestions = 5;
     var maxSuggestionsToShowEmail = 2;
     var desiredMarginTop = 45;
-    var initialBottom = 20;
     var initialRight = -20;
 
     return {
@@ -20,6 +19,10 @@ angular.module('kifi')
       link: function(scope, element) {
         var currPage = 0;
         var widget;
+        var highlightedIndex = 0;
+        var suggestionPaginator;
+        var justScrolled;
+        var keepCardElement;
 
         var canAddParticipants = scope.keep.permissions && scope.keep.permissions.indexOf('add_participants') !== -1;
         var canAddLibraries = scope.keep.permissions && scope.keep.permissions.indexOf('add_libraries') !== -1;
@@ -39,20 +42,22 @@ angular.module('kifi')
         function initWidget() {
           scope.success = false;
           scope.sending = false;
+          scope.justScrolled = false;
           scope.showCreateLibrary = false;
           scope.init = false; // set to true once widget is ready to be shown
 
           scope.suggestions = [];
           scope.selections = [];
 
+          suggestionPaginator = new Paginator(suggestionSource, numSuggestions, Paginator.DONE_WHEN_RESPONSE_IS_EMPTY);
+
           scope.typeahead = '';
           scope.validEmail = false;
           currPage = 0;
 
-          refreshSuggestions(null, numSuggestions);
-
           widget = angular.element($templateCache.get('keep/sendKeepWidget.tpl.html'));
-          element.parents('.kf-keep').append(widget);
+          keepCardElement = element.parents('.kf-keep');
+          keepCardElement.append(widget);
           $compile(widget)(scope);
           widget.hide();
           setInitialPosition();
@@ -61,6 +66,10 @@ angular.module('kifi')
               $timeout(function () {
                 widget.show();
                 adjustWidgetPosition();
+                if (scope.suggestions.length) {
+                  scope.suggestions[0].isHighlighted = true;
+                }
+                resetInput();
               }, 0);
             }
           });
@@ -70,12 +79,15 @@ angular.module('kifi')
 
 
         function setInitialPosition() {
-          widget.css({ bottom: initialBottom + 'px', right: initialRight  + 'px' });
+          var elementOffset = element.offset();
+          var keepCardElementOffset = keepCardElement.offset();
+          var keepCardHeight = keepCardElement.height();
+
+          widget.css({ bottom: keepCardHeight - (elementOffset.top - keepCardElementOffset.top) + 'px', right: initialRight  + 'px' });
         }
 
         function adjustWidgetPosition() {
-          // rendering the create library page may increase the height of the widget,
-          // so make sure it's not overflowing on top
+          // shift widget down to avoid top-overflow
 
           var widgetOffsetTop = widget.offset().top;
 
@@ -90,36 +102,6 @@ angular.module('kifi')
           if (!angular.element(event.target).closest('.kf-send-keep-widget').length) {
             scope.$apply(scope.removeWidget);
           }
-        }
-
-        function refreshSuggestions(query, limit, offset) {
-          query = query || '';
-          limit = limit || numSuggestions;
-          offset = offset || 0;
-          return keepService.suggestRecipientsForKeep(query || '', limit, offset, typeaheadFilter, scope.keep.pubId).then(function (resultData) {
-            var nonSelectedResults = resultData.results.filter(function (suggestion) {
-              var suggId = suggestion.id || suggestion.email;
-              return !scope.selections.find(function(selection) {
-                return (selection.id || selection.email) === suggId;
-              });
-            });
-
-            if (nonSelectedResults.length <= maxSuggestionsToShowEmail) {
-              scope.showNewEmail = true;
-            }
-
-            if (nonSelectedResults.length === 0 && resultData.mayHaveMore) {
-              refreshSuggestions(query, limit, offset + limit);
-            } else {
-              scope.suggestions = nonSelectedResults;
-              if (widget && !scope.init) {
-                scope.init = true;
-                resetInput();
-              } else {
-                $timeout(adjustWidgetPosition, 50);
-              }
-            }
-          });
         }
 
         function resetInput() {
@@ -156,17 +138,91 @@ angular.module('kifi')
           });
         }
 
+        function suggestionSource(pageNumber, pageSize) {
+          return keepService.suggestRecipientsForKeep(scope.typeahead, pageSize, pageNumber * pageSize, typeaheadFilter).then(function(res) {
+            return res.results.filter(function (suggestion) {
+              var suggId = suggestion.id || suggestion.email;
+              return !scope.selections.find(function (selection) {
+                return suggId === (selection.id || selection.email);
+              });
+            });
+          });
+        }
+
+        function clearHighlights() {
+          scope.suggestions.forEach(function(suggestion) {
+            suggestion.isHighlighted = false;
+          });
+        }
+
+        function adjustScroll(selectedIndex) {
+          var suggestionListElement = widget.find('.kf-skw-suggestions');
+          var suggestionElementHeight = widget.find('.kf-skw-suggestion').height();
+          var suggestionListElementHeight = suggestionListElement.height();
+          var numSuggestionsVisible = suggestionListElementHeight / suggestionElementHeight;
+
+          var selectionTop = selectedIndex * suggestionElementHeight;
+          var visibleTop = suggestionListElement.scrollTop();
+          var visibleBottom = visibleTop + suggestionListElementHeight;
+
+          if (selectionTop < visibleTop) {
+            suggestionListElement.scrollTop(selectionTop);
+          } else if (selectionTop > visibleBottom) {
+            suggestionListElement.scrollTop(selectionTop - (numSuggestionsVisible * suggestionElementHeight));
+          }
+
+          justScrolled = true;
+          $timeout(function() {
+            justScrolled = false;
+          }, 500);
+        }
+
         scope.removeWidget = function() {
           if (widget) {
             widget.remove();
           }
+
           $document.off('mousedown', onClick);
+        };
+
+        scope.onHoverSuggestion = function(suggestion) {
+          if (!justScrolled) {
+            clearHighlights();
+            highlightedIndex = _.indexOf(scope.suggestions, suggestion);
+            suggestion.isHighlighted = true;
+          }
+        };
+
+        scope.onUnhoverSuggestion = function(suggestion) {
+          if (!justScrolled) {
+            suggestion.isHighlighted = false;
+          }
+        };
+
+        scope.fetchSuggestions = function () {
+          return suggestionPaginator.fetch().then(function(suggestions) {
+            scope.suggestions = suggestions;
+            if (widget && !scope.init) {
+              scope.init = true;
+            }
+          });
         };
 
         scope.selectSuggestion = function(suggestion) {
           scope.selections.push(suggestion);
-          refreshSuggestions();
           resetInput();
+          suggestionPaginator.reset();
+          scope.fetchSuggestions().then(function() {
+            suggestionPaginator.items = suggestionPaginator.items.filter(function (s) {
+              return (s.id || s.email) !== (suggestion.id || suggestion.email);
+            });
+            scope.suggestions = scope.suggestions.filter(function (s) {
+              return (s.id || s.email) !== (suggestion.id || suggestion.email);
+            });
+            highlightedIndex = 0;
+            scope.suggestions[highlightedIndex].isHighlighted = true;
+            adjustScroll(highlightedIndex);
+          });
         };
 
         scope.removeSelection = function(selection) {
@@ -220,18 +276,54 @@ angular.module('kifi')
         scope.processKeyEvent = function (event) {
           switch (event.keyCode) {
             case KEY.BSPACE:
-              if (scope.typeahead === '') {
-                event.preventDefault();
-                scope.removeSelection(scope.selections.pop());
+              event.preventDefault();
+              if (scope.selections.length && scope.typeahead === '') {
+                scope.removeSelection(scope.selections[scope.selections.length-1]);
+                clearHighlights();
+                highlightedIndex++;
+                scope.suggestions[highlightedIndex].isHighlighted = true;
+              } else if (scope.typeahead !== '') {
+                scope.typeahead = scope.typeahead.slice(0, -1);
+                scope.onTypeaheadInputChanged();
               }
               break;
             case KEY.ENTER:
               event.preventDefault();
-              if (scope.selections.length) {
-                scope.onSend();
+              var highlightedSuggestion = scope.suggestions.find(function (sugg) {
+                return sugg.isHighlighted;
+              });
+              if (highlightedSuggestion) {
+                scope.selectSuggestion(highlightedSuggestion);
+                if (scope.suggestions.length) {
+                  clearHighlights();
+                  highlightedIndex = highlightedIndex < scope.suggestions.length ? highlightedIndex : scope.suggestions.length - 1;
+                  scope.suggestions[highlightedIndex].isHighlighted = true;
+                }
               }
               break;
+            case KEY.DOWN:
+            case KEY.UP:
+              event.preventDefault();
+              clearHighlights();
+              if (event.keyCode === KEY.DOWN) {
+                if (highlightedIndex === scope.suggestions.length-1) {
+                  scope.fetchSuggestions();
+                }
+                highlightedIndex = highlightedIndex === scope.suggestions.length-1 ? highlightedIndex : highlightedIndex + 1;
+                scope.suggestions[highlightedIndex].isHighlighted = true;
+                adjustScroll(highlightedIndex+2);
+              } else {
+                highlightedIndex = highlightedIndex === 0 ? 0 : highlightedIndex - 1;
+                scope.suggestions[highlightedIndex].isHighlighted = true;
+                adjustScroll(highlightedIndex);
+              }
+              break;
+            case KEY.ESC:
+              event.preventDefault();
+              scope.removeWidget();
+              break;
           }
+
         };
 
         scope.onSend = function() {
@@ -271,9 +363,18 @@ angular.module('kifi')
         };
 
 
-        scope.onTypeaheadInputChanged = function(query) {
+        scope.onTypeaheadInputChanged = function() {
           currPage = 0;
-          refreshSuggestions(query, numSuggestions);
+          suggestionPaginator.reset();
+          scope.fetchSuggestions().then(function () {
+            clearHighlights();
+            highlightedIndex = 0;
+            if (scope.suggestions.length) {
+              clearHighlights();
+              scope.suggestions[highlightedIndex].isHighlighted = true;
+            }
+            adjustScroll(highlightedIndex);
+          });
           resizeInput();
           scope.validEmail = util.validateEmail(scope.typeahead);
         };
