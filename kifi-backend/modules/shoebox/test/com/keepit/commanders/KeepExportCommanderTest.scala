@@ -1,5 +1,7 @@
 package com.keepit.commanders
 
+import java.util.zip.{ ZipEntry, ZipOutputStream }
+
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
@@ -19,6 +21,7 @@ import com.keepit.model._
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
 import com.keepit.test.ShoeboxTestInjector
+import org.apache.commons.math3.random.MersenneTwister
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 import play.api.libs.json.Json

@@ -1,18 +1,18 @@
 package com.keepit.controllers.client
 
+import java.util.zip.{ ZipEntry, ZipOutputStream }
+
 import com.google.inject.Inject
 import com.keepit.commanders.KeepExportCommander
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
-import com.keepit.common.core.tryExtensionOps
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
-import com.keepit.common.util.RightBias
-import com.keepit.common.util.RightBias.FromOption
+import com.keepit.export.FullKifiExport
 import com.keepit.model._
-import com.keepit.shoebox.data.assemblers.KeepInfoAssembler
-import play.api.libs.json.Json
+import org.apache.commons.math3.random.MersenneTwister
+import play.api.libs.iteratee.Enumerator
 
 import scala.concurrent.{ ExecutionContext, Future }
 
@@ -68,5 +68,25 @@ class KeepExportController @Inject() (
           }
         }
     }.getOrElse(Future.successful(BadRequest))
+  }
+
+  def fullKifiExport() = UserAction.async { request =>
+    log.info(s"[RPB] Full kifi export for ${request.userId}")
+    keepExportCommander.fullKifiExport(request.userId).map { export =>
+      val enum = Enumerator.outputStream { os =>
+        val zip = new ZipOutputStream(os)
+        keepExportCommander.htmlDump(export).foreach {
+          case (fileName, html) =>
+            zip.putNextEntry(new ZipEntry("kifi-export/" + fileName))
+            zip.write(html.map(_.toByte).toArray)
+            zip.closeEntry()
+        }
+        zip.close()
+      }
+      Ok.chunked(enum >>> Enumerator.eof).withHeaders(
+        "Content-Type" -> "application/zip",
+        "Content-Disposition" -> "attachment; filename=test.zip"
+      )
+    }
   }
 }
