@@ -87,7 +87,7 @@ class ElizaDiscussionController @Inject() (
       contextBuilder.build
     }
     implicit val time = input.time
-    discussionCommander.sendMessage(input.userId, input.text, input.keepId, source = input.source).map { msg =>
+    discussionCommander.sendMessage(input.userId, input.text, input.keepId, source = input.source)(time = time, context = context).map { msg =>
       val output = Response(msg)
       Ok(Json.toJson(output))
     }

@@ -654,13 +654,13 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val user = db.readWrite { implicit s =>
           UserFactory.user().withName("Rocky", "Balboa").withUsername("tester").saved
         }
-        val email = Await.result(sender.sendToUser(toEmail, user.id.get, "/joshelman/things-i-share"), Duration(5, "seconds"))
+        val email = Await.result(sender.sendToUser(toEmail, user.id.get, "https://www.kifi.com/joshelman/things-i-share"), Duration(5, "seconds"))
         outbox.size === 1
         outbox(0) === email
 
         email.to === Seq(toEmail)
         email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.User.WAITLIST)
-        email.subject === "You are on the list"
+        email.subject === "You now have the Twitter Full Search Kifi library"
         val html = email.htmlBody.value
         //        println(html)
         html must contain("Hi Rocky")

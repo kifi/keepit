@@ -23,16 +23,16 @@ minWidthForBoxed = maxWidthForNarrowKeep + 1px
   cursor: pointer
   position: relative
 
-.kf-keep-card-add-btn
-  display: inline-block
+.kf-keep-card-add-container
   position: relative
-  background-color: transparent
-  border: none
-  padding: 0px
   width: 32px
-  height: 32px
-  transform: scale(.66)
-  right: 5px
+  height: 24px
+  right: 4px
+
+.kf-keep-card-add-btn
+  position: relative
+  transform: scale(.6)
+  bottom: 4px
 
   &:hover
     opacity: .7
@@ -49,7 +49,6 @@ minWidthForBoxed = maxWidthForNarrowKeep + 1px
   display: none
   left: calc(50% - 70px)
   top: 25px
-  width: 140px
   text-align: left
   padding: 10px
   color: black
@@ -95,21 +94,13 @@ minWidthForBoxed = maxWidthForNarrowKeep + 1px
         border-radius: (keepRectBorderRadius + 2px) (keepRectBorderRadius + 2px) keepRectBorderRadius keepRectBorderRadius
 
 .kf-keep-card-library-chip
-.kf-keep-card-email-chip
+  background: gray
   border-radius: 3px
   font-size: 12px
   max-width: 120px
   display: inline-flex
   padding: 2px 6px
   color: white
-
-  > span
-    overflow: hidden
-    text-overflow: ellipsis
-    white-space: nowrap
-
-.kf-keep-card-library-chip
-  background: gray
 
   > svg
     width: 15px
@@ -125,8 +116,21 @@ minWidthForBoxed = maxWidthForNarrowKeep + 1px
     margin-top: 1.5px
     margin-right: 5px
 
+  > span
+    overflow: hidden
+    text-overflow: ellipsis
+    white-space: nowrap
+
 .kf-keep-card-email-chip
+  display: table-cell
+  text-align: center
   background: linkBlueColor
+  color: white
+  border-radius: 100%
+  height: 20px
+  width: 20px
+  font-size: 14px
+  line-height: 20px
 
 .kf-keep-header
   border-bottom: 1px solid defaultBorderColor

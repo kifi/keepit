@@ -150,7 +150,7 @@
            kf-user-tooltip
            library="library"
            ng-href="{{::library.path}}"
-           ng-repeat="addedLibrary in keep.members.libraries"
+           ng-repeat="addedLibrary in keep.members.libraries | limitTo: maxMembersPerEntity"
            ng-init="library = addedLibrary.library">
           <svg kf-symbol-sprite
                ng-if="library && library|libPrivacyIcon"
@@ -165,21 +165,19 @@
            ng-href="{{::participant|profileUrl}}"
            ng-style="{'background-image': 'url(' + (participant | pic:100) + ')'}"
            kf-user-tooltip="::participant"
-           ng-repeat="addedUser in keep.members.users | limitTo: (keep.participants.length > 5 ? 4 : 5)"
+           ng-repeat="addedUser in keep.members.users | limitTo: maxMembersPerEntity"
            ng-init="participant = addedUser.user"></a>
-        <span class="kf-feed-tooltip-target kf-keep-card-email-chip" kf-user-tooltip email="email" ng-repeat="email in keep.members.emails">
-          <span ng-bind="email.email"></span>
-        </span>
+        <span class="kf-feed-tooltip-target kf-keep-card-email-chip" kf-user-tooltip email="email" ng-repeat="email in keep.members.emails | limitTo: maxMembersPerEntity" ng-bind="email.email[0].toUpperCase()"></span>
          <span class="kf-keep-card-participants-more"
-               ng-if="keep.members.users.length > 5">
-          <span ng-bind-template="+{{(keep.members.users.length - 4)|number}}"></span>
+               ng-if="totalMemberCount > (maxMembersPerEntity * 3)">
+          <span ng-bind-template="+{{(leftoverMembers.length)|number}}"></span>
           <div class="kf-dropdown-menu kf-keep-card-participants-more-tooltip">
-            <div ng-repeat="addedUser in keep.members.users.slice(4)"
-                 ng-init="participant = addedUser.user"
-                 ng-bind="participant|name"></div>
+            <div ng-repeat="member in leftoverMembers" ng-bind="member.name || member.email"></div>
           </div>
          </span>
-        <button class="kf-keep-card-add-btn sprite sprite-add-link-2-active" kf-send-keep-widget keep="keep" ng-if="showAddRecipients"></button>
+        <div class="kf-keep-card-add-container">
+          <div class="kf-keep-card-add-btn sprite sprite-add-link-2-active" kf-send-keep-widget keep="keep" ng-if="showAddRecipients"></div>
+        </div>
       </div>
 
       <div ng-if="galleryView && !showActivityEvents" kf-keep-comments keep="keep" max-initial-comments="maxInitialComments" edit-keep-note="editKeepNote" can-edit-keep="canEditKeep"></div>

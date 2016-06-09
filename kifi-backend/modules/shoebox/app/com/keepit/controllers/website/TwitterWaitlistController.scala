@@ -102,9 +102,10 @@ class TwitterWaitlistController @Inject() (
     }
   }
 
-  def thanksForTwitterWaitlistRedirectHack = thanksForTwitterWaitlist
+  def thanksForTwitterWaitlistRedirectHack = thanksForTwitterWaitlist(None)
 
-  def thanksForTwitterWaitlist = MaybeUserAction { implicit request =>
+  def thanksForTwitterWaitlist(target: Option[String]) = MaybeUserAction { implicit request =>
+    val syncTarget = target.map(SyncTarget.get).getOrElse(SyncTarget.Tweets)
     val session = request.session
     request match {
       case requestNonUser: NonUserRequest[_] =>
@@ -122,7 +123,7 @@ class TwitterWaitlistController @Inject() (
         if (twitterSui.isEmpty) {
           Redirect("/link/twitter?intent=waitlist").withSession(session + (SecureSocial.OriginalUrlKey -> "/twitter/thanks"))
         } else {
-          commander.createSyncOrWaitlist(ur.userId, SyncTarget.Tweets) match {
+          commander.createSyncOrWaitlist(ur.userId, syncTarget) match {
             case Left(error) =>
               log.warn(s"[thanksForTwitterWaitlist] ${ur.userId} Error when creating sync, $error")
               db.readWrite { implicit s => userValueRepo.setValue(ur.userId, UserValueName.TWITTER_SYNC_PROMO, "show_sync") }
@@ -156,10 +157,7 @@ class TwitterWaitlistController @Inject() (
   }
 
   def createSync(target: Option[String]) = UserAction { request =>
-    val syncTarget = target match {
-      case Some(SyncTarget.Favorites.value) => SyncTarget.Favorites
-      case _ => SyncTarget.Tweets
-    }
+    val syncTarget = target.map(SyncTarget.get).getOrElse(SyncTarget.Tweets)
     commander.createSyncOrWaitlist(request.userId, syncTarget) match {
       case Left(err) =>
         BadRequest(Json.obj("error" -> "failed", "msg" -> err))

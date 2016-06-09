@@ -76,7 +76,7 @@ class SocialUserInfoRepoImpl @Inject() (
   initTable()
 
   private val UNPROCESSED_STATES = SocialUserInfoStates.CREATED :: SocialUserInfoStates.FETCHED_USING_FRIEND :: Nil
-  private val REFRESHING_STATES = SocialUserInfoStates.FETCHED_USING_SELF :: SocialUserInfoStates.FETCH_FAIL :: Nil
+  private val REFRESHING_STATES = SocialUserInfoStates.FETCHED_USING_SELF :: SocialUserInfoStates.FETCH_FAIL :: SocialUserInfoStates.USER_NOT_FOUND :: Nil
   private val REFRESH_FREQUENCY = 21
 
   override def save(socialUserInfo: SocialUserInfo)(implicit session: RWSession): SocialUserInfo = {
