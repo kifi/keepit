@@ -47,11 +47,26 @@ minWidthForBoxed = maxWidthForNarrowKeep + 1px
 
 .kf-keep-card-participants-more-tooltip
   display: none
-  left: calc(50% - 70px)
+  left: calc(50%)
   top: 25px
   text-align: left
-  padding: 10px
+  padding: 5px
   color: black
+  cursor: default
+  white-space: nowrap
+
+  &::after
+    content: ''
+    position: absolute
+    height: 10px
+    width: 100%
+    top: -10px
+    left: 0px
+
+.kf-keep-card-participants-more-member
+  &.kf-link
+    &:hover
+      text-decoration: none
 
 .kf-keep-card-initial-message-container
   display: flex

@@ -172,7 +172,17 @@
                ng-if="totalMemberCount > (maxMembersPerEntity * 3)">
           <span ng-bind-template="+{{(leftoverMembers.length)|number}}"></span>
           <div class="kf-dropdown-menu kf-keep-card-participants-more-tooltip">
-            <div ng-repeat="member in leftoverMembers" ng-bind="member.name || member.email"></div>
+            <div class="kf-keep-card-participants-more-txt" ng-repeat="member in leftoverMembers">
+               <a class="kf-link kf-keep-card-participants-more-member" ng-if="member.user" ng-init="user = member.user"
+                 ng-bind="user.firstName + ' ' + user.lastName"
+                 ng-href="{{::user|profileUrl}}"
+                ></a>
+                <a class="kf-link kf-keep-card-participants-more-member" ng-if="member.library" ng-init="library = member.library"
+                  ng-bind="library.name"
+                  ng-href="{{::library.path}}"
+                ></a>
+                <span class="kf-keep-card-participants-more-member" ng-if="member.email" ng-init="email = member.email" ng-bind="email"></span>
+            </div>
           </div>
          </span>
         <div class="kf-keep-card-add-container">

@@ -69,10 +69,10 @@ class MessageFetchingCommander @Inject() (
   }
 
   def getThreadMessagesWithBasicUser(thread: MessageThread): Future[Seq[MessageWithBasicUser]] = {
-    val userParticipantSet = thread.participants.allUsers
+    val messages = getMessagesByKeepId(thread.keepId).filter(_.auxData.forall(SystemMessageData.isFullySupported))
+    val userParticipantSet = thread.participants.allUsers ++ messages.flatMap(_.from.asUser).toSet
     log.info(s"[get_thread] got participants for keepId ${thread.keepId}: $userParticipantSet")
     val messagesFut: Future[Seq[MessageWithBasicUser]] = new SafeFuture(shoebox.getBasicUsers(userParticipantSet.toSeq) map { id2BasicUser =>
-      val messages = getMessagesByKeepId(thread.keepId).filter(_.auxData.forall(SystemMessageData.isFullySupported))
       log.info(s"[get_thread] got raw messages for keepId ${thread.keepId}: ${messages.length}")
       messages.map(getMessageWithBasicUser(_, thread, id2BasicUser))
     })

@@ -256,7 +256,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
           twitterWaitlistRepo.save(entry.copy(state = TwitterWaitlistEntryStates.ACCEPTED, twitterHandle = Some(handle)))
         }
       }
-      val sync = twitterSyncCommander.internTwitterSync(Some(userId), lib.id.get, handle, SyncTarget.Tweets)
+      val sync = twitterSyncCommander.internTwitterSync(Some(userId), lib.id.get, handle, target)
       log.info(s"[createSync] Sync created for $userId, ${handle.value}")
       syncTwitterShow(handle, sui, lib.id.get).andThen {
         case _ => // Always sync, even if show failed to update

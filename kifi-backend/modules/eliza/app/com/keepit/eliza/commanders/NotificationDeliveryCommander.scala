@@ -125,50 +125,50 @@ class NotificationDeliveryCommanderImpl @Inject() (
   }
 
   def notifyAddParticipants(adderUserId: Id[User], diff: KeepRecipientsDiff, thread: MessageThread, basicEvent: BasicKeepEvent): Unit = {
-    new SafeFuture(shoebox.getRecipientsOnKeep(thread.keepId) map {
-      case (basicUsers, basicLibraries, emails) =>
-        val author = basicUsers(adderUserId)
-        val theTitle: String = thread.pageTitle.getOrElse("New conversation")
-        val participants: Seq[BasicUserLikeEntity] =
-          basicUsers.values.toSeq.map(u => BasicUserLikeEntity(u)) ++
-            thread.participants.allNonUsers.toSeq.map(nu => BasicUserLikeEntity(EmailParticipant.toBasicNonUser(nu)))
-        val notificationJson = Json.obj(
-          "id" -> basicEvent.id,
-          "time" -> basicEvent.timestamp,
-          "thread" -> thread.pubKeepId,
-          "text" -> DescriptionElements.formatPlain(basicEvent.header),
-          "url" -> thread.url,
-          "title" -> theTitle,
-          "author" -> author,
-          "participants" -> participants,
-          "locator" -> thread.deepLocator,
-          "unread" -> true,
-          "category" -> NotificationCategory.User.MESSAGE.category
-        )
+    new SafeFuture(for {
+      (basicUsers, basicLibraries, emails) <- shoebox.getRecipientsOnKeep(thread.keepId)
+      author <- basicUsers.get(adderUserId).map(Future.successful).getOrElse {
+        shoebox.getBasicUsers(Seq(adderUserId)).map(_.getOrElse(adderUserId, throw new Exception(s"Action taken by $adderUserId cannot be displayed because user does not exist")))
+      }
+    } yield {
+      val theTitle: String = thread.pageTitle.getOrElse("New conversation")
+      val participants: Seq[BasicUserLikeEntity] =
+        basicUsers.values.toSeq.map(u => BasicUserLikeEntity(u)) ++
+          thread.participants.allNonUsers.toSeq.map(nu => BasicUserLikeEntity(EmailParticipant.toBasicNonUser(nu)))
+      val notificationJson = Json.obj(
+        "id" -> basicEvent.id,
+        "time" -> basicEvent.timestamp,
+        "thread" -> thread.pubKeepId,
+        "text" -> DescriptionElements.formatPlain(basicEvent.header),
+        "url" -> thread.url,
+        "title" -> theTitle,
+        "author" -> author,
+        "participants" -> participants,
+        "locator" -> thread.deepLocator,
+        "unread" -> true,
+        "category" -> NotificationCategory.User.MESSAGE.category
+      )
 
-        val precomputedInfo = PrecomputedInfo.BuildForEvent(Some(thread), Some(basicUsers))
-        val threadNotifsByUserFut = threadNotifBuilder.buildForUsersFromEvent(diff.users.added, thread.keepId, basicEvent, author, Some(precomputedInfo))
+      val precomputedInfo = PrecomputedInfo.BuildForEvent(Some(thread), Some(basicUsers))
+      val threadNotifsByUserFut = threadNotifBuilder.buildForUsersFromEvent(diff.users.added, thread.keepId, basicEvent, author, Some(precomputedInfo))
 
-        threadNotifsByUserFut.foreach { threadNotifsByUser =>
-          (diff.users.added - adderUserId).foreach { userId =>
-            sendToUser(userId, Json.arr("notification", notificationJson, threadNotifsByUser(userId)))
-          }
-        }
-
-        thread.participants.allUsers.par.foreach { userId =>
-          sendToUser(userId, Json.arr("event", thread.pubKeepId, basicEvent))
-          sendToUser(userId, Json.arr("thread_participants", thread.pubKeepId, participants))
-        }
-
-        val pushNotifText = {
-          val senderName = basicUsers(adderUserId).fullName
-          s"$senderName sent ${thread.pageTitle.getOrElse("you a page")}"
-        }
+      threadNotifsByUserFut.foreach { threadNotifsByUser =>
         (diff.users.added - adderUserId).foreach { userId =>
-          sendPushNotificationForMessageThread(userId, thread.keepId, pushNotifText, lastSeenThread = None)
+          sendToUser(userId, Json.arr("notification", notificationJson, threadNotifsByUser(userId)))
         }
-        sendKeepRecipients(thread.participants.allUsers, thread.pubKeepId, basicUsers.values.toSet, basicLibraries.values.toSet, emails)
-        emailCommander.notifyAddedEmailUsers(thread, diff.emails.added.toSeq)
+      }
+
+      thread.participants.allUsers.par.foreach { userId =>
+        sendToUser(userId, Json.arr("event", thread.pubKeepId, basicEvent))
+        sendToUser(userId, Json.arr("thread_participants", thread.pubKeepId, participants))
+      }
+
+      val pushNotifText = s"${author.fullName} sent ${thread.pageTitle.getOrElse("you a page")}"
+      (diff.users.added - adderUserId).foreach { userId =>
+        sendPushNotificationForMessageThread(userId, thread.keepId, pushNotifText, lastSeenThread = None)
+      }
+      sendKeepRecipients(thread.participants.allUsers, thread.pubKeepId, basicUsers.values.toSet, basicLibraries.values.toSet, emails)
+      emailCommander.notifyAddedEmailUsers(thread, diff.emails.added.toSeq)
     })
   }
 
