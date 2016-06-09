@@ -3,10 +3,11 @@
 angular.module('kifi')
 
 .directive('kfSendKeepWidget', [
-  '$document', '$templateCache', '$rootElement', '$timeout', '$window', '$compile', 'KEY', 'keepService', 'profileService', 'modalService',
-  function($document, $templateCache, $rootElement, $timeout, $window, $compile, KEY, keepService, profileService, modalService) {
+  '$document', '$templateCache', '$rootElement', '$timeout', '$window', '$compile', 'KEY', 'keepService', 'profileService', 'modalService', 'util',
+  function($document, $templateCache, $rootElement, $timeout, $window, $compile, KEY, keepService, profileService, modalService, util) {
 
     var numSuggestions = 4;
+    var maxSuggestionsToShowEmail = 2;
     var desiredMarginTop = 45;
     var initialBottom = 20;
     var initialRight = -20;
@@ -19,7 +20,6 @@ angular.module('kifi')
       link: function(scope, element) {
         var currPage = 0;
         var widget;
-        var init;
         var filteredSuggestions = []; // ids of entities to filter from suggestions (keep.members + scope.selected)
 
         var canAddParticipants = scope.keep.permissions && scope.keep.permissions.indexOf('add_participants') !== -1;
@@ -27,6 +27,7 @@ angular.module('kifi')
         var typeaheadFilter = (canAddParticipants ? ['user', 'email'] : []).concat(canAddLibraries ? ['library'] : []).join(',');
 
         scope.hasExperiment = profileService.me && profileService.me.experiments && profileService.me.experiments.indexOf('add_keep_recipients') !== -1;
+        scope.maxSuggestionsToShowEmail = maxSuggestionsToShowEmail;
 
         function listenForInit() {
           element.on('click', function () {
@@ -44,11 +45,11 @@ angular.module('kifi')
 
           scope.suggestions = [];
           scope.selections = [];
-          init = false;
 
           filteredSuggestions = computeKeepMembers(scope.keep); // ids of keep.members + scope.selections to omit
 
           scope.typeahead = '';
+          scope.validEmail = false;
           currPage = 0;
 
           refreshSuggestions(null, numSuggestions);
@@ -117,6 +118,10 @@ angular.module('kifi')
               return filteredSuggestions.indexOf(suggestion.id || suggestion.email) === -1;
             });
 
+            if (nonMemberResults.length <= maxSuggestionsToShowEmail) {
+              scope.showNewEmail = true;
+            }
+
             if (nonMemberResults.length === 0 && resultData.mayHaveMore) {
               refreshSuggestions(query, limit, offset + limit);
             } else {
@@ -133,7 +138,10 @@ angular.module('kifi')
 
         function resetInput() {
           scope.typeahead = '';
-          resizeInput();
+          scope.validEmail = false;
+          $timeout(function() {
+            resizeInput();
+          }, 0);
           $timeout(function() {
             widget.find('.kf-skw-input').focus();
           }, 500);
@@ -150,7 +158,7 @@ angular.module('kifi')
           }
         }
 
-        function updateSelectionsOnKeep() {
+        function updateKeepMembers() {
           scope.selections.forEach(function(selection) {
             if (selection.kind === 'user') {
               scope.keep.members.users.push({ 'user': selection });
@@ -268,7 +276,7 @@ angular.module('kifi')
             .then(function() {
               scope.sending = false;
               scope.success = true;
-              updateSelectionsOnKeep();
+              updateKeepMembers();
               $timeout(scope.removeWidget, 1000);
             })
             ['catch'](function() {
@@ -289,6 +297,7 @@ angular.module('kifi')
           currPage = 0;
           refreshSuggestions(query, numSuggestions);
           resizeInput();
+          scope.validEmail = util.validateEmail(scope.typeahead);
         };
 
         listenForInit();
