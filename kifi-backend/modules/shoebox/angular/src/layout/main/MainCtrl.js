@@ -285,7 +285,8 @@ angular.module('kifi')
     function tryToTriggerTwitterPromo() {
       var guide = angular.element('.kifi-guide-4-stage, .kifi-guide-0-stage').length;
       if (!guide) {
-        if (profileService.prefs.twitter_sync_promo === 'show_sync') {
+        // Disabling dialog one until we are ready
+        if (false && profileService.prefs.twitter_sync_promo === 'show_sync') {
           modalService.open({
             template: 'twitter/twitterSyncDialogModal.tpl.html',
             scope: $scope

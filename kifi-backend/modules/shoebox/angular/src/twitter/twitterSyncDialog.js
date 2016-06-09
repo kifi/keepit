@@ -14,12 +14,16 @@ angular.module('kifi')
         $analytics.eventTrack('user_viewed_pane', { type: 'twitterSyncDialog'});
         profileService.savePrefs({twitter_sync_promo: null});
         $scope.onClickSync = function () {
-          net.twitterSync().then(function () {
-            kfModalCtrl.close();
-            modalService.open({
-              template: 'twitter/twitterSyncStatusDialogModal.tpl.html',
-              scope: $scope
-            });
+          net.twitterSync().then(function (res) {
+            if (res && res.auth) {
+              $window.location = res.auth;
+            } else {
+              kfModalCtrl.close();
+              modalService.open({
+                template: 'twitter/twitterSyncStatusDialogModal.tpl.html',
+                scope: $scope
+              });
+            }
           })['catch'](modalService.openGenericErrorModal);
         };
 
