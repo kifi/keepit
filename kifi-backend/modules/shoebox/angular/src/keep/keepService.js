@@ -78,8 +78,8 @@ angular.module('kifi')
         return net.modifyKeepRecipients(keepId, diff);
       },
 
-      suggestRecipientsForKeep: function (query, limit, offset, requested) {
-        return net.suggestRecipientsForKeep({query: query, limit: limit, offset: offset, requested: requested})
+      suggestRecipientsForKeep: function (query, limit, offset, requested, keepId) {
+        return net.suggestRecipientsForKeep({query: query, limit: limit, offset: offset, requested: requested, keepId: keepId})
           .then(function (result) {
             return result.data;
           });

@@ -6,7 +6,7 @@
     </div>
 
     <ul class="kf-skw-suggestions">
-      <li ng-repeat="suggestion in suggestions" ng-if="!suggestion.isSelected" ng-click="selectSuggestion(suggestion)">
+      <li ng-repeat="suggestion in suggestions" ng-click="selectSuggestion(suggestion)">
         <div ng-include="'keep/sendKeepSuggestionItem.tpl.html'"></div>
       </li>
       <li class="kf-skw-suggestion" ng-if="suggestions.length <= 2">

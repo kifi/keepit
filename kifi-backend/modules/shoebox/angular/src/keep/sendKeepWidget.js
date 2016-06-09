@@ -20,7 +20,6 @@ angular.module('kifi')
       link: function(scope, element) {
         var currPage = 0;
         var widget;
-        var filteredSuggestions = []; // ids of entities to filter from suggestions (keep.members + scope.selected)
 
         var canAddParticipants = scope.keep.permissions && scope.keep.permissions.indexOf('add_participants') !== -1;
         var canAddLibraries = scope.keep.permissions && scope.keep.permissions.indexOf('add_libraries') !== -1;
@@ -45,8 +44,6 @@ angular.module('kifi')
 
           scope.suggestions = [];
           scope.selections = [];
-
-          filteredSuggestions = computeKeepMembers(scope.keep); // ids of keep.members + scope.selections to omit
 
           scope.typeahead = '';
           scope.validEmail = false;
@@ -89,20 +86,6 @@ angular.module('kifi')
           }
         }
 
-        function computeKeepMembers(keep) {
-          var ids = [];
-          keep.members.emails.forEach(function(member) {
-            ids.push(member.email.email);
-          });
-          keep.members.users.forEach(function(member) {
-            ids.push(member.user.id);
-          });
-          keep.members.libraries.forEach(function(member) {
-            ids.push(member.library.id);
-          });
-          return ids;
-        }
-
         function onClick(event) {
           if (!angular.element(event.target).closest('.kf-send-keep-widget').length) {
             scope.$apply(scope.removeWidget);
@@ -113,19 +96,22 @@ angular.module('kifi')
           query = query || '';
           limit = limit || numSuggestions;
           offset = offset || 0;
-          return keepService.suggestRecipientsForKeep(query || '', limit, offset, typeaheadFilter).then(function (resultData) {
-            var nonMemberResults = resultData.results.filter(function(suggestion) {
-              return filteredSuggestions.indexOf(suggestion.id || suggestion.email) === -1;
+          return keepService.suggestRecipientsForKeep(query || '', limit, offset, typeaheadFilter, scope.keep.pubId).then(function (resultData) {
+            var nonSelectedResults = resultData.results.filter(function (suggestion) {
+              var suggId = suggestion.id || suggestion.email;
+              return !scope.selections.find(function(selection) {
+                return (selection.id || selection.email) === suggId;
+              });
             });
 
-            if (nonMemberResults.length <= maxSuggestionsToShowEmail) {
+            if (nonSelectedResults.length <= maxSuggestionsToShowEmail) {
               scope.showNewEmail = true;
             }
 
-            if (nonMemberResults.length === 0 && resultData.mayHaveMore) {
+            if (nonSelectedResults.length === 0 && resultData.mayHaveMore) {
               refreshSuggestions(query, limit, offset + limit);
             } else {
-              scope.suggestions = nonMemberResults;
+              scope.suggestions = nonSelectedResults;
               if (widget && !scope.init) {
                 scope.init = true;
                 resetInput();
@@ -179,8 +165,6 @@ angular.module('kifi')
 
         scope.selectSuggestion = function(suggestion) {
           scope.selections.push(suggestion);
-          filteredSuggestions.push(suggestion.id || suggestion.email);
-          suggestion.isSelected = true;
           scope.typeahead = '';
           refreshSuggestions();
           resetInput();
@@ -190,10 +174,7 @@ angular.module('kifi')
           scope.selections = scope.selections.filter(function(s) {
             return s !== selection;
           });
-          filteredSuggestions = filteredSuggestions.filter(function(sId) {
-            return sId !== (selection.id || selection.email);
-          });
-          selection.isSelected = false;
+          scope.suggestions = [selection].concat(scope.suggestions);
           resetInput();
         };
 
@@ -242,9 +223,7 @@ angular.module('kifi')
             case KEY.BSPACE:
               if (scope.typeahead === '') {
                 event.preventDefault();
-                var popped = scope.selections.pop();
-                popped.isSelected = false;
-                resetInput();
+                scope.removeSelection(scope.selections.pop());
               }
               break;
             case KEY.ENTER:
