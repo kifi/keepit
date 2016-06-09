@@ -233,12 +233,17 @@ class TwitterWaitlistCommanderImpl @Inject() (
   }
 
   private def createSync(userId: Id[User], sui: SocialUserInfo, handle: TwitterHandle, target: SyncTarget, entryOpt: Option[TwitterWaitlistEntry]): Either[String, TwitterSyncState] = {
+    val (titleNoun, slugNoun, actionVerb) = target match {
+      case SyncTarget.Favorites => ("Favorites", "favorites", "favorited")
+      case SyncTarget.Tweets => ("Links", "links", "shared")
+    }
+
     val addRequest = LibraryInitialValues(
-      name = s"@${handle.value}’s Twitter Links",
+      name = s"@${handle.value}’s Twitter $titleNoun",
       visibility = LibraryVisibility.PUBLISHED,
-      slug = Some(s"${handle.value}-twitter-links"),
+      slug = Some(s"${handle.value}-twitter-$slugNoun"),
       kind = Some(LibraryKind.USER_CREATED), // bad!
-      description = Some(s"Interesting pages, articles, and links I've shared on Twitter: https://twitter.com/${handle.value}"),
+      description = Some(s"Interesting pages, articles, and links I've $actionVerb on Twitter: https://twitter.com/${handle.value}"),
       color = Some(LibraryColor.pickRandomLibraryColor()),
       listed = Some(true)
     )
