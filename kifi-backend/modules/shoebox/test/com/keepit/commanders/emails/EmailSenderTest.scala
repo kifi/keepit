@@ -654,7 +654,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val user = db.readWrite { implicit s =>
           UserFactory.user().withName("Rocky", "Balboa").withUsername("tester").saved
         }
-        val email = Await.result(sender.sendToUser(toEmail, user.id.get), Duration(5, "seconds"))
+        val email = Await.result(sender.sendToUser(toEmail, user.id.get, "/joshelman/things-i-share"), Duration(5, "seconds"))
         outbox.size === 1
         outbox(0) === email
 
@@ -662,12 +662,14 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.User.WAITLIST)
         email.subject === "You are on the list"
         val html = email.htmlBody.value
-        html must contain("Hey Rocky")
-        html must contain("Kifi Twitter library is ready")
+        //        println(html)
+        html must contain("Hi Rocky")
+        html must contain("""You can check out your new library here: <a href="https://www.kifi.com/joshelman/things-i-share">https://www.kifi.com/joshelman/things-i-share</a>""")
+        html must contain("https://twitter.com/intent/tweet?text=Browse%2Fsearch%20all%20the%20links%20I%E2%80%99ve%20shared%20on%20Twitter%20https%3A%2F%2Fwww.kifi.com%2Fjoshelman%2Fthings-i-share%20via%20%40Kifi.%20Create%20your%20own%3A&url=https%3A%2F%2Fwww.kifi.com%2Ftwitter&source=kifi&related=kifi")
         html must not contain ("Your recommendations network") // custom email layout
 
-        val text = email.textBody.get.value
-        text must contain("Kifi Twitter library is ready")
+        //        val text = email.textBody.get.value
+        //        text must contain("Kifi Twitter library is ready")
       }
     }
   }
