@@ -69,7 +69,9 @@ class TwitterOAuthProviderImpl @Inject() (
       .withQueryString("include_entities" -> false.toString, "skip_status" -> true.toString)
       .get()
     call map { resp =>
-      if (resp.status != 200) {
+      if (resp.status == 429) {
+        throw new AuthException(s"Rate limited. status=${resp.status} body=${resp.body};", resp)
+      } else if (resp.status != 200) {
         throw new AuthException(s"[fetchSocialUserInfo] non-OK response from $verifyCredsEndpoint. status=${resp.status} body=${resp.body}; request=${resp.underlying[NettyResponse]} request.uri=${resp.underlying[NettyResponse].getUri}", resp)
       } else {
         resp.json.asOpt[TwitterUserInfo] match {
