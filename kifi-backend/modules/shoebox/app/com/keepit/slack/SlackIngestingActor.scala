@@ -272,7 +272,7 @@ class SlackIngestingActor @Inject() (
         case url if !ignoreUrl(url, blacklist) =>
           val title = linksFromText.get(url).flatten orElse linksFromAttachments.get(url).flatMap(_.title.map(_.value))
           RawBookmarkRepresentation(
-            title = title,
+            title = title.map(_.replaceAllLiterally("&amp;", "&")),
             url = url,
             canonical = None,
             openGraph = None,
