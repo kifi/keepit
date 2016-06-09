@@ -132,7 +132,7 @@ private[social] class SocialGraphActor @Inject() (
         db.readWrite { implicit s => socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.TOKEN_EXPIRED).withLastGraphRefresh()) }
         log.warn(s"SocialUserInfo token expired: $socialUserInfo", ex)
         Seq()
-      case ae: AuthException if Option(ae.response.status).exists(_ == 429) =>
+      case ae: AuthException if Option(ae.response).exists(_.status == 429) =>
         log.warn(s"[fetchUserInfo] Got rate limited for: $socialUserInfo")
         db.readWrite { implicit s => socialRepo.save(socialUserInfo.withLastGraphRefresh()) }
         Seq()
