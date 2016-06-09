@@ -1209,7 +1209,7 @@ api.port.on({
     })
     .then(function (activityResponseData) {
       log('[send_keepscussion] get activity resp:', activityResponseData);
-      activityData[keepId] = activityResponseData.events;
+      activityData[keepId] = activityResponseData;
     })
     .catch(function (req) {
       log('#c00', '[send_keepscussion] resp:', req);
@@ -1288,7 +1288,7 @@ api.port.on({
       var newActivity = responseData.events;
       log('[activity_from] newActivity', newActivity);
       if (newActivity) {
-        var allActivity = activityData[keepId].events = newActivity.concat(cachedActivityEvents).filter(filterDuplicates(getId)).sort(function (a, b) {
+        activityData[keepId].events = newActivity.concat(cachedActivityEvents).filter(filterDuplicates(getId)).sort(function (a, b) {
           return b.timestamp - a.timestamp;
         });
         respond({ activity: newActivity });
