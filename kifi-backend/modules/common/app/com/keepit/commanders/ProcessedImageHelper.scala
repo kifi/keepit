@@ -515,27 +515,26 @@ class ImageCleanup @Inject() (
   private val cleanupAfterMin = 15
 
   def cleanup(file: File): Unit = Try {
-    images.enqueue((clock.now, file.getAbsolutePath))
+    synchronized { images.enqueue((clock.now, file.getAbsolutePath)) }
     purge()
   }
 
   private def purge(): Unit = {
-    synchronized {
-      if (images.headOption.exists(_._1.isBefore(clock.now.minusMinutes(cleanupAfterMin))) || images.length > 500) {
-        Some(images.dequeue()._2)
-      } else None
-    }.foreach { filename =>
-      Try {
-        val file = new File(filename)
-        if (file.exists()) {
-          file.delete()
+    val shouldPop = images.length > 500 || images.headOption.exists(_._1.isBefore(clock.now.minusMinutes(cleanupAfterMin)))
+    if (shouldPop) {
+      synchronized {
+        Try(images.dequeue()).map(_._2).toOption
+      }.foreach { filename =>
+        Try {
+          val file = new File(filename)
+          if (file.exists()) {
+            file.delete()
+          }
+        } match {
+          case Failure(ex) => log.info(s"[ImageCleanup] Couldn't delete file $filename: ${ex.toString}")
+          case Success(_) =>
         }
-      } match {
-        case Failure(ex) => log.info(s"[ImageCleanup] Couldn't delete file $filename: ${ex.toString}")
-        case Success(_) =>
-      }
-      if (images.nonEmpty) {
-        purge()
+        if (images.nonEmpty) { purge() }
       }
     }
   }

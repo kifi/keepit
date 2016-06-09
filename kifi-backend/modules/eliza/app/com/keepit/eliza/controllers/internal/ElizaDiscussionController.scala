@@ -177,13 +177,6 @@ class ElizaDiscussionController @Inject() (
     Ok(Json.obj("lastActivityByKeepId" -> Json.toJson(lastActivityByKeepId)))
   }
 
-  def getEmailParticipantsForKeeps() = Action(parse.tolerantJson) { request =>
-    import GetEmailParticipantsForKeep._
-    val keepIds = request.body.as[Request].keepIds
-    val emailParticipantsByKeepIds = discussionCommander.getEmailParticipantsForKeeps(keepIds)
-    Ok(Json.toJson(Response(emailParticipantsByKeepIds)))
-  }
-
   def getInitialRecipientsByKeepId() = Action.async(parse.tolerantJson) { request =>
     import GetInitialRecipientsByKeepId._
     val keepIds = request.body.as[Request].keepIds
