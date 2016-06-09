@@ -23,7 +23,7 @@ class TwitterWaitlistEmailSender @Inject() (
       fromName = Some(Right("Kifi")),
       from = SystemEmailAddress.NOTIFICATIONS,
       to = Right(email),
-      subject = "You now have the Twitter Full Search Kifi library",
+      subject = "Done!  Your Twitter Library is ready.  Want Your “Liked” Links too?",
       category = NotificationCategory.User.WAITLIST,
       htmlTemplate = views.html.email.black.twitterAccept(userId, twitterLibUrl, URLEncoder.encode(twitterLibUrl, UTF8)),
       textTemplate = None,
