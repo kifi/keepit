@@ -315,7 +315,9 @@ class AuthHelper @Inject() (
         db.readWrite { implicit s =>
           joinResult match {
             case Right(sync) => userValueRepo.setValue(userId, UserValueName.TWITTER_SYNC_PROMO, "in_progress")
-            case Left(err) => userValueRepo.setValue(userId, UserValueName.TWITTER_SYNC_PROMO, "show_sync")
+            case Left(err) =>
+              log.info("[processIntent] Error creating Twitter sync: " + err)
+              userValueRepo.setValue(userId, UserValueName.TWITTER_SYNC_PROMO, "show_sync")
           }
         }
         "/twitter/thanks"
