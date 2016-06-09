@@ -660,11 +660,12 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
 
         email.to === Seq(toEmail)
         email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.User.WAITLIST)
-        email.subject === "You now have the Twitter Full Search Kifi library"
+        email.subject === """Done! Your Twitter Library is ready. Want Your “Liked” Links too?"""
         val html = email.htmlBody.value
         //        println(html)
         html must contain("Hi Rocky")
-        html must contain("""You can check out your new library here: <a href="https://www.kifi.com/joshelman/things-i-share">https://www.kifi.com/joshelman/things-i-share</a>""")
+        html must contain("Your Twitter integrated library is ready!")
+        html must contain("""<a href="https://www.kifi.com/joshelman/things-i-share">https://www.kifi.com/joshelman/things-i-share</a>""")
         html must contain("https://twitter.com/intent/tweet?text=Browse%2Fsearch%20all%20the%20links%20I%E2%80%99ve%20shared%20on%20Twitter%20https%3A%2F%2Fwww.kifi.com%2Fjoshelman%2Fthings-i-share%20via%20%40Kifi.%20Create%20your%20own%3A&url=https%3A%2F%2Fwww.kifi.com%2Ftwitter&source=kifi&related=kifi")
         html must not contain ("Your recommendations network") // custom email layout
 
