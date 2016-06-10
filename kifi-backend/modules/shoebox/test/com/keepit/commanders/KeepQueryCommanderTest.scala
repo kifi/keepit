@@ -2,7 +2,7 @@ package com.keepit.commanders
 
 import com.google.inject.Injector
 import com.keepit.commanders.KeepQuery.Arrangement.FromOrdering
-import com.keepit.commanders.KeepQuery.{ FromId, ForUri, ForLibrary }
+import com.keepit.commanders.KeepQuery.{ FromId, ForUriAndRecipients, ForLibrary }
 import com.keepit.common.controller._
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
@@ -77,15 +77,15 @@ class KeepQueryCommanderTest extends Specification with ShoeboxTestInjector {
         }
 
         val query = KeepQuery(
-          target = ForUri(uri, user.id.get, KeepRecipients.EMPTY),
+          target = ForUriAndRecipients(uri, user.id.get, KeepRecipients.EMPTY),
           arrangement = None,
           paging = KeepQuery.Paging(filter = None, offset = 0, limit = 10)
         )
         db.readOnlyMaster { implicit s =>
           inject[KeepQueryCommander].getKeeps(Some(user.id.get), query).length === 3 // of the four keeps, only 3 are visible
-          inject[KeepQueryCommander].getKeeps(Some(user.id.get), query.copy(target = ForUri(uri, user.id.get, KeepRecipients.EMPTY.plusUser(user.id.get)))).length === 2
-          inject[KeepQueryCommander].getKeeps(Some(user.id.get), query.copy(target = ForUri(uri, user.id.get, KeepRecipients.EMPTY.plusLibrary(lib.id.get)))).length === 2
-          inject[KeepQueryCommander].getKeeps(Some(user.id.get), query.copy(target = ForUri(uri, user.id.get, KeepRecipients.EMPTY.plusUser(user.id.get).plusLibrary(lib.id.get)))).length === 1
+          inject[KeepQueryCommander].getKeeps(Some(user.id.get), query.copy(target = ForUriAndRecipients(uri, user.id.get, KeepRecipients.EMPTY.plusUser(user.id.get)))).length === 2
+          inject[KeepQueryCommander].getKeeps(Some(user.id.get), query.copy(target = ForUriAndRecipients(uri, user.id.get, KeepRecipients.EMPTY.plusLibrary(lib.id.get)))).length === 2
+          inject[KeepQueryCommander].getKeeps(Some(user.id.get), query.copy(target = ForUriAndRecipients(uri, user.id.get, KeepRecipients.EMPTY.plusUser(user.id.get).plusLibrary(lib.id.get)))).length === 1
         }
         1 === 1
       }

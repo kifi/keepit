@@ -195,7 +195,7 @@ class SlackAuthRouter @Inject() (
     }
 
     val slackAuthPage = pathCommander.orgPage(org) + s"?$modelParams&slackTeamId=${slackTeamId.value}"
-    
+
     Redirect(slackAuthPage.absolute).withSession(request.session)
   }
 

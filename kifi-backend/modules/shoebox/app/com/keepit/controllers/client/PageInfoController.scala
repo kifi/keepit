@@ -1,16 +1,18 @@
 package com.keepit.controllers.client
 
 import com.google.inject.Inject
-import com.keepit.commanders.KeepQuery.{ FirstOrder, ForUri, Paging }
+import com.keepit.commanders.KeepQuery.{ FirstOrder, ForUriAndRecipients, Paging }
 import com.keepit.commanders.gen.BasicLibraryGen
 import com.keepit.commanders.{ KeepQuery, KeepQueryCommander }
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
+import com.keepit.common.core.mapExtensionOps
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.json
 import com.keepit.common.json.SchemaReads
+import com.keepit.common.reflection.Enumerator
 import com.keepit.common.time._
 import com.keepit.common.util.PaginationContext
 import com.keepit.common.util.RightBias._
@@ -104,18 +106,13 @@ class PageInfoController @Inject() (
     request.body.asOpt[Input].fold(Future.successful(schemaHelper.loudHintResponse(request.body, schema))) { input =>
       val seenIds = input.paginationContext.fold(Set.empty[Id[Keep]])(_.toSet)
       val uriIdOpt = db.readOnlyReplica { implicit s => uriInterner.getByUri(input.url).map(_.id.get) }
-      val newIds = uriIdOpt.fold(Seq.empty[Id[Keep]]) { uriId =>
-        db.readOnlyReplica { implicit s =>
-          queryCommander.getKeeps(
-            requester = Some(request.userId),
-            query = KeepQuery(
-              target = ForUri(uriId, viewer = request.userId, KeepRecipients.EMPTY),
-              arrangement = None,
-              paging = Paging(filter = Some(seenIds).filter(_.nonEmpty).map(KeepQuery.Seen), offset = 0, limit = 10)
-            )
-          )
-        }
+      val newIdsBySection = uriIdOpt.map { uriId =>
+        db.readOnlyReplica { implicit s => keepRepo.getSectionedKeepsOnUri(request.userId, uriId, seenIds, limit = 10) }
+      }.getOrElse(Map.empty)
+      val sectionById = newIdsBySection.flatMap {
+        case (section, ids) => ids.map(_ -> section)
       }
+      val newIds = newIdsBySection.traverseByKey.flatten
       val result = {
         val keepInfosFut = keepInfoAssembler.assembleKeepInfos(viewer = Some(request.userId), keepSet = newIds.toSet, config = input.config)
         val pageInfoFut = uriIdOpt.fold(Future.successful(Option.empty[NewPageInfo])) { uriId =>
@@ -123,7 +120,7 @@ class PageInfoController @Inject() (
         }
         for { keepInfos <- keepInfosFut; pageInfo <- pageInfoFut } yield NewKeepInfosForPage(
           page = pageInfo,
-          keeps = newIds.flatMap(kId => keepInfos.get(kId).flatMap(_.getRight)),
+          keeps = newIds.flatMap(kId => keepInfos.get(kId).flatMap(_.getRight).map(_ -> sectionById(kId))),
           paginationContext = PaginationContext.fromSet(seenIds ++ newIds)
         )
       }

@@ -27,7 +27,7 @@ object KeepQuery {
   // ForLibrary(libId) => keeps in library `libId`
   case class ForLibrary(libId: Id[Library]) extends Target
   // ForUri(uriId, recips) => keeps on `uriId` with k.recipients isSupersetOf recips
-  case class ForUri(uriId: Id[NormalizedURI], viewer: Id[User], recipientSubset: KeepRecipients) extends Target
+  case class ForUriAndRecipients(uriId: Id[NormalizedURI], viewer: Id[User], recipientSubset: KeepRecipients) extends Target
   // FirstOrder(uriIds, viewer) => keeps on `uriId` that `viewer` is directly connected to, or connected via a library
   case class FirstOrder(uriId: Id[NormalizedURI], viewer: Id[User]) extends Target
 
