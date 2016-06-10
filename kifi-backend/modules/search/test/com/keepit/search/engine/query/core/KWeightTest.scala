@@ -27,7 +27,7 @@ class KWeightTest extends Specification {
   "KWeight" should {
     "return a single (KTextWeight, 1.0f) for KTextQuery" in {
       val q0 = new KTextQuery("")
-      val w0 = searcher.createWeight(q0).asInstanceOf[KWeight]
+      val w0 = searcher.createNormalizedWeight(q0, true).asInstanceOf[KWeight]
       val out = new ArrayBuffer[(Weight, Float)]
       w0.getWeights(out)
 
@@ -35,7 +35,7 @@ class KWeightTest extends Specification {
       out(0)._1 must beAnInstanceOf[KTextWeight]
 
       val q1 = mkKTextQuery("def")
-      val w1 = searcher.createWeight(q1).asInstanceOf[KWeight]
+      val w1 = searcher.createNormalizedWeight(q1, true).asInstanceOf[KWeight]
       out.clear()
       w1.getWeights(out)
 
@@ -45,7 +45,7 @@ class KWeightTest extends Specification {
 
     "return an empty list of Weight for an empty KBooleanQuery" in {
       val q = new KBooleanQuery
-      val w = searcher.createWeight(q).asInstanceOf[KWeight]
+      val w = searcher.createNormalizedWeight(q, true).asInstanceOf[KWeight]
       val out = new ArrayBuffer[(Weight, Float)]
       w.getWeights(out)
 
@@ -58,7 +58,7 @@ class KWeightTest extends Specification {
       q.add(mkKTextQuery("abc"), Occur.SHOULD)
       q.add(mkKTextQuery("def"), Occur.SHOULD)
 
-      val w = searcher.createWeight(q).asInstanceOf[KWeight]
+      val w = searcher.createNormalizedWeight(q, true).asInstanceOf[KWeight]
       val out = new ArrayBuffer[(Weight, Float)]
       w.getWeights(out)
 
@@ -75,7 +75,7 @@ class KWeightTest extends Specification {
       q.add(mkKTextQuery("abc"), Occur.MUST)
       q.add(mkKTextQuery("def"), Occur.SHOULD)
 
-      val w = searcher.createWeight(q).asInstanceOf[KWeight]
+      val w = searcher.createNormalizedWeight(q, true).asInstanceOf[KWeight]
       val out = new ArrayBuffer[(Weight, Float)]
       w.getWeights(out)
 
@@ -93,7 +93,7 @@ class KWeightTest extends Specification {
       q.add(mkKTextQuery("abc"), Occur.MUST_NOT)
       q.add(mkKTextQuery("def"), Occur.SHOULD)
 
-      val w = searcher.createWeight(q).asInstanceOf[KWeight]
+      val w = searcher.createNormalizedWeight(q, true).asInstanceOf[KWeight]
       val out = new ArrayBuffer[(Weight, Float)]
       w.getWeights(out)
 
@@ -114,7 +114,7 @@ class KWeightTest extends Specification {
       q0.add(mkKTextQuery("def"), Occur.SHOULD)
       val q = new KBoostQuery(q0, mkKTextQuery("jkl"), 2.0f)
 
-      val w = searcher.createWeight(q).asInstanceOf[KWeight]
+      val w = searcher.createNormalizedWeight(q, true).asInstanceOf[KWeight]
       val out = new ArrayBuffer[(Weight, Float)]
       w.getWeights(out)
 

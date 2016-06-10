@@ -128,7 +128,6 @@ trait ElizaServiceClient extends ServiceClient {
   // Discussion cross-service methods
   def getCrossServiceMessages(msgIds: Set[Id[Message]]): Future[Map[Id[Message], CrossServiceMessage]]
   def getCrossServiceDiscussionsForKeeps(keepIds: Set[Id[Keep]], fromTime: Option[DateTime], maxMessagesShown: Int): Future[Map[Id[Keep], CrossServiceDiscussion]]
-  def getEmailParticipantsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Map[EmailAddress, (Id[User], DateTime)]]]
   def markKeepsAsReadForUser(userId: Id[User], lastSeenByKeep: Map[Id[Keep], Id[Message]]): Future[Map[Id[Keep], Int]]
   def sendMessageOnKeep(userId: Id[User], text: String, keepId: Id[Keep], source: Option[MessageSource])(implicit time: CrossServiceTime): Future[Message]
   def getMessagesOnKeep(keepId: Id[Keep], fromIdOpt: Option[Id[Message]], limit: Int): Future[Seq[Message]]
@@ -315,14 +314,6 @@ class ElizaServiceClientImpl @Inject() (
     }
   }
 
-  def getEmailParticipantsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Map[EmailAddress, (Id[User], DateTime)]]] = {
-    import GetEmailParticipantsForKeep._
-    val request = Request(keepIds)
-    call(Eliza.internal.getEmailParticipantsForKeeps(), body = Json.toJson(request)).map { response =>
-      response.json.as[Response].emailParticipantsByKeepId
-    }
-  }
-
   def getElizaKeepStream(userId: Id[User], limit: Int, beforeId: Option[Id[Keep]], filter: ElizaFeedFilter): Future[Map[Id[Keep], DateTime]] = {
     import GetElizaKeepStream._
     call(Eliza.internal.getElizaKeepStream(userId, limit, beforeId, filter)).map { response =>
@@ -442,17 +433,6 @@ object ElizaServiceClient {
     case class Response(discussions: Map[Id[Keep], CrossServiceDiscussion])
     implicit val requestFormat: Format[Request] = Json.format[Request]
     implicit val responseFormat: Format[Response] = Json.format[Response]
-  }
-
-  object GetEmailParticipantsForKeep {
-    case class Request(keepIds: Set[Id[Keep]])
-    case class Response(emailParticipantsByKeepId: Map[Id[Keep], Map[EmailAddress, (Id[User], DateTime)]])
-    implicit val requestFormat: Format[Request] = Json.format[Request]
-    implicit val responseFormat: Format[Response] = {
-      implicit val tupleFormat: Format[(Id[User], DateTime)] = TupleFormat.tuple2Format[Id[User], DateTime]
-      implicit val emailMapFormat: Format[Map[EmailAddress, (Id[User], DateTime)]] = TraversableFormat.mapFormat(_.address, EmailAddress.validate(_).toOption)
-      Json.format[Response]
-    }
   }
 
   object MarkKeepsAsReadForUser {

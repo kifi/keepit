@@ -99,7 +99,7 @@ k.messageHeader = k.messageHeader || (function ($, win) {
 
     shadePane: function () {
       if (k.pane) {
-        var $who = this.$el.closest('.kifi-thread-who').css('overflow', 'hidden').addClass('kifi-active');
+        var $who = this.$el.closest('.kifi-thread-who').addClass('kifi-active');
         k.pane.shade();
         clearTimeout($who.data('t'));
       }

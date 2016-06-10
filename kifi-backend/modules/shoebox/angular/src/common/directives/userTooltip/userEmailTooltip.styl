@@ -1,0 +1,56 @@
+.kf-uet
+  position: absolute
+  top: -55px
+  left: -28px
+  background-color: #fff
+  color: alpha(black, 1)
+  padding: 10px
+  box-shadow: 0 3px 5px rgba(0,0,0,.1)
+  border: 1px solid #b8c5d2
+  border-radius: 3px
+  text-align: left
+  cursor: default
+  z-index: 100
+
+  &.ng-enter
+  &.ng-leave
+    transition: transform 90ms, opacity 90ms
+    transform-origin: 15% bottom
+
+  &.ng-enter:not(.ng-enter-active)
+  &.ng-leave-active
+    transform: translate(0, 3px) scale(.9)
+    opacity: 0
+
+  &::after
+    content: ''
+    position: absolute
+    height: 16px
+    width: 16px
+    bottom: -6px
+    left: 29px
+    box-sizing: border-box
+    border-color: inherit
+    background-color: #fff
+    box-shadow: 2px 2px 3px rgba(0,0,0,.1)
+    transform: rotate(45deg)
+
+.kf-uet-below
+  top: 25px
+  bottom: -45px
+
+  &::after
+    top: -6px
+    bottom: auto
+    box-shadow: none
+
+.kf-uet-top
+  display: table
+  table-layout: fixed
+  border-collapse: collapse
+  max-width: 320px
+  position: relative
+  z-index: 1  // to cover triangle below
+  border-radius: 2px
+  background: white
+  font-smoothing: autoaliased

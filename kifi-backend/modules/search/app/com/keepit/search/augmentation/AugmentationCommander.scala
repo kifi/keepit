@@ -179,7 +179,7 @@ class AugmentationCommanderImpl @Inject() (
       val keptAtDocValues: NumericDocValues = reader.getNumericDocValues(KeepFields.keptAtField)
       val recordDocValues = reader.getBinaryDocValues(KeepFields.recordField)
 
-      val docs = reader.termDocsEnum(uriTerm)
+      val docs = reader.postings(uriTerm)
 
       def getKeepRecord(docId: Int): KeepRecord = {
         val ref = recordDocValues.get(docId)

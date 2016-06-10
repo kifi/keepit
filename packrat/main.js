@@ -519,6 +519,17 @@ var socketHandlers = {
 
     var keep = keepData[keepId];
     if (keep) {
+      if (keep.recipients.users.length > users.length && !users.some(idIs(me.id))) {
+        removeNotification(keepId);
+        forEachTabAtLocator('/messages/' + keepId, function (tab) {
+          api.tabs.emit(tab, 'show_pane', {
+            trigger: 'evictedAutoNavigate',
+            locator: getDefaultPaneLocator(),
+            redirected: false
+          }, {queue: 1});
+        });
+        return;
+      }
       keep.recipients.users = users;
       keep.recipients.emails = emails;
       keep.recipients.libraries = libraries;
@@ -602,10 +613,6 @@ function emitAllTabs(name, data, options) {
   return api.tabs.each(function(tab) {
     api.tabs.emit(tab, name, data, options);
   });
-}
-
-function emitThreadInfoToTab(th, keep, keepActivity, tab) {
-  api.tabs.emit(tab, 'thread_info', {th: th, keep: keep, activity: keepActivity}, {queue: 1});
 }
 
 function emitThreadToTab(id, keep, activity, tab) {
@@ -763,34 +770,59 @@ api.port.on({
   },
   update_keepscussion_recipients: function (data, respond, tab) {
     var d = pageData[tab.nUri];
-    var newUsers = data.newUsers;
-    var newEmails = data.newEmails;
-    var newLibraries = data.newLibraries;
+    var keepId = data.keepId;
+    var newUsers = data.newUsers || [];
+    var newEmails = data.newEmails || [];
+    var newLibraries = data.newLibraries || [];
+    var removeUsers = data.removeUsers || [];
+    var removeEmails = data.removeEmails || [];
+    var removeLibraries = data.removeLibraries || [];
+
     var params = {
       libraries: {
-        add: newLibraries.map(getId),
-        remove: []
+        add: newLibraries,
+        remove: removeLibraries
       },
       users: {
-        add: newUsers.map(getId),
-        remove: []
+        add: newUsers,
+        remove: removeUsers
       },
       emails: {
-        add: newEmails.map(getId),
-        remove: []
+        add: newEmails,
+        remove: removeEmails
       },
       source: api.browser.name
     };
-    var keep = keepData[data.keepId];
-    var activity = activityData[data.keepId];
-    var permissions = keep && keep.viewer && keep.viewer.permissions || [];
+    var removingSelf = (removeUsers.indexOf(me.id) !== -1);
 
-    if (keep && permissions.indexOf('add_participants') === -1) {
+    var keep = keepData[keepId];
+    var activity = activityData[keepId];
+    var permissions = keep && keep.viewer && keep.viewer.permissions || [];
+    var requestedAdd = (newUsers.length > 0 || newLibraries.length > 0 || newEmails.length > 0);
+    var requestedRemove = (removeUsers.length > 0 || removeLibraries.length > 0 || removeEmails.length > 0);
+    if (keep && !removingSelf && (
+      (requestedAdd && permissions.indexOf('add_participants') === -1) ||
+      (requestedRemove && permissions.indexOf('remove_participants') === -1)
+    )) {
       return respond(false);
     }
 
-    ajax('POST', '/ext/keeps/' + data.keepId + '/recipients', params, respond.bind(null, true), respond.bind(null, false));
+    if (removingSelf) {
+      removeNotification(keepId);
+      forEachTabAtLocator('/messages/' + keepId, function (tab) {
+        api.tabs.emit(tab, 'show_pane', {
+          trigger: 'evictedAutoNavigate',
+          locator: getDefaultPaneLocator(),
+          redirected: false
+        }, {queue: 1});
+      });
+    }
+
+    updateKeepReciepients(keepId, params)
+    .then(respond.bind(null, true))
+    .catch(respond.bind(null, false));
   },
+
   keeps_and_libraries_and_organizations_and_me_and_experiments: function (_, respond, tab) {
     var d = pageData[tab.nUri];
 
@@ -807,12 +839,16 @@ api.port.on({
       libraries = unique(libraries, getId);
 
       var recentLibIds = loadRecentLibs();
-      if (guideData && guideData.library && recentLibIds.indexOf(guideData.library.id) < 0) {
-        var i = libraries.findIndex(idIs(guideData.library.id));
-        if (i >= 0) {
-          libraries = libraries.splice(i, 1).concat(libraries);  // list guided library first
+      if (guideData) {
+        var guideLibId = (guideData.library &&  guideData.library.id) || mySysLibIds[0];
+        if (guideLibId) {
+          var i = libraries.findIndex(idIs(guideLibId));
+          if (i >= 0) {
+            libraries = libraries.splice(i, 1).concat(libraries);  // list guided library first
+          }
         }
       }
+
       libraries.filter(idIsIn(mySysLibIds)).forEach(setProp('system', true));
       libraries.filter(idIsIn(recentLibIds)).forEach(setProp('recent', true));
       var keeps = d ? d.keeps : [];
@@ -1057,6 +1093,7 @@ api.port.on({
     (pageData[tab.nUri] || {}).shown = true;
     logEvent('slider', 'sliderShown', data.urls);
     if (data.action) {
+      getDefaultLibraries(); // prime the cache
       tracker.track('user_expanded_keeper', {action: data.action});
     }
   },
@@ -1168,7 +1205,7 @@ api.port.on({
     })
     .then(function (activityResponseData) {
       log('[send_keepscussion] get activity resp:', activityResponseData);
-      activityData[keepId] = activityResponseData.events;
+      activityData[keepId] = activityResponseData;
     })
     .catch(function (req) {
       log('#c00', '[send_keepscussion] resp:', req);
@@ -1247,7 +1284,7 @@ api.port.on({
       var newActivity = responseData.events;
       log('[activity_from] newActivity', newActivity);
       if (newActivity) {
-        var allActivity = activityData[keepId].events = newActivity.concat(cachedActivityEvents).filter(filterDuplicates(getId)).sort(function (a, b) {
+        activityData[keepId].events = newActivity.concat(cachedActivityEvents).filter(filterDuplicates(getId)).sort(function (a, b) {
           return b.timestamp - a.timestamp;
         });
         respond({ activity: newActivity });
@@ -1274,26 +1311,20 @@ api.port.on({
 
     function doThread(id, keep, keepActivity) {
       var th = notificationsById[id];
-      if (th) {
-        emitThreadInfoToTab(th, keep, keepActivity, tab);
-      } else {
-        // TODO: remember that this tab needs this thread info until it gets it or its pane changes?
+      if (!th) {
         socket.send(['get_one_thread', id], function (th) {
           if (th) {
             standardizeNotification(th);
             updateIfJustRead(th);
             notificationsById[th.thread] = th;
-          } else { // th = null if the thread has no notif (e.g. deeplink to user's own keep)
-            th = { thread: id };
           }
-          emitThreadInfoToTab(th, keep, keepActivity, tab);
         });
       }
+
       var msgs = messageData[id];
       if (msgs) {
         emitThreadToTab(id, keep, keepActivity, tab);
       } else {
-        // TODO: remember that this tab needs this thread until it gets it or its pane changes?
         socket.send(['get_thread', id]);
       }
     }
@@ -1798,6 +1829,7 @@ function removeNotification(threadId) {
 
   delete notificationsById[threadId];
   delete threadReadAt[threadId];
+  delete keepData[threadId];
 
   tellVisibleTabsNoticeCountIfChanged();
 }
@@ -2254,7 +2286,6 @@ function kifify(tab) {
     }
     kififyWithPageData(tab, d);
   } else {
-    getDefaultLibraries(); // prime the cache
     ajax('POST', '/ext/page', {url: url}, gotPageDetailsFor.bind(null, url, tab), function fail(xhr) {
       if (xhr.status === 403) {
         clearSession();
@@ -2385,7 +2416,7 @@ function gotPageThreads(uri, nUri, threads, numTotal) {
 }
 
 function isSent(th) {
-  return th.firstAuthor != null && th.participants[th.firstAuthor].id === me.id;
+  return th.firstAuthor != null && th.participants[th.firstAuthor] && th.participants[th.firstAuthor].id === me.id;
 }
 
 function isUnread(th) {
@@ -2981,6 +3012,12 @@ function sendKeep(data) {
   });
 }
 
+function updateKeepReciepients(keepId, data) {
+  return new Promise(function (resolve, reject) {
+    ajax('POST', '/api/1/keeps/' + keepId + '/recipients', data, resolve, reject);
+  });
+}
+
 function getUrlPatterns(next) {
   ajax('GET', '/ext/pref/rules', function gotUrlPatterns(o) {
     log('[gotUrlPatterns]', o);
@@ -3070,6 +3107,7 @@ function authenticate(callback, retryMs) {
   function done(data) {
     log('[authenticate:done] reason: %s session: %o', api.loadReason, data);
     unstore('logout');
+    getDefaultLibraries(); // prime the cache
 
     api.toggleLogging(data.experiments.indexOf('extension_logging') >= 0);
     me = standardizeUser(data.user, data.orgs);

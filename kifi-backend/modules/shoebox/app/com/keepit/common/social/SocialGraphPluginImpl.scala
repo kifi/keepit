@@ -72,7 +72,7 @@ private[social] class SocialGraphActor @Inject() (
 
     case FetchUserInfo(socialUserInfoId) =>
       val socialUserInfo = db.readOnlyMaster { implicit session =>
-        socialRepo.get(socialUserInfoId)
+        socialRepo.getNoCache(socialUserInfoId)
       }
       fetchUserInfo(socialUserInfo)
       sender ! (())
@@ -132,7 +132,12 @@ private[social] class SocialGraphActor @Inject() (
         db.readWrite { implicit s => socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.TOKEN_EXPIRED).withLastGraphRefresh()) }
         log.warn(s"SocialUserInfo token expired: $socialUserInfo", ex)
         Seq()
+      case ae: AuthException if Option(ae.response).exists(_.status == 429) =>
+        log.warn(s"[fetchUserInfo] Got rate limited for: $socialUserInfo")
+        db.readWrite { implicit s => socialRepo.save(socialUserInfo.withLastGraphRefresh()) }
+        Seq()
       case ae: AuthException =>
+        log.warn(s"[fetchUserInfo] AuthException: $socialUserInfo", ae)
         db.readWrite { implicit s => socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.USER_NOT_FOUND).withLastGraphRefresh()) }
         Seq()
       case ex: Exception =>

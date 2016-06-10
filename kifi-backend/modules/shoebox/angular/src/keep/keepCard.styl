@@ -23,16 +23,17 @@ minWidthForBoxed = maxWidthForNarrowKeep + 1px
   cursor: pointer
   position: relative
 
-.kf-keep-card-add-btn
-  display: inline-block
+.kf-keep-card-add-container
   position: relative
-  background-color: transparent
-  border: none
-  padding: 0px
   width: 32px
-  height: 32px
-  transform: scale(.66)
-  right: 5px
+  height: 24px
+  right: 4px
+
+.kf-keep-card-add-btn
+  position: relative
+  transform: scale(.6)
+  bottom: 4px
+  cursor: pointer
 
   &:hover
     opacity: .7
@@ -47,12 +48,26 @@ minWidthForBoxed = maxWidthForNarrowKeep + 1px
 
 .kf-keep-card-participants-more-tooltip
   display: none
-  left: calc(50% - 70px)
+  left: calc(50%)
   top: 25px
-  width: 140px
   text-align: left
-  padding: 10px
+  padding: 5px
   color: black
+  cursor: default
+  white-space: nowrap
+
+  &::after
+    content: ''
+    position: absolute
+    height: 10px
+    width: 100%
+    top: -10px
+    left: 0px
+
+.kf-keep-card-participants-more-member
+  &.kf-link
+    &:hover
+      text-decoration: none
 
 .kf-keep-card-initial-message-container
   display: flex
@@ -95,10 +110,10 @@ minWidthForBoxed = maxWidthForNarrowKeep + 1px
         border-radius: (keepRectBorderRadius + 2px) (keepRectBorderRadius + 2px) keepRectBorderRadius keepRectBorderRadius
 
 .kf-keep-card-library-chip
+  background: gray
   border-radius: 3px
   font-size: 12px
   max-width: 120px
-  background: gray
   display: inline-flex
   padding: 2px 6px
   color: white
@@ -110,17 +125,28 @@ minWidthForBoxed = maxWidthForNarrowKeep + 1px
     flex-shrink: 0
     fill: white
 
-  > span
-    overflow: hidden
-    text-overflow: ellipsis
-    white-space: nowrap
-
   > img
     width: 12px
     height: 12px
     flex-shrink: 0;
     margin-top: 1.5px
     margin-right: 5px
+
+  > span
+    overflow: hidden
+    text-overflow: ellipsis
+    white-space: nowrap
+
+.kf-keep-card-email-chip
+  display: table-cell
+  text-align: center
+  background: linkBlueColor
+  color: white
+  border-radius: 100%
+  height: 20px
+  width: 20px
+  font-size: 14px
+  line-height: 20px
 
 .kf-keep-header
   border-bottom: 1px solid defaultBorderColor

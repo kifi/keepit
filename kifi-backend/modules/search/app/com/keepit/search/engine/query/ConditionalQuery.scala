@@ -2,7 +2,7 @@ package com.keepit.search.engine.query
 
 import com.keepit.common.logging.Logging
 import com.keepit.search.index.Searcher
-import org.apache.lucene.index.AtomicReaderContext
+import org.apache.lucene.index.LeafReaderContext
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.ComplexExplanation
@@ -17,7 +17,7 @@ import java.util.{ Set => JSet }
 
 class ConditionalQuery(val source: Query, val condition: Query) extends Query {
 
-  override def createWeight(searcher: IndexSearcher): Weight = new ConditionalWeight(this, searcher.asInstanceOf[Searcher])
+  override def createWeight(searcher: IndexSearcher, needsScores: Boolean): Weight = new ConditionalWeight(this, searcher.asInstanceOf[Searcher], needsScores)
 
   override def rewrite(reader: IndexReader): Query = {
     val rewrittenSrc = source.rewrite(reader)
@@ -42,13 +42,10 @@ class ConditionalQuery(val source: Query, val condition: Query) extends Query {
   override def hashCode(): Int = source.hashCode() + condition.hashCode()
 }
 
-class ConditionalWeight(query: ConditionalQuery, searcher: Searcher) extends Weight with Logging {
+class ConditionalWeight(query: ConditionalQuery, searcher: Searcher, needsScores: Boolean) extends Weight(query) with Logging {
 
-  val sourceWeight = query.source.createWeight(searcher)
-  val conditionWeight = query.condition.createWeight(searcher)
-
-  override def getQuery() = query
-  override def scoresDocsOutOfOrder() = false
+  val sourceWeight = query.source.createWeight(searcher, needsScores)
+  val conditionWeight = query.condition.createWeight(searcher, needsScores)
 
   override def getValueForNormalization() = {
     val sum = sourceWeight.getValueForNormalization
@@ -61,7 +58,7 @@ class ConditionalWeight(query: ConditionalQuery, searcher: Searcher) extends Wei
     conditionWeight.normalize(norm, topLevelBoost * query.getBoost())
   }
 
-  override def explain(context: AtomicReaderContext, doc: Int) = {
+  override def explain(context: LeafReaderContext, doc: Int) = {
     val reader = context.reader
     val sc = scorer(context, reader.getLiveDocs);
     val exists = (sc != null && sc.advance(doc) == doc);
@@ -104,7 +101,7 @@ class ConditionalWeight(query: ConditionalQuery, searcher: Searcher) extends Wei
     result
   }
 
-  override def scorer(context: AtomicReaderContext, acceptDocs: Bits): Scorer = {
+  override def scorer(context: LeafReaderContext, acceptDocs: Bits): Scorer = {
     val sourceScorer = sourceWeight.scorer(context, acceptDocs)
     if (sourceScorer == null) null
     else {

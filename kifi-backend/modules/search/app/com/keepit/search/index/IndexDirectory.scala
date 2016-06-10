@@ -15,24 +15,25 @@ trait IndexDirectory extends Directory with BackedUpDirectory {
 
 trait IndexStore extends ObjectStore[ArchivedIndexDirectory, File]
 
-class ArchivedIndexDirectory(dir: File, protected val tempDir: File, store: IndexStore) extends MMapDirectory(dir) with ArchivedDirectory with IndexDirectory {
+class ArchivedIndexDirectory(dir: File, protected val tempDir: File, store: IndexStore) extends MMapDirectory(dir.toPath) with ArchivedDirectory with IndexDirectory {
   def asFile() = Some(dir)
+  def getDirectoryFile() = dir
   protected def getArchive() = store.syncGet(this).get
   protected def saveArchive(tarFile: File) = store += (this, tarFile)
 }
 
 class VolatileIndexDirectory extends RAMDirectory with IndexDirectory with Logging {
   def asFile() = None
-  def scheduleBackup(): Unit = log.warn(s"Cannot schedule backup of volatile index directory ${this.getLockID}")
-  def cancelBackup(): Unit = log.warn(s"Cannot cancel backup of volatile index directory ${this.getLockID}")
+  def scheduleBackup(): Unit = log.warn(s"Cannot schedule backup of volatile index directory $this")
+  def cancelBackup(): Unit = log.warn(s"Cannot cancel backup of volatile index directory $this")
   def doBackup(): Boolean = false
-  def restoreFromBackup(): Unit = log.warn(s"Cannot restore volatile index directory ${this.getLockID}")
+  def restoreFromBackup(): Unit = log.warn(s"Cannot restore volatile index directory $this")
 }
 
 case class IndexStoreInbox(dir: File) extends S3InboxDirectory
 
 class S3IndexStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val accessLog: AccessLog, val inbox: IndexStoreInbox) extends S3FileStore[ArchivedIndexDirectory] with IndexStore {
-  def idToKey(indexDirectory: ArchivedIndexDirectory): String = indexDirectory.getDirectory().getName + ".tar.gz"
+  def idToKey(indexDirectory: ArchivedIndexDirectory): String = indexDirectory.getDirectoryFile().getName + ".tar.gz"
 }
 
 class InMemoryIndexStoreImpl extends InMemoryFileStore[ArchivedIndexDirectory] with IndexStore

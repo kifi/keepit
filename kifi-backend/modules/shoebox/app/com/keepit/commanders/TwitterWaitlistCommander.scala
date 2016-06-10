@@ -4,8 +4,9 @@ import java.io.FileOutputStream
 
 import com.google.inject.{ Provider, Singleton, Inject, ImplementedBy }
 import com.keepit.common.concurrent.ReactiveLock
+import com.keepit.common.crypto.RatherInsecureDESCrypt
 import com.keepit.common.db.slick.DBSession.RSession
-import com.keepit.common.db.{ State, Id }
+import com.keepit.common.db.{ ExternalId, State, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.oauth.{ OAuth1TokenInfo, TwitterUserShow, TwitterOAuthProvider }
@@ -37,6 +38,9 @@ trait TwitterWaitlistCommander {
   def getFakeWaitlistLength(): Long
   def getWaitlist: Seq[(TwitterWaitlistEntry, Option[TwitterSyncState])]
   def acceptUser(userId: Id[User], handle: TwitterHandle): Either[String, TwitterSyncState]
+
+  def getSyncKey(userExtId: ExternalId[User]): String
+  def getUserFromSyncKey(urlKey: String): Option[ExternalId[User]]
 }
 
 @Singleton
@@ -233,12 +237,17 @@ class TwitterWaitlistCommanderImpl @Inject() (
   }
 
   private def createSync(userId: Id[User], sui: SocialUserInfo, handle: TwitterHandle, target: SyncTarget, entryOpt: Option[TwitterWaitlistEntry]): Either[String, TwitterSyncState] = {
+    val (titleNoun, slugNoun, actionVerb) = target match {
+      case SyncTarget.Favorites => ("Favorites", "favorites", "favorited")
+      case SyncTarget.Tweets => ("Links", "links", "shared")
+    }
+
     val addRequest = LibraryInitialValues(
-      name = s"@${handle.value}’s Twitter Links",
+      name = s"@${handle.value}’s Twitter $titleNoun",
       visibility = LibraryVisibility.PUBLISHED,
-      slug = Some(s"${handle.value}-twitter-links"),
+      slug = Some(s"${handle.value}-twitter-$slugNoun"),
       kind = Some(LibraryKind.USER_CREATED), // bad!
-      description = Some(s"Interesting pages, articles, and links I've shared on Twitter: https://twitter.com/${handle.value}"),
+      description = Some(s"Interesting pages, articles, and links I've $actionVerb on Twitter: https://twitter.com/${handle.value}"),
       color = Some(LibraryColor.pickRandomLibraryColor()),
       listed = Some(true)
     )
@@ -251,7 +260,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
           twitterWaitlistRepo.save(entry.copy(state = TwitterWaitlistEntryStates.ACCEPTED, twitterHandle = Some(handle)))
         }
       }
-      val sync = twitterSyncCommander.internTwitterSync(Some(userId), lib.id.get, handle, SyncTarget.Tweets)
+      val sync = twitterSyncCommander.internTwitterSync(Some(userId), lib.id.get, handle, target)
       log.info(s"[createSync] Sync created for $userId, ${handle.value}")
       syncTwitterShow(handle, sui, lib.id.get).andThen {
         case _ => // Always sync, even if show failed to update
@@ -382,6 +391,16 @@ class TwitterWaitlistCommanderImpl @Inject() (
         imageFile.file // To force imageFile not to be GCed
       }
     }
+  }
+
+  private val crypt = new RatherInsecureDESCrypt
+  private val key = crypt.stringToKey("TwittersyncWhoooooaaaaaH")
+  def getSyncKey(userExtId: ExternalId[User]): String = {
+    crypt.crypt(key, userExtId.id).trim()
+  }
+
+  def getUserFromSyncKey(urlKey: String): Option[ExternalId[User]] = {
+    crypt.decrypt(key, urlKey).map(_.trim()).toOption.flatMap(ExternalId.asOpt[User])
   }
 }
 

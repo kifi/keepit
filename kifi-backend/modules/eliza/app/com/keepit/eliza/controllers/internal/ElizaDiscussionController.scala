@@ -87,7 +87,7 @@ class ElizaDiscussionController @Inject() (
       contextBuilder.build
     }
     implicit val time = input.time
-    discussionCommander.sendMessage(input.userId, input.text, input.keepId, source = input.source).map { msg =>
+    discussionCommander.sendMessage(input.userId, input.text, input.keepId, source = input.source)(time = time, context = context).map { msg =>
       val output = Response(msg)
       Ok(Json.toJson(output))
     }
@@ -175,13 +175,6 @@ class ElizaDiscussionController @Inject() (
     val beforeKeepId = beforeId.map(Id[Keep])
     val lastActivityByKeepId = db.readOnlyMaster(implicit s => userThreadRepo.getThreadStream(userId, limit, beforeKeepId, filter))
     Ok(Json.obj("lastActivityByKeepId" -> Json.toJson(lastActivityByKeepId)))
-  }
-
-  def getEmailParticipantsForKeeps() = Action(parse.tolerantJson) { request =>
-    import GetEmailParticipantsForKeep._
-    val keepIds = request.body.as[Request].keepIds
-    val emailParticipantsByKeepIds = discussionCommander.getEmailParticipantsForKeeps(keepIds)
-    Ok(Json.toJson(Response(emailParticipantsByKeepIds)))
   }
 
   def getInitialRecipientsByKeepId() = Action.async(parse.tolerantJson) { request =>

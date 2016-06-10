@@ -29,7 +29,6 @@ trait ElizaDiscussionCommander {
   def getMessagesOnKeep(keepId: Id[Keep], fromIdOpt: Option[Id[ElizaMessage]], limit: Int): Future[Seq[Message]]
   def getCrossServiceDiscussionsForKeeps(keepIds: Set[Id[Keep]], fromTime: Option[DateTime], maxMessagesShown: Int): Map[Id[Keep], CrossServiceDiscussion]
   def syncAddParticipants(keepId: Id[Keep], event: KeepEventData.ModifyRecipients, source: Option[KeepEventSource]): Future[Unit]
-  def getEmailParticipantsForKeeps(keepIds: Set[Id[Keep]]): Map[Id[Keep], Map[EmailAddress, (Id[User], DateTime)]]
   def sendMessage(userId: Id[User], txt: String, keepId: Id[Keep], source: Option[MessageSource])(implicit time: CrossServiceTime, context: HeimdalContext): Future[Message]
   def editParticipantsOnKeepForOldElizaClients(keepId: Id[Keep], editor: Id[User], newUsers: Seq[Id[User]], newNonUsers: Seq[BasicContact], source: Option[KeepEventSource])(implicit context: HeimdalContext): Future[Boolean]
   def modifyRecipientsForKeep(keepId: Id[Keep], userAttribution: Id[User], diff: KeepRecipientsDiff, source: Option[KeepEventSource])(implicit ctxt: HeimdalContext): Future[(MessageThread, KeepRecipientsDiff)]
@@ -133,16 +132,6 @@ class ElizaDiscussionCommanderImpl @Inject() (
           sentOnUriId = None
         ))
       }
-    }
-  }
-
-  def getEmailParticipantsForKeeps(keepIds: Set[Id[Keep]]): Map[Id[Keep], Map[EmailAddress, (Id[User], DateTime)]] = {
-    db.readOnlyMaster { implicit session =>
-      nonUserThreadRepo.getByKeepIds(keepIds)
-    }.mapValues {
-      _.map(t => (t.participant, t.createdBy, t.createdAt)).map {
-        case (EmailParticipant(address), addedBy, addedAt) => address -> (addedBy, addedAt)
-      }.toMap
     }
   }
 

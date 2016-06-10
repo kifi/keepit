@@ -3,7 +3,7 @@ package com.keepit.search.index
 import org.apache.lucene.index._
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConversions._
-import org.apache.lucene.index.AtomicReader.CoreClosedListener
+import org.apache.lucene.index.LeafReader.CoreClosedListener
 
 object WrappedIndexReader {
 
@@ -78,10 +78,10 @@ class WrappedIndexReader(val inner: DirectoryReader, val wrappedSubReaders: Arra
     }
   }
 
-  lazy val asAtomicReader: WrappedSubReader = new WrappedSubReader("", SlowCompositeReaderWrapper.wrap(this), getIdMapper)
+  lazy val asLeafReader: WrappedSubReader = new WrappedSubReader("", SlowCompositeReaderWrapper.wrap(this), getIdMapper)
 }
 
-class WrappedSubReader(val name: String, val inner: AtomicReader, idMapper: IdMapper, val skip: Boolean = false) extends AtomicReader {
+class WrappedSubReader(val name: String, val inner: LeafReader, idMapper: IdMapper, val skip: Boolean = false) extends LeafReader {
   def getIdMapper = idMapper
 
   override def getNumericDocValues(field: String): NumericDocValues = inner.getNumericDocValues(field)

@@ -36,7 +36,7 @@ class KeepSourceCommanderTest extends TestKitSupport with SpecificationLike with
               username = SlackUsername("@ryanpbrewster"),
               timestamp = SlackTimestamp("1234512345.0000"),
               channel = SlackChannelIdAndName(SlackChannelId("C12341234"), SlackChannelName("#pandatime")),
-              rawText = s"random text = ${RandomStringUtils.randomAlphabetic(20)}",
+              text = s"random text = ${RandomStringUtils.randomAlphabetic(20)}",
               attachments = Seq.empty,
               permalink = "http://totallyfakelink.com",
               originalJson = JsNull

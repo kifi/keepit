@@ -60,7 +60,7 @@ k.guide.step1 = k.guide.step1 || function () {
       stepsCopy[2] = $.extend({}, steps[2]);
       stepsCopy[2].arrow = $.extend({}, steps[2].arrow);
       stepsCopy[2].arrow.to = $.extend({}, steps[2].arrow.to);
-      stepsCopy[2].arrow.to.sel = steps[2].arrow.to.sel + '[data-id=' + page.libraryId + ']';
+      stepsCopy[2].arrow.to.sel = steps[2].arrow.to.sel;
       step = k.guide.step(stepsCopy, {
         $guide: $guide,
         page: page,

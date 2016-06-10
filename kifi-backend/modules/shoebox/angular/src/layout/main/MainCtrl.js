@@ -5,10 +5,10 @@ angular.module('kifi')
 .controller('MainCtrl', [
   '$scope', '$rootScope', '$window', '$timeout', '$rootElement', '$q',
   'initParams', 'installService', 'profileService', 'routeService',
-  'modalService', 'libraryService', 'extensionLiaison', '$state',
+  'modalService', 'libraryService', 'extensionLiaison',
   function ($scope, $rootScope, $window, $timeout, $rootElement, $q,
     initParams, installService, profileService, routeService,
-    modalService, libraryService, extensionLiaison, $state) {
+    modalService, libraryService, extensionLiaison) {
 
     var importBookmarksMessageEvent;
     var bannerMessages = {
@@ -251,16 +251,18 @@ angular.module('kifi')
       $rootElement.find('body').addClass('mac');
     }
 
+    profileService.fetchPrefs().then(function() {
+      var guideWillRun = installService.installedVersion && profileService.prefs.auto_show_guide;
+      if (!guideWillRun && profileService.prefs.twitter_sync_promo) {
+        $timeout(tryToTriggerTwitterPromo, 1000);
+      }
+    });
+
     var unregisterAutoShowGuide = $rootScope.$watch(function () {
-      var newInstall = installService.installedVersion && profileService.prefs.auto_show_guide;
-      var ftue = profileService.prefs.has_seen_ftue === false;
-      return newInstall || ftue;
+      return installService.installedVersion && profileService.prefs.auto_show_guide;
     }, function (show) {
       if (show) {
-        if (profileService.prefs.has_seen_ftue === false) {
-          //get started
-          $state.go('getStarted.followLibraries');
-        } else if (profileService.prefs.auto_show_guide) {
+        if (profileService.prefs.auto_show_guide) {
           // guide
           $timeout(function () { // Let the dust settle a bit before starting guide.
             extensionLiaison.triggerGuide();
@@ -271,7 +273,22 @@ angular.module('kifi')
           unregisterAutoShowGuide();
         }
       }
-
     });
+
+    $window.addEventListener('message', function (msg) {
+      if (msg.type === 'guide_end' && profileService.prefs.twitter_sync_promo) {
+        tryToTriggerTwitterPromo();
+      }
+    });
+
+    function tryToTriggerTwitterPromo() {
+      var guide = angular.element('.kifi-guide-4-stage, .kifi-guide-0-stage').length;
+      if (!guide) {
+        // do it.
+        // Consider immediately setting twitter_sync_promo to null.
+        angular.noop();
+      }
+    }
+
   }
 ]);

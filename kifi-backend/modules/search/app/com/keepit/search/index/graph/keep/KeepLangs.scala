@@ -2,9 +2,10 @@ package com.keepit.search.index.graph.keep
 
 import com.keepit.common.strings._
 import com.keepit.search.index.Searcher
-import org.apache.lucene.index.Term
+import org.apache.lucene.index.{ PostingsEnum, Term }
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.util.BytesRef
+
 import scala.collection.mutable
 import scala.math.floor
 
@@ -23,7 +24,7 @@ class KeepLangs(searcher: Searcher) {
       val term = new Term(KeepFields.libraryField, libId.toString)
 
       searcher.foreachReader { reader =>
-        val tp = reader.termPositionsEnum(term)
+        val tp = reader.postings(term, PostingsEnum.PAYLOADS)
         if (tp != null) {
           var doc = tp.nextDoc()
           while (doc < NO_MORE_DOCS) {
