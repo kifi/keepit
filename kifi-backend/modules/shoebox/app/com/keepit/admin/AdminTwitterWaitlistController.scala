@@ -2,7 +2,7 @@ package com.keepit.controllers.admin
 
 import com.google.inject.Inject
 import com.keepit.commanders.{ TwitterPublishingCommander, PathCommander, TwitterWaitlistCommander }
-import com.keepit.commanders.emails.EmailTemplateSender
+import com.keepit.commanders.emails.{ EmailSenderProvider, EmailTemplateSender }
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
@@ -21,6 +21,7 @@ import scala.util.{ Failure, Success, Try }
 class AdminTwitterWaitlistController @Inject() (
     val userActionsHelper: UserActionsHelper,
     twitterWaitlistCommander: TwitterWaitlistCommander,
+    emailSenderProvider: EmailSenderProvider,
     twitterWaitlistRepo: TwitterWaitlistRepo,
     twitterPublishingCommander: TwitterPublishingCommander,
     db: Database,
@@ -96,6 +97,7 @@ class AdminTwitterWaitlistController @Inject() (
             twitterWaitlistRepo.save(entry.withState(TwitterWaitlistEntryStates.ANNOUNCED))
           }
         }
+        sendTwitterEmailToLib(libraryId)
         SeeOther("https://twitter.com/kifi/status/" + status.getId())
       case Failure(e) =>
         db.readWrite { implicit s =>
@@ -108,12 +110,24 @@ class AdminTwitterWaitlistController @Inject() (
   }
 
   def markAsTwitted(userId: Id[User]) = AdminUserAction { implicit request =>
-    val entries = db.readWrite { implicit s =>
+    val states = db.readWrite { implicit s =>
       twitterWaitlistRepo.getByUser(userId) map { entry =>
         twitterWaitlistRepo.save(entry.withState(TwitterWaitlistEntryStates.ANNOUNCED))
       }
+      twitterSyncStateRepo.getByUserIdUsed(userId)
     }
-    Ok(s"Done! ${entries.mkString(";")}")
+    sendTwitterEmailToLib(states.head.libraryId)
+    Ok(s"Done! ${states.mkString(";")}")
   }
 
+  private def sendTwitterEmailToLib(libraryId: Id[Library]) = {
+    val (email, libraryUrl, userId, count) = db.readOnlyMaster { implicit s =>
+      val library = libraryRepo.get(libraryId)
+      val userId = library.ownerId
+      val email = userEmailAddressRepo.getPrimaryByUser(userId).get.address
+      val libraryUrl = libPathCommander.libraryPage(library)
+      (email, libraryUrl, userId, library.keepCount)
+    }
+    emailSenderProvider.twitterWaitlist.sendToUser(email, userId, libraryUrl.absolute, count)
+  }
 }
