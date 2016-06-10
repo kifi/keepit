@@ -1,4 +1,4 @@
-@(userId: com.keepit.common.db.Id[User], twitterLibUrl: String, urlEncodedTwitterLibUrl: String, count: Int)
+@(userId: com.keepit.common.db.Id[User], twitterLibUrl: String, urlEncodedTwitterLibUrl: String, count: Int, syncKey: String)
 @import com.keepit.common.mail.template.helpers._
 
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -153,7 +153,7 @@
                     <td align="center" valign="top">
                       <table width="250" border="0" cellspacing="0" cellpadding="0" align="center">
                         <tbody><tr>
-                          <td bgcolor="#56b263" height="28" align="center" valign="middle" style="font-family:'Lato', Arial, sans-serif; font-size:14px; color:#ffffff; border-radius:10px;"><a href="https://www.kifi.com/twitter/thanks?target=favorites" target="_blank" style="color:#ffffff; text-decoration:none; line-height:20px; display:block;">Add “Your Liked Tweets” library!</a></td>
+                          <td bgcolor="#56b263" height="28" align="center" valign="middle" style="font-family:'Lato', Arial, sans-serif; font-size:14px; color:#ffffff; border-radius:10px;"><a href="https://www.kifi.com/twitter/sync-favorites?k=@syncKey" target="_blank" style="color:#ffffff; text-decoration:none; line-height:20px; display:block;">Add “Your Liked Tweets” library!</a></td>
                         </tr>
                         </tbody></table>
                     </td>

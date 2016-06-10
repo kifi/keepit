@@ -121,13 +121,15 @@ class AdminTwitterWaitlistController @Inject() (
   }
 
   private def sendTwitterEmailToLib(libraryId: Id[Library]) = {
-    val (email, libraryUrl, userId, count) = db.readOnlyMaster { implicit s =>
+    val (email, libraryUrl, userId, count, externalUserId) = db.readOnlyMaster { implicit s =>
       val library = libraryRepo.get(libraryId)
       val userId = library.ownerId
+      val user = userRepo.get(userId)
       val email = userEmailAddressRepo.getPrimaryByUser(userId).get.address
       val libraryUrl = libPathCommander.libraryPage(library)
-      (email, libraryUrl, userId, library.keepCount)
+      (email, libraryUrl, userId, library.keepCount, user.externalId)
     }
-    emailSenderProvider.twitterWaitlist.sendToUser(email, userId, libraryUrl.absolute, count)
+    val syncKey = twitterWaitlistCommander.getSyncKey(externalUserId)
+    emailSenderProvider.twitterWaitlist.sendToUser(email, userId, libraryUrl.absolute, count, syncKey)
   }
 }
