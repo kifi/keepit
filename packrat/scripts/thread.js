@@ -3,6 +3,7 @@
 // @require styles/keeper/participant_colors.css
 // @require scripts/html/keeper/messages.js
 // @require scripts/html/keeper/message_keepscussion.js
+// @require scripts/html/keeper/message_error.js
 // @require scripts/html/keeper/kifi_mustache_tags.js
 // @require scripts/html/keeper/message_email_tooltip.js
 // @require scripts/html/keeper/compose.js
