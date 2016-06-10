@@ -152,14 +152,14 @@ class AdminLibraryController @Inject() (
   }
 
   def sendTwitterEmailToLib(libraryId: Id[Library]) = AdminUserPage.async { implicit request =>
-    val (email, libraryUrl, userId) = db.readOnlyMaster { implicit s =>
+    val (email, libraryUrl, userId, count) = db.readOnlyMaster { implicit s =>
       val library = libraryRepo.get(libraryId)
       val userId = library.ownerId
       val email = userEmailAddressRepo.getPrimaryByUser(userId).get.address
       val libraryUrl = libPathCommander.libraryPage(library)
-      (email, libraryUrl, userId)
+      (email, libraryUrl, userId, library.keepCount)
     }
-    emailSenderProvider.twitterWaitlist.sendToUser(email, userId, libraryUrl.absolute)
+    emailSenderProvider.twitterWaitlist.sendToUser(email, userId, libraryUrl.absolute, count)
     libraryView(libraryId)(request)
   }
 
