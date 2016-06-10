@@ -1,6 +1,7 @@
 package com.keepit.eliza.model
 
 import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.util.Ord
 import com.keepit.eliza.util.MessageFormatter
 import com.keepit.search.index.message.{ ThreadContent, FULL }
 import com.keepit.common.db.{ Id, SequenceNumber }
@@ -32,49 +33,49 @@ class MessagingIndexCommander @Inject() (
     else getMessages(fromId, Id[ElizaMessage](toId.id + 100), maxId)
   }
 
-  private def getThreadContentsForThreadWithSequenceNumber(keepId: Id[Keep], seq: SequenceNumber[ThreadContent]): Future[ThreadContent] = {
+  private def getThreadContentsForThreadWithSequenceNumber(keepId: Id[Keep], seq: SequenceNumber[ThreadContent]): Option[Future[ThreadContent]] = {
     log.info(s"getting content for thread $keepId seq $seq")
     val thread = db.readOnlyReplica { implicit session => threadRepo.getByKeepId(keepId).get }
-    val threadId = thread.id.get
-    val userParticipants: Seq[Id[User]] = thread.participants.allUsers.toSeq
-    val participantBasicUsersFuture = shoebox.getBasicUsers(userParticipants)
-    val participantBasicNonUsers = thread.participants.allNonUsers.map(nu => BasicUserLikeEntity(EmailParticipant.toBasicNonUser(nu)))
-
     val messages: Seq[ElizaMessage] = db.readOnlyReplica { implicit session =>
       messageRepo.get(keepId, 0)
-    }.filterNot(_.from.isSystem).sortBy(-_.createdAt.getMillis)
+    }.filterNot(_.from.isSystem).sortBy(_.createdAt.getMillis)(Ord.descending)
 
-    val digest = try {
-      MessageFormatter.toText(messages.head.messageText).slice(0, 255)
-    } catch {
-      case e: Throwable =>
-        airbrake.notify(e)
-        messages.head.messageText
-    }
-    val content = messages.map { m =>
-      try {
-        MessageFormatter.toText(m.messageText)
+    if (messages.isEmpty) None
+    else Some {
+      val basicUsersFut = shoebox.getBasicUsers(thread.participants.allUsers.toSeq)
+      val basicEmails = thread.participants.allNonUsers.map(nu => BasicUserLikeEntity(EmailParticipant.toBasicNonUser(nu)))
+      val digest = try {
+        MessageFormatter.toText(messages.head.messageText).slice(0, 255)
       } catch {
         case e: Throwable =>
           airbrake.notify(e)
-          m.messageText
+          messages.head.messageText
       }
-    }
+      val content = messages.map { m =>
+        try {
+          MessageFormatter.toText(m.messageText)
+        } catch {
+          case e: Throwable =>
+            airbrake.notify(e)
+            m.messageText
+        }
+      }
 
-    participantBasicUsersFuture.map { participantBasicUsers =>
-      ThreadContent(
-        mode = FULL,
-        id = Id[ThreadContent](threadId.id),
-        seq = seq,
-        participants = participantBasicUsers.values.toSeq.map(BasicUserLikeEntity.apply) ++ participantBasicNonUsers,
-        updatedAt = messages.head.createdAt,
-        url = thread.url,
-        keepId = thread.pubKeepId,
-        pageTitleOpt = thread.pageTitle,
-        digest = digest,
-        content = content,
-        participantIds = userParticipants
-      )
+      basicUsersFut.map { participantBasicUsers =>
+        ThreadContent(
+          mode = FULL,
+          id = Id[ThreadContent](thread.id.get.id),
+          seq = seq,
+          participants = participantBasicUsers.values.toSeq.map(BasicUserLikeEntity.apply) ++ basicEmails,
+          updatedAt = messages.head.createdAt,
+          url = thread.url,
+          keepId = thread.pubKeepId,
+          pageTitleOpt = thread.pageTitle,
+          digest = digest,
+          content = content,
+          participantIds = thread.participants.allUsers.toSeq
+        )
+      }
     }
   }
 
@@ -84,7 +85,7 @@ class MessagingIndexCommander @Inject() (
     val allMessages = getMessages(fromId, toId, maxMessageId)
     log.info(s"got messages ${allMessages.map(_.id.get).mkString(",")}")
     val messagesByKeep = allMessages.groupBy(_.keepId)
-    Future.sequence(messagesByKeep.toSeq.map {
+    Future.sequence(messagesByKeep.toSeq.flatMap {
       case (keepId, messages) =>
         getThreadContentsForThreadWithSequenceNumber(keepId, SequenceNumber(messages.map(_.id.get.id).max))
     })

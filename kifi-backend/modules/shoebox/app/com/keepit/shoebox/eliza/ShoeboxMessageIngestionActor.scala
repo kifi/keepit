@@ -1,14 +1,13 @@
 package com.keepit.shoebox.eliza
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ TagCommander, Hashtags, KeepMutator, KeepCommander }
+import com.keepit.commanders.{ Hashtags, KeepMutator, TagCommander }
 import com.keepit.common.akka.{ FortyTwoActor, SafeFuture }
 import com.keepit.common.core._
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.SlackLog
-import com.keepit.common.util.DeltaSet
 import com.keepit.discussion.{ CrossServiceMessage, Message }
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
@@ -74,16 +73,6 @@ class ShoeboxMessageIngestionActor @Inject() (
               val lastMessageTime = msgs.map(_.sentAt).maxBy(_.getMillis)
               keepMutator.updateLastActivityAtIfLater(keepId, lastMessageTime)
             }
-            def handleKeepEvents() = msgs.flatMap(_.auxData).foreach {
-              case KeepEventData.ModifyRecipients(editor, KeepRecipientsDiff(users, libraries, emails)) =>
-                val diff = KeepRecipientsDiff(
-                  users = DeltaSet.empty.addAll(users.added),
-                  emails = DeltaSet.empty.addAll(emails.added),
-                  libraries = DeltaSet.empty.addAll(libraries.added)
-                )
-                keepMutator.unsafeModifyKeepRecipients(keepId, diff, userAttribution = Some(editor))
-              case KeepEventData.EditTitle(_, _, _) =>
-            }
             def syncTagsFromMessages() = msgs.foreach { msg =>
               val existing = tagCommander.getTagsForMessage(msg.id).toSet
               if (msg.isDeleted) {
@@ -100,7 +89,6 @@ class ShoeboxMessageIngestionActor @Inject() (
             // Apply all of the functions in sequence
             updateMessageSeq()
             updateLastActivity()
-            handleKeepEvents()
             syncTagsFromMessages()
         }
         systemValueRepo.setSequenceNumber(shoeboxMessageSeq, maxSeq)
