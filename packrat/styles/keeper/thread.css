@@ -21,16 +21,7 @@
 .kifi-message-sent:first-child {
   margin-top: 4px;
 }
-.kifi-message-status {
-  position: absolute;
-  right: 10px;
-  top: -6px;
-  line-height: 12px;
-  font-size: 12px;
-  padding: 0 3px;
-  background-color: #fafafa;
-  display: none;
-}
+
 .kifi-message-sent-header-item:not([data-kind="text"]) {
   font-weight: bold;
 }
@@ -53,6 +44,7 @@
 .kifi-message-sent:last-child {
   margin-bottom: 8px;
 }
+.kifi-message-status,
 .kifi-message-sent-stamp {
   position: absolute;
   right: 0;
@@ -61,6 +53,9 @@
   font-size: 10px;
   text-align: right;
   color: #a9a9a9;
+}
+.kifi-message-status {
+  background-color: #fafafa;
 }
 .kifi-message-source {
   font-style: italic;
