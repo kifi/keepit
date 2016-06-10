@@ -27,7 +27,7 @@ final case class NewKeepInfo(
 object NewKeepInfo {
   private implicit val timeFormat: Writes[DateTime] = Writes { dt => DateTimeJsonFormat.writes(dt) }
   private implicit val sourceWrites = SourceAttribution.externalWrites
-  implicit val writes: Writes[NewKeepInfo] = Json.writes[NewKeepInfo]
+  implicit val writes: OWrites[NewKeepInfo] = Json.writes[NewKeepInfo]
 }
 
 final case class NewKeepImageInfo(

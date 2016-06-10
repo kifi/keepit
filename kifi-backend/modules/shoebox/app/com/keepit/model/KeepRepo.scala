@@ -2,7 +2,7 @@ package com.keepit.model
 
 import com.google.inject.{ ImplementedBy, Inject, Provider, Singleton }
 import com.keepit.commanders.{ KeepQuery, LibraryMetadataCache }
-import com.keepit.common.core.anyExtensionOps
+import com.keepit.common.core.{ anyExtensionOps, iterableExtensionOps }
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick._
@@ -11,6 +11,7 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
 import com.keepit.discussion.Message
 import com.keepit.model.FeedFilter._
+import com.keepit.shoebox.data.keep.KeepProximitySection
 import org.joda.time.DateTime
 
 import scala.slick.jdbc.{ GetResult, PositionedResult }
@@ -49,6 +50,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getRecentKeepsByActivity(userId: Id[User], limit: Int, beforeIdOpt: Option[ExternalId[Keep]], afterIdOpt: Option[ExternalId[Keep]], filterOpt: Option[ShoeboxFeedFilter] = None)(implicit session: RSession): Seq[(Keep, DateTime)]
   def pageByLibrary(libraryId: Id[Library], offset: Int, limit: Int, excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
   def getKeepIdsForQuery(query: KeepQuery)(implicit session: RSession): Seq[Id[Keep]]
+  def getSectionedKeepsOnUri(viewer: Id[User], uri: Id[NormalizedURI], seen: Set[Id[Keep]], limit: Int)(implicit session: RSession): Map[KeepProximitySection, Seq[Id[Keep]]]
   def getChangedKeepsFromLibrary(libraryId: Id[Library], seq: SequenceNumber[Keep])(implicit session: RSession): Seq[Keep]
   def getByUriAndLibrariesHash(uriId: Id[NormalizedURI], libIds: Set[Id[Library]])(implicit session: RSession): Seq[Keep]
   def getByUriAndParticipantsHash(uriId: Id[NormalizedURI], users: Set[Id[User]], emails: Set[EmailAddress])(implicit session: RSession): Seq[Keep]
@@ -547,7 +549,7 @@ class KeepRepoImpl @Inject() (
               } yield ktl.keepId).exists
             )
         } yield k
-      case ForUri(uri, viewer, recips) =>
+      case ForUriAndRecipients(uri, viewer, recips) =>
         for {
           k <- rs if k.uriId === uri &&
             (if (recips.libraries.isEmpty) true else ktlRows.filter(ktl => ktl.keepId === k.id && ktl.libraryId.inSet(recips.libraries)).length === recips.libraries.size) &&
@@ -600,6 +602,62 @@ class KeepRepoImpl @Inject() (
 
     val q = activeRows |> filterByTarget |> filterSeenRows |> orderByTime |> pageThroughOrderedRows
     q.list
+  }
+
+  def getSectionedKeepsOnUri(viewer: Id[User], uri: Id[NormalizedURI], seen: Set[Id[Keep]], limit: Int)(implicit session: RSession): Map[KeepProximitySection, Seq[Id[Keep]]] = {
+    /*
+    I am sorry that this method exists.
+    It is a testament to the disasterous combination of my hubris and incompetence.
+
+    The sections are:
+      0 --> direct (i.e., keep_to_user)
+      1 --> indirect via library membership
+      2 --> indirect via org library
+      3 --> indirect via published visibility
+     */
+    val excludeSet: String = if (seen.nonEmpty) seen.map(_.id).mkString("(", ",", ")") else "(-1)"
+    val statement = s"""
+     (SELECT ${KeepProximitySection.Direct.priority} as section, ktu.keep_id, ktu.last_activity_at
+      FROM keep_to_user ktu
+      WHERE ktu.state = 'active' AND ktu.uri_id = $uri
+        AND ktu.user_id = $viewer
+        AND ktu.keep_id NOT IN #$excludeSet
+      LIMIT $limit)
+
+     UNION
+
+     (SELECT ${KeepProximitySection.LibraryMembership.priority} as section, ktl.keep_id, ktl.last_activity_at
+      FROM keep_to_library ktl
+      WHERE ktl.state = 'active' AND ktl.uri_id = $uri
+        AND ktl.library_id IN (SELECT lm.library_id FROM library_membership lm WHERE lm.state = 'active' AND lm.user_id = $viewer)
+        AND ktl.keep_id NOT IN $excludeSet
+      LIMIT $limit)
+
+     UNION
+
+     (SELECT ${KeepProximitySection.OrganizationLibrary.priority} as section, ktl.keep_id, ktl.last_activity_at
+      FROM keep_to_library ktl
+      WHERE ktl.state = 'active' AND ktl.uri_id = $uri
+        AND ktl.visibility IN ('organization', 'published')
+        AND ktl.organization_id IN (SELECT om.organization_id FROM organization_membership om WHERE om.state = 'active' AND om.user_id = $viewer)
+        AND ktl.keep_id NOT IN $excludeSet
+      LIMIT $limit)
+
+     UNION
+
+     (SELECT ${KeepProximitySection.PublishedLibrary.priority} as section, ktl.keep_id, ktl.last_activity_at
+      FROM keep_to_library ktl
+      WHERE ktl.state = 'active' AND ktl.uri_id = $uri
+        AND ktl.visibility = 'published'
+        AND ktl.keep_id NOT IN $excludeSet
+      LIMIT $limit)
+
+     ORDER BY section asc, last_activity_at desc
+     """
+    val sectionedKeeps = new SQLInterpolation_WarningsFixed(StringContext(statement)).sql.as[(Int, Id[Keep], DateTime)].list
+    sectionedKeeps.distinctBy(_._2).take(limit).groupBy(_._1).map {
+      case (section, garbage) => KeepProximitySection.fromInt(section) -> garbage.map(_._2)
+    }
   }
 
   def getByExtIdandLibraryId(extId: ExternalId[Keep], libraryId: Id[Library], excludeSet: Set[State[Keep]])(implicit session: RSession): Option[Keep] = {
