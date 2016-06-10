@@ -97,6 +97,7 @@ GET     /integrations/twitter/thanks  @com.keepit.controllers.website.TwitterWai
 GET     /twitter                    @com.keepit.controllers.website.TwitterWaitlistController.twitterWaitlistLanding()
 GET     /twitter/request            @com.keepit.controllers.website.TwitterWaitlistController.requestToTwitterWaitlist()
 GET     /twitter/thanks             @com.keepit.controllers.website.TwitterWaitlistController.thanksForTwitterWaitlist(target: Option[String])
+GET     /twitter/sync-favorites     @com.keepit.controllers.website.TwitterWaitlistController.createFavoritesSync(k: String)
 
 GET     /i/:id                      @com.keepit.controllers.website.InviteController.userInvite(id: ExternalId[User])
 GET     /join/:creditCodeStr        @com.keepit.controllers.website.InviteController.creditInvite(creditCodeStr: String)

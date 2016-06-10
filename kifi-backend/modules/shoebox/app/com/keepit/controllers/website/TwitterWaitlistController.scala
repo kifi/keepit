@@ -1,9 +1,10 @@
 package com.keepit.controllers.website
 
-import com.google.inject.Inject
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders.{ PathCommander, TwitterWaitlistCommander }
 import com.keepit.common.controller._
-import com.keepit.common.db.Id
+import com.keepit.common.crypto.RatherInsecureDESCrypt
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
@@ -16,6 +17,7 @@ import securesocial.core.SecureSocial
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Success, Try }
 
+@Singleton
 class TwitterWaitlistController @Inject() (
     commander: TwitterWaitlistCommander,
     socialRepo: SocialUserInfoRepo,
@@ -29,6 +31,7 @@ class TwitterWaitlistController @Inject() (
     libraryRepo: LibraryRepo,
     clock: Clock,
     userValueRepo: UserValueRepo,
+    userRepo: UserRepo,
     implicit val ec: ExecutionContext) extends UserActions with ShoeboxServiceController {
 
   def twitterWaitlistLandingRedirectHack() = twitterWaitlistLanding()
@@ -125,7 +128,7 @@ class TwitterWaitlistController @Inject() (
         } else {
           commander.createSyncOrWaitlist(ur.userId, syncTarget) match {
             case Left(error) =>
-              log.warn(s"[thanksForTwitterWaitlist] ${ur.userId} Error when creating sync, $error")
+              log.warn(s"[thanksForTwitterWaitlist] Error ${ur.userId} when creating sync, $error")
               db.readWrite { implicit s => userValueRepo.setValue(ur.userId, UserValueName.TWITTER_SYNC_PROMO, "show_sync") }
               MarketingSiteRouter.marketingSite("twitter-confirmation")
             case Right(Right(sync)) if syncIsReady(sync) =>
@@ -180,6 +183,33 @@ class TwitterWaitlistController @Inject() (
           Ok(Json.obj("complete" -> true, "url" -> libPathCommander.getPathForLibrary(library), "handle" -> sync.twitterHandle.value))
         } else {
           Ok(Json.obj("complete" -> false, "url" -> libPathCommander.getPathForLibrary(library), "handle" -> sync.twitterHandle.value))
+        }
+    }
+  }
+
+  def createFavoritesSync(k: String) = MaybeUserAction { request =>
+    commander.getUserFromSyncKey(k) match {
+      case Some(userExtId) =>
+        db.readOnlyMaster { implicit s => userRepo.getOpt(userExtId) }.map { user =>
+          commander.createSyncOrWaitlist(user.id.get, SyncTarget.Favorites) match {
+            case Right(Right(sync)) =>
+              if (sync.createdAt.isBefore(clock.now.minusMinutes(2))) {
+                db.readWrite { implicit s => userValueRepo.clearValue(user.id.get, UserValueName.TWITTER_SYNC_PROMO) }
+                redirectToLibrary(sync.libraryId)
+              } else {
+                db.readWrite { implicit s => userValueRepo.setValue(user.id.get, UserValueName.TWITTER_SYNC_PROMO, "in_progress") }
+                Redirect("/")
+              }
+            case other =>
+              log.error(s"[thanksForTwitterWaitlist] ${user.id.get} Error when creating favorites: $other")
+              Redirect("/integrations/twitter")
+          }
+        }.getOrElse(Redirect("/integrations/twitter"))
+      case None =>
+        log.error(s"[thanksForTwitterWaitlist] Error, unknown key: $k")
+        request match {
+          case n: NonUserRequest[_] => Redirect("/integrations/twitter")
+          case u: UserRequest[_] => Redirect("/twitter/thanks?target=favorites")
         }
     }
   }

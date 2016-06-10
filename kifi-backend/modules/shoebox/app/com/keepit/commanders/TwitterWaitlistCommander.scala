@@ -4,8 +4,9 @@ import java.io.FileOutputStream
 
 import com.google.inject.{ Provider, Singleton, Inject, ImplementedBy }
 import com.keepit.common.concurrent.ReactiveLock
+import com.keepit.common.crypto.RatherInsecureDESCrypt
 import com.keepit.common.db.slick.DBSession.RSession
-import com.keepit.common.db.{ State, Id }
+import com.keepit.common.db.{ ExternalId, State, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.oauth.{ OAuth1TokenInfo, TwitterUserShow, TwitterOAuthProvider }
@@ -37,6 +38,9 @@ trait TwitterWaitlistCommander {
   def getFakeWaitlistLength(): Long
   def getWaitlist: Seq[(TwitterWaitlistEntry, Option[TwitterSyncState])]
   def acceptUser(userId: Id[User], handle: TwitterHandle): Either[String, TwitterSyncState]
+
+  def getSyncKey(userExtId: ExternalId[User]): String
+  def getUserFromSyncKey(urlKey: String): Option[ExternalId[User]]
 }
 
 @Singleton
@@ -387,6 +391,16 @@ class TwitterWaitlistCommanderImpl @Inject() (
         imageFile.file // To force imageFile not to be GCed
       }
     }
+  }
+
+  private val crypt = new RatherInsecureDESCrypt
+  private val key = crypt.stringToKey("TwittersyncWhoooooaaaaaH")
+  def getSyncKey(userExtId: ExternalId[User]): String = {
+    crypt.crypt(key, userExtId.id).trim()
+  }
+
+  def getUserFromSyncKey(urlKey: String): Option[ExternalId[User]] = {
+    crypt.decrypt(key, urlKey).map(_.trim()).toOption.flatMap(ExternalId.asOpt[User])
   }
 }
 
