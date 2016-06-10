@@ -23,6 +23,7 @@ class EmailTestController @Inject() (
     db: Database,
     pathCommander: PathCommander,
     emailRepo: ElectronicMailRepo,
+    libraryRepo: LibraryRepo,
     emailSenderProvider: EmailSenderProvider,
     emailTemplateSender: EmailTemplateSender,
     orgDomainCommander: OrganizationDomainOwnershipCommander) extends ShoeboxServiceController {
@@ -91,8 +92,12 @@ class EmailTestController @Inject() (
           }
         }
       case "twitterWaitlist" =>
-        val libraryUrl = db.readOnlyMaster { implicit s => pathCommander.libraryPageById(libraryId) }.absolute
-        emailSenderProvider.twitterWaitlist.sendToUser(sendTo, userId, libraryUrl)
+        val (count, libraryUrl) = db.readOnlyMaster { implicit s =>
+          val lib = libraryRepo.get(libraryId)
+          val url = pathCommander.libraryPage(lib).absolute
+          (lib.keepCount, url)
+        }
+        emailSenderProvider.twitterWaitlist.sendToUser(sendTo, userId, libraryUrl, count)
       case "joinByVerifying" =>
         Future.successful(orgDomainCommander.sendMembershipConfirmationEmail(OrganizationDomainSendMemberConfirmationRequest(userId, orgId, sendTo)).right.get)
     }
