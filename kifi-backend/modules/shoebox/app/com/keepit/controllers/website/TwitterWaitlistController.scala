@@ -16,6 +16,7 @@ import play.twirl.api.Html
 import securesocial.core.SecureSocial
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Success, Try }
+import com.keepit.common.http._
 
 @Singleton
 class TwitterWaitlistController @Inject() (
@@ -138,7 +139,7 @@ class TwitterWaitlistController @Inject() (
             case Right(waitOrNewSync) =>
               log.info(s"[thanksForTwitterWaitlist] ${ur.userId} now on waitlist $waitOrNewSync")
               db.readWrite { implicit s => userValueRepo.setValue(ur.userId, UserValueName.TWITTER_SYNC_PROMO, "in_progress") }
-              MarketingSiteRouter.marketingSite("twitter-confirmation")
+              redirectToHomeOrInstall(ur)
           }
         }
     }
@@ -157,6 +158,18 @@ class TwitterWaitlistController @Inject() (
       libraryRepo.get(libraryId)
     }
     Redirect(libPathCommander.getPathForLibrary(library))
+  }
+
+  private def redirectToHomeOrInstall(request: UserRequest[_]) = {
+    val hasSeenInstall = db.readOnlyMaster { implicit s =>
+      userValueRepo.getValue(request.userId, UserValues.hasSeenInstall)
+    }
+    val homeOrInstall = if (request.userAgentOpt.exists(_.canRunExtensionIfUpToDate) && !hasSeenInstall) {
+      HomeControllerRoutes.install
+    } else {
+      HomeControllerRoutes.home
+    }
+    Redirect(homeOrInstall)
   }
 
   def createSync(target: Option[String]) = UserAction { request =>
