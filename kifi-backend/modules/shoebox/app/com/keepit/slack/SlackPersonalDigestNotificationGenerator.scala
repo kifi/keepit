@@ -110,7 +110,7 @@ class SlackPersonalDigestNotificationGenerator @Inject() (
       DescriptionElements(
         "The link you recently sent",
         mostRecentIngestedMsg.channel.name.map(chName => s"in #${chName.value}" --> LinkElement(mostRecentIngestedMsg.permalink)),
-        "was saved in", s"${digest.org.name}'s" --> linkToOrg, "resository on Kifi."
+        "was saved in", s"${digest.org.name}'s" --> linkToOrg, "repository on Kifi (a featured app on Slack)."
       ), DescriptionElements(
         "Get your team's links on top of Google Search results w/ the", "browser add-on" --> LinkElement(PathCommander.browserExtension), "."
       ), DescriptionElements(
