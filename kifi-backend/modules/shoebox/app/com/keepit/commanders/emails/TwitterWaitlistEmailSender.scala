@@ -21,7 +21,7 @@ class TwitterWaitlistEmailSender @Inject() (
     val emailToSend = EmailToSend(
       title = "Kifi — Congrats! You're on the list",
       fromName = Some(Right("Kifi")),
-      from = SystemEmailAddress.NOTIFICATIONS,
+      from = SystemEmailAddress.EISHAY_PUBLIC,
       to = Right(email),
       subject = s"Done!  Your Twitter Library is ready with $count keeps.  Want Your “Liked” Links too?",
       category = NotificationCategory.User.WAITLIST,
