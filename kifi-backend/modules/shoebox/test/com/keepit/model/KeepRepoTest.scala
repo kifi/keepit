@@ -60,5 +60,16 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
         }
       }
     }
+    "get keeps (organized into sections) on a page" in {
+      withDb() { implicit injector =>
+        // Just to ensure that the syntax is valid
+        db.readOnlyMaster { implicit s =>
+          (ktuRepo.count, ktlRepo.count, libraryMembershipRepo.count, orgMembershipRepo.count)
+          keepRepo.getSectionedKeepsOnUri(Id(1), Id(1), Set.empty, limit = 10)
+          keepRepo.getSectionedKeepsOnUri(Id(1), Id(1), Set(Id(42)), limit = 10)
+        }
+        1 === 1
+      }
+    }
   }
 }
