@@ -615,47 +615,30 @@ class KeepRepoImpl @Inject() (
       2 --> indirect via org library
       3 --> indirect via published visibility
      */
-    val excludeSet: String = if (seen.nonEmpty) seen.map(_.id).mkString("(", ",", ")") else "(-1)"
-    val statement = s"""
-     (SELECT ${KeepProximitySection.Direct.priority} as section, ktu.keep_id, ktu.last_activity_at
-      FROM keep_to_user ktu
-      WHERE ktu.state = 'active' AND ktu.uri_id = $uri
-        AND ktu.user_id = $viewer
-        AND ktu.keep_id NOT IN #$excludeSet
-      LIMIT $limit)
+    val orgVisibilities: Set[LibraryVisibility] = Set(LibraryVisibility.ORGANIZATION, LibraryVisibility.PUBLISHED)
+    val pubVisibility: LibraryVisibility = LibraryVisibility.PUBLISHED
 
-     UNION
+    val direct = ktuRows.filter { ktu =>
+      ktu.uriId === uri && ktu.userId === viewer && !ktu.keepId.inSet(seen)
+    }.map(ktu => (KeepProximitySection.Direct.priority, ktu.keepId, ktu.lastActivityAt)).take(limit)
 
-     (SELECT ${KeepProximitySection.LibraryMembership.priority} as section, ktl.keep_id, ktl.last_activity_at
-      FROM keep_to_library ktl
-      WHERE ktl.state = 'active' AND ktl.uri_id = $uri
-        AND ktl.library_id IN (SELECT lm.library_id FROM library_membership lm WHERE lm.state = 'active' AND lm.user_id = $viewer)
-        AND ktl.keep_id NOT IN $excludeSet
-      LIMIT $limit)
+    val lib = ktlRows.filter { ktl =>
+      ktl.uriId === uri && ktl.libraryId.in {
+        lmRows.filter(_.userId === viewer).map(_.libraryId)
+      } && !ktl.keepId.inSet(seen)
+    }.map(ktl => (KeepProximitySection.LibraryMembership.priority, ktl.keepId, ktl.lastActivityAt)).take(limit)
 
-     UNION
+    val org = ktlRows.filter { ktl =>
+      ktl.uriId === uri && ktl.visibility.inSet(orgVisibilities) && ktl.organizationId.in {
+        omRows.filter(_.userId === viewer).map(_.organizationId)
+      } && !ktl.keepId.inSet(seen)
+    }.map(ktl => (KeepProximitySection.OrganizationLibrary.priority, ktl.keepId, ktl.lastActivityAt)).take(limit)
 
-     (SELECT ${KeepProximitySection.OrganizationLibrary.priority} as section, ktl.keep_id, ktl.last_activity_at
-      FROM keep_to_library ktl
-      WHERE ktl.state = 'active' AND ktl.uri_id = $uri
-        AND ktl.visibility IN ('organization', 'published')
-        AND ktl.organization_id IN (SELECT om.organization_id FROM organization_membership om WHERE om.state = 'active' AND om.user_id = $viewer)
-        AND ktl.keep_id NOT IN $excludeSet
-      LIMIT $limit)
+    val published = ktlRows.filter { ktl =>
+      ktl.uriId === uri && ktl.visibility === pubVisibility && !ktl.keepId.inSet(seen)
+    }.map(ktl => (KeepProximitySection.PublishedLibrary.priority, ktl.keepId, ktl.lastActivityAt)).take(limit)
 
-     UNION
-
-     (SELECT ${KeepProximitySection.PublishedLibrary.priority} as section, ktl.keep_id, ktl.last_activity_at
-      FROM keep_to_library ktl
-      WHERE ktl.state = 'active' AND ktl.uri_id = $uri
-        AND ktl.visibility = 'published'
-        AND ktl.keep_id NOT IN $excludeSet
-      LIMIT $limit)
-
-     ORDER BY section asc, last_activity_at desc
-     """
-    val sectionedKeeps = new SQLInterpolation_WarningsFixed(StringContext(statement)).sql.as[(Int, Id[Keep], DateTime)].list
-    sectionedKeeps.distinctBy(_._2).take(limit).groupBy(_._1).map {
+    (direct union lib union org union published).list.distinctBy(_._2).take(limit).groupBy(_._1).map {
       case (section, garbage) => KeepProximitySection.fromInt(section) -> garbage.map(_._2)
     }
   }
