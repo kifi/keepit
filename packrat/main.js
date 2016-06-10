@@ -615,10 +615,6 @@ function emitAllTabs(name, data, options) {
   });
 }
 
-function emitThreadInfoToTab(th, keep, keepActivity, tab) {
-  api.tabs.emit(tab, 'thread_info', {th: th, keep: keep, activity: keepActivity}, {queue: 1});
-}
-
 function emitThreadToTab(id, keep, activity, tab) {
   api.tabs.emit(tab, 'thread', {id: id, keep: keep, activity: activity}, {queue: 1});
 }
@@ -1315,26 +1311,20 @@ api.port.on({
 
     function doThread(id, keep, keepActivity) {
       var th = notificationsById[id];
-      if (th) {
-        emitThreadInfoToTab(th, keep, keepActivity, tab);
-      } else {
-        // TODO: remember that this tab needs this thread info until it gets it or its pane changes?
+      if (!th) {
         socket.send(['get_one_thread', id], function (th) {
           if (th) {
             standardizeNotification(th);
             updateIfJustRead(th);
             notificationsById[th.thread] = th;
-          } else { // th = null if the thread has no notif (e.g. deeplink to user's own keep)
-            th = { thread: id };
           }
-          emitThreadInfoToTab(th, keep, keepActivity, tab);
         });
       }
+
       var msgs = messageData[id];
       if (msgs) {
         emitThreadToTab(id, keep, keepActivity, tab);
       } else {
-        // TODO: remember that this tab needs this thread until it gets it or its pane changes?
         socket.send(['get_thread', id]);
       }
     }
