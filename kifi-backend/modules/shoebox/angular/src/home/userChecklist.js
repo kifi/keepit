@@ -136,8 +136,8 @@ angular.module('kifi')
           },
           {
             name: 'twitter_sync',
-            title: 'Sign up for the Twitter Beta',
-            subtitle: 'Twitter meets deep search',
+            title: 'Sync Twitter with Kifi',
+            subtitle: 'Automatically save tweeted & liked links',
             action: function () {
               $window.open(routeService.connectTwitter,'_blank');
               $analytics.eventTrack('user_clicked_page', {
