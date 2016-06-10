@@ -1,7 +1,7 @@
 package com.keepit.controllers.internal
 
 import com.google.inject.Inject
-import com.keepit.commanders.OrganizationDomainOwnershipCommander
+import com.keepit.commanders.{ PathCommander, OrganizationDomainOwnershipCommander }
 import com.keepit.commanders.emails._
 import com.keepit.common.controller.ShoeboxServiceController
 import com.keepit.common.crypto.PublicIdConfiguration
@@ -21,7 +21,9 @@ import scala.concurrent.Future
 class EmailTestController @Inject() (
     postOffice: LocalPostOffice,
     db: Database,
+    pathCommander: PathCommander,
     emailRepo: ElectronicMailRepo,
+    libraryRepo: LibraryRepo,
     emailSenderProvider: EmailSenderProvider,
     emailTemplateSender: EmailTemplateSender,
     orgDomainCommander: OrganizationDomainOwnershipCommander) extends ShoeboxServiceController {
@@ -90,7 +92,12 @@ class EmailTestController @Inject() (
           }
         }
       case "twitterWaitlist" =>
-        emailSenderProvider.twitterWaitlist.sendToUser(sendTo, userId)
+        val (count, libraryUrl) = db.readOnlyMaster { implicit s =>
+          val lib = libraryRepo.get(libraryId)
+          val url = pathCommander.libraryPage(lib).absolute
+          (lib.keepCount, url)
+        }
+        emailSenderProvider.twitterWaitlist.sendToUser(sendTo, userId, libraryUrl, count)
       case "joinByVerifying" =>
         Future.successful(orgDomainCommander.sendMembershipConfirmationEmail(OrganizationDomainSendMemberConfirmationRequest(userId, orgId, sendTo)).right.get)
     }

@@ -4,7 +4,7 @@ import com.keepit.search.SearchConfig
 import com.keepit.search.index.Searcher
 import com.keepit.search.index.graph.keep.KeepFields
 import com.keepit.search.engine.query.{ RecencyScorer, RecencyQuery }
-import org.apache.lucene.index.AtomicReaderContext
+import org.apache.lucene.index.LeafReaderContext
 import org.apache.lucene.search.{ Weight, MatchAllDocsQuery }
 import org.apache.lucene.util.Bits.MatchAllBits
 
@@ -19,9 +19,9 @@ trait KeepRecencyEvaluator { self: DebugOption =>
     new RecencyQuery(new MatchAllDocsQuery(), KeepFields.lastActivityAt, recencyBoostStrength, halfDecayMillis)
   }
 
-  private[this] lazy val recencyWeight: Weight = searcher.createWeight(recencyQuery)
+  private[this] lazy val recencyWeight: Weight = searcher.createNormalizedWeight(recencyQuery, true)
 
-  protected def getRecencyScorer(readerContext: AtomicReaderContext): RecencyScorer = {
+  protected def getRecencyScorer(readerContext: LeafReaderContext): RecencyScorer = {
     // use MatchAllBits to avoid delete check. this is safe because RecencyScorer is used passively.
     recencyWeight.scorer(readerContext, new MatchAllBits(readerContext.reader.maxDoc())).asInstanceOf[RecencyScorer]
   }
@@ -32,9 +32,9 @@ trait KeepRecencyEvaluator { self: DebugOption =>
     new RecencyQuery(new MatchAllDocsQuery(), KeepFields.lastActivityAt, recencyBoostStrength, halfDecayMillis)
   }
 
-  private[this] lazy val slowDecayingRecencyWeight: Weight = searcher.createWeight(slowDecayingRecencyQuery)
+  private[this] lazy val slowDecayingRecencyWeight: Weight = searcher.createNormalizedWeight(slowDecayingRecencyQuery, true)
 
-  protected def getSlowDecayingRecencyScorer(readerContext: AtomicReaderContext): RecencyScorer = {
+  protected def getSlowDecayingRecencyScorer(readerContext: LeafReaderContext): RecencyScorer = {
     // use MatchAllBits to avoid delete check. this is safe because RecencyScorer is used passively.
     slowDecayingRecencyWeight.scorer(readerContext, new MatchAllBits(readerContext.reader.maxDoc())).asInstanceOf[RecencyScorer]
   }

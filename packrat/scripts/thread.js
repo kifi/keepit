@@ -3,8 +3,8 @@
 // @require styles/keeper/participant_colors.css
 // @require scripts/html/keeper/messages.js
 // @require scripts/html/keeper/message_keepscussion.js
+// @require scripts/html/keeper/message_error.js
 // @require scripts/html/keeper/kifi_mustache_tags.js
-// @require scripts/html/keeper/message_email_tooltip.js
 // @require scripts/html/keeper/compose.js
 // @require scripts/lib/jquery.timeago.js
 // @require scripts/lib/jquery-canscroll.js
@@ -24,35 +24,28 @@ k.panes.thread = k.panes.thread || (function () {
   var $who, $holder, browserName;
 
   var handlers = {
-    thread_info: function (o) {
-      if ($holder && $holder.data('threadId') === o.th.thread) {
-        $holder.data('keep', o.keep);
-        reflectComposePermissions(o.keep);
-        var participants;
-        if (o.keep) {
-          var recipients = o.keep.recipients;
-          participants = Object.keys(recipients).map(function (k) {
-            var p = recipients[k];
-            var kind = k === 'users' ? 'user' : k === 'emails' ? 'email' : k === 'libraries' ? 'library' : null;
-            p.forEach(function (d) {
-              d.kind = kind;
-            });
-            return p;
-          }).reduce(function (a, n) { return a.concat(n); });
-        } else {
-          participants = o.th.participants;
-        }
-        if (o.activity && o.activity.events) {
-          updateAllActivity(o.id, o.activity.events);
-        }
-        k.messageHeader.init($who.find('.kifi-message-header'), o.th.thread, participants, o.keep);
-      }
-    },
     thread: function (o) {
-      if ($holder && $holder.data('threadId') === o.id) {
-        $holder.data('keep', o.keep);
-        reflectComposePermissions(o.keep);
-        updateAllActivity(o.id, o.activity.events);
+      var keep = o.keep;
+      var keepId = keep.id;
+      var activity = o.activity;
+
+      if ($holder && $holder.data('threadId') === keepId) {
+        $holder.data('keep', keep);
+        reflectComposePermissions(keep);
+        var recipients = keep.recipients;
+        var participants = Object.keys(recipients).map(function (k) {
+          var p = recipients[k];
+          var kind = k === 'users' ? 'user' : k === 'emails' ? 'email' : k === 'libraries' ? 'library' : null;
+          p.forEach(function (d) {
+            d.kind = kind;
+          });
+          return p;
+        }).reduce(function (a, n) { return a.concat(n); });
+
+        if (activity && activity.events) {
+          updateAllActivity(keepId, activity.events);
+        }
+        k.messageHeader.init($who.find('.kifi-message-header'), keepId, participants, keep);
       }
     },
     thread_error: function (o) {
@@ -71,8 +64,8 @@ k.panes.thread = k.panes.thread || (function () {
       var threadId = locator.split('/')[2];
       log('[panes.thread.render]', threadId);
 
-      $who = $paneBox.find('.kifi-thread-who');  // uncomment code below once header is pre-rendered again
-      var $tall = $paneBox.find('.kifi-pane-tall'); //.css('margin-top', $who.outerHeight());
+      $who = $paneBox.find('.kifi-thread-who');
+      var $tall = $paneBox.find('.kifi-pane-tall');
 
       $holder = renderBlank($paneBox, $tall, $who, threadId);
 
@@ -131,15 +124,6 @@ k.panes.thread = k.panes.thread || (function () {
             a.href = url;
           });
         }
-      })
-      .hoverfu('.kifi-message-email-learn', function (configureHover) {
-        var link = this;
-        k.render('html/keeper/message_email_tooltip', function (html) {
-          configureHover(html, {
-            mustHoverFor: 1e9, click: 'toggle',
-            position: {my: 'right+50 bottom-10', at: 'center top', of: link, collision: 'none'}
-          });
-        });
       })
       .data({threadId: threadId, compose: compose});
 

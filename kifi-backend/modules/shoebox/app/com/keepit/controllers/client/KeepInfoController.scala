@@ -97,10 +97,11 @@ class KeepInfoController @Inject() (
   }
 
   @json case class RecipientSuggestion(query: Option[String], results: Seq[JsObject /* TypeaheadResult */ ], mayHaveMore: Boolean, limit: Option[Int], offset: Option[Int])
-  def suggestRecipient(query: Option[String], limit: Option[Int], offset: Option[Int], requested: Option[String]) = UserAction.async { request =>
+  def suggestRecipient(keepIdStr: Option[String], query: Option[String], limit: Option[Int], offset: Option[Int], requested: Option[String]) = UserAction.async { request =>
+    val keepId = keepIdStr.map(Keep.decodePublicIdStr(_).get)
     val requestedSet = requested.map(_.split(',').map(_.trim).flatMap(TypeaheadRequest.applyOpt).toSet).filter(_.nonEmpty).getOrElse(TypeaheadRequest.all)
-    typeaheadCommander.searchAndSuggestKeepRecipients(request.userId, query.getOrElse(""), limit, offset, requestedSet).map { suggestions =>
-      val body = suggestions.take(limit.getOrElse(20)).collect {
+    keepCommander.suggestRecipients(request.userId, keepId, query, offset getOrElse 0, limit getOrElse 20, requestedSet).map { suggestions =>
+      val body = suggestions.map {
         case u: UserContactResult => Json.toJson(u).as[JsObject] ++ Json.obj("kind" -> "user")
         case e: EmailContactResult => Json.toJson(e).as[JsObject] ++ Json.obj("kind" -> "email")
         case l: LibraryResult => Json.toJson(l).as[JsObject] ++ Json.obj("kind" -> "library")

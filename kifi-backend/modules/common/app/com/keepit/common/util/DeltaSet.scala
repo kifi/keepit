@@ -10,11 +10,12 @@ case class DeltaSet[T](djs: DisjointSets[T, DeltaSet.AddOrRemove]) {
   def add(items: T*) = addAll(items.toSet)
   def remove(items: T*) = removeAll(items.toSet)
 
-  def isEmpty: Boolean = djs.getSet(DeltaSet.Add).isEmpty && djs.getSet(DeltaSet.Remove).isEmpty
-  def nonEmpty: Boolean = !isEmpty
   def added: Set[T] = djs.getSet(DeltaSet.Add)
   def removed: Set[T] = djs.getSet(DeltaSet.Remove)
   def all: Set[T] = djs.elems.keySet
+
+  def isEmpty: Boolean = all.isEmpty
+  def nonEmpty: Boolean = !isEmpty
 
   def map[S](f: T => S): DeltaSet[S] = this.copy(djs = djs.map(f))
 }

@@ -8,7 +8,7 @@ import com.keepit.search.index.graph.keep.KeepFields
 import com.keepit.search.index.{ IdMapper, Searcher, WrappedSubReader }
 import com.keepit.search.util.LongArraySet
 import com.keepit.search.util.join.{ DataBuffer, DataBufferWriter }
-import org.apache.lucene.index.{ NumericDocValues, Term, AtomicReaderContext }
+import org.apache.lucene.index.{ NumericDocValues, Term, LeafReaderContext }
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.{ Query, Scorer }
 import scala.concurrent.Future
@@ -31,7 +31,7 @@ class UriFromKeepsScoreVectorSource(
     QueryProjector.project(query, searchFields)
   }
 
-  protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
+  protected def writeScoreVectors(readerContext: LeafReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
     val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
     val idFilter = context.idFilter
 
@@ -91,7 +91,7 @@ class UriFromKeepsScoreVectorSource(
   private def loadDiscoverableURIs(keepVisibilityEvaluator: KeepVisibilityEvaluator, idFilter: LongArraySet, reader: WrappedSubReader, idMapper: IdMapper, uriIdDocValues: NumericDocValues, writer: DataBufferWriter, output: DataBuffer): Unit = {
     def loadWithNoScore(term: Term, visibility: Int): Int = {
       val v = visibility | Visibility.HAS_SECONDARY_ID
-      val td = reader.termDocsEnum(term)
+      val td = reader.postings(term)
       val initialOutputSize = output.size
       if (td != null) {
         var docId = td.nextDoc()

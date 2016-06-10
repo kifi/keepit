@@ -106,10 +106,9 @@ k.messageContext = k.messageContext || (function ($) {
      */
     render: function (name) {
       switch (name) {
-      case 'button':
-        return this.renderButton();
       case 'content':
         return this.renderContent();
+      //case 'button':
       //case 'option':
       }
     },
@@ -154,15 +153,6 @@ k.messageContext = k.messageContext || (function ($) {
      */
     renderContent: function () {
       return $(k.render('html/keeper/message_context', this.getView()));
-    },
-
-    /**
-     * Renders and returns a 'Add Participants' button.
-     *
-     * @return {string} Add participant icon html
-     */
-    renderButton: function () {
-      return ''; //$(k.render('html/keeper/message_participant_icon', this.getView(), partials));
     },
 
     /**

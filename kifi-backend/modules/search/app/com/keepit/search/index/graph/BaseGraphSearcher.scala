@@ -10,7 +10,7 @@ import scala.math.min
 
 class BaseGraphSearcher(searcher: Searcher) extends Logging {
 
-  protected val reader: WrappedSubReader = searcher.indexReader.asAtomicReader
+  protected val reader: WrappedSubReader = searcher.indexReader.asLeafReader
 
   def getDocId(id: Long) = reader.getIdMapper.getDocId(id)
 

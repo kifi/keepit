@@ -315,7 +315,7 @@ class MessagingCommanderImpl @Inject() (
         throw NotAuthorizedException("Wrong code path for system Messages.")
     }
 
-    log.info(s"Sending message from $from to ${initialThread.participants}")
+    log.info(s"Sending message from $from on keep ${initialThread.keepId}, csTime = ${time.time} so createdAt = ${Ord.max(clock.now, time.time)}")
     val (message, thread) = db.readWrite { implicit session =>
       val msg = messageRepo.save(ElizaMessage(
         createdAt = Ord.max(clock.now, time.time),

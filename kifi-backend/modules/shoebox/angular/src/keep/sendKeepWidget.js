@@ -3,11 +3,14 @@
 angular.module('kifi')
 
 .directive('kfSendKeepWidget', [
-  '$document', '$templateCache', '$rootElement', '$timeout', '$window', '$compile', 'KEY', 'keepService', 'profileService', 'modalService',
-  function($document, $templateCache, $rootElement, $timeout, $window, $compile, KEY, keepService, profileService, modalService) {
+  '$document', '$templateCache', '$rootElement', '$timeout', '$window', '$compile', 'KEY', 'keepService', 'profileService', 'modalService', 'util',
+  function($document, $templateCache, $rootElement, $timeout, $window, $compile, KEY, keepService, profileService, modalService, util) {
 
     var numSuggestions = 4;
+    var maxSuggestionsToShowEmail = 2;
     var desiredMarginTop = 45;
+    var initialBottom = 20;
+    var initialRight = -20;
 
     return {
       restrict: 'A',
@@ -17,10 +20,12 @@ angular.module('kifi')
       link: function(scope, element) {
         var currPage = 0;
         var widget;
-        var init;
-        var filteredSuggestions = []; // ids of entities to filter from suggestions (keep.members + scope.selected)
 
-        scope.hasExperiment = profileService.me && profileService.me.experiments && profileService.me.experiments.indexOf('add_keep_recipients') !== -1;
+        var canAddParticipants = scope.keep.permissions && scope.keep.permissions.indexOf('add_participants') !== -1;
+        var canAddLibraries = scope.keep.permissions && scope.keep.permissions.indexOf('add_libraries') !== -1;
+        var typeaheadFilter = (canAddParticipants ? ['user', 'email'] : []).concat(canAddLibraries ? ['library'] : []).join(',');
+
+        scope.maxSuggestionsToShowEmail = maxSuggestionsToShowEmail;
 
         function listenForInit() {
           element.on('click', function () {
@@ -38,24 +43,23 @@ angular.module('kifi')
 
           scope.suggestions = [];
           scope.selections = [];
-          init = false;
-
-          filteredSuggestions = computeKeepMembers(scope.keep); // ids of keep.members + scope.selections to omit
 
           scope.typeahead = '';
+          scope.validEmail = false;
           currPage = 0;
 
           refreshSuggestions(null, numSuggestions);
 
           widget = angular.element($templateCache.get('keep/sendKeepWidget.tpl.html'));
-          $rootElement.find('html').append(widget);
+          element.parents('.kf-keep').append(widget);
           $compile(widget)(scope);
           widget.hide();
-          $timeout(setInitialPosition, 0);
+          setInitialPosition();
           scope.$watch('init', function () {
             if (scope.init) {
               $timeout(function () {
                 widget.show();
+                adjustWidgetPosition();
               }, 0);
             }
           });
@@ -65,65 +69,20 @@ angular.module('kifi')
 
 
         function setInitialPosition() {
-
-          // try to load the first batch of suggestions before calculating the widget position,
-          // if we can't wait for the response, go with a height estimate
-
-          var elementOffsetTop = element.offset().top;
-          var distanceFromBottom = $window.innerHeight - elementOffsetTop;
-
-          var elementOffsetLeft = element.offset().left;
-
-          // Place the widget such that 1) it's on the screen, and 2) does not obscure the keep members UI on the keep card.
-          // If the widget can be placed above the keep members chips, set the bottom to be above it.
-          // Else if the widget can be placed below the keep members chips, set the bottom s.t. the top is below it.
-          // Else, do our best by placing the widget in middle of the keep
-
-          var suggestionItem = widget.find('.kf-skw-suggestion'); // the No Results Found element
-          var widgetHeight = (numSuggestions+3) * suggestionItem.height();
-
-          var bottom;
-
-          if (elementOffsetTop - widgetHeight >= desiredMarginTop) {
-            bottom = distanceFromBottom;
-          } else if (distanceFromBottom - widgetHeight >= 0) {
-            bottom = distanceFromBottom - widgetHeight;
-          } else {
-            bottom = distanceFromBottom - (widgetHeight/2);
-          }
-
-          var distanceFromRight = $window.innerWidth - elementOffsetLeft;
-
-          widget.css({ bottom: bottom + 'px', right: distanceFromRight  + 'px' });
+          widget.css({ bottom: initialBottom + 'px', right: initialRight  + 'px' });
         }
 
-        function setCreateLibraryPosition() {
+        function adjustWidgetPosition() {
           // rendering the create library page may increase the height of the widget,
           // so make sure it's not overflowing on top
 
-          var widgetHeight = widget.height();
           var widgetOffsetTop = widget.offset().top;
-          var distanceFromBottom = $window.innerHeight - widgetHeight - widgetOffsetTop;
-
 
           if (widgetOffsetTop < desiredMarginTop) {
-            var bottom = distanceFromBottom - (desiredMarginTop - widgetOffsetTop);
-            widget.css({ bottom: bottom + 'px' });
+            var shiftDown = (desiredMarginTop - widgetOffsetTop);
+            var bottom = parseInt(widget.css('bottom').slice(0,-2), 10);
+            widget.css({ bottom: (bottom - shiftDown) + 'px' });
           }
-        }
-
-        function computeKeepMembers(keep) {
-          var ids = [];
-          keep.members.emails.forEach(function(member) {
-            ids.push(member.email.email);
-          });
-          keep.members.users.forEach(function(member) {
-            ids.push(member.user.id);
-          });
-          keep.members.libraries.forEach(function(member) {
-            ids.push(member.library.id);
-          });
-          return ids;
         }
 
         function onClick(event) {
@@ -133,19 +92,30 @@ angular.module('kifi')
         }
 
         function refreshSuggestions(query, limit, offset) {
-          return keepService.suggestRecipientsForKeep(query, limit, offset, null).then(function (resultData) {
-            var nonMemberResults = resultData.results.filter(function(suggestion) {
-              return filteredSuggestions.indexOf(suggestion.id || suggestion.email) === -1;
+          query = query || '';
+          limit = limit || numSuggestions;
+          offset = offset || 0;
+          return keepService.suggestRecipientsForKeep(query || '', limit, offset, typeaheadFilter, scope.keep.pubId).then(function (resultData) {
+            var nonSelectedResults = resultData.results.filter(function (suggestion) {
+              var suggId = suggestion.id || suggestion.email;
+              return !scope.selections.find(function(selection) {
+                return (selection.id || selection.email) === suggId;
+              });
             });
 
-            if (nonMemberResults.length === 0 && resultData.mayHaveMore) {
-              refreshSuggestions(query, limit, (offset || 0) + limit);
+            if (nonSelectedResults.length <= maxSuggestionsToShowEmail) {
+              scope.showNewEmail = true;
+            }
+
+            if (nonSelectedResults.length === 0 && resultData.mayHaveMore) {
+              refreshSuggestions(query, limit, offset + limit);
             } else {
-              scope.suggestions = nonMemberResults;
-              if (widget && !init) {
-                init = true;
-                widget.show();
+              scope.suggestions = nonSelectedResults;
+              if (widget && !scope.init) {
+                scope.init = true;
                 resetInput();
+              } else {
+                $timeout(adjustWidgetPosition, 50);
               }
             }
           });
@@ -153,7 +123,10 @@ angular.module('kifi')
 
         function resetInput() {
           scope.typeahead = '';
-          resizeInput();
+          scope.validEmail = false;
+          $timeout(function() {
+            resizeInput();
+          }, 0);
           $timeout(function() {
             widget.find('.kf-skw-input').focus();
           }, 500);
@@ -170,14 +143,14 @@ angular.module('kifi')
           }
         }
 
-        function updateSelectionsOnKeep() {
+        function updateKeepMembers() {
           scope.selections.forEach(function(selection) {
             if (selection.kind === 'user') {
               scope.keep.members.users.push({ 'user': selection });
             } else if (selection.kind === 'library') {
               scope.keep.members.libraries.push({ 'library': selection });
             } else if (selection.kind === 'email') {
-              scope.keep.members.emails.push({ 'email': selection });
+              scope.keep.members.emails.push(selection);
             }
           });
         }
@@ -191,14 +164,8 @@ angular.module('kifi')
 
         scope.selectSuggestion = function(suggestion) {
           scope.selections.push(suggestion);
-          filteredSuggestions.push(suggestion.id || suggestion.email);
-          suggestion.isSelected = true;
-
-          if (widget.find('.kf-skw-suggestion').length === 1) {
-            currPage++;
-            refreshSuggestions(scope.typeahead, numSuggestions, currPage * numSuggestions);
-          }
-
+          scope.typeahead = '';
+          refreshSuggestions();
           resetInput();
         };
 
@@ -206,10 +173,7 @@ angular.module('kifi')
           scope.selections = scope.selections.filter(function(s) {
             return s !== selection;
           });
-          filteredSuggestions = filteredSuggestions.filter(function(sId) {
-            return sId !== (selection.id || selection.email);
-          });
-          selection.isSelected = false;
+          scope.suggestions = [selection].concat(scope.suggestions);
           resetInput();
         };
 
@@ -217,12 +181,14 @@ angular.module('kifi')
           scope.showCreateLibrary = true;
 
           $timeout(function() {
-            setCreateLibraryPosition();
-          }, 0);
+            adjustWidgetPosition();
+          }, 100);
         };
 
         scope.exitCreateLibrary = function() {
           scope.showCreateLibrary = false;
+          setInitialPosition();
+          $timeout(adjustWidgetPosition, 0);
           resetInput();
         };
 
@@ -230,6 +196,8 @@ angular.module('kifi')
           var suggestion = convertLibraryToSuggestion(library);
           scope.selectSuggestion(suggestion);
           scope.showCreateLibrary = false;
+          setInitialPosition();
+          $timeout(adjustWidgetPosition, 0);
           resetInput();
         };
 
@@ -254,9 +222,7 @@ angular.module('kifi')
             case KEY.BSPACE:
               if (scope.typeahead === '') {
                 event.preventDefault();
-                var popped = scope.selections.pop();
-                popped.isSelected = false;
-                resetInput();
+                scope.removeSelection(scope.selections.pop());
               }
               break;
             case KEY.ENTER:
@@ -288,7 +254,7 @@ angular.module('kifi')
             .then(function() {
               scope.sending = false;
               scope.success = true;
-              updateSelectionsOnKeep();
+              updateKeepMembers();
               $timeout(scope.removeWidget, 1000);
             })
             ['catch'](function() {
@@ -309,6 +275,7 @@ angular.module('kifi')
           currPage = 0;
           refreshSuggestions(query, numSuggestions);
           resizeInput();
+          scope.validEmail = util.validateEmail(scope.typeahead);
         };
 
         listenForInit();

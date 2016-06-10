@@ -10,6 +10,8 @@ angular.module('kifi')
       modalService, keepActionService, $location, undoService, $rootScope, profileService,
       $injector, $filter) {
 
+    var maxMembersPerEntity = 4;
+
     // constants for side-by-side layout image sizing heuristic, based on large screen stylesheet values
     var cardW = 496;
     var cardInnerW = cardW - 2 * 20;
@@ -288,10 +290,18 @@ angular.module('kifi')
           scope.showActivityEvents = keep.activity;
           scope.showOriginLibrary = scope.currentPageOrigin !== 'libraryPage' &&
             keep.library && keep.library.visibility !== 'discoverable' && keep.library.kind === 'system_secret';
-          scope.showAddRecipients = keep.permissions.indexOf('add_participants') !== -1;
+          scope.showAddRecipients = keep.permissions.indexOf('add_participants') !== -1 || keep.permissions.indexOf('add_libraries') !== -1;
           // Don't change until the link is updated to be a bit more secure:
           scope.galleryView = scope.forceGalleryView || !profileService.prefs.use_minimal_keep_card;
           scope.globalGalleryView = scope.galleryView;
+
+
+          scope.maxMembersPerEntity = maxMembersPerEntity;
+          scope.totalMemberCount = keep.members.users.length + keep.members.libraries.length + keep.members.emails.length;
+          scope.leftoverMembers = keep.members.users.slice(maxMembersPerEntity)
+            .concat(keep.members.libraries.slice(maxMembersPerEntity))
+            .concat(keep.members.emails.slice(maxMembersPerEntity));
+
           var updateNote = function () {
             var noteMayHaveFallback = keep.sourceAttribution && (keep.sourceAttribution.twitter || keep.sourceAttribution.slack);
             var noteHasSubstance = function (note) {

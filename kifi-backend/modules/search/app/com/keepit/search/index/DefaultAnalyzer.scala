@@ -182,9 +182,9 @@ class Analyzer(tokenizerFactory: TokenizerFactory,
     }
   }
 
-  override def createComponents(fieldName: String, reader: Reader): TokenStreamComponents = {
+  override def createComponents(fieldName: String): TokenStreamComponents = {
     val filters = factories.reverse
-    val tokenizer = tokenizerFactory.create(reader)
+    val tokenizer = tokenizerFactory.create()
     val tokenStream = filters.foldLeft(tokenizer.asInstanceOf[TokenStream]) { (tokenStream, filter) => filter(tokenStream) }
     new TokenStreamComponents(tokenizer, tokenStream)
   }

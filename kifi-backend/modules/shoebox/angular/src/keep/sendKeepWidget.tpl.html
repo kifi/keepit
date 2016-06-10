@@ -6,15 +6,21 @@
     </div>
 
     <ul class="kf-skw-suggestions">
-      <li ng-repeat="suggestion in suggestions" ng-if="!suggestion.isSelected" ng-click="selectSuggestion(suggestion)">
+      <li ng-repeat="suggestion in suggestions" ng-click="selectSuggestion(suggestion)">
         <div ng-include="'keep/sendKeepSuggestionItem.tpl.html'"></div>
       </li>
-      <li class="kf-skw-suggestion" ng-if="suggestions.length === 0">
-        <div class="kf-skw-suggestion-noresults">No results found</div>
+      <li class="kf-skw-suggestion" ng-if="suggestions.length <= 2">
+        <div class="kf-skw-suggestion-img-container">
+          <div class="kf-skw-suggestion-img kf-skw-suggestion-img-email kf-skw-suggestion-img-newemail"></div>
+        </div>
+        <span class="kf-skw-suggestion-content" ng-if="showNewEmail" ng-click="validEmail ? selectSuggestion({ email: typeahead, kind: 'email' }): null;">
+          <div class="kf-skw-suggestion-name" ng-bind="typeahead"></div>
+          <div class="kf-skw-suggestion-subname" ng-bind="validEmail ? 'An email address' : ((typeahead ? 'Keep' : 'Start') + ' typing an email address')"></div>
+        </span>
       </li>
     </ul>
 
-    <span class="kf-skw-lib-create-container" ng-if="hasExperiment" ng-click="onClickCreateLibrary()">
+    <span class="kf-skw-lib-create-container" ng-click="onClickCreateLibrary()">
       <span class="kf-skw-lib-create-icon sprite sprite-add-link-2-active"></span>
       <span class="kf-skw-lib-create-txt">Create library</span>
     </span>
@@ -49,7 +55,7 @@
       <button class="kf-skw-send-btn" ng-if="!sending && !success" ng-click="onSend()" ng-disabled="selections.length === 0">Send</button>
     </div>
   </div>
-  <div class="kf-skw-send-body" ng-if="hasExperiment && showCreateLibrary">
+  <div class="kf-skw-send-body" ng-if="showCreateLibrary">
     <div kf-create-library-widget once-library-created="onceLibraryCreated" on-exit="exitCreateLibrary()"></div>
   </div>
 </div>

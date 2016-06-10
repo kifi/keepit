@@ -14,7 +14,7 @@ trait SimpleGraphDirectory extends GraphDirectory with BackedUpDirectory {
 }
 
 class ArchivedSimpleGraphDirectory(dir: File, protected val tempDir: File, protected val store: GraphStore) extends SimpleGraphDirectory with ArchivedGraphDirectory {
-  def getDirectory() = dir
+  def getDirectoryFile() = dir
 
   def load(): (SimpleGraph, GraphUpdaterState) = this.synchronized {
     val graphFile = getGraphFile()
@@ -83,9 +83,9 @@ class ArchivedSimpleGraphDirectory(dir: File, protected val tempDir: File, prote
     checksum
   }
 
-  private def getStateFile(): File = new File(getDirectory(), "state")
-  private def getGraphFile(): File = new File(getDirectory(), "graph")
-  private def getChecksumFile(): File = new File(getDirectory(), "checksum")
+  private def getStateFile(): File = new File(getDirectoryFile(), "state")
+  private def getGraphFile(): File = new File(getDirectoryFile(), "graph")
+  private def getChecksumFile(): File = new File(getDirectoryFile(), "checksum")
 }
 
 class RatherUselessSimpleGraphDirectory extends SimpleGraphDirectory with Logging {

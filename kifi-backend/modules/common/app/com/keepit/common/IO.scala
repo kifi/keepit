@@ -81,7 +81,7 @@ trait BackedUpDirectory {
 }
 
 trait ArchivedDirectory extends BackedUpDirectory {
-  def getDirectory(): File
+  def getDirectoryFile(): File
   protected def getArchive(): File
   protected def saveArchive(archive: File): Unit
   protected def tempDir(): File
@@ -90,7 +90,7 @@ trait ArchivedDirectory extends BackedUpDirectory {
   def scheduleBackup() = shouldBackup.set(true)
   def cancelBackup() = shouldBackup.set(false)
   def doBackup() = if (shouldBackup.getAndSet(false)) {
-    val dir = getDirectory()
+    val dir = getDirectoryFile()
     val tarGz = IO.compress(dir, tempDir.getCanonicalPath)
     saveArchive(tarGz)
     tarGz.delete()
@@ -98,7 +98,7 @@ trait ArchivedDirectory extends BackedUpDirectory {
   } else false
 
   def restoreFromBackup(): Unit = {
-    val dir = getDirectory()
+    val dir = getDirectoryFile()
     val tarGz = getArchive()
     FileUtils.deleteDirectory(dir)
     IO.uncompress(tarGz, dir.getParentFile.getAbsolutePath)

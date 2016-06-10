@@ -6,7 +6,7 @@ import com.keepit.search.SearchContext
 import com.keepit.search.index.article.ArticleFields
 import com.keepit.search.index.{ Searcher, WrappedSubReader }
 import com.keepit.search.util.join.{ BloomFilter, DataBuffer, DataBufferWriter }
-import org.apache.lucene.index.AtomicReaderContext
+import org.apache.lucene.index.LeafReaderContext
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.{ Query, Scorer }
 
@@ -17,7 +17,7 @@ class UriFromArticlesScoreVectorSource(protected val searcher: Searcher, context
     QueryProjector.project(query, searchFields)
   }
 
-  protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
+  protected def writeScoreVectors(readerContext: LeafReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
     val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
     val idFilter = context.idFilter
 

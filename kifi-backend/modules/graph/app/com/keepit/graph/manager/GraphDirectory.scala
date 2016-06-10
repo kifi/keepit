@@ -14,12 +14,12 @@ trait GraphDirectory {
 }
 
 trait ArchivedGraphDirectory extends ArchivedDirectory with Logging { self: GraphDirectory =>
-  def asFile() = Some(getDirectory())
+  def asFile() = Some(getDirectoryFile())
   protected def store: GraphStore
   protected def getArchive() = store.syncGet(this).get
   protected def saveArchive(tarFile: File) = store += (this, tarFile)
   def init(): Unit = {
-    val dir = getDirectory()
+    val dir = getDirectoryFile()
     if (!dir.exists()) {
       try {
         val t1 = currentDateTime.getMillis
@@ -42,7 +42,7 @@ trait GraphStore extends ObjectStore[ArchivedGraphDirectory, File]
 case class GraphStoreInbox(dir: File) extends S3InboxDirectory
 
 class S3GraphStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val accessLog: AccessLog, val inbox: GraphStoreInbox) extends S3FileStore[ArchivedGraphDirectory] with GraphStore {
-  def idToKey(graphDirectory: ArchivedGraphDirectory): String = graphDirectory.getDirectory().getName + ".tar.gz"
+  def idToKey(graphDirectory: ArchivedGraphDirectory): String = graphDirectory.getDirectoryFile().getName + ".tar.gz"
 }
 
 class InMemoryGraphStoreImpl extends InMemoryFileStore[ArchivedGraphDirectory] with GraphStore

@@ -4,7 +4,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.search.engine.query.core.KWeight
 import com.keepit.search.index.{ Searcher }
 import com.keepit.search.util.join.DataBuffer
-import org.apache.lucene.index.AtomicReaderContext
+import org.apache.lucene.index.LeafReaderContext
 import org.apache.lucene.search.{ Query, Weight, Scorer }
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
@@ -21,7 +21,7 @@ trait ScoreVectorSourceLike extends ScoreVectorSource with Logging with DebugOpt
 
   def prepare(query: Query, matchWeightNormalizer: MatchWeightNormalizer): Unit = {
     weights.clear()
-    val weight = searcher.createWeight(preprocess(query))
+    val weight = searcher.createNormalizedWeight(preprocess(query), true)
     if (weight != null) {
       weight.asInstanceOf[KWeight].getWeights(weights)
     }
@@ -49,9 +49,9 @@ trait ScoreVectorSourceLike extends ScoreVectorSource with Logging with DebugOpt
 
   protected val searcher: Searcher
 
-  protected def indexReaderContexts: Seq[AtomicReaderContext] = { searcher.indexReader.getContext.leaves }
+  protected def indexReaderContexts: Seq[LeafReaderContext] = { searcher.indexReader.getContext.leaves }
 
-  protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: DirectScoreContext)
+  protected def writeScoreVectors(readerContext: LeafReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: DirectScoreContext)
 
   protected def createScorerQueue(scorers: Array[Scorer], coreSize: Int): TaggedScorerQueue = TaggedScorerQueue(scorers, coreSize)
 }

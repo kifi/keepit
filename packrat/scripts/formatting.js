@@ -414,7 +414,7 @@ function formatParticipant(participant) {
   participant.isEmail = participant.kind === 'email' || participant.email;
   participant.isUser = !participant.isEmail && (!participant.kind || participant.kind === 'user' || participant.kind === 'kifi');
   participant.isLibrary = participant.kind === 'library';
-
+  participant.isMe = (participant.id === k.me.id);
   var id = participant.id || participant.email;
 
   if (participant.isLibrary && !participant.color) {

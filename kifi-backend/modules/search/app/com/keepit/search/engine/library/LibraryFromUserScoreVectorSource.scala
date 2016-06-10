@@ -11,7 +11,7 @@ import com.keepit.search.index.user.{ UserFields }
 import com.keepit.search.{ SearchConfig, SearchContext }
 import com.keepit.search.index.{ Searcher, WrappedSubReader }
 import com.keepit.search.util.join.{ DataBufferReader, DataBuffer, DataBufferWriter }
-import org.apache.lucene.index.{ AtomicReaderContext, Term }
+import org.apache.lucene.index.{ LeafReaderContext, Term }
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.{ Scorer, Query }
 import scala.collection.JavaConversions._
@@ -66,7 +66,7 @@ class LibraryFromUserScoreVectorSource(
     }
   }
 
-  private def indexReaderContexts: Seq[AtomicReaderContext] = { librarySearcher.indexReader.getContext.leaves }
+  private def indexReaderContexts: Seq[LeafReaderContext] = { librarySearcher.indexReader.getContext.leaves }
 
   private def loadWithScore(userId: Long, taggedScores: Array[Int], size: Int, output: DataBuffer, writer: DataBufferWriter): Unit = {
 
@@ -78,7 +78,7 @@ class LibraryFromUserScoreVectorSource(
 
       val idMapper = reader.getIdMapper
 
-      val td = reader.termDocsEnum(new Term(LibraryFields.ownerField, userId.toString))
+      val td = reader.postings(new Term(LibraryFields.ownerField, userId.toString))
       if (td != null) {
         var docId = td.nextDoc()
         while (docId < NO_MORE_DOCS) {
@@ -104,7 +104,7 @@ class LibraryFromUserScoreVectorSource(
       QueryProjector.project(query, searchFields)
     }
 
-    protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
+    protected def writeScoreVectors(readerContext: LeafReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
       val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
 
       // execute the query

@@ -1,13 +1,15 @@
 package com.keepit.controllers.admin
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ TagCommander, LibraryInfoCommander, LibraryCommander, LibrarySuggestedSearchCommander }
+import com.keepit.commanders.emails.EmailSenderProvider
+import com.keepit.commanders._
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ Id, SequenceNumber, State }
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.net.RichRequestHeader
 import com.keepit.common.queue.messages.SuggestedSearchTerms
 import com.keepit.common.time._
@@ -45,7 +47,10 @@ case class LibraryPageInfo(
 class AdminLibraryController @Inject() (
     val userActionsHelper: UserActionsHelper,
     keepRepo: KeepRepo,
+    libPathCommander: PathCommander,
     normalizedURIRepo: NormalizedURIRepo,
+    userEmailAddressRepo: UserEmailAddressRepo,
+    emailSenderProvider: EmailSenderProvider,
     libraryRepo: LibraryRepo,
     ktlRepo: KeepToLibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
@@ -144,6 +149,18 @@ class AdminLibraryController @Inject() (
     }
     val info = LibraryPageInfo(libraryStats = stats, hotTodayWithStats = hotTodayWithStats, topDailyFollower = topDailyFollower, topDailyKeeps = topDailyKeeps, libraryCount = totalPublishedCount, page = page, pageSize = pageSize)
     Ok(html.admin.libraries(info))
+  }
+
+  def sendTwitterEmailToLib(libraryId: Id[Library]) = AdminUserPage.async { implicit request =>
+    val (email, libraryUrl, userId, count) = db.readOnlyMaster { implicit s =>
+      val library = libraryRepo.get(libraryId)
+      val userId = library.ownerId
+      val email = userEmailAddressRepo.getPrimaryByUser(userId).get.address
+      val libraryUrl = libPathCommander.libraryPage(library)
+      (email, libraryUrl, userId, library.keepCount)
+    }
+    emailSenderProvider.twitterWaitlist.sendToUser(email, userId, libraryUrl.absolute, count)
+    libraryView(libraryId)(request)
   }
 
   def libraryView(libraryId: Id[Library], transfer: Boolean = false) = AdminUserPage.async { implicit request =>

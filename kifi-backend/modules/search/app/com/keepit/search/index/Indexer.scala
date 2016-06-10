@@ -69,7 +69,7 @@ abstract class Indexer[T, S, D <: Indexable[T, S], I <: Indexer[T, S, D, I]](
 
   val commitBatchSize = 1000
 
-  protected def indexWriterConfig = new IndexWriterConfig(Version.LATEST, DefaultAnalyzer.defaultAnalyzer)
+  protected def indexWriterConfig = new IndexWriterConfig(DefaultAnalyzer.defaultAnalyzer)
 
   private[this] var indexWriter: IndexWriter = null
 

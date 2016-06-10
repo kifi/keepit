@@ -8,7 +8,7 @@ import com.keepit.search.index.graph.library.LibraryIndexable
 import com.keepit.search.index.graph.keep.KeepFields
 import com.keepit.search.index.{ LongBufferUtil, DocUtil, Searcher, WrappedSubReader }
 import com.keepit.search.util.join.{ DataBuffer, DataBufferWriter }
-import org.apache.lucene.index.{ BinaryDocValues, AtomicReaderContext }
+import org.apache.lucene.index.{ BinaryDocValues, LeafReaderContext }
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.{ Query, Scorer }
 import scala.concurrent.Future
@@ -35,7 +35,7 @@ class LibraryFromKeepsScoreVectorSource(
     QueryProjector.project(query, searchFields)
   }
 
-  protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
+  protected def writeScoreVectors(readerContext: LeafReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
     val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
     val idFilter = context.idFilter
 
