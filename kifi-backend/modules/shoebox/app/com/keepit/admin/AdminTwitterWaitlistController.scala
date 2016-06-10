@@ -120,6 +120,11 @@ class AdminTwitterWaitlistController @Inject() (
     Ok(s"Done! ${states.mkString(";")}")
   }
 
+  def getFavSyncLink(userId: Id[User]) = AdminUserAction { implicit request =>
+    val user = db.readOnlyMaster { implicit s => userRepo.get(userId) }
+    Ok(twitterWaitlistCommander.getSyncKey(user.externalId))
+  }
+
   private def sendTwitterEmailToLib(libraryId: Id[Library]) = {
     val (email, libraryUrl, userId, count) = db.readOnlyMaster { implicit s =>
       val library = libraryRepo.get(libraryId)
