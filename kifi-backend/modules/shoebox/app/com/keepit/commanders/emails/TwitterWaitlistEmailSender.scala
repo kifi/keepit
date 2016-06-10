@@ -17,7 +17,7 @@ class TwitterWaitlistEmailSender @Inject() (
     emailTemplateSender: EmailTemplateSender,
     protected val airbrake: AirbrakeNotifier) extends Logging {
 
-  def sendToUser(email: EmailAddress, userId: Id[User], twitterLibUrl: String, count: Int): Future[ElectronicMail] = {
+  def sendToUser(email: EmailAddress, userId: Id[User], twitterLibUrl: String, count: Int, syncKey: String): Future[ElectronicMail] = {
     val emailToSend = EmailToSend(
       title = "Kifi — Congrats! You're on the list",
       fromName = Some(Right("Kifi")),
@@ -25,7 +25,7 @@ class TwitterWaitlistEmailSender @Inject() (
       to = Right(email),
       subject = s"Done!  Your Twitter Library is ready with $count keeps.  Want Your “Liked” Links too?",
       category = NotificationCategory.User.WAITLIST,
-      htmlTemplate = views.html.email.black.twitterAccept(userId, twitterLibUrl, URLEncoder.encode(twitterLibUrl, UTF8), count),
+      htmlTemplate = views.html.email.black.twitterAccept(userId, twitterLibUrl, URLEncoder.encode(twitterLibUrl, UTF8), count, syncKey),
       textTemplate = None,
       templateOptions = Seq(TemplateOptions.CustomLayout).toMap,
       campaign = Some(s"twitter_waitlist"))
