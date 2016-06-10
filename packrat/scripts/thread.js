@@ -386,9 +386,15 @@ k.panes.thread = k.panes.thread || (function () {
     .empty()
     .append($(k.render('html/keeper/message_error', {errorText: errorText})))
     .css({cursor: 'pointer', color: '#a00'})
-    .fadeIn(300).off('click').click(function() {
+    .fadeIn(300)
+    .off('click')
+    .on('click', function() {
       $(this).fadeOut(100);
       $reply.find('time').css({display:''});
+      api.port.emit('track_pane_click', {
+        type: 'retry_send',
+        status: status
+      });
       transmitReply($reply, originalText, threadId);
     });
   }
