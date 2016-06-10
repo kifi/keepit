@@ -97,7 +97,7 @@ class EmailTestController @Inject() (
           val url = pathCommander.libraryPage(lib).absolute
           (lib.keepCount, url)
         }
-        emailSenderProvider.twitterWaitlist.sendToUser(sendTo, userId, libraryUrl, count)
+        emailSenderProvider.twitterWaitlist.sendToUser(sendTo, userId, libraryUrl, count, "MY_KEY")
       case "joinByVerifying" =>
         Future.successful(orgDomainCommander.sendMembershipConfirmationEmail(OrganizationDomainSendMemberConfirmationRequest(userId, orgId, sendTo)).right.get)
     }

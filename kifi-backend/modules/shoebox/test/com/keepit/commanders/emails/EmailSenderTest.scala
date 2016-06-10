@@ -654,7 +654,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val user = db.readWrite { implicit s =>
           UserFactory.user().withName("Rocky", "Balboa").withUsername("tester").saved
         }
-        val email = Await.result(sender.sendToUser(toEmail, user.id.get, "https://www.kifi.com/random/things-i-share", 123), Duration(5, "seconds"))
+        val email = Await.result(sender.sendToUser(toEmail, user.id.get, "https://www.kifi.com/random/things-i-share", 123, "MY_KEY"), Duration(5, "seconds"))
         outbox.size === 1
         outbox(0) === email
 
