@@ -20,7 +20,7 @@
       </li>
     </ul>
 
-    <span class="kf-skw-lib-create-container" ng-if="hasExperiment" ng-click="onClickCreateLibrary()">
+    <span class="kf-skw-lib-create-container" ng-click="onClickCreateLibrary()">
       <span class="kf-skw-lib-create-icon sprite sprite-add-link-2-active"></span>
       <span class="kf-skw-lib-create-txt">Create library</span>
     </span>
@@ -55,7 +55,7 @@
       <button class="kf-skw-send-btn" ng-if="!sending && !success" ng-click="onSend()" ng-disabled="selections.length === 0">Send</button>
     </div>
   </div>
-  <div class="kf-skw-send-body" ng-if="hasExperiment && showCreateLibrary">
+  <div class="kf-skw-send-body" ng-if="showCreateLibrary">
     <div kf-create-library-widget once-library-created="onceLibraryCreated" on-exit="exitCreateLibrary()"></div>
   </div>
 </div>
