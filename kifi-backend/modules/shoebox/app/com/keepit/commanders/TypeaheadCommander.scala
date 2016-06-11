@@ -392,20 +392,14 @@ class TypeaheadCommander @Inject() (
       (users, contacts) <- friendsF
       libraryHits <- librariesF
     } yield {
-      if (userId == Id[User](3) || userId == Id[User](35713)) { // andrew and cam
-        val userDist = users.groupBy(_._1).filter(_._2.length > 1).values.toList
-        val conDist = contacts.groupBy(_.email).filter(_._2.length > 1).values.toList
-        val libDist = libraryHits.groupBy(_.info.id).filter(_._2.length > 1).values.toList
-        log.info(s"[crazylog] $userId, $drop $limit $ceil; ${users.length} ${contacts.length} ${libraryHits.length}. $userDist $conDist $libDist")
-      }
-      // (interactionIdx, typeaheadIdx, value). Lower scores are better for both.
+      // (interactionIdx, typeaheadIdx, priority, value). Lower scores are better for both.
       val userRes = users.distinctBy(_._1).zipWithIndex.map {
         case ((id, bu), idx) =>
-          (userScore(id), idx, UserContactResult(name = bu.fullName, id = bu.externalId, pictureName = Some(bu.pictureName), username = bu.username, firstName = bu.firstName, lastName = bu.lastName))
+          (userScore(id), idx, 0, UserContactResult(name = bu.fullName, id = bu.externalId, pictureName = Some(bu.pictureName), username = bu.username, firstName = bu.firstName, lastName = bu.lastName))
       }
       val emailRes = contacts.distinctBy(_.email).zipWithIndex.map {
         case (contact, idx) =>
-          (emailScore(contact.email), idx + limit, EmailContactResult(email = contact.email, name = contact.name))
+          (emailScore(contact.email), idx + limit, 2, EmailContactResult(email = contact.email, name = contact.name))
       }
       val libRes = {
         val libraries = libraryHits.map(_.info)
@@ -413,18 +407,26 @@ class TypeaheadCommander @Inject() (
         val libsById = libToResult(userId, libraries.map(_.id))
         libraries.flatMap(l => libsById.get(l.id).map(r => l.id -> r)).zipWithIndex.map {
           case ((id, lib), idx) =>
-            (libScore(id), idx + libIdToImportance(id), lib)
+            (libScore(id), idx + libIdToImportance(id), 1, lib)
         }
       }
 
       val combined: Seq[TypeaheadSearchResult] = (userRes ++ emailRes ++ libRes).filter {
-        case (_, _, u: UserContactResult) if requested.contains(TypeaheadRequest.User) => true
-        case (_, _, e: EmailContactResult) if requested.contains(TypeaheadRequest.Email) => true
-        case (_, _, l: LibraryResult) if requested.contains(TypeaheadRequest.Library) => true
+        case (_, _, _, u: UserContactResult) if requested.contains(TypeaheadRequest.User) => true
+        case (_, _, _, e: EmailContactResult) if requested.contains(TypeaheadRequest.Email) => true
+        case (_, _, _, l: LibraryResult) if requested.contains(TypeaheadRequest.Library) => true
         case _ => false
-      }.sortBy(d => (d._1, d._2)).slice(drop, ceil).map { case (_, _, res) => res }
+      }.sortBy(d => (d._1, d._2, d._3)).slice(drop, ceil).map { case (_, _, _, res) => res }
 
-      combined.toVector
+      val deduped = combined.distinct
+
+      if (deduped.length != combined.length && (userId == Id[User](3) || userId == Id[User](35713))) {
+        log.info(s"[crazylog2] U: $userRes")
+        log.info(s"[crazylog2] E: $emailRes")
+        log.info(s"[crazylog2] L: $libRes")
+      }
+
+      deduped.toVector
     }
   }
 
