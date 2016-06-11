@@ -392,12 +392,18 @@ class TypeaheadCommander @Inject() (
       (users, contacts) <- friendsF
       libraryHits <- librariesF
     } yield {
+      if (userId == Id[User](3) || userId == Id[User](35713)) { // andrew and cam
+        val userDist = users.groupBy(_._1).filter(_._2.length > 1).values.toList
+        val conDist = contacts.groupBy(_.email).filter(_._2.length > 1).values.toList
+        val libDist = libraryHits.groupBy(_.info.id).filter(_._2.length > 1).values.toList
+        log.info(s"[crazylog] $userId, $drop $limit $ceil; ${users.length} ${contacts.length} ${libraryHits.length}. $userDist $conDist $libDist")
+      }
       // (interactionIdx, typeaheadIdx, value). Lower scores are better for both.
-      val userRes = users.zipWithIndex.map {
+      val userRes = users.distinctBy(_._1).zipWithIndex.map {
         case ((id, bu), idx) =>
           (userScore(id), idx, UserContactResult(name = bu.fullName, id = bu.externalId, pictureName = Some(bu.pictureName), username = bu.username, firstName = bu.firstName, lastName = bu.lastName))
       }
-      val emailRes = contacts.zipWithIndex.map {
+      val emailRes = contacts.distinctBy(_.email).zipWithIndex.map {
         case (contact, idx) =>
           (emailScore(contact.email), idx + limit, EmailContactResult(email = contact.email, name = contact.name))
       }
