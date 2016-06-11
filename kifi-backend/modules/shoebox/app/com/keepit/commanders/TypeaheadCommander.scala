@@ -411,22 +411,23 @@ class TypeaheadCommander @Inject() (
         }
       }
 
-      val combined: Seq[TypeaheadSearchResult] = (userRes ++ emailRes ++ libRes).filter {
+      val combinedAll = (userRes ++ emailRes ++ libRes).filter {
         case (_, _, _, u: UserContactResult) if requested.contains(TypeaheadRequest.User) => true
         case (_, _, _, e: EmailContactResult) if requested.contains(TypeaheadRequest.Email) => true
         case (_, _, _, l: LibraryResult) if requested.contains(TypeaheadRequest.Library) => true
         case _ => false
-      }.sortBy(d => (d._1, d._2, d._3)).slice(drop, ceil).map { case (_, _, _, res) => res }
+      }.sortBy(d => (d._1, d._2, d._3))
 
-      val deduped = combined.distinct
+      val deduped = combinedAll.distinct
+      val combined: Seq[TypeaheadSearchResult] = deduped.slice(drop, ceil).map { case (_, _, _, res) => res }
 
-      if (deduped.length != combined.length && (userId == Id[User](3) || userId == Id[User](35713))) {
-        log.info(s"[crazylog2] U: $userRes")
-        log.info(s"[crazylog2] E: $emailRes")
-        log.info(s"[crazylog2] L: $libRes")
+      if (deduped.length != combinedAll.length && (userId == Id[User](3) || userId == Id[User](35713))) {
+        log.info(s"[crazylog3] U: $userRes")
+        log.info(s"[crazylog3] E: $emailRes")
+        log.info(s"[crazylog3] L: $libRes")
       }
 
-      deduped.toVector
+      combined.toVector
     }
   }
 
