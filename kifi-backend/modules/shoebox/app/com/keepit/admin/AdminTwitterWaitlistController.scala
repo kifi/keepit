@@ -129,7 +129,8 @@ class AdminTwitterWaitlistController @Inject() (
     res map {
       case (user, library, _, _) =>
         db.readOnlyMaster { implicit s =>
-          val email = userEmailAddressRepo.getPrimaryByUser(user.id.get).get.address
+          val userId = user.id.get
+          val email = userEmailAddressRepo.getPrimaryByUser(userId).map(_.address).getOrElse(userEmailAddressRepo.getByUser(userId))
           val libraryUrl = libPathCommander.libraryPage(library)
           (user, library, email, libraryUrl)
         }
