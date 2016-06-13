@@ -416,10 +416,10 @@ class TypeaheadCommander @Inject() (
         case (_, _, _, e: EmailContactResult) if requested.contains(TypeaheadRequest.Email) => true
         case (_, _, _, l: LibraryResult) if requested.contains(TypeaheadRequest.Library) => true
         case _ => false
-      }.sortBy(d => (d._1, d._2, d._3))
+      }.sortBy(d => (d._1, d._2, d._3)).map { case (_, _, _, res) => res }
 
       val deduped = combinedAll.distinct
-      val combined: Seq[TypeaheadSearchResult] = deduped.slice(drop, ceil).map { case (_, _, _, res) => res }
+      val combined: Seq[TypeaheadSearchResult] = deduped.slice(drop, ceil)
 
       if (deduped.length != combinedAll.length && (userId == Id[User](3) || userId == Id[User](35713))) {
         log.info(s"[crazylog3] U: $userRes")
