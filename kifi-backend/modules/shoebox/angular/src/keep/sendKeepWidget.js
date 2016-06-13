@@ -143,7 +143,7 @@ angular.module('kifi')
         }
 
         function suggestionSource(pageNumber, pageSize) {
-          return keepService.suggestRecipientsForKeep(scope.typeahead, pageSize, pageNumber * pageSize, typeaheadFilter).then(function(res) {
+          return keepService.suggestRecipientsForKeep(scope.typeahead, pageSize, pageNumber * pageSize, typeaheadFilter, scope.keep.pubId).then(function(res) {
             return res.results.filter(function (suggestion) {
               var suggId = suggestion.id || suggestion.email;
               return !scope.selections.find(function (selection) {
