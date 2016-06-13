@@ -1,0 +1,34 @@
+package com.keepit.commanders.emails
+
+import java.net.URLEncoder
+
+import com.google.inject.Inject
+import com.keepit.common.db.Id
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.logging.Logging
+import com.keepit.common.mail.template.{ EmailToSend, TemplateOptions }
+import com.keepit.common.mail.{ ElectronicMail, EmailAddress, SystemEmailAddress }
+import com.keepit.common.strings.UTF8
+import com.keepit.model.{ NotificationCategory, User }
+
+import scala.concurrent.Future
+
+class TwitterWaitlistOldUsersEmailSender @Inject() (
+    emailTemplateSender: EmailTemplateSender,
+    protected val airbrake: AirbrakeNotifier) extends Logging {
+
+  def sendToUser(email: EmailAddress, userId: Id[User], twitterLibUrl: String, count: Int, syncKey: String): Future[ElectronicMail] = {
+    val emailToSend = EmailToSend(
+      title = "Kifi — Congrats! You're on the list",
+      fromName = Some(Right("Kifi")),
+      from = SystemEmailAddress.EISHAY_PUBLIC,
+      to = Right(email),
+      subject = s"Your Twitter Library is building up with $count keeps! Want Your “Liked” Links too?",
+      category = NotificationCategory.User.WAITLIST,
+      htmlTemplate = views.html.email.black.twitterAcceptOldUsers(userId, twitterLibUrl, URLEncoder.encode(twitterLibUrl, UTF8), count, syncKey),
+      textTemplate = None,
+      templateOptions = Seq(TemplateOptions.CustomLayout).toMap,
+      campaign = Some(s"twitter_waitlist"))
+    emailTemplateSender.send(emailToSend)
+  }
+}

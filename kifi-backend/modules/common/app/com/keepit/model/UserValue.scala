@@ -72,6 +72,7 @@ object UserValueName {
   val TWITTER_PROTECTED_ACCOUNT = UserValueName("twitter_protected_account")
   val TWITTER_STATUSES_COUNT = UserValueName("twitter_statuses_count")
   val TWITTER_FAVOURITES_COUNT = UserValueName("twitter_favourites_count")
+  val SENT_TWITTER_SYNC_EMAIL = UserValueName("sent_twitter_sync_email")
 
   // ↓↓↓↓ This should be combined with preferences. Why does it exist?
   // User Profile Settings (be sure to add to UserValueSettings.defaultSettings for default values)

@@ -662,12 +662,38 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.User.WAITLIST)
         email.subject === """Done! Your Twitter Library is ready with 123 keeps. Want Your “Liked” Links too?"""
         val html = email.htmlBody.value
-        //        println(html)
         html must contain("Hi Rocky")
         html must contain("Your Twitter integrated library is ready with 123 keeps!")
         html must contain("""<a href="https://www.kifi.com/random/things-i-share">https://www.kifi.com/random/things-i-share</a>""")
-        "https://twitter.com/intent/tweet?text=Browse%2Fsearch%20all%20the%20links%20I%E2%80%99ve%20shared%20on%20Twitter%20urlEncodedTwitterLibUrl%20via%20%40Kifi.%20Create%20your%20own%3A&url=https%3A%2F%2Fwww.kifi.com%2Ftwitter&source=kifi&related=kifi"
         html must contain("https://twitter.com/intent/tweet?text=Browse%2Fsearch%20all%20the%20links%20I%E2%80%99ve%20shared%20on%20Twitter%20https%3A%2F%2Fwww.kifi.com%2Frandom%2Fthings-i-share%20via%20%40Kifi.%20Create%20your%20own%3A&url=https%3A%2F%2Fwww.kifi.com%2Ftwitter&source=kifi&related=kifi")
+        html must not contain ("Your recommendations network") // custom email layout
+
+        //        val text = email.textBody.get.value
+        //        text must contain("Kifi Twitter library is ready")
+      }
+    }
+
+    "sends confirmation email to existing old users" in {
+      withDb(modules: _*) { implicit injector =>
+        val outbox = inject[FakeOutbox]
+        val sender = inject[TwitterWaitlistOldUsersEmailSender]
+        val toEmail = EmailAddress("foo@bar.com")
+        val user = db.readWrite { implicit s =>
+          UserFactory.user().withName("Rocky", "Balboa").withUsername("tester").saved
+        }
+        val email = Await.result(sender.sendToUser(toEmail, user.id.get, "https://www.kifi.com/random/things-i-share", 123, "MY_KEY"), Duration(5, "seconds"))
+        outbox.size === 1
+        outbox(0) === email
+
+        email.to === Seq(toEmail)
+        email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.User.WAITLIST)
+        email.subject === """Your Twitter Library is building up with 123 keeps! Want Your “Liked” Links too?"""
+        val html = email.htmlBody.value
+        //        println(html)
+        html must contain("Hi Rocky")
+        html must contain("Kifi has new Twitter integration features!")
+        html must contain("""<a href="https://www.kifi.com/random/things-i-share">Twitter #deepsearch</a>""")
+        html must contain("""<a href="https://www.kifi.com/twitter/sync-favorites?k=MY_KEY" target="_blank" style="color:#ffffff; text-decoration:none; line-height:20px; display:block;">Add “Your Liked Tweets” library!</a>""")
         html must not contain ("Your recommendations network") // custom email layout
 
         //        val text = email.textBody.get.value

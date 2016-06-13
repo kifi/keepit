@@ -109,6 +109,32 @@ class AdminTwitterWaitlistController @Inject() (
     }
   }
 
+  def emailUsersWithTwitterLibs(max: Int) = AdminUserAction { implicit request =>
+    val res = db.readOnlyMaster { implicit s =>
+      twitterSyncStateRepo.getActiveByTarget(SyncTarget.Tweets) filter (_.userId.isDefined) map { sync =>
+        val userId = sync.userId.get
+        val user = userRepo.get(userId)
+        val library = libraryRepo.get(sync.libraryId)
+        val suiOpt = socialUserInfoRepo.getByUser(userId).find(_.networkType == SocialNetworks.TWITTER).filter(_.state == SocialUserInfoStates.FETCHED_USING_SELF).filter(_.credentials.nonEmpty)
+        (user, library, suiOpt, sync)
+      } filter {
+        case (user, library, suiOpt, sync) =>
+          user.isActive && library.isActive && suiOpt.isDefined && sync.state == TwitterSyncStateStates.ACTIVE
+      }
+    }
+    val users = res.map {
+      case (user, library, suiOpt, sync) =>
+        db.readOnlyMaster { implicit s =>
+          val email = userEmailAddressRepo.getPrimaryByUser(user.id.get).get.address
+          val libraryUrl = libPathCommander.libraryPage(library)
+          (user, library, suiOpt, sync, email, libraryUrl)
+        }
+    }
+    //    emailSenderProvider.twitterWaitlistOldUsers.sendToUser(email, userId, libraryUrl.absolute, count)
+    //    Ok(s"Sent emails to ${users.size} users")
+    Ok("sent")
+  }
+
   def markAsTwitted(userId: Id[User]) = AdminUserAction { implicit request =>
     val states = db.readWrite { implicit s =>
       twitterWaitlistRepo.getByUser(userId) map { entry =>
@@ -116,8 +142,10 @@ class AdminTwitterWaitlistController @Inject() (
       }
       twitterSyncStateRepo.getByUserIdUsed(userId)
     }
-    sendTwitterEmailToLib(states.head.libraryId)
-    Ok(s"Done! ${states.mkString(";")}")
+    if (states.nonEmpty) {
+      sendTwitterEmailToLib(states.head.libraryId)
+      Ok(s"Done! ${states.mkString(";")}")
+    } else InternalServerError(s"no states for user $userId")
   }
 
   def getFavSyncLink(userId: Id[User]) = AdminUserAction { implicit request =>
