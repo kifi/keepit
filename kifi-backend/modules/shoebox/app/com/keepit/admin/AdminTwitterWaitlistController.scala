@@ -6,6 +6,7 @@ import com.keepit.commanders.emails.{ EmailSenderProvider, EmailTemplateSender }
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
+import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail.{ SystemEmailAddress, EmailAddress }
@@ -111,9 +112,9 @@ class AdminTwitterWaitlistController @Inject() (
     }
   }
 
-  def emailUsersWithTwitterLibs(max: Int) = AdminUserAction { implicit request =>
+  private def doEmailUsersWithTwitterLibs(syncs: Seq[TwitterSyncState], max: Int) = {
     val res = db.readOnlyMaster { implicit s =>
-      twitterSyncStateRepo.getActiveByTarget(SyncTarget.Tweets) filter (_.userId.isDefined) map { sync =>
+      syncs filter (_.userId.isDefined) map { sync =>
         val userId = sync.userId.get
         val user = userRepo.get(userId)
         val library = libraryRepo.get(sync.libraryId)
@@ -124,7 +125,8 @@ class AdminTwitterWaitlistController @Inject() (
           val validUser = user.isActive && library.isActive && suiOpt.isDefined && sync.state == TwitterSyncStateStates.ACTIVE
           validUser && userValueRepo.getUserValue(user.id.get, UserValueName.SENT_TWITTER_SYNC_EMAIL).isEmpty
       } take max
-    } map {
+    }
+    res map {
       case (user, library, _, _) =>
         db.readOnlyMaster { implicit s =>
           val email = userEmailAddressRepo.getPrimaryByUser(user.id.get).get.address
@@ -136,12 +138,42 @@ class AdminTwitterWaitlistController @Inject() (
         val syncKey = twitterWaitlistCommander.getSyncKey(user.externalId)
         emailSenderProvider.twitterWaitlistOldUsers.sendToUser(email, user.id.get, libraryUrl.absolute, library.keepCount, syncKey).onComplete {
           case Failure(ex) =>
+            db.readWrite { implicit s =>
+              userValueRepo.setValue(user.id.get, UserValueName.SENT_TWITTER_SYNC_EMAIL, "fail")
+            }
             airbrake.notify(s"could not email $user using $email on lib $library", ex)
           case Success(mail) =>
+            db.readWrite { implicit s =>
+              userValueRepo.setValue(user.id.get, UserValueName.SENT_TWITTER_SYNC_EMAIL, "success")
+            }
             log.info(s"email sent to $email $user")
         }
     }
     Ok(s"Sending emails to ${res.size} users")
+  }
+
+  def emailUsersWithTwitterLibs(max: Int) = AdminUserAction { implicit request =>
+    val syncs = db.readOnlyMaster { implicit s =>
+      twitterSyncStateRepo.getActiveByTarget(SyncTarget.Tweets)
+    }
+    doEmailUsersWithTwitterLibs(syncs, max)
+  }
+
+  def testEmailUsersWithTwitterLibs(max: Int, userIdsString: String) = AdminUserAction { implicit request =>
+    val userIds = userIdsString.split(",").map(_.toInt).map(Id[User](_))
+    val syncs = db.readOnlyMaster { implicit s =>
+      twitterSyncStateRepo.getByUserIds(userIds.toSet)
+    }
+    val res = doEmailUsersWithTwitterLibs(syncs, max)
+    Thread.sleep(1000) //this is bad code, use only for testing async stuff and i can be done better. should be removed from codebase by tomorrow
+    db.readWrite { implicit s =>
+      userIds map { userId =>
+        val value = userValueRepo.getUserValue(userId, UserValueName.SENT_TWITTER_SYNC_EMAIL).getOrElse(throw new Exception(s"user $userId has no userValue"))
+        if (value.value != "success") throw new Exception(s"user $userId has no success: $value")
+        userValueRepo.clearValue(userId, UserValueName.SENT_TWITTER_SYNC_EMAIL)
+      }
+    }
+    res
   }
 
   def markAsTwitted(userId: Id[User]) = AdminUserAction { implicit request =>
@@ -174,4 +206,5 @@ class AdminTwitterWaitlistController @Inject() (
     val syncKey = twitterWaitlistCommander.getSyncKey(externalUserId)
     emailSenderProvider.twitterWaitlist.sendToUser(email, userId, libraryUrl.absolute, count, syncKey)
   }
+
 }
