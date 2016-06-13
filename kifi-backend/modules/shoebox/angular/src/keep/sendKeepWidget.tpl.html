@@ -14,7 +14,7 @@
         <div class="kf-skw-suggestion-img-container">
           <div class="kf-skw-suggestion-img kf-skw-suggestion-img-email kf-skw-suggestion-img-newemail"></div>
         </div>
-        <span class="kf-skw-suggestion-content" ng-if="showNewEmail" ng-click="validEmail ? selectSuggestion({ email: typeahead, kind: 'email' }): null;">
+        <span class="kf-skw-suggestion-content" ng-click="validEmail ? selectSuggestion({ email: typeahead, kind: 'email' }): null;">
           <div class="kf-skw-suggestion-name" ng-bind="typeahead"></div>
           <div class="kf-skw-suggestion-subname" ng-bind="validEmail ? 'An email address' : ((typeahead ? 'Keep' : 'Start') + ' typing an email address')"></div>
         </span>
