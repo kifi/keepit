@@ -7,6 +7,7 @@ import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail.{ SystemEmailAddress, EmailAddress }
 import com.keepit.common.mail.template.{ TemplateOptions, EmailToSend }
 import com.keepit.model._
@@ -24,6 +25,7 @@ class AdminTwitterWaitlistController @Inject() (
     emailSenderProvider: EmailSenderProvider,
     twitterWaitlistRepo: TwitterWaitlistRepo,
     twitterPublishingCommander: TwitterPublishingCommander,
+    airbrake: AirbrakeNotifier,
     db: Database,
     userRepo: UserRepo,
     libraryRepo: LibraryRepo,
@@ -119,20 +121,27 @@ class AdminTwitterWaitlistController @Inject() (
         (user, library, suiOpt, sync)
       } filter {
         case (user, library, suiOpt, sync) =>
-          user.isActive && library.isActive && suiOpt.isDefined && sync.state == TwitterSyncStateStates.ACTIVE
-      }
-    }
-    val users = res.map {
-      case (user, library, suiOpt, sync) =>
+          val validUser = user.isActive && library.isActive && suiOpt.isDefined && sync.state == TwitterSyncStateStates.ACTIVE
+          validUser && userValueRepo.getUserValue(user.id.get, UserValueName.SENT_TWITTER_SYNC_EMAIL).isEmpty
+      } take max
+    } map {
+      case (user, library, _, _) =>
         db.readOnlyMaster { implicit s =>
           val email = userEmailAddressRepo.getPrimaryByUser(user.id.get).get.address
           val libraryUrl = libPathCommander.libraryPage(library)
-          (user, library, suiOpt, sync, email, libraryUrl)
+          (user, library, email, libraryUrl)
+        }
+    } map {
+      case (user, library, email, libraryUrl) =>
+        val syncKey = twitterWaitlistCommander.getSyncKey(user.externalId)
+        emailSenderProvider.twitterWaitlistOldUsers.sendToUser(email, user.id.get, libraryUrl.absolute, library.keepCount, syncKey).onComplete {
+          case Failure(ex) =>
+            airbrake.notify(s"could not email $user using $email on lib $library", ex)
+          case Success(mail) =>
+            log.info(s"email sent to $email $user")
         }
     }
-    //    emailSenderProvider.twitterWaitlistOldUsers.sendToUser(email, userId, libraryUrl.absolute, count)
-    //    Ok(s"Sent emails to ${users.size} users")
-    Ok("sent")
+    Ok(s"Sending emails to ${res.size} users")
   }
 
   def markAsTwitted(userId: Id[User]) = AdminUserAction { implicit request =>
