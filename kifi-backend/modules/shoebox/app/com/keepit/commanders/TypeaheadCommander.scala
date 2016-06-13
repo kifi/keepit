@@ -366,12 +366,13 @@ class TypeaheadCommander @Inject() (
     val drop = dropOpt.map(Math.min(_, 40)).getOrElse(0)
     val limit = limitOpt.map(Math.min(_, 20)).getOrElse(10) // Fetch too many, we'll drop later.
     val ceil = drop + limit
+    val libsToFetch = ceil + 7 // A bit tricky. Libraries can move 6 records ahead by being more important than contacts. So, we must fetch extra to ensure stability.
 
     val friendsF = if (requested.contains(TypeaheadRequest.User) || requested.contains(TypeaheadRequest.Email)) {
       searchFriendsAndContacts(userId, query, includeSelf = true, Some(ceil))
     } else Future.successful((Seq.empty, Seq.empty))
     val librariesF = if (requested.contains(TypeaheadRequest.Library)) {
-      libraryTypeahead.topN(userId, query, Some(ceil))(TypeaheadHit.defaultOrdering[LibraryTypeaheadResult])
+      libraryTypeahead.topN(userId, query, Some(libsToFetch))(TypeaheadHit.defaultOrdering[LibraryTypeaheadResult])
     } else Future.successful(Seq.empty)
 
     val (userScore, emailScore, libScore) = {
