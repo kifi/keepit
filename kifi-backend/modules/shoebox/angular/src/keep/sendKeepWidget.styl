@@ -48,8 +48,14 @@
     opacity: 1
 
 .kf-skw-suggestions
+  max-height: 175px
+  overflow: scroll
+
   &:last-child
     border-bottom: none
+
+.highlighted
+  background-color: #e7e7e7
 
 .kf-skw-lib-create-container
   display: inline-flex
@@ -58,6 +64,7 @@
   width: 100%
   cursor: pointer
   font-weight: 600
+  border-top: 1px solid lightGrey
   border-bottom: 1px solid lightGrey
 
   &:hover
@@ -78,6 +85,7 @@
   flex-wrap: wrap
   background-color: #fcfcfc
   padding: 10px
+  border-top: 1px solid lightGrey
 
 .kf-skw-recipient-container
   display: inline-flex
