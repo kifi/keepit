@@ -559,7 +559,7 @@ k.keepBox = k.keepBox || (function () {
 
       k.render('html/keeper/titled_tip', {
         dir: 'above',
-        cssClass: 'kifi-pane-settings-tip',
+        cssClass: 'kifi-keep-box-tip',
         title: title,
         html: k.formatting.jsonDom(message)
       }, {
