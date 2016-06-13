@@ -3,8 +3,10 @@
 angular.module('kifi')
 
 .directive('kfSendKeepWidget', [
-  '$document', '$templateCache', '$rootElement', '$timeout', '$window', '$compile', 'keepService', 'profileService', 'modalService', 'KEY', 'Paginator', 'util',
-  function($document, $templateCache, $rootElement, $timeout, $window, $compile, keepService, profileService, modalService, KEY, Paginator, util) {
+  '$compile', '$templateCache', '$document', '$window', '$rootElement', '$state', '$timeout', '$analytics',
+  'keepService', 'profileService', 'modalService', 'KEY', 'Paginator', 'util',
+  function($compile, $templateCache, $document, $window, $rootElement, $state, $timeout,  $analytics,
+    keepService, profileService, modalService, KEY, Paginator, util) {
 
     var numSuggestions = 5;
     var maxSuggestionsToShowEmail = 2;
@@ -34,6 +36,7 @@ angular.module('kifi')
         function listenForInit() {
           element.on('click', function () {
             initWidget();
+            clickTrack('open');
           });
 
           scope.$on('$destroy', scope.removeWidget);
@@ -71,6 +74,7 @@ angular.module('kifi')
                 }
                 resetInput();
               }, 0);
+              $analytics.eventTrack('user_viewed_page', { type: 'addParticipantsWidget' });
             }
           });
 
@@ -177,9 +181,14 @@ angular.module('kifi')
           }, 500);
         }
 
+        function clickTrack(action) {
+          $analytics.eventTrack('user_clicked_page', { type: $state.$current.name, action: 'clickedAddParticipants:' + action });
+        }
+
         scope.removeWidget = function() {
           if (widget) {
             widget.remove();
+            clickTrack('close');
           }
 
           $document.off('mousedown', onClick);
@@ -239,6 +248,8 @@ angular.module('kifi')
           $timeout(function() {
             adjustWidgetPosition();
           }, 100);
+
+          clickTrack('createLibrary');
         };
 
         scope.exitCreateLibrary = function() {
@@ -360,6 +371,8 @@ angular.module('kifi')
               });
               $timeout(scope.removeWidget, 1000);
             });
+
+          clickTrack('send');
         };
 
 
