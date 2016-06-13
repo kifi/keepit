@@ -199,7 +199,7 @@ class AdminTwitterWaitlistController @Inject() (
       val library = libraryRepo.get(libraryId)
       val userId = library.ownerId
       val user = userRepo.get(userId)
-      val email = userEmailAddressRepo.getPrimaryByUser(userId).get.address
+      val email = userEmailAddressRepo.getPrimaryByUser(userId).map(_.address).getOrElse(userEmailAddressRepo.getByUser(userId))
       val libraryUrl = libPathCommander.libraryPage(library)
       (email, libraryUrl, userId, library.keepCount, user.externalId)
     }
