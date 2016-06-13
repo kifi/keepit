@@ -204,7 +204,18 @@ class AdminTwitterWaitlistController @Inject() (
       (email, libraryUrl, userId, library.keepCount, user.externalId)
     }
     val syncKey = twitterWaitlistCommander.getSyncKey(externalUserId)
-    emailSenderProvider.twitterWaitlist.sendToUser(email, userId, libraryUrl.absolute, count, syncKey)
+    emailSenderProvider.twitterWaitlist.sendToUser(email, userId, libraryUrl.absolute, count, syncKey).onComplete {
+      case Failure(ex) =>
+        db.readWrite { implicit s =>
+          userValueRepo.setValue(userId, UserValueName.SENT_TWITTER_SYNC_EMAIL, "fail")
+        }
+        airbrake.notify(s"could not email $userId using $email on lib $libraryUrl", ex)
+      case Success(mail) =>
+        db.readWrite { implicit s =>
+          userValueRepo.setValue(userId, UserValueName.SENT_TWITTER_SYNC_EMAIL, "success")
+        }
+        log.info(s"email sent to $email $userId")
+    }
   }
 
 }
