@@ -422,9 +422,9 @@ class TypeaheadCommander @Inject() (
       val combined: Seq[TypeaheadSearchResult] = deduped.slice(drop, ceil)
 
       if (userId == Id[User](3) || userId == Id[User](35713)) {
-        log.info(s"[crazylog4] U: $userRes")
-        log.info(s"[crazylog4] E: $emailRes")
-        log.info(s"[crazylog4] L: $libRes")
+        log.info(s"[crazylog4] U: $userId $query $limitOpt $dropOpt $userRes")
+        log.info(s"[crazylog4] E: $userId $query $limitOpt $dropOpt $emailRes")
+        log.info(s"[crazylog4] L: $userId $query $limitOpt $dropOpt $libRes")
       }
 
       combined.toVector
