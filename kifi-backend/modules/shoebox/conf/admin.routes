@@ -275,6 +275,7 @@ POST    /admin/graph/wander                                @com.keepit.controlle
 
 POST    /admin/library/:id/sendTweet                       @com.keepit.controllers.admin.AdminTwitterWaitlistController.tweetAtUserLibrary(id: Id[Library])
 POST    /admin/twitter/emailUsersWithTwitterLibs/:max      @com.keepit.controllers.admin.AdminTwitterWaitlistController.emailUsersWithTwitterLibs(max: Int)
+POST    /admin/twitter/emailUsersWithTwitterLibs/:max/:userIds      @com.keepit.controllers.admin.AdminTwitterWaitlistController.testEmailUsersWithTwitterLibs(max: Int, userIds: String)
 POST    /admin/user/:id/markAsTwitted                      @com.keepit.controllers.admin.AdminTwitterWaitlistController.markAsTwitted(id: Id[User])
 GET     /admin/twitter                                     @com.keepit.controllers.admin.AdminTwitterWaitlistController.getWaitlist()
 GET     /admin/twitter/accept                              @com.keepit.controllers.admin.AdminTwitterWaitlistController.acceptUser(userId: Id[User], handle: String)
