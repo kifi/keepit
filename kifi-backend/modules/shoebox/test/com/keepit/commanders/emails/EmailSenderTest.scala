@@ -693,7 +693,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         html must contain("Hi Rocky")
         html must contain("Kifi has new Twitter integration features!")
         html must contain("""<a href="https://www.kifi.com/random/things-i-share">Twitter #deepsearch</a>""")
-        html must contain("""<a href="https://www.kifi.com/twitter/sync-favorites?k=MY_KEY" target="_blank" style="color:#ffffff; text-decoration:none; line-height:20px; display:block;">Add “Your Liked Tweets” library!</a>""")
+        html must contain("""<a href="https://www.kifi.com/twitter/sync-favorites?k=MY_KEY" target="_blank" style="color:#ffffff; text-decoration:none; line-height:20px; display:block;">Add “Your Liked Tweets” library</a>""")
         html must not contain ("Your recommendations network") // custom email layout
 
         //        val text = email.textBody.get.value
