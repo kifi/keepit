@@ -125,8 +125,7 @@ class AdminTwitterWaitlistController @Inject() (
           val validUser = user.isActive && library.isActive && suiOpt.isDefined && sync.state == TwitterSyncStateStates.ACTIVE
           validUser && userValueRepo.getUserValue(user.id.get, UserValueName.SENT_TWITTER_SYNC_EMAIL).isEmpty
       } take max
-    }
-    res map {
+    } map {
       case (user, library, _, _) =>
         db.readOnlyMaster { implicit s =>
           val userId = user.id.get
@@ -166,7 +165,7 @@ class AdminTwitterWaitlistController @Inject() (
       twitterSyncStateRepo.getByUserIds(userIds.toSet)
     }
     val res = doEmailUsersWithTwitterLibs(syncs, max)
-    Thread.sleep(1000) //this is bad code, use only for testing async stuff and i can be done better. should be removed from codebase by tomorrow
+    Thread.sleep(5000) //this is bad code, use only for testing async stuff and i can be done better. should be removed from codebase by tomorrow
     db.readWrite { implicit s =>
       userIds map { userId =>
         val value = userValueRepo.getUserValue(userId, UserValueName.SENT_TWITTER_SYNC_EMAIL).getOrElse(throw new Exception(s"user $userId has no userValue"))
