@@ -10,7 +10,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
 import com.keepit.model._
-import play.api.libs.iteratee.{ Enumeratee, Enumerator }
+import play.api.libs.iteratee.{ Iteratee, Enumeratee, Enumerator }
 
 import scala.concurrent.{ ExecutionContext, Future }
 
@@ -68,24 +68,24 @@ class KeepExportController @Inject() (
     }.getOrElse(Future.successful(BadRequest))
   }
 
-  def fullKifiExport() = UserAction.async { request =>
+  def fullKifiExport() = UserAction { request =>
     log.info(s"[RPB] Full kifi export for ${request.userId}")
-    keepExportCommander.fullKifiExport(request.userId).map { export =>
-      val enum = Enumerator.outputStream { os =>
-        val zip = new ZipOutputStream(os)
-        keepExportCommander.htmlDump(export).foreach {
-          case (fileName, html) =>
-            zip.putNextEntry(new ZipEntry("kifi/" + fileName))
-            zip.write(html.map(_.toByte).toArray)
-            zip.closeEntry()
-        }
-        zip.close()
+    val export = keepExportCommander.fullKifiExport(request.userId)
+    val enum = Enumerator.outputStream { os =>
+      val zip = new ZipOutputStream(os)
+      export.run(Iteratee.foreach {
+        case (fileName, html) =>
+          zip.putNextEntry(new ZipEntry("kifi/" + fileName))
+          zip.write(html.map(_.toByte).toArray)
+          zip.closeEntry()
+      }).andThen {
+        case _ => zip.close()
       }
-      val exportFileName = s"${request.user.primaryUsername.get.normalized.value}-kifi-export.zip"
-      Ok.chunked(enum >>> Enumerator.eof).withHeaders(
-        "Content-Type" -> "application/zip",
-        "Content-Disposition" -> s"attachment; filename=$exportFileName"
-      )
     }
+    val exportFileName = s"${request.user.primaryUsername.get.normalized.value}-kifi-export.zip"
+    Ok.chunked(enum >>> Enumerator.eof).withHeaders(
+      "Content-Type" -> "application/zip",
+      "Content-Disposition" -> s"attachment; filename=$exportFileName"
+    )
   }
 }
