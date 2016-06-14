@@ -449,12 +449,12 @@ class KeepCommanderImpl @Inject() (
       }
     }.getOrElse((Set.empty, Set.empty, Set.empty))
     val excludeSize = usersToExclude.size + emailsToExclude.size + librariesToExclude.size
-    typeaheadCommander.searchAndSuggestKeepRecipients(userId, query getOrElse "", limitOpt = Some(limit + excludeSize), dropOpt = Some(offset), requested = requestedSet).imap { result =>
+    typeaheadCommander.searchAndSuggestKeepRecipients(userId, query getOrElse "", limitOpt = Some(limit+(excludeSize*2)), dropOpt = Some(Math.min(offset-excludeSize, 0)), requested = requestedSet).imap { result =>
       result.filterNot {
         case u: UserContactResult => usersToExclude.contains(u.id)
         case e: EmailContactResult => emailsToExclude.contains(e.email)
         case l: LibraryResult => librariesToExclude.contains(l.id)
-      }.take(limit)
+      }.drop(offset).take(limit)
     }
   }
 
