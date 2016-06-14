@@ -81,20 +81,20 @@ class MobileUserController @Inject() (
     }
   }
 
-  def currentUser = UserAction.async { implicit request =>
+  def currentUser = UserAction { implicit request =>
     getUserInfo(request, true)
   }
 
-  def updateCurrentUser() = UserAction.async(parse.tolerantJson) { implicit request =>
+  def updateCurrentUser() = UserAction(parse.tolerantJson) { implicit request =>
     request.body.validate[UpdatableUserInfo] match {
       case JsSuccess(userData, _) => {
         userCommander.updateUserInfo(request.userId, userData)
         getUserInfo(request)
       }
       case JsError(errors) if errors.exists { case (path, _) => path == __ \ "emails" } =>
-        Future.successful(BadRequest(Json.obj("error" -> "bad email addresses")))
+        BadRequest(Json.obj("error" -> "bad email addresses"))
       case _ =>
-        Future.successful(BadRequest(Json.obj("error" -> "could not parse user info from body")))
+        BadRequest(Json.obj("error" -> "could not parse user info from body"))
     }
   }
 
@@ -137,22 +137,17 @@ class MobileUserController @Inject() (
   private def getUserInfo[T](request: UserRequest[T], profileInfo: Boolean = false) = {
     val user = userCommander.getUserInfo(request.user)
     val (friendCount, keepCount, libCount, libFollowerCount) = if (profileInfo) db.readOnlyMaster { implicit s => getProfileInfo(request.userId) } else (0, 0, 0, 0)
-    userCommander.getHelpRankInfo(request.userId) map { info =>
-      Ok(toJson(user.basicUser).as[JsObject] ++
-        toJson(user.info).as[JsObject] ++
-        Json.obj(
-          "notAuthed" -> user.notAuthed,
-          "experiments" -> request.experiments.map(_.value),
-          "clickCount" -> info.clickCount,
-          "rekeepCount" -> info.rekeepCount,
-          "rekeepTotalCount" -> info.rekeepTotalCount,
-          "friendCount" -> friendCount,
-          "keepCount" -> keepCount,
-          "libCount" -> libCount,
-          "libFollowerCount" -> libFollowerCount
-        )
+    Ok(toJson(user.basicUser).as[JsObject] ++
+      toJson(user.info).as[JsObject] ++
+      Json.obj(
+        "notAuthed" -> user.notAuthed,
+        "experiments" -> request.experiments.map(_.value),
+        "friendCount" -> friendCount,
+        "keepCount" -> keepCount,
+        "libCount" -> libCount,
+        "libFollowerCount" -> libFollowerCount
       )
-    }
+    )
   }
 
   def changePassword = UserAction(parse.tolerantJson) { implicit request =>
