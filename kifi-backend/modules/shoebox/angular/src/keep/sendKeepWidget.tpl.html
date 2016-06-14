@@ -10,7 +10,7 @@
           ng-class="{'highlighted': suggestion.isHighlighted }" ng-mouseenter="onHoverSuggestion(suggestion)" ng-mouseleave="onUnhoverSuggestion(suggestion)">
         <div class="kf-skw-suggestion" ng-include="'keep/sendKeepSuggestionItem.tpl.html'"></div>
       </li>
-      <li class="kf-skw-suggestion" ng-if="suggestions.length <= 2">
+      <li class="kf-skw-suggestion kf-skw-suggestion-email" ng-if="suggestions.length <= 2" ng-disabled="!validEmail">
         <div class="kf-skw-suggestion-img-container">
           <div class="kf-skw-suggestion-img kf-skw-suggestion-img-email kf-skw-suggestion-img-newemail"></div>
         </div>

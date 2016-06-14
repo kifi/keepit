@@ -180,8 +180,8 @@ angular.module('kifi')
           }, 500);
         }
 
-        function clickTrack(action) {
-          $analytics.eventTrack('user_clicked_page', { type: $state.$current.name, action: 'clickedAddParticipants:' + action });
+        function clickTrack(action, props) {
+          $analytics.eventTrack('user_clicked_page', _.extend({ type: $state.$current.name, action: 'clickedAddParticipants:' + action }, props || {}));
         }
 
         scope.removeWidget = function() {
@@ -231,6 +231,7 @@ angular.module('kifi')
             scope.suggestions[highlightedIndex].isHighlighted = true;
             adjustScroll(highlightedIndex);
           });
+          clickTrack('selectedParticipant');
         };
 
         scope.removeSelection = function(selection) {
@@ -239,6 +240,7 @@ angular.module('kifi')
           });
           scope.suggestions = [selection].concat(scope.suggestions);
           resetInput();
+          clickTrack('unselectedParticipant');
         };
 
         scope.onClickCreateLibrary = function() {
@@ -371,7 +373,12 @@ angular.module('kifi')
               $timeout(scope.removeWidget, 1000);
             });
 
-          clickTrack('send');
+          clickTrack('send', {
+            numUserParticipants: userIds.length,
+            numLibraryParticipants: libraryIds.length,
+            numEmailParticipants: emails.length,
+            numTotalParticipants: userIds.length + libraryIds.length + emails.length
+          });
         };
 
 
