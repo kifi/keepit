@@ -9,10 +9,8 @@ import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
-import com.keepit.export.FullKifiExport
 import com.keepit.model._
-import org.apache.commons.math3.random.MersenneTwister
-import play.api.libs.iteratee.Enumerator
+import play.api.libs.iteratee.{ Enumeratee, Enumerator }
 
 import scala.concurrent.{ ExecutionContext, Future }
 
@@ -77,15 +75,16 @@ class KeepExportController @Inject() (
         val zip = new ZipOutputStream(os)
         keepExportCommander.htmlDump(export).foreach {
           case (fileName, html) =>
-            zip.putNextEntry(new ZipEntry("kifi-export/" + fileName))
+            zip.putNextEntry(new ZipEntry("kifi/" + fileName))
             zip.write(html.map(_.toByte).toArray)
             zip.closeEntry()
         }
         zip.close()
       }
+      val exportFileName = s"${request.user.primaryUsername.get.normalized.value}-kifi-export.zip"
       Ok.chunked(enum >>> Enumerator.eof).withHeaders(
         "Content-Type" -> "application/zip",
-        "Content-Disposition" -> "attachment; filename=test.zip"
+        "Content-Disposition" -> s"attachment; filename=$exportFileName"
       )
     }
   }

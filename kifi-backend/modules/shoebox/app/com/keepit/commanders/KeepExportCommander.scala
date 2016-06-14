@@ -1,7 +1,8 @@
 package com.keepit.commanders
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.common.core.{ anyExtensionOps, optionExtensionOps, mapExtensionOps }
+import com.keepit.common.concurrent.FutureHelpers
+import com.keepit.common.core.{ anyExtensionOps, optionExtensionOps, mapExtensionOps, futureExtensionOps }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
@@ -120,6 +121,7 @@ class KeepExportCommanderImpl @Inject() (
     val libsByKeepId = keeps.map { keep => keep.id.get -> libIdsByKeep(keep.id.get).flatMap(idToLib.get) }.toMap
     KeepExportResponse(keeps.sortBy(_.keptAt), tagsByKeepId, libsByKeepId)
   }
+
   def fullKifiExport(userId: Id[User]): Future[FullKifiExport] = {
     val shoeboxFut = db.readOnlyReplicaAsync { implicit s =>
       val libs = {
@@ -132,10 +134,15 @@ class KeepExportCommanderImpl @Inject() (
       }
       (libs, keeps)
     }
-    val roverFut = shoeboxFut.flatMap {
-      case (libs, keeps) =>
-        val uriIds = keeps.values.map(_.uriId).toSet
-        rover.getUriSummaryByUris(uriIds)
+    val roverFut = {
+      val URI_BATCH_SIZE = 500
+      shoeboxFut.flatMap {
+        case (libs, keeps) =>
+          val uriIds = keeps.values.map(_.uriId).toSet
+          FutureHelpers.foldLeft(uriIds.grouped(URI_BATCH_SIZE).toIterable)(Map.empty[Id[NormalizedURI], RoverUriSummary]) {
+            case (acc, batch) => rover.getUriSummaryByUris(batch).imap(x => acc ++ x)
+          }
+      }
     }
     for {
       (libs, keeps) <- shoeboxFut
@@ -158,26 +165,34 @@ class KeepExportCommanderImpl @Inject() (
     s"""
        |<h1>Kifi Export</h1>
        |<ul>
-       |  ${export.libs.traverseByKey.map(l => s"<li>${l.name}</li>").mkString("\n")}
+       |${export.libs.traverseByKey.map(l => s"<li><a href=${libraryLink(l)}>${l.name}</a></li>").mkString("\n")}
        |</ul>
     """.stripMargin
   }
 
-  private def libraryLink(lib: Library) = Library.publicId(lib.id.get).id
+  private def libraryLink(lib: Library) = s"${Library.publicId(lib.id.get).id}.html"
   private def libraryDump(export: FullKifiExport): Map[FileName, HtmlDump] = {
     def libraryPage(lib: Library): HtmlDump = {
+      val keepsList = export.keeps.filterValues(_.recipients.libraries.contains(lib.id.get)).traverseByKey.map { k =>
+        s"<li><a href=${keepLink(k)}>${k.title getOrElse k.url}</a></li>"
+      }.mkString("\n")
       s"""
+         |<a href=$indexLink>Home</a>
          |<h1>${lib.name}</h1>
          |<h2>${lib.keepCount} keeps</h1>
+         |<ul>
+         |$keepsList
+         |</ul>
       """.stripMargin
     }
     export.libs.map { case (lId, lib) => libraryLink(lib) -> libraryPage(lib) }
   }
 
-  private def keepLink(keep: Keep) = Keep.publicId(keep.id.get).id
+  private def keepLink(keep: Keep) = s"${Keep.publicId(keep.id.get).id}.html"
   private def keepDump(export: FullKifiExport): Map[FileName, HtmlDump] = {
     def keepPage(keep: Keep, uriSummary: Option[RoverUriSummary]): HtmlDump = {
       s"""
+         |<a href=$indexLink>Home</a>
          |<h1>${keep.title getOrElse keep.url}</h1>
          |${uriSummary.flatMap(_.article.description) getOrElse "<no_content>"}
       """.stripMargin
