@@ -2,18 +2,18 @@ package com.keepit.controllers.website
 
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.common.controller.FakeUserActionsHelper
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.controllers.client.KeepExportController
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
-import com.keepit.model.LibraryFactoryHelper._
-import com.keepit.model.UserFactoryHelper._
-import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
+import play.api.libs.iteratee.{ Enumeratee, Enumerator, Iteratee }
 import play.api.mvc.Call
 import play.api.test.FakeRequest
+
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
 class KeepExportControllerTest extends Specification with ShoeboxTestInjector {
   def createFakeRequest(route: Call) = FakeRequest(route.method, route.url)
@@ -27,19 +27,14 @@ class KeepExportControllerTest extends Specification with ShoeboxTestInjector {
     FakeSocialGraphModule()
   )
 
-  "OrganizationController" should {
-    "stream a zipped kifi export" in {
-      withDb(modules: _*) { implicit injector =>
-        val (user, lib) = db.readWrite { implicit s =>
-          val user = UserFactory.user().saved
-          val lib = LibraryFactory.library().withOwner(user).saved
-          (user, lib)
-        }
-        inject[FakeUserActionsHelper].setUser(user)
-        val request = createFakeRequest(route.fullKifiExport())
-        val resultFut = controller.fullKifiExport().apply(request)
-        1 === 1
-      }
+  "KeepExportController" should {
+    "demonstrate how to use enumerators and enumeratees" in {
+      val source: Enumerator[Int] = Enumerator.enumerate(Stream.range(1, 1000))
+      val transformer: Enumeratee[Int, String] = Enumeratee.map[Int](x => (x * x).toString)
+      val consumer: Iteratee[String, Int] = Iteratee.fold[String, Int](0)(_ + _.length)
+      val result = source.through(transformer).run(consumer)
+      Await.result(result, Duration.Inf) === Seq.range(1, 1000).map(x => x * x).mkString.length
+      1 === 1
     }
   }
 }
