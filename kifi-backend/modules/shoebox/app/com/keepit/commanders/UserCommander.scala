@@ -139,7 +139,6 @@ trait UserCommander {
   def getGmailABookInfos(userId: Id[User]): Future[Seq[ABookInfo]]
   def uploadContactsProxy(userId: Id[User], origin: ABookOriginType, payload: JsValue): Future[Try[ABookInfo]]
   def getUserInfo(user: User): BasicUserInfo
-  def getHelpRankInfo(userId: Id[User]): Future[UserKeepAttributionInfo]
   def getUserSegment(userId: Id[User]): UserSegment
   def tellUsersWithContactOfNewUserImmediate(newUser: User): Option[Future[Set[Id[User]]]]
   def sendWelcomeEmail(userId: Id[User], withVerification: Boolean = false, targetEmailOpt: Option[EmailAddress] = None): Future[Unit]
@@ -348,10 +347,6 @@ class UserCommanderImpl @Inject() (
         false
       case Some(hostname) => organizationDomainOwnershipRepo.getOwnershipsForDomain(hostname).nonEmpty
     }
-  }
-
-  def getHelpRankInfo(userId: Id[User]): Future[UserKeepAttributionInfo] = {
-    heimdalClient.getKeepAttributionInfo(userId)
   }
 
   def getUserSegment(userId: Id[User]): UserSegment = {

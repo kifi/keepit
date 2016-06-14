@@ -37,19 +37,6 @@ POST    /admin/domains/tags            @com.keepit.controllers.admin.UrlControll
 GET     /admin/domains/overrides       @com.keepit.controllers.admin.UrlController.getDomainOverrides
 POST    /admin/domains/overrides       @com.keepit.controllers.admin.UrlController.saveDomainOverrides
 
-GET     /admin/keepDiscoveries/page/:page @com.keepit.controllers.admin.AdminAttributionController.keepDiscoveriesView(page:Int, size:Int ?= 50, showImage:Boolean ?= false)
-GET     /admin/keepClicks/page/:page @com.keepit.controllers.admin.AdminAttributionController.keepDiscoveriesView(page:Int, size:Int ?= 50, showImage:Boolean ?= false)
-GET     /admin/rekeeps/page/:page    @com.keepit.controllers.admin.AdminAttributionController.rekeepsView(page:Int, size:Int ?= 50, showImage:Boolean ?= false)
-GET     /admin/keepInfos/:id         @com.keepit.controllers.admin.AdminAttributionController.keepInfos(id:Id[User])
-GET     /admin/reKeeps/:id           @com.keepit.controllers.admin.AdminAttributionController.reKeepInfos(id:Id[User])
-GET     /admin/topReKeeps            @com.keepit.controllers.admin.AdminAttributionController.topReKeeps(degree:Int ?= 3)
-GET     /admin/keepAttribution       @com.keepit.controllers.admin.AdminAttributionController.topReKeeps(degree:Int ?= 3)
-
-POST    /admin/reKeepStats/update       @com.keepit.controllers.admin.AdminAttributionController.updateReKeepStats
-POST    /admin/reKeepStats/user/update  @com.keepit.controllers.admin.AdminAttributionController.updateUserReKeepStats
-POST    /admin/reKeepStats/users/update @com.keepit.controllers.admin.AdminAttributionController.updateUsersReKeepStats
-POST    /admin/reKeepStats/all/update   @com.keepit.controllers.admin.AdminAttributionController.updateAllReKeepStats
-
 GET     /admin/sitemap/library          @com.keepit.controllers.admin.AdminSiteMapController.generateLibrarySitemap()
 GET     /admin/sitemap/user             @com.keepit.controllers.admin.AdminSiteMapController.generateUserSitemap()
 

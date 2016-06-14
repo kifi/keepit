@@ -330,12 +330,11 @@ class KeepInternerImpl @Inject() (
           // Analytics & typeaheads
           libraries.foreach { lib => libraryAnalytics.keptPages(keeps, lib, ctx) }
           keeps.groupBy(_.userId).collect {
-            case (Some(userId), ks) =>
+            case (Some(userId), _) =>
               libraries.foreach { lib =>
                 libResCache.direct.remove(LibraryResultTypeaheadKey(userId, lib.id.get))
                 relevantSuggestedLibrariesCache.direct.remove(RelevantSuggestedLibrariesKey(userId))
               }
-              heimdalClient.processKeepAttribution(userId, ks)
           }
           searchClient.updateKeepIndex()
 
