@@ -811,12 +811,7 @@ api.port.on({
     }
 
     updateKeepReciepients(keepId, params)
-    .then(function () {
-      if (removingSelf) {
-        removeFromThread(keepId);
-      }
-      respond(true);
-    })
+    .then(respond.bind(null, true))
     .catch(respond.bind(null, false));
   },
 
