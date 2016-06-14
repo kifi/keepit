@@ -172,10 +172,9 @@ class SlackIngestingActor @Inject() (
     FutureHelpers.foldLeftUntil[Unit, Option[SlackTimestamp]](Stream.continually(()))(integration.lastMessageTimestamp) {
       case (lastMessageTimestamp, ()) =>
         getLatestMessagesWithLinks(tokenWithScopes.token, integration.slackTeamId, integration.slackChannelId, channel.slackChannelName, lastMessageTimestamp).flatMap { allMessages =>
-          val (messages, invalidMessages) = allMessages.partition(_.channel.id == integration.slackChannelId)
-          airbrake.verify(invalidMessages.isEmpty, s"Fetched messages from the wrong channel (integration ${integration.id.get}): $invalidMessages")
+          val validMessages = allMessages.filter(_.channel.id == integration.slackChannelId)
+          val (newLastMessageTimestamp, ingestedMessages) = ingestMessages(integration, settings, validMessages)
 
-          val (newLastMessageTimestamp, ingestedMessages) = ingestMessages(integration, settings, messages)
           val futureReactions = if (shouldAddReactions) {
             FutureHelpers.sequentialExec(ingestedMessages.toSeq.sortBy(_.timestamp)) { message =>
               slackClient.addReaction(team.kifiBot.map(_.token) getOrElse tokenWithScopes.token, SlackReaction.robotFace, message.channel.id, message.timestamp) recover {
