@@ -126,7 +126,7 @@ class ElizaDiscussionController @Inject() (
     log.info(s"[EDCtrlr-MRASE] Handling an event for ${input.keepId} from ${input.userAttribution}")
     discussionCommander.modifyRecipientsForKeep(input.keepId, input.userAttribution, input.diff, input.source).andThen {
       case Success((thread, diff)) => input.notifEvent.foreach { event =>
-        notifDeliveryCommander.notifyAddParticipants(input.userAttribution, input.diff, thread, event)
+        notifDeliveryCommander.notifyThreadAboutParticipantDiff(input.userAttribution, input.diff, thread, event)
       }
     }.map(_ => NoContent)
   }

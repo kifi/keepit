@@ -46,7 +46,7 @@ trait NotificationDeliveryCommander {
   // todo: For each method here, remove if no one's calling it externally, and set as private in the implementation
   def updateEmailParticipantThreads(thread: MessageThread, newMessage: ElizaMessage): Unit
   def notifyEmailParticipants(thread: MessageThread): Unit
-  def notifyAddParticipants(adderUserId: Id[User], diff: KeepRecipientsDiff, thread: MessageThread, basicEvent: BasicKeepEvent): Unit
+  def notifyThreadAboutParticipantDiff(adderUserId: Id[User], diff: KeepRecipientsDiff, thread: MessageThread, basicEvent: BasicKeepEvent): Unit
   def notifyMessage(userId: Id[User], keepId: PublicId[Keep], message: MessageWithBasicUser): Unit
   def notifyRead(userId: Id[User], keepId: Id[Keep], messageIdOpt: Option[Id[ElizaMessage]], nUrl: String, readAt: DateTime): Unit
   def notifyUnread(userId: Id[User], keepId: Id[Keep], messageIdOpt: Option[Id[ElizaMessage]], nUrl: String, readAt: DateTime): Unit
@@ -124,7 +124,7 @@ class NotificationDeliveryCommanderImpl @Inject() (
     emailCommander.notifyEmailUsers(thread)
   }
 
-  def notifyAddParticipants(adderUserId: Id[User], diff: KeepRecipientsDiff, thread: MessageThread, basicEvent: BasicKeepEvent): Unit = {
+  def notifyThreadAboutParticipantDiff(adderUserId: Id[User], diff: KeepRecipientsDiff, thread: MessageThread, basicEvent: BasicKeepEvent): Unit = {
     new SafeFuture(for {
       (basicUsers, basicLibraries, emails) <- shoebox.getRecipientsOnKeep(thread.keepId)
       author <- basicUsers.get(adderUserId).map(Future.successful).getOrElse {
@@ -161,6 +161,10 @@ class NotificationDeliveryCommanderImpl @Inject() (
       thread.participants.allUsers.par.foreach { userId =>
         sendToUser(userId, Json.arr("event", thread.pubKeepId, basicEvent))
         sendToUser(userId, Json.arr("thread_participants", thread.pubKeepId, participants))
+      }
+
+      diff.users.removed.foreach { userId =>
+        sendToUser(userId, Json.arr("removed_from_thread", thread.pubKeepId))
       }
 
       val pushNotifText = s"${author.fullName} sent ${thread.pageTitle.getOrElse("you a page")}"
