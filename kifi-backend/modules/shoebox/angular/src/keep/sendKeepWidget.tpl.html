@@ -5,7 +5,7 @@
       <svg class="kf-skw-close symbol-sprite" kf-symbol-sprite icon="error" ng-click="removeWidget()">
     </div>
 
-    <ul class="kf-skw-suggestions" smart-scroll kf-wheel-allow scroll-distance="'40%'" scroll-next="fetchSuggestions()">
+    <ul class="kf-skw-suggestions" smart-scroll kf-wheel-allow scroll-distance="'100%'" scroll-next="fetchSuggestions()">
       <li ng-repeat="suggestion in suggestions" ng-click="selectSuggestion(suggestion)"
           ng-class="{'highlighted': suggestion.isHighlighted }" ng-mouseenter="onHoverSuggestion(suggestion)" ng-mouseleave="onUnhoverSuggestion(suggestion)">
         <div class="kf-skw-suggestion" ng-include="'keep/sendKeepSuggestionItem.tpl.html'"></div>

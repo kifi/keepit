@@ -382,21 +382,23 @@ angular.module('kifi')
         };
 
 
-        scope.onTypeaheadInputChanged = function() {
+        scope.onTypeaheadInputChanged = _.debounce(function() {
           currPage = 0;
-          suggestionPaginator.reset();
-          scope.fetchSuggestions().then(function () {
-            clearHighlights();
-            highlightedIndex = 0;
-            if (scope.suggestions.length) {
+          $timeout(function () {
+            suggestionPaginator.reset();
+            scope.fetchSuggestions().then(function () {
               clearHighlights();
-              scope.suggestions[highlightedIndex].isHighlighted = true;
-            }
-            adjustScroll(highlightedIndex);
-          });
-          resizeInput();
-          scope.validEmail = util.validateEmail(scope.typeahead);
-        };
+              highlightedIndex = 0;
+              if (scope.suggestions.length) {
+                clearHighlights();
+                scope.suggestions[highlightedIndex].isHighlighted = true;
+              }
+              adjustScroll(highlightedIndex);
+            });
+            resizeInput();
+            scope.validEmail = util.validateEmail(scope.typeahead);
+          }, 200);
+        }, 200, { trailing: true });
 
         listenForInit();
       }
