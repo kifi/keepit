@@ -31,6 +31,7 @@ GET    /api/1/keeps/:id/activity     @com.keepit.controllers.client.KeepInfoCont
 # Exports
 GET    /api/1/keeps/export/personal  @com.keepit.controllers.client.KeepExportController.exportPersonalKeeps()
 GET    /api/1/keeps/export/org       @com.keepit.controllers.client.KeepExportController.exportOrganizationKeeps()
+GET    /api/1/keeps/export/full      @com.keepit.controllers.client.KeepExportController.fullKifiExport()
 
 ##
 # LIBRARIES
