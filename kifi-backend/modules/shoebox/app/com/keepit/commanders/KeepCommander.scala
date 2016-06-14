@@ -449,14 +449,16 @@ class KeepCommanderImpl @Inject() (
       }
     }.getOrElse((Set.empty, Set.empty, Set.empty))
     val excludeSize = usersToExclude.size + emailsToExclude.size + librariesToExclude.size
-    typeaheadCommander.searchAndSuggestKeepRecipients(userId, query getOrElse "", limitOpt = Some(limit + excludeSize), dropOpt = Some(offset), requested = requestedSet).imap { result =>
+    val dropOpt = if (keepIdOpt.isDefined) Some(offset) else None // we can't accurately know how much to drop if we're going to filter after
+    typeaheadCommander.searchAndSuggestKeepRecipients(userId, query getOrElse "", limitOpt = Some(limit+excludeSize), dropOpt = dropOpt, requested = requestedSet).imap { result =>
       result.filterNot {
         case u: UserContactResult => usersToExclude.contains(u.id)
         case e: EmailContactResult => emailsToExclude.contains(e.email)
         case l: LibraryResult => librariesToExclude.contains(l.id)
-      }.take(limit)
+      }.drop(offset).take(limit)
     }
   }
+  
 
   def numKeeps(userId: Id[User]): Int = db.readOnlyReplica { implicit s => keepRepo.getCountByUser(userId) }
 
