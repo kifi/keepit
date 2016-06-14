@@ -548,6 +548,9 @@ var socketHandlers = {
       api.tabs.emit(tab, 'participants', participants);  // TODO: send threadId too
     });
   },
+  removed_from_thread: function (keepId) {
+    removeFromThread(keepId);
+  },
   thread_muted: function(threadId, muted) {
     log("[socket:thread_muted]", threadId, muted);
     setMuted(threadId, muted);
@@ -807,19 +810,13 @@ api.port.on({
       return respond(false);
     }
 
-    if (removingSelf) {
-      removeNotification(keepId);
-      forEachTabAtLocator('/messages/' + keepId, function (tab) {
-        api.tabs.emit(tab, 'show_pane', {
-          trigger: 'evictedAutoNavigate',
-          locator: getDefaultPaneLocator(),
-          redirected: false
-        }, {queue: 1});
-      });
-    }
-
     updateKeepReciepients(keepId, params)
-    .then(respond.bind(null, true))
+    .then(function () {
+      if (removingSelf) {
+        removeFromThread(keepId);
+      }
+      respond(true);
+    })
     .catch(respond.bind(null, false));
   },
 
@@ -2613,6 +2610,17 @@ function getPrefetchedResults(query, cb) {
     }
   }
   return !!entry;
+}
+
+function removeFromThread(keepId) {
+  removeNotification(keepId);
+  forEachTabAtLocator('/messages/' + keepId, function (tab) {
+    api.tabs.emit(tab, 'show_pane', {
+      trigger: 'evictedAutoNavigate',
+      locator: getDefaultPaneLocator(),
+      redirected: false
+    }, {queue: 1});
+  });
 }
 
 // ===== Local storage
