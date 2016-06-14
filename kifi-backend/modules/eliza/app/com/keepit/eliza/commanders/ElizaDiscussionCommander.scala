@@ -247,7 +247,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
         shoebox.persistModifyRecipients(keepId, ModifyRecipients(editor, realDiff), source).map {
           case None => false
           case Some(CommonAndBasicKeepEvent(_, basicEvent)) =>
-            notifDeliveryCommander.notifyAddParticipants(editor, realDiff, updatedThread, basicEvent)
+            notifDeliveryCommander.notifyThreadAboutParticipantDiff(editor, realDiff, updatedThread, basicEvent)
             true
         }
       } else Future.successful(false)
