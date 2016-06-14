@@ -35,8 +35,8 @@ angular.module('kifi')
       }
     };
 
-    Paginator.prototype.fetch = function (sourceFunction, pageNumber, pageSize) {
-      if (this.loading) {
+    Paginator.prototype.fetch = function (sourceFunction, pageNumber, pageSize, refresh) {
+      if (!refresh && this.loading) {
         return this._cachedFetch;
       }
 
@@ -51,7 +51,13 @@ angular.module('kifi')
         .then(function (items) {
           this.hasMoreItems = this._calcServerHasMore(items, pageSize);
           this.init = true;
-          this.items = this.items.concat(items);
+
+          if (refresh) {
+            this.items = items;
+            this.fetchPageNumber = 0;
+          } else {
+            this.items = this.items.concat(items);
+          }
 
           return this.items;
         }.bind(this))

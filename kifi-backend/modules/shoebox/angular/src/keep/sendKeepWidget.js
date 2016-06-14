@@ -207,8 +207,9 @@ angular.module('kifi')
           }
         };
 
-        scope.fetchSuggestions = function () {
-          return suggestionPaginator.fetch().then(function(suggestions) {
+        scope.fetchSuggestions = function (refresh) {
+          refresh = refresh || false;
+          return suggestionPaginator.fetch(null, null, null, refresh).then(function(suggestions) {
             scope.suggestions = suggestions;
             if (widget && !scope.init) {
               scope.init = true;
@@ -382,23 +383,22 @@ angular.module('kifi')
         };
 
 
-        scope.onTypeaheadInputChanged = _.debounce(function() {
+        scope.onTypeaheadInputChanged = function() {
           currPage = 0;
-          $timeout(function () {
-            suggestionPaginator.reset();
-            scope.fetchSuggestions().then(function () {
+
+          suggestionPaginator.reset();
+          scope.fetchSuggestions(true).then(function () {
+            clearHighlights();
+            highlightedIndex = 0;
+            if (scope.suggestions.length) {
               clearHighlights();
-              highlightedIndex = 0;
-              if (scope.suggestions.length) {
-                clearHighlights();
-                scope.suggestions[highlightedIndex].isHighlighted = true;
-              }
-              adjustScroll(highlightedIndex);
-            });
-            resizeInput();
-            scope.validEmail = util.validateEmail(scope.typeahead);
-          }, 200);
-        }, 200, { trailing: true });
+              scope.suggestions[highlightedIndex].isHighlighted = true;
+            }
+            adjustScroll(highlightedIndex);
+          });
+          resizeInput();
+          scope.validEmail = util.validateEmail(scope.typeahead);
+        };
 
         listenForInit();
       }
