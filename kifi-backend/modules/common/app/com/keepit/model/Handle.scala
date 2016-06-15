@@ -45,8 +45,8 @@ object LibrarySpace {
   case class UserSpace(id: Id[User]) extends LibrarySpace
   case class OrganizationSpace(id: Id[Organization]) extends LibrarySpace
 
-  implicit def fromUserId(userId: Id[User]): UserSpace = UserSpace(userId)
-  implicit def fromOrganizationId(organizationId: Id[Organization]): OrganizationSpace = OrganizationSpace(organizationId)
+  implicit def fromUserId(userId: Id[User]): LibrarySpace = UserSpace(userId)
+  implicit def fromOrganizationId(organizationId: Id[Organization]): LibrarySpace = OrganizationSpace(organizationId)
 
   def fromOptions(userIdOpt: Option[Id[User]], orgIdOpt: Option[Id[Organization]]): Option[LibrarySpace] = {
     (userIdOpt, orgIdOpt) match { // org-biased, to match apply behavior
