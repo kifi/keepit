@@ -1,0 +1,36 @@
+<div class="kf-right-hand-widget-container" ng-if="keeps.length">
+  <div class="kf-keep-page-rhr-header">In these discussions</div>
+  <div class="kf-keep-discussions-widget-container"
+        ng-repeat="keep in keeps">
+    <a ng-href="{{::keep.activity.latestEvent.author.url|pathFromUrl}}"
+        ng-if="keep.activity.latestEvent.author.picture"
+        ng-style="{ 'background-image' : 'url(' + (keep.activity.latestEvent.author.picture) + ')' }"
+        class="kf-keep-discussions-widget-image"></a>
+    <div class="kf-keep-discussions-widget-right-container" ng-click="onClickDiscussion(keep)">
+      <div class="kf-keep-discussions-widget-participants">
+        <svg kf-symbol-sprite
+              class="kf-keep-discussions-widget-visibility"
+              icon="{{::(keep.recipients.libraries[0]|libPrivacyIcon) || 'lock'}}"></svg><!--
+        --><span ng-repeat="library in keep.recipients.libraries | limitTo: maxDiscussionRecipientsPerType"
+              ng-bind="library.name | ellipsize: 18"
+              ng-style="{ color: library.color }"
+              class="kf-keep-discussions-widget-library"></span><!--
+        --><span ng-repeat="user in keep.recipients.users | limitTo: maxDiscussionRecipientsPerType"
+              ng-bind="user|firstName"></span><!--
+        --><span class="kf-keep-discussions-widget-participant"
+              ng-repeat="email in keep.recipients.emails | limitTo: maxDiscussionRecipientsPerType"
+              ng-bind="email"></span><!--
+        --><span ng-if="extraRecipients[keep].count" ng-bind-template="+{{extraRecipients[keep].count}}"></span>
+      </div>
+      <div class="kf-keep-discussions-widget-message"
+           ng-if="latestActivityElements[keep]">
+        <span class="kf-keep-discussions-widget-message-sender" ng-bind="keep.activity.latestEvent.author|firstName"></span>:
+        <span kf-activity-event-segments="latestActivityElements[keep]"></span>
+      </div>
+      <time class="kf-keep-discussions-widget-message-time"
+          ng-attr-datetime="{{::keep.activity.latestEvent.timestamp}}"
+          am-time-ago="::keep.activity.latestEvent.timestamp"
+          title="{{::keep.activity.latestEvent.timestamp|localTime}}"></time>
+    </div>
+  </div>
+</div>

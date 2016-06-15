@@ -23,29 +23,9 @@ angular.module('kifi')
             extensionLiaison.openDeepLink($scope.keep.url, $scope.keep.discussion.locator);
           };
 
-          function processElements(elements) {
-            var processedElements = [];
-            if (elements) {
-              elements.forEach(function (element) {
-                if (element.kind === 'text') {
-                  var parts = messageFormattingService.trimExtraSpaces(messageFormattingService.full(element.text));
-                  parts.forEach(function (part) {
-                    if (part.type === 'LOOK_HERE' && $scope.keep) {
-                      part.url = $scope.keep.url;
-                      part.locator = '/messages/' + $scope.keep.pubId;
-                    }
-                    processedElements.push(part);
-                  });
-                } else {
-                  processedElements.push(element);
-                }
-              });
-            }
-            return processedElements;
-          }
-
           $scope.activity = $scope.activityEvent.header || [{kind: 'user', text: $scope.activityEvent.sentBy.firstName}];
-          $scope.body = processElements($scope.activityEvent.body || [{kind: 'text', text: $scope.activityEvent.text}]);
+          $scope.body = messageFormattingService.processActivityEventElements(
+            $scope.activityEvent.body || [{kind: 'text', text: $scope.activityEvent.text}], $scope.keep);
 
           var canDeleteMessage = $scope.activityEvent.kind === 'comment' && (
             $scope.me.id === ($scope.activityEvent.author && $scope.activityEvent.author.id) ||
