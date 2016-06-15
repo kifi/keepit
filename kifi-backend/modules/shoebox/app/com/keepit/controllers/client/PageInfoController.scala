@@ -1,7 +1,7 @@
 package com.keepit.controllers.client
 
 import com.google.inject.Inject
-import com.keepit.commanders.KeepQuery.{ FirstOrder, ForUriAndRecipients, Paging }
+import com.keepit.commanders.KeepQuery.{ FirstOrder, Paging }
 import com.keepit.commanders.gen.BasicLibraryGen
 import com.keepit.commanders.{ KeepQuery, KeepQueryCommander }
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
@@ -12,7 +12,6 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.json
 import com.keepit.common.json.SchemaReads
-import com.keepit.common.reflection.Enumerator
 import com.keepit.common.time._
 import com.keepit.common.util.PaginationContext
 import com.keepit.common.util.RightBias._
@@ -90,9 +89,10 @@ class PageInfoController @Inject() (
 
   private object GetKeepsByUri {
     import json.SchemaReads._
-    final case class Input(url: String, paginationContext: Option[PaginationContext[Keep]], config: KeepViewAssemblyOptions)
+    final case class Input(url: String, recipient: Option[String], paginationContext: Option[PaginationContext[Keep]], config: KeepViewAssemblyOptions)
     val schemaReads: SchemaReads[Input] = (
       (__ \ 'url).readWithSchema[String] and
+      (__ \ 'recipient).readNullableWithSchema[String] and
       (__ \ 'paginationContext).readNullableWithSchema[PaginationContext[Keep]] and
       (__ \ 'config).readNullableWithSchema(KeepInfoAssemblerConfig.useDefaultForMissing).map(_ getOrElse KeepInfoAssemblerConfig.default)
     )(Input.apply _)
