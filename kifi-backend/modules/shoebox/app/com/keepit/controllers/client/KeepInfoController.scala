@@ -40,6 +40,7 @@ class KeepInfoController @Inject() (
   clock: Clock,
   typeaheadCommander: TypeaheadCommander,
   userValueRepo: UserValueRepo,
+  permissionCommander: PermissionCommander,
   implicit val airbrake: AirbrakeNotifier,
   private implicit val defaultContext: ExecutionContext,
   private implicit val publicIdConfig: PublicIdConfiguration)
@@ -86,6 +87,13 @@ class KeepInfoController @Inject() (
   def getActivityOnKeep(pubId: PublicId[Keep], limit: Int, fromTime: Option[DateTime]) = MaybeUserAction.async { implicit request =>
     val result = for {
       keepId <- Keep.decodePublicId(pubId).map(Future.successful).getOrElse(Future.failed(KeepFail.INVALID_KEEP_ID))
+      _ <- {
+        val permissions = db.readOnlyMaster { implicit s =>
+          permissionCommander.getKeepPermissions(keepId, request.userIdOpt)
+        }
+        if (permissions.contains(KeepPermission.VIEW_KEEP)) Future.successful(())
+        else Future.failed(KeepFail.INSUFFICIENT_PERMISSIONS)
+      }
       activity <- keepActivityAssembler.getActivityForKeep(keepId, fromTime, limit)
     } yield {
       Ok(Json.toJson(activity))
