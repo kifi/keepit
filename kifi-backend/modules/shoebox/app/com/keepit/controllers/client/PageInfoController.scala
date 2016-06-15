@@ -1,17 +1,19 @@
 package com.keepit.controllers.client
 
 import com.google.inject.Inject
-import com.keepit.commanders.KeepQuery.{ FirstOrder, Paging }
+import com.keepit.commanders.KeepQuery.{ ForUriAndRecipients, FirstOrder, Paging }
 import com.keepit.commanders.gen.BasicLibraryGen
 import com.keepit.commanders.{ KeepQuery, KeepQueryCommander }
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.core.mapExtensionOps
-import com.keepit.common.crypto.PublicIdConfiguration
-import com.keepit.common.db.Id
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.json
 import com.keepit.common.json.SchemaReads
+import com.keepit.common.mail.EmailAddress
+import com.keepit.common.performance.Stopwatch
 import com.keepit.common.time._
 import com.keepit.common.util.PaginationContext
 import com.keepit.common.util.RightBias._
@@ -19,7 +21,8 @@ import com.keepit.model._
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.shoebox.data.assemblers.KeepInfoAssemblerConfig.KeepViewAssemblyOptions
 import com.keepit.shoebox.data.assemblers.{ KeepInfoAssembler, KeepInfoAssemblerConfig }
-import com.keepit.shoebox.data.keep.{ NewKeepInfosForPage, NewPageInfo }
+import com.keepit.shoebox.data.keep.{ NewKeepInfosForIntersection, NewKeepInfosForPage, NewPageInfo }
+import org.apache.commons.lang3.RandomStringUtils
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
@@ -46,7 +49,7 @@ class PageInfoController @Inject() (
       uriInterner.getByUri(url).map(_.id.get).fold(Seq.empty[BasicLibrary]) { uriId =>
         val query = KeepQuery(
           target = FirstOrder(uriId, viewer),
-          paging = Paging(filter = None, offset = 0, limit = Math.min(limit, 50)),
+          paging = KeepQuery.Paging(filter = None, offset = 0, limit = Math.min(limit, 50)),
           arrangement = None
         )
         val keepIds = keepRepo.getKeepIdsForQuery(query).toSet
@@ -89,10 +92,9 @@ class PageInfoController @Inject() (
 
   private object GetKeepsByUri {
     import json.SchemaReads._
-    final case class Input(url: String, recipient: Option[String], paginationContext: Option[PaginationContext[Keep]], config: KeepViewAssemblyOptions)
+    final case class Input(url: String, paginationContext: Option[PaginationContext[Keep]], config: KeepViewAssemblyOptions)
     val schemaReads: SchemaReads[Input] = (
       (__ \ 'url).readWithSchema[String] and
-      (__ \ 'recipient).readNullableWithSchema[String] and
       (__ \ 'paginationContext).readNullableWithSchema[PaginationContext[Keep]] and
       (__ \ 'config).readNullableWithSchema(KeepInfoAssemblerConfig.useDefaultForMissing).map(_ getOrElse KeepInfoAssemblerConfig.default)
     )(Input.apply _)
@@ -127,4 +129,69 @@ class PageInfoController @Inject() (
       result.map(ans => Ok(outputWrites.writes(ans)))
     }
   }
+
+  private object GetKeepsByUriAndRecipients {
+    import json.SchemaReads._
+    final case class GetKeepsByUriAndRecipients(
+      url: String,
+      users: Set[ExternalId[User]],
+      libraries: Set[PublicId[Library]],
+      emails: Set[EmailAddress])
+    val schemaReads: SchemaReads[GetKeepsByUriAndRecipients] = (
+      (__ \ 'url).readWithSchema[String] and
+      (__ \ 'users).readNullableWithSchema[Set[ExternalId[User]]].map(_ getOrElse Set.empty) and
+      (__ \ 'libraries).readNullableWithSchema[Set[PublicId[Library]]].map(_ getOrElse Set.empty) and
+      (__ \ 'emails).readNullableWithSchema[Set[EmailAddress]].map(_ getOrElse Set.empty))(GetKeepsByUriAndRecipients.apply _)
+    implicit val reads = schemaReads.reads
+    val schema = schemaReads.schema
+    val schemaHelper = json.schemaHelper(reads)
+    val outputWrites: Writes[NewKeepInfosForIntersection] = NewKeepInfosForIntersection.writes
+  }
+  def getKeepsByUriAndRecipients() = UserAction.async(parse.tolerantJson) { implicit request =>
+    import GetKeepsByUriAndRecipients._
+    val resultIfEverythingChecksOut = for {
+      input <- request.body.asOpt[GetKeepsByUriAndRecipients].withLeft("malformed_input")
+      recipients <- db.readOnlyReplica { implicit s =>
+        val userIdMap = userRepo.convertExternalIds(input.users)
+        for {
+          users <- input.users.fragileMap(id => userIdMap.get(id).withLeft("invalid_user_id"))
+          libraries <- input.libraries.fragileMap(pubId => Library.decodePublicId(pubId).toOption.withLeft("invalid_library_id"))
+        } yield KeepRecipients(libraries, input.emails, users)
+      }
+    } yield getKeepInfosForIntersection(request.userId, input.url, recipients)
+
+    resultIfEverythingChecksOut.fold(
+      fail => Future.successful(schemaHelper.hintResponse(request.body, schema)),
+      result => result.map(ans => Ok(outputWrites.writes(ans)))
+    )
+  }
+
+  private def getKeepInfosForIntersection(viewer: Id[User], url: String, recipients: KeepRecipients): Future[NewKeepInfosForIntersection] = {
+    val stopwatch = new Stopwatch(s"[PIC-PAGE-${RandomStringUtils.randomAlphanumeric(5)}]")
+    val uriOpt = db.readOnlyReplica { implicit s =>
+      uriInterner.getByUri(url).map(_.id.get)
+    }
+    stopwatch.logTimeWith("uri_retrieved")
+    uriOpt.fold(Future.successful(NewKeepInfosForIntersection.empty)) { uriId =>
+      val query = KeepQuery(
+        target = ForUriAndRecipients(uriId, viewer, recipients),
+        paging = KeepQuery.Paging(filter = None, offset = 0, limit = 10),
+        arrangement = None
+      )
+      for {
+        keepIds <- db.readOnlyReplicaAsync { implicit s => queryCommander.getKeeps(Some(viewer), query) }
+        _ = stopwatch.logTimeWith(s"query_complete_n_${keepIds.length}")
+        (pageInfo, keepInfos) <- {
+          // Launch these in parallel
+          val pageInfoFut = keepInfoAssembler.assemblePageInfos(Some(viewer), Set(uriId)).map(_.get(uriId))
+          val keepInfosFut = keepInfoAssembler.assembleKeepInfos(Some(viewer), keepIds.toSet)
+          for (p <- pageInfoFut; k <- keepInfosFut) yield (p, k)
+        }
+      } yield {
+        stopwatch.logTimeWith("done")
+        NewKeepInfosForIntersection(pageInfo, keepIds.flatMap(kId => keepInfos.get(kId).flatMap(_.getRight)))
+      }
+    }
+  }
+
 }

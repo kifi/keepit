@@ -263,7 +263,7 @@ class UserCommanderImpl @Inject() (
   def updateName(userId: Id[User], newFirstName: Option[String], newLastName: Option[String]): User = {
     db.readWrite { implicit session =>
       val user = userRepo.get(userId)
-      userRepo.save(user.copy(firstName = newFirstName.getOrElse(user.firstName), lastName = newLastName.getOrElse(user.lastName)))
+      userRepo.save(user.copy(firstName = newFirstName.filter(_.nonEmpty).getOrElse(user.firstName), lastName = newLastName.getOrElse(user.lastName)))
     }
   }
 
