@@ -21,6 +21,13 @@ object NewKeepInfosForPage {
   }
 }
 
+case class NewKeepInfosForIntersection(page: Option[NewPageInfo], keeps: Seq[NewKeepInfo])
+
+object NewKeepInfosForIntersection {
+  val empty = NewKeepInfosForIntersection(page = Option.empty, keeps = Seq.empty)
+  implicit val writes: Writes[NewKeepInfosForIntersection] = Json.writes[NewKeepInfosForIntersection]
+}
+
 sealed abstract class KeepProximitySection(val priority: Int, val value: String)
 object KeepProximitySection extends Enumerator[KeepProximitySection] {
   case object Direct extends KeepProximitySection(0, "direct")
