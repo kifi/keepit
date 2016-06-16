@@ -1,12 +1,13 @@
 package com.keepit.controllers.client
 
 import com.google.inject.Inject
-import com.keepit.commanders.KeepQuery.{ ForUriAndRecipients, FirstOrder, Paging }
+import com.keepit.commanders.KeepQuery.{ ForUriAndRecipients, FirstOrder }
 import com.keepit.commanders.gen.BasicLibraryGen
 import com.keepit.commanders.{ KeepQuery, KeepQueryCommander }
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.core.mapExtensionOps
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
+import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -21,7 +22,7 @@ import com.keepit.model._
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.shoebox.data.assemblers.KeepInfoAssemblerConfig.KeepViewAssemblyOptions
 import com.keepit.shoebox.data.assemblers.{ KeepInfoAssembler, KeepInfoAssemblerConfig }
-import com.keepit.shoebox.data.keep.{ NewKeepInfosForIntersection, NewKeepInfosForPage, NewPageInfo }
+import com.keepit.shoebox.data.keep.{ KeepProximitySection, NewKeepInfosForIntersection, NewKeepInfosForPage, NewPageInfo }
 import org.apache.commons.lang3.RandomStringUtils
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -136,12 +137,17 @@ class PageInfoController @Inject() (
       url: String,
       users: Set[ExternalId[User]],
       libraries: Set[PublicId[Library]],
-      emails: Set[EmailAddress])
+      emails: Set[EmailAddress],
+      paginationContext: PaginationContext[Keep],
+      initialRequest: Boolean)
     val schemaReads: SchemaReads[GetKeepsByUriAndRecipients] = (
       (__ \ 'url).readWithSchema[String] and
       (__ \ 'users).readNullableWithSchema[Set[ExternalId[User]]].map(_ getOrElse Set.empty) and
       (__ \ 'libraries).readNullableWithSchema[Set[PublicId[Library]]].map(_ getOrElse Set.empty) and
-      (__ \ 'emails).readNullableWithSchema[Set[EmailAddress]].map(_ getOrElse Set.empty))(GetKeepsByUriAndRecipients.apply _)
+      (__ \ 'emails).readNullableWithSchema[Set[EmailAddress]].map(_ getOrElse Set.empty) and
+      (__ \ 'paginationContext).readNullableWithSchema[PaginationContext[Keep]].map(_ getOrElse PaginationContext.empty) and
+      (__ \ 'initialRequest).readWithSchema[Boolean]
+    )(GetKeepsByUriAndRecipients.apply _)
     implicit val reads = schemaReads.reads
     val schema = schemaReads.schema
     val schemaHelper = json.schemaHelper(reads)
@@ -158,7 +164,7 @@ class PageInfoController @Inject() (
           libraries <- input.libraries.fragileMap(pubId => Library.decodePublicId(pubId).toOption.withLeft("invalid_library_id"))
         } yield KeepRecipients(libraries, input.emails, users)
       }
-    } yield getKeepInfosForIntersection(request.userId, input.url, recipients)
+    } yield getKeepInfosForIntersection(request.userId, input.url, recipients, input.paginationContext, input.initialRequest)
 
     resultIfEverythingChecksOut.fold(
       fail => Future.successful(schemaHelper.hintResponse(request.body, schema)),
@@ -166,32 +172,55 @@ class PageInfoController @Inject() (
     )
   }
 
-  private def getKeepInfosForIntersection(viewer: Id[User], url: String, recipients: KeepRecipients): Future[NewKeepInfosForIntersection] = {
+  private def getKeepInfosForIntersection(viewer: Id[User], url: String, recipients: KeepRecipients, paginationContext: PaginationContext[Keep], initialRequest: Boolean): Future[NewKeepInfosForIntersection] = {
     val stopwatch = new Stopwatch(s"[PIC-PAGE-${RandomStringUtils.randomAlphanumeric(5)}]")
     val uriOpt = db.readOnlyReplica { implicit s =>
       uriInterner.getByUri(url).map(_.id.get)
     }
     stopwatch.logTimeWith("uri_retrieved")
     uriOpt.fold(Future.successful(NewKeepInfosForIntersection.empty)) { uriId =>
+      val pageInfoFut = if (initialRequest) keepInfoAssembler.assemblePageInfos(Some(viewer), Set(uriId)).map(_.get(uriId)) else Future.successful(None)
+      val entityNameFut = if (initialRequest && (recipients.numLibraries + recipients.numParticipants > 0)) db.readOnlyReplicaAsync(implicit s => getNameOfFirstEntity(recipients)) else Future.successful(None)
       val query = KeepQuery(
         target = ForUriAndRecipients(uriId, viewer, recipients),
-        paging = KeepQuery.Paging(filter = None, offset = 0, limit = 10),
+        paging = KeepQuery.Paging(filter = Some(KeepQuery.Seen(paginationContext.toSet)), offset = 0, limit = 5),
         arrangement = None
       )
       for {
-        keepIds <- db.readOnlyReplicaAsync { implicit s => queryCommander.getKeeps(Some(viewer), query) }
-        _ = stopwatch.logTimeWith(s"query_complete_n_${keepIds.length}")
-        (pageInfo, keepInfos) <- {
-          // Launch these in parallel
-          val pageInfoFut = keepInfoAssembler.assemblePageInfos(Some(viewer), Set(uriId)).map(_.get(uriId))
-          val keepInfosFut = keepInfoAssembler.assembleKeepInfos(Some(viewer), keepIds.toSet)
-          for (p <- pageInfoFut; k <- keepInfosFut) yield (p, k)
-        }
+        intersectionKeepIds <- db.readOnlyReplicaAsync { implicit s => queryCommander.getKeeps(Some(viewer), query) }
+        _ = stopwatch.logTimeWith(s"query_complete_n_${intersectionKeepIds.length}")
+        onThisPageKeepIdsBySection <- if (initialRequest) {
+          db.readOnlyReplicaAsync { implicit s => keepRepo.getSectionedKeepsOnUri(viewer, uriId, intersectionKeepIds.toSet, limit = 5) }
+        } else Future.successful(Map.empty[KeepProximitySection, Seq[Id[Keep]]])
+
+        keepInfosFut = keepInfoAssembler.assembleKeepInfos(Some(viewer), intersectionKeepIds.toSet ++ onThisPageKeepIdsBySection.values.flatten.toSet)
+
+        pageInfo <- pageInfoFut
+        keepInfos <- keepInfosFut
+        entityName <- entityNameFut
       } yield {
         stopwatch.logTimeWith("done")
-        NewKeepInfosForIntersection(pageInfo, keepIds.flatMap(kId => keepInfos.get(kId).flatMap(_.getRight)))
+        val sortedIntersectionKeepInfos = intersectionKeepIds.flatMap(kId => keepInfos.get(kId).flatMap(_.getRight))
+        val onThisPageKeepInfosWithSection = onThisPageKeepIdsBySection.flatMap {
+          case (section, kIds) => kIds.flatMap(kId => keepInfos.get(kId).flatMap(_.getRight).map(_ -> section))
+        }.toSeq
+        NewKeepInfosForIntersection(
+          pageInfo,
+          PaginationContext.fromSet[Keep](intersectionKeepIds.toSet),
+          sortedIntersectionKeepInfos,
+          onThisPageKeepInfosWithSection,
+          entityName = entityName
+        )
       }
     }
+  }
+
+  private def getNameOfFirstEntity(recipients: KeepRecipients)(implicit session: RSession): Option[String] = {
+    recipients.users.headOption.map { uid =>
+      userRepo.get(uid).fullName
+    }.orElse(recipients.libraries.headOption.flatMap { lid =>
+      basicLibraryGen.getBasicLibrary(lid).map(_.name)
+    }).orElse(recipients.emails.headOption.map(_.address))
   }
 
 }
