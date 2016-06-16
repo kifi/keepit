@@ -74,31 +74,7 @@ class KeepExportController @Inject() (
   }
 
   def fullKifiExport() = UserAction { request =>
-    val export = fullExportCommander.fullExport(request.userId)
-    val fileEnum = export.spaces.flatMap { space =>
-      space.libraries.flatMap { library =>
-        library.keeps.flatMap { keep =>
-          fullKeepPage(keep)
-        } andThen fullLibraryPage(library)
-      } andThen fullSpacePage(space)
-    } andThen fullIndexPage(export)
-
-    val exportBase = s"${request.user.primaryUsername.get.normalized.value}-kifi-export"
-    val enum = Enumerator.outputStream { os =>
-      val zip = new ZipOutputStream(os)
-      fileEnum.run(Iteratee.foreach {
-        case (filename, value) =>
-          zip.putNextEntry(new ZipEntry(s"$exportBase/$filename.json"))
-          zip.write(Json.prettyPrint(value).map(_.toByte).toArray)
-          zip.closeEntry()
-      }).andThen {
-        case res => zip.close()
-      }
-    }
-    Ok.chunked(enum andThen Enumerator.eof).withHeaders(
-      "Content-Type" -> "application/zip",
-      "Content-Disposition" -> s"attachment; filename=$exportBase.zip"
-    )
+    NotFound
   }
 
   private def fullIndexPage(export: FullStreamingExport.Root): Enumerator[(String, JsValue)] = {
