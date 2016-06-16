@@ -25,11 +25,12 @@ case class NewKeepInfosForIntersection(
   page: Option[NewPageInfo],
   paginationContext: PaginationContext[Keep],
   intersectionKeeps: Seq[NewKeepInfo],
-  onThisPageKeeps: Seq[(NewKeepInfo, KeepProximitySection)]
+  onThisPageKeeps: Seq[(NewKeepInfo, KeepProximitySection)],
+  entityName: Option[String] // name of either user or library we're filtering on
 )
 
 object NewKeepInfosForIntersection {
-  val empty = NewKeepInfosForIntersection(page = Option.empty, paginationContext = PaginationContext.empty, intersectionKeeps = Seq.empty, onThisPageKeeps = Seq.empty)
+  val empty = NewKeepInfosForIntersection(page = Option.empty, paginationContext = PaginationContext.empty, intersectionKeeps = Seq.empty, onThisPageKeeps = Seq.empty, entityName = None)
   implicit val writes: Writes[NewKeepInfosForIntersection] = {
     implicit val helper: Writes[(NewKeepInfo, KeepProximitySection)] = Writes {
       case (info, section) => NewKeepInfo.writes.writes(info) + ("section" -> KeepProximitySection.writes.writes(section))
