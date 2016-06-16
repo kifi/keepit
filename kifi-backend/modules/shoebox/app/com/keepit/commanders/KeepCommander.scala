@@ -441,16 +441,22 @@ class KeepCommanderImpl @Inject() (
   }
 
   def suggestRecipients(userId: Id[User], keepIdOpt: Option[Id[Keep]], query: Option[String], offset: Int, limit: Int, requestedSet: Set[TypeaheadRequest]): Future[Seq[TypeaheadSearchResult]] = {
-    val (usersToExclude: Set[ExternalId[User]], emailsToExclude: Set[EmailAddress], librariesToExclude: Set[PublicId[Library]]) = keepIdOpt.map { keepId =>
-      db.readOnlyReplica { implicit s =>
-        (userRepo.getUsers(ktuRepo.getAllByKeepId(keepId).map(_.userId)).values.map(_.externalId).toSet,
-          kteRepo.getAllByKeepId(keepId).map(_.emailAddress).toSet,
-          ktlRepo.getAllByKeepId(keepId).map(ktl => Library.publicId(ktl.libraryId)).toSet)
-      }
-    }.getOrElse((Set.empty, Set.empty, Set.empty))
+    keepIdOpt.map { keepId => suggestNewRecipientsForKeep(userId, keepId, query getOrElse "", offset, limit, requestedSet)
+    }.getOrElse(typeaheadCommander.searchAndSuggestKeepRecipients(userId, query getOrElse "", Some(limit), Some(offset), requestedSet))
+  }
+
+  private def suggestNewRecipientsForKeep(userId: Id[User], keepId: Id[Keep], query: String, offset: Int, limit: Int, requestedSet: Set[TypeaheadRequest]): Future[Seq[TypeaheadSearchResult]] = {
+    val (usersToExclude: Set[ExternalId[User]], emailsToExclude: Set[EmailAddress], librariesToExclude: Set[PublicId[Library]]) = db.readOnlyReplica { implicit s =>
+      (userRepo.getUsers(ktuRepo.getAllByKeepId(keepId).map(_.userId)).values.map(_.externalId).toSet,
+        kteRepo.getAllByKeepId(keepId).map(_.emailAddress).toSet,
+        ktlRepo.getAllByKeepId(keepId).map(ktl => Library.publicId(ktl.libraryId)).toSet)
+    }
     val excludeSize = usersToExclude.size + emailsToExclude.size + librariesToExclude.size
-    val dropOpt = if (keepIdOpt.isDefined) Some(offset) else None // we can't accurately know how much to drop if we're going to filter after
-    typeaheadCommander.searchAndSuggestKeepRecipients(userId, query getOrElse "", limitOpt = Some(offset + limit + excludeSize), dropOpt = dropOpt, requested = requestedSet).imap { result =>
+
+    // we can't accurately know how much to drop if we're going to filter keep recipients after so,
+    // request the true sequence up to this page, filter, then slice using offset, offset+limit
+
+    typeaheadCommander.searchAndSuggestKeepRecipients(userId, query, limitOpt = Some(offset + limit + excludeSize), dropOpt = Some(0), requested = requestedSet).imap { result =>
       result.filterNot {
         case u: UserContactResult => usersToExclude.contains(u.id)
         case e: EmailContactResult => emailsToExclude.contains(e.email)
