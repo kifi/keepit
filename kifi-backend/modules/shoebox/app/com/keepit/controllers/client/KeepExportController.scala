@@ -8,9 +8,13 @@ import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, Use
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.json.EitherFormat
 import com.keepit.common.time._
+import com.keepit.export.FullExportCommander
 import com.keepit.model._
+import com.keepit.social.BasicUser
 import play.api.libs.iteratee.{ Iteratee, Enumeratee, Enumerator }
+import play.api.libs.json.{ JsValue, Writes, JsArray, Json }
 
 import scala.concurrent.{ ExecutionContext, Future }
 
@@ -19,6 +23,7 @@ class KeepExportController @Inject() (
   val userActionsHelper: UserActionsHelper,
   keepRepo: KeepRepo,
   keepExportCommander: KeepExportCommander,
+  fullExportCommander: FullExportCommander,
   clock: Clock,
   implicit val airbrake: AirbrakeNotifier,
   private implicit val defaultContext: ExecutionContext,
@@ -70,22 +75,77 @@ class KeepExportController @Inject() (
 
   def fullKifiExport() = UserAction { request =>
     log.info(s"[RPB] Full kifi export for ${request.userId}")
-    val export = keepExportCommander.fullKifiExport(request.userId)
+    val export = fullExportCommander.fullExport(request.userId)
+    val fileEnum = export.spaces.flatMap { space =>
+      space.libraries.flatMap { library =>
+        library.keeps.flatMap { keeps =>
+          Enumerator.empty[(String, JsValue)]
+        } andThen library.keeps.map(_.keep).through(Enumeratee.grouped(Iteratee.getChunks)).through(Enumeratee.map { keeps =>
+          fullLibraryPage(library.library, keeps)
+        })
+      } andThen space.libraries.map(_.library).through(Enumeratee.grouped(Iteratee.getChunks)).through(Enumeratee.map { libs =>
+        fullSpacePage(space.space, libs)
+      })
+    } andThen export.spaces.map(_.space).through(Enumeratee.grouped(Iteratee.getChunks)).through(Enumeratee.map { spaces =>
+      fullIndexPage(export.user, spaces)
+    })
+
     val enum = Enumerator.outputStream { os =>
       val zip = new ZipOutputStream(os)
-      export.run(Iteratee.foreach {
-        case (fileName, html) =>
-          zip.putNextEntry(new ZipEntry("kifi/" + fileName))
-          zip.write(html.map(_.toByte).toArray)
+      fileEnum.run(Iteratee.foreach {
+        case (filename, value) =>
+          zip.putNextEntry(new ZipEntry("kifi/" + filename + ".json"))
+          zip.write(Json.prettyPrint(value).map(_.toByte).toArray)
           zip.closeEntry()
       }).andThen {
-        case _ => zip.close()
+        case res => zip.close()
       }
     }
     val exportFileName = s"${request.user.primaryUsername.get.normalized.value}-kifi-export.zip"
     Ok.chunked(enum >>> Enumerator.eof).withHeaders(
       "Content-Type" -> "application/zip",
       "Content-Disposition" -> s"attachment; filename=$exportFileName"
+    )
+  }
+
+  private def fullIndexPage(me: BasicUser, spaces: Seq[Either[BasicUser, BasicOrganization]]): (String, JsValue) = {
+    implicit val spaceWrites = EitherFormat.keyedWrites[BasicUser, BasicOrganization]("user", "org")
+    "index" -> Json.obj(
+      "me" -> me,
+      "spaces" -> JsArray(spaces.map { space =>
+        val partialSpace = spaceWrites.writes(space)
+        partialSpace
+      })
+    )
+  }
+  private def fullSpacePage(space: Either[BasicUser, BasicOrganization], libs: Seq[Library]): (String, JsValue) = {
+    implicit val spaceWrites = EitherFormat.keyedWrites[BasicUser, BasicOrganization]("user", "org")
+    val fullSpace = spaceWrites.writes(space)
+    space.fold(_.externalId.id, _.orgId.id) -> Json.obj(
+      "space" -> fullSpace,
+      "libraries" -> JsArray(libs.map { lib =>
+        val partialLibrary = Json.obj(
+          "id" -> Library.publicId(lib.id.get),
+          "name" -> lib.name,
+          "description" -> lib.description
+        )
+        partialLibrary
+      })
+    )
+  }
+  def fullLibraryPage(library: Library, keeps: Seq[Keep]): (String, JsValue) = {
+    val fullLibrary = Json.obj("name" -> library.name)
+    Library.publicId(library.id.get).id -> Json.obj(
+      "library" -> fullLibrary,
+      "keeps" -> JsArray(keeps.map { keep =>
+        val partialKeep = Json.obj(
+          "id" -> Keep.publicId(keep.id.get),
+          "title" -> keep.title,
+          "url" -> keep.url,
+          "keptAt" -> keep.keptAt
+        )
+        partialKeep
+      })
     )
   }
 }
