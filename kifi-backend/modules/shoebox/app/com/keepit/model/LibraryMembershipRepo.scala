@@ -35,6 +35,7 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
   def getWithLibraryIdAndUserIds(libraryId: Id[Library], userIds: Set[Id[User]], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Map[Id[User], LibraryMembership]
   def pageWithLibraryIdAndAccess(libraryId: Id[Library], offset: Int, limit: Int, accessSet: Set[LibraryAccess],
     excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Seq[LibraryMembership]
+  def pageByUserId(userId: Id[User], offset: Int, limit: Int)(implicit session: RSession): Seq[LibraryMembership]
   def someWithLibraryIdAndAccess(libraryId: Id[Library], limit: Int, access: LibraryAccess, excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Seq[LibraryMembership]
   def getMinisByLibraryIdsAndAccess(libraryIds: Set[Id[Library]], accessSet: Set[LibraryAccess])(implicit session: RSession): Map[Id[Library], Seq[MiniLibraryMembership]]
   def countWithLibraryIdAndAccess(libraryId: Id[Library], access: LibraryAccess)(implicit session: RSession): Int
@@ -115,6 +116,10 @@ class LibraryMembershipRepoImpl @Inject() (
     val safeOffset = if (offset >= 0) offset else 0
     // This can be removed once clients stop calling with offset = -1
     (for (b <- rows if b.libraryId === libraryId && b.access.inSet(accessSet) && b.state =!= excludeState.orNull) yield b).sortBy(r => (r.access, r.id)).drop(safeOffset).take(limit).list
+  }
+
+  def pageByUserId(userId: Id[User], offset: Int, limit: Int)(implicit session: RSession): Seq[LibraryMembership] = {
+    activeRows.filter(_.userId === userId).sortBy(_.id).drop(offset max 0).take(limit).list
   }
 
   @StatsdTiming("LibraryMembershipRepo.someWithLibraryIdAndAccess")

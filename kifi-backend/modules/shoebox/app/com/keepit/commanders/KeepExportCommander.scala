@@ -2,20 +2,19 @@ package com.keepit.commanders
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.concurrent.FutureHelpers
-import com.keepit.common.core.{ anyExtensionOps, optionExtensionOps, mapExtensionOps, futureExtensionOps }
+import com.keepit.common.core.{ anyExtensionOps, futureExtensionOps, mapExtensionOps, optionExtensionOps }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.{ Logging, SlackLog }
 import com.keepit.common.time.dateTimeOrdering
-import com.keepit.common.util.MapHelpers
-import com.keepit.export.FullKifiExport
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.RoverUriSummary
 import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
+import play.api.libs.iteratee.{ Concurrent, Enumerator }
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success, Try }
@@ -24,8 +23,7 @@ import scala.util.{ Failure, Success, Try }
 trait KeepExportCommander {
   def assembleKeepExport(keepExports: Seq[KeepExport]): String
   def exportKeeps(exportRequest: KeepExportRequest): Future[Try[KeepExportResponse]]
-  def fullKifiExport(userId: Id[User]): Future[FullKifiExport]
-  def htmlDump(export: FullKifiExport): Map[String, String]
+  def fullKifiExport(userId: Id[User]): Enumerator[(String, String)]
 }
 
 @Singleton
@@ -122,82 +120,75 @@ class KeepExportCommanderImpl @Inject() (
     KeepExportResponse(keeps.sortBy(_.keptAt), tagsByKeepId, libsByKeepId)
   }
 
-  def fullKifiExport(userId: Id[User]): Future[FullKifiExport] = {
-    val shoeboxFut = db.readOnlyReplicaAsync { implicit s =>
-      val libs = {
+  type FileName = String
+  type HtmlDump = String
+  def fullKifiExport(userId: Id[User]): Enumerator[(FileName, HtmlDump)] = {
+    val KEEP_BATCH_SIZE = 100
+    def beginEmitting(channel: Concurrent.Channel[(FileName, HtmlDump)]): Unit = {
+      val libs = db.readOnlyMaster { implicit s =>
         val allLibIds = libraryMembershipRepo.getWithUserId(userId).map(_.libraryId)
         libraryRepo.getActiveByIds(allLibIds.toSet)
       }
-      val keeps = {
+      channel.push(indexLink -> indexPage(libs))
+
+      val keeps = db.readOnlyMaster { implicit s =>
         val keepIds = ktlRepo.getAllByLibraryIds(libs.keySet).values.flatMap(_.map(_.keepId)).toSet
         keepRepo.getActiveByIds(keepIds.toSet)
       }
-      (libs, keeps)
-    }
-    val roverFut = {
-      val URI_BATCH_SIZE = 500
-      shoeboxFut.flatMap {
-        case (libs, keeps) =>
-          val uriIds = keeps.values.map(_.uriId).toSet
-          FutureHelpers.foldLeft(uriIds.grouped(URI_BATCH_SIZE).toIterable)(Map.empty[Id[NormalizedURI], RoverUriSummary]) {
-            case (acc, batch) => rover.getUriSummaryByUris(batch).imap(x => acc ++ x)
+
+      libs.foreach {
+        case (lId, lib) =>
+          channel.push(libraryLink(lib) -> libraryPage(lib, keeps))
+      }
+
+      FutureHelpers.sequentialExec(keeps.grouped(KEEP_BATCH_SIZE).toIterable) { batch =>
+        rover.getUriSummaryByUris(batch.values.map(_.uriId).toSet).imap { summaries =>
+          batch.foreach {
+            case (kId, keep) =>
+              channel.push(keepLink(keep) -> keepPage(keep, summaries.get(keep.uriId)))
           }
+        }
+      }.andThen {
+        case result =>
+          channel.eofAndEnd()
       }
     }
-    for {
-      (libs, keeps) <- shoeboxFut
-      uris <- roverFut
-    } yield FullKifiExport(libs = libs, keeps = keeps, uris = uris)
-  }
 
-  type FileName = String
-  type HtmlDump = String
-  def htmlDump(export: FullKifiExport): Map[FileName, HtmlDump] = {
-    MapHelpers.unions(Seq(
-      Map(indexLink -> indexPage(export)),
-      libraryDump(export),
-      keepDump(export)
-    ))
+    Concurrent.unicast(onStart = beginEmitting)
   }
 
   private def indexLink = "index.html"
-  private def indexPage(export: FullKifiExport): HtmlDump = {
+  private def indexPage(libs: Map[Id[Library], Library]): HtmlDump = {
     s"""
        |<h1>Kifi Export</h1>
        |<ul>
-       |${export.libs.traverseByKey.map(l => s"<li><a href=${libraryLink(l)}>${l.name}</a></li>").mkString("\n")}
+       |${libs.traverseByKey.map(l => s"<li><a href=${libraryLink(l)}>${l.name}</a></li>").mkString("\n")}
        |</ul>
     """.stripMargin
   }
 
   private def libraryLink(lib: Library) = s"${Library.publicId(lib.id.get).id}.html"
-  private def libraryDump(export: FullKifiExport): Map[FileName, HtmlDump] = {
-    def libraryPage(lib: Library): HtmlDump = {
-      val keepsList = export.keeps.filterValues(_.recipients.libraries.contains(lib.id.get)).traverseByKey.map { k =>
-        s"<li><a href=${keepLink(k)}>${k.title getOrElse k.url}</a></li>"
-      }.mkString("\n")
-      s"""
-         |<a href=$indexLink>Home</a>
-         |<h1>${lib.name}</h1>
-         |<h2>${lib.keepCount} keeps</h1>
-         |<ul>
-         |$keepsList
-         |</ul>
-      """.stripMargin
-    }
-    export.libs.map { case (lId, lib) => libraryLink(lib) -> libraryPage(lib) }
+  private def libraryPage(lib: Library, keeps: Map[Id[Keep], Keep]): HtmlDump = {
+    val keepsList = keeps.filterValues(_.recipients.libraries.contains(lib.id.get)).traverseByKey.map { k =>
+      s"<li><a href=${keepLink(k)}>${k.title getOrElse k.url}</a></li>"
+    }.mkString("\n")
+    s"""
+       |<a href=$indexLink>Home</a>
+       |<h1>${lib.name}</h1>
+       |<h2>${lib.keepCount} keeps</h1>
+       |<ul>
+       |$keepsList
+       |</ul>
+    """.stripMargin
   }
 
   private def keepLink(keep: Keep) = s"${Keep.publicId(keep.id.get).id}.html"
-  private def keepDump(export: FullKifiExport): Map[FileName, HtmlDump] = {
-    def keepPage(keep: Keep, uriSummary: Option[RoverUriSummary]): HtmlDump = {
-      s"""
-         |<a href=$indexLink>Home</a>
-         |<h1>${keep.title getOrElse keep.url}</h1>
-         |${uriSummary.flatMap(_.article.description) getOrElse "<no_content>"}
-      """.stripMargin
-    }
-    export.keeps.map { case (kId, keep) => keepLink(keep) -> keepPage(keep, export.uris.get(keep.uriId)) }
+  private def keepPage(keep: Keep, uriSummary: Option[RoverUriSummary]): HtmlDump = {
+    s"""
+       |<a href=$indexLink>Home</a>
+       |<h1>${keep.title getOrElse keep.url}</h1>
+       |${uriSummary.flatMap(_.article.description) getOrElse "<no_content>"}
+    """.stripMargin
   }
 }
 

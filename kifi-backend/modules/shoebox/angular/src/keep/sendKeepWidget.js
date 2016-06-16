@@ -19,7 +19,6 @@ angular.module('kifi')
         keep: '='
       },
       link: function(scope, element) {
-        var currPage = 0;
         var widget;
         var highlightedIndex = 0;
         var suggestionPaginator;
@@ -55,7 +54,6 @@ angular.module('kifi')
 
           scope.typeahead = '';
           scope.validEmail = false;
-          currPage = 0;
 
           widget = angular.element($templateCache.get('keep/sendKeepWidget.tpl.html'));
           keepCardElement = element.parents('.kf-keep');
@@ -153,9 +151,11 @@ angular.module('kifi')
         }
 
         function clearHighlights() {
-          scope.suggestions.forEach(function(suggestion) {
-            suggestion.isHighlighted = false;
-          });
+          if (scope.suggestions) {
+            scope.suggestions.forEach(function(suggestion) {
+              suggestion.isHighlighted = false;
+            });
+          }
         }
 
         function adjustScroll(selectedIndex) {
@@ -289,14 +289,13 @@ angular.module('kifi')
         scope.processKeyEvent = function (event) {
           switch (event.keyCode) {
             case KEY.BSPACE:
-              event.preventDefault();
               if (scope.selections.length && scope.typeahead === '') {
+                event.preventDefault();
                 scope.removeSelection(scope.selections[scope.selections.length-1]);
                 clearHighlights();
                 highlightedIndex++;
                 scope.suggestions[highlightedIndex].isHighlighted = true;
               } else if (scope.typeahead !== '') {
-                scope.typeahead = scope.typeahead.slice(0, -1);
                 scope.onTypeaheadInputChanged();
               }
               break;
@@ -384,8 +383,6 @@ angular.module('kifi')
 
 
         scope.onTypeaheadInputChanged = function() {
-          currPage = 0;
-
           suggestionPaginator.reset();
           scope.fetchSuggestions(true).then(function () {
             clearHighlights();

@@ -54,7 +54,7 @@ angular.module('kifi')
 
           if (refresh) {
             this.items = items;
-            this.fetchPageNumber = 0;
+            this.fetchPageNumber = 1;
           } else {
             this.items = this.items.concat(items);
           }

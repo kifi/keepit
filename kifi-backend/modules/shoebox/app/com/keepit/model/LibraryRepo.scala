@@ -32,6 +32,7 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def getLibrariesWithOpenWriteAccess(organizationId: Id[Organization], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Seq[Library]
   def getAllByOwner(ownerId: Id[User], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): List[Library]
   def getBySpace(space: LibrarySpace, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Set[Library]
+  def pageBySpace(space: LibrarySpace, offset: Int, limit: Int)(implicit session: RSession): Seq[Library]
   def getBySpaceAndSlug(space: LibrarySpace, slug: LibrarySlug, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
   def getBySpaceAndKind(space: LibrarySpace, kind: LibraryKind, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Set[Library]
   def getBySpaceAndKinds(space: LibrarySpace, kinds: Set[LibraryKind], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Set[Library]
@@ -211,6 +212,13 @@ class LibraryRepoImpl @Inject() (
       case UserSpace(userId) => getByUserId(userId, excludeState)
       case OrganizationSpace(orgId) => getByOrgId(orgId, excludeState)
     }
+  }
+  def pageBySpace(space: LibrarySpace, offset: Int, limit: Int)(implicit session: RSession): Seq[Library] = {
+    val libsBySpace = space match {
+      case UserSpace(userId) => activeRows.filter(l => l.ownerId === userId && l.orgId.isEmpty)
+      case OrganizationSpace(orgId) => activeRows.filter(l => l.orgId === orgId)
+    }
+    libsBySpace.sortBy(_.id).drop(offset).take(limit).list
   }
 
   def getLibraryIdsForQuery(query: LibraryQuery, extraInfo: LibraryQuery.ExtraInfo)(implicit session: RSession): Seq[Id[Library]] = {

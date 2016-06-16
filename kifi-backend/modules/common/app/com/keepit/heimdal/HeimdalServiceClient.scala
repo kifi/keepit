@@ -28,24 +28,7 @@ import com.keepit.common.db.{ ExternalId, Id }
 import org.joda.time.DateTime
 import com.kifi.franz.SQSQueue
 
-trait KeepDiscoveryRepoAccess {
-  def getPagedKeepDiscoveries(page: Int = 0, size: Int = 50): Future[Seq[KeepDiscovery]]
-  def getDiscoveryCount(): Future[Int]
-  def getUriDiscoveriesWithCountsByKeeper(userId: Id[User]): Future[Seq[URIDiscoveryCount]]
-  def getDiscoveryCountsByURIs(uriIds: Set[Id[NormalizedURI]]): Future[Seq[URIDiscoveryCount]]
-  def getDiscoveryCountsByKeepIds(userId: Id[User], keepIds: Set[Id[Keep]]): Future[Seq[KeepDiscoveryCount]]
-}
-
-trait ReKeepRepoAccess {
-  def getPagedReKeeps(page: Int = 0, size: Int = 50): Future[Seq[ReKeep]]
-  def getReKeepCount(): Future[Int]
-  def getUriReKeepsWithCountsByKeeper(userId: Id[User]): Future[Seq[URIReKeepCount]]
-  def getReKeepCountsByURIs(uriIds: Set[Id[NormalizedURI]]): Future[Seq[URIReKeepCount]]
-  def getReKeepCountsByKeepIds(userId: Id[User], keepIds: Set[Id[Keep]]): Future[Seq[KeepReKeptCount]]
-  def getReKeepCountsByUserUri(userId: Id[User], uriId: Id[NormalizedURI]): Future[(Int, Int)]
-}
-
-trait HeimdalServiceClient extends ServiceClient with KeepDiscoveryRepoAccess with ReKeepRepoAccess {
+trait HeimdalServiceClient extends ServiceClient {
 
   final val serviceType = ServiceType.HEIMDAL
 
@@ -64,24 +47,6 @@ trait HeimdalServiceClient extends ServiceClient with KeepDiscoveryRepoAccess wi
   def postDelightedAnswer(userRegistrationInfo: DelightedUserRegistrationInfo, answer: BasicDelightedAnswer): Future[Option[BasicDelightedAnswer]]
 
   def cancelDelightedSurvey(userRegistrationInfo: DelightedUserRegistrationInfo): Future[Boolean]
-
-  def getKeepAttributionInfo(userId: Id[User]): Future[UserKeepAttributionInfo]
-
-  def getUserReKeepsByDegree(keepIds: Seq[KeepIdInfo]): Future[Seq[UserReKeepsAcc]]
-
-  def getReKeepsByDegree(keeperId: Id[User], keepId: Id[Keep]): Future[Seq[ReKeepsPerDeg]]
-
-  def updateUserReKeepStats(userId: Id[User]): Future[Unit]
-
-  def updateUsersReKeepStats(userIds: Seq[Id[User]]): Future[Unit]
-
-  def updateAllReKeepStats(): Future[Unit]
-
-  def getHelpRankInfos(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[HelpRankInfo]]
-
-  def processSearchHitAttribution(hit: SearchHitReport): Future[Unit]
-
-  def processKeepAttribution(userId: Id[User], newKeeps: Seq[Keep]): Future[Unit]
 }
 
 private[heimdal] object HeimdalBatchingConfiguration extends BatchingActorConfiguration[HeimdalClientActor] {
@@ -184,135 +149,4 @@ class HeimdalServiceClientImpl @Inject() (
     }
   }
 
-  def getPagedKeepDiscoveries(page: Int, size: Int): Future[Seq[KeepDiscovery]] = {
-    call(Heimdal.internal.getPagedKeepDiscoveries(page, size)) map { r =>
-      Json.parse(r.body).as[Seq[KeepDiscovery]]
-    }
-  }
-
-  def getDiscoveryCount(): Future[Int] = {
-    call(Heimdal.internal.getDiscoveryCount) map { r => Json.parse(r.body).as[Int] }
-  }
-
-  def getUriDiscoveriesWithCountsByKeeper(userId: Id[User]): Future[Seq[URIDiscoveryCount]] = {
-    call(Heimdal.internal.getUriDiscoveriesWithCountsByKeeper(userId)) map { r =>
-      Json.parse(r.body).as[Seq[URIDiscoveryCount]]
-    }
-  }
-
-  def getDiscoveryCountsByURIs(uriIds: Set[Id[NormalizedURI]]): Future[Seq[URIDiscoveryCount]] = {
-    val payload = Json.toJson(uriIds.toSeq)
-    call(Heimdal.internal.getDiscoveryCountsByURIs, payload) map { r =>
-      Json.parse(r.body).as[Seq[URIDiscoveryCount]]
-    }
-  }
-
-  def getDiscoveryCountsByKeepIds(userId: Id[User], keepIds: Set[Id[Keep]]): Future[Seq[KeepDiscoveryCount]] = {
-    val payload = Json.obj(
-      "userId" -> userId,
-      "keepIds" -> Json.toJson(keepIds.toSeq)
-    )
-    call(Heimdal.internal.getDiscoveryCountsByKeepIds, payload) map { r =>
-      Json.parse(r.body).as[Seq[KeepDiscoveryCount]]
-    }
-  }
-
-  def getKeepAttributionInfo(userId: Id[User]): Future[UserKeepAttributionInfo] = {
-    call(Heimdal.internal.getKeepAttributionInfo(userId)) map { r =>
-      Json.parse(r.body).as[UserKeepAttributionInfo]
-    }
-  }
-
-  def getPagedReKeeps(page: Int, size: Int): Future[Seq[ReKeep]] = {
-    call(Heimdal.internal.getPagedReKeeps(page, size)) map { r =>
-      Json.parse(r.body).as[Seq[ReKeep]]
-    }
-  }
-
-  def getReKeepCount(): Future[Int] = {
-    call(Heimdal.internal.getReKeepCount) map { r => Json.parse(r.body).as[Int] }
-  }
-
-  def getUriReKeepsWithCountsByKeeper(userId: Id[User]): Future[Seq[URIReKeepCount]] = {
-    call(Heimdal.internal.getUriReKeepsWithCountsByKeeper(userId)) map { r =>
-      Json.parse(r.body).as[Seq[URIReKeepCount]]
-    }
-  }
-
-  def getReKeepCountsByURIs(uriIds: Set[Id[NormalizedURI]]): Future[Seq[URIReKeepCount]] = {
-    val payload = Json.toJson(uriIds.toSeq)
-    call(Heimdal.internal.getReKeepCountsByURIs, payload) map { r =>
-      Json.parse(r.body).as[Seq[URIReKeepCount]]
-    }
-  }
-
-  def getReKeepCountsByKeepIds(userId: Id[User], keepIds: Set[Id[Keep]]): Future[Seq[KeepReKeptCount]] = {
-    val payload = Json.obj(
-      "userId" -> userId,
-      "keepIds" -> keepIds.toSeq
-    )
-    call(Heimdal.internal.getReKeepCountsByKeepIds, payload) map { r =>
-      Json.parse(r.body).as[Seq[KeepReKeptCount]]
-    }
-  }
-
-  def getReKeepCountsByUserUri(userId: Id[User], uriId: Id[NormalizedURI]): Future[(Int, Int)] = {
-    call(Heimdal.internal.getReKeepCountsByUserUri(userId, uriId)) map { r =>
-      val json = r.json
-      val rekeepCount = (json \ "rekeepCount").as[Int]
-      val rekeepTotalCount = (json \ "rekeepTotalCount").as[Int]
-      (rekeepCount, rekeepTotalCount)
-    }
-  }
-
-  def getUserReKeepsByDegree(keepIds: Seq[KeepIdInfo]): Future[Seq[UserReKeepsAcc]] = {
-    call(Heimdal.internal.getUserReKeepsByDegree, Json.toJson(keepIds)) map { r =>
-      Json.parse(r.body).as[Seq[UserReKeepsAcc]]
-    }
-  }
-
-  def getReKeepsByDegree(keeperId: Id[User], keepId: Id[Keep]): Future[Seq[ReKeepsPerDeg]] = {
-    call(Heimdal.internal.getReKeepsByDegree(keeperId, keepId)) map { r =>
-      Json.parse(r.body).as[Seq[ReKeepsPerDeg]]
-    }
-  }
-
-  def updateUserReKeepStats(userId: Id[User]): Future[Unit] = {
-    val payload = Json.toJson(userId)
-    call(Heimdal.internal.updateUserReKeepStats, payload) map { _ => Unit }
-  }
-
-  def updateUsersReKeepStats(userIds: Seq[Id[User]]): Future[Unit] = {
-    val payload = Json.toJson(userIds)
-    call(Heimdal.internal.updateUsersReKeepStats, payload) map { _ => Unit }
-  }
-
-  def updateAllReKeepStats(): Future[Unit] = {
-    call(Heimdal.internal.updateAllReKeepStats) map { _ => Unit }
-  }
-
-  def getHelpRankInfos(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[HelpRankInfo]] = {
-    val payload = Json.toJson(uriIds)
-    call(Heimdal.internal.getHelpRankInfo, payload, callTimeouts = longTimeout) map { r =>
-      r.json.as[Seq[HelpRankInfo]]
-    }
-  }
-
-  def processSearchHitAttribution(hit: SearchHitReport): Future[Unit] = {
-    call(Heimdal.internal.processSearchHitAttribution, Json.toJson(hit)) map { r => Unit }
-  }
-
-  def processKeepAttribution(userId: Id[User], newKeeps: Seq[Keep]): Future[Unit] = {
-    var count = 0
-    FutureHelpers.sequentialExec[Seq[Keep], Unit](newKeeps.grouped(50).toSeq) { batch =>
-      val payload = Json.obj(
-        "userId" -> userId,
-        "keeps" -> batch
-      )
-      call(Heimdal.internal.processKeepAttribution, payload) map { r =>
-        count += batch.size
-        log.info(s"[processKeepAttribution(userId=$userId)] processed $count keeps")
-      }
-    }
-  }
 }
