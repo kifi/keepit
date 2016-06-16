@@ -36,7 +36,7 @@ angular.module('kifi')
     };
 
     Paginator.prototype.fetch = function (sourceFunction, pageNumber, pageSize, refresh) {
-      if (this.loading) {
+      if (!refresh && this.loading) {
         return this._cachedFetch;
       }
 

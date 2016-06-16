@@ -24,6 +24,7 @@ angular.module('kifi')
         var suggestionPaginator;
         var justScrolled;
         var keepCardElement;
+        var donePaging;
 
         var canAddParticipants = scope.keep.permissions && scope.keep.permissions.indexOf('add_participants') !== -1;
         var canAddLibraries = scope.keep.permissions && scope.keep.permissions.indexOf('add_libraries') !== -1;
@@ -45,6 +46,7 @@ angular.module('kifi')
           scope.sending = false;
           scope.justScrolled = false;
           scope.showCreateLibrary = false;
+          donePaging = false;
           scope.init = false; // set to true once widget is ready to be shown
 
           scope.suggestions = [];
@@ -141,6 +143,7 @@ angular.module('kifi')
 
         function suggestionSource(pageNumber, pageSize) {
           return keepService.suggestRecipientsForKeep(scope.typeahead, pageSize, pageNumber * pageSize, typeaheadFilter, scope.keep.pubId).then(function(res) {
+            donePaging = !res.mayHaveMore;
             return res.results.filter(function (suggestion) {
               var suggId = suggestion.id || suggestion.email;
               return !scope.selections.find(function (selection) {
@@ -207,20 +210,28 @@ angular.module('kifi')
           }
         };
 
-        scope.fetchSuggestions = function (refresh) {
+        function fetchSuggestions(refresh) {
+          refresh = refresh || false;
           return suggestionPaginator.fetch(null, null, null, refresh).then(function(suggestions) {
+            suggestionPaginator.hasMoreItems = refresh || !donePaging;
             scope.suggestions = suggestions;
             if (widget && !scope.init) {
               scope.init = true;
             }
           });
+        }
+
+        scope.pageSuggestions = function() {
+          if (suggestionPaginator.hasMoreItems) {
+            fetchSuggestions(false);
+          }
         };
 
         scope.selectSuggestion = function(suggestion) {
           scope.selections.push(suggestion);
           resetInput();
           suggestionPaginator.reset();
-          scope.fetchSuggestions().then(function() {
+          fetchSuggestions(true).then(function() {
             suggestionPaginator.items = suggestionPaginator.items.filter(function (s) {
               return (s.id || s.email) !== (suggestion.id || suggestion.email);
             });
@@ -318,7 +329,7 @@ angular.module('kifi')
               clearHighlights();
               if (event.keyCode === KEY.DOWN) {
                 if (highlightedIndex === scope.suggestions.length-1) {
-                  scope.fetchSuggestions();
+                  scope.pageSuggestions();
                 }
                 highlightedIndex = highlightedIndex === scope.suggestions.length-1 ? highlightedIndex : highlightedIndex + 1;
                 scope.suggestions[highlightedIndex].isHighlighted = true;
@@ -383,7 +394,7 @@ angular.module('kifi')
 
         scope.onTypeaheadInputChanged = function() {
           suggestionPaginator.reset();
-          scope.fetchSuggestions(true).then(function () {
+          fetchSuggestions(true).then(function () {
             clearHighlights();
             highlightedIndex = 0;
             if (scope.suggestions.length) {
