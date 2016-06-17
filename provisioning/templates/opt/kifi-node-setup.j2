@@ -43,7 +43,7 @@ def set_tags_from_spot_request(instance):
     spot_req = ec2_spot_request()
     if spot_req is not None:
         log("Spot request found: %s" % spot_req['SpotInstanceRequestId'])
-        spot_tags = spot_req['Tags']
+        spot_tags = [t for t in spot_req['Tags'] if t['Key'].find('aws:') == -1]
         log("Adding tags from spot request %s" % spot_tags)
         instance.create_tags(Tags=spot_tags)
         return True
