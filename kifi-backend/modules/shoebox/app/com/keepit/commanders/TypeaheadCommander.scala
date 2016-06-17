@@ -1,32 +1,31 @@
 package com.keepit.commanders
 
-import com.google.inject.{ Provider, Inject, Singleton }
+import com.google.inject.{ Inject, Provider, Singleton }
 import com.keepit.abook.ABookServiceClient
 import com.keepit.abook.model.RichContact
 import com.keepit.commanders.gen.BasicOrganizationGen
-import com.keepit.common.cache.{ Key, JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics }
+import com.keepit.common.CollectionHelpers.dedupBy
+import com.keepit.common.cache.{ CacheStatistics, FortyTwoCachePlugin, JsonCacheImpl, Key }
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.core._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
-import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
-import com.keepit.common.healthcheck.{ AirbrakeNotifier, SystemAdminMailSender }
+import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging.LoggerWithPrefix
 import com.keepit.common.logging.{ AccessLog, LogPrefix, Logging }
 import com.keepit.common.mail.{ BasicContact, EmailAddress }
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.store.{ ImageSize, ImagePath }
-import com.keepit.common.time.DateTimeJsonFormat
-import com.keepit.model.{ SocialUserConnectionsKey, _ }
+import com.keepit.common.store.ImagePath
+import com.keepit.model._
 import com.keepit.search.SearchServiceClient
 import com.keepit.slack.SlackInfoCommander
 import com.keepit.social.{ BasicUser, SocialNetworkType, SocialNetworks, TypeaheadUserHit }
 import com.keepit.typeahead._
 import com.kifi.macros.json
 import org.joda.time.DateTime
-import com.keepit.common.CollectionHelpers.dedupBy
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration._
@@ -345,27 +344,28 @@ class TypeaheadCommander @Inject() (
   private val maxSuggestHistory = 100 // Users can paginate through maxHistory suggestions. For more, they'll need to search.
   private val maxBatchSize = 20
 
-  private[this] val suggestKeepRecipientsConsolidator = new RequestConsolidator[(Id[User], Option[Int], Option[Int], Set[TypeaheadRequest]), Seq[TypeaheadSearchResult]](30.seconds)
-  private[this] val searchKeepRecipientsConsolidator = new RequestConsolidator[(Id[User], String, Option[Int], Option[Int], Set[TypeaheadRequest]), Seq[TypeaheadSearchResult]](5.seconds)
+  private[this] val suggestKeepRecipientsConsolidator = new RequestConsolidator[(Id[User], Int, Int, Set[TypeaheadRequest]), Seq[TypeaheadSearchResult]](30.seconds)
+  private[this] val searchKeepRecipientsConsolidator = new RequestConsolidator[(Id[User], String, Int, Int, Set[TypeaheadRequest]), Seq[TypeaheadSearchResult]](20.seconds)
   def searchAndSuggestKeepRecipients(userId: Id[User], query: String, limitOpt: Option[Int], dropOpt: Option[Int], requested: Set[TypeaheadRequest]): Future[Seq[TypeaheadSearchResult]] = {
     // Users, emails, and libraries
+    val drop = dropOpt.map(Math.min(_, maxSearchHistory)).getOrElse(0)
+    val limit = limitOpt.map(Math.min(_, maxBatchSize)).getOrElse(10)
+
     query.trim match {
       case q if q.isEmpty && dropOpt.exists(_ >= maxSuggestHistory) => Future.successful(Seq.empty)
       case q if q.nonEmpty && dropOpt.exists(_ >= maxSearchHistory) => Future.successful(Seq.empty)
       case q if q.isEmpty =>
-        suggestKeepRecipientsConsolidator(userId, limitOpt, dropOpt, requested) { _ =>
-          Future.successful(suggestResults(userId, limitOpt, dropOpt, requested))
+        suggestKeepRecipientsConsolidator(userId, limit, drop, requested) { _ =>
+          Future.successful(suggestResults(userId, limit, drop, requested))
         }
       case q =>
-        searchKeepRecipientsConsolidator(userId, q, limitOpt, dropOpt, requested) { _ =>
-          searchKeepRecipients(userId, q, limitOpt, dropOpt, requested)
+        searchKeepRecipientsConsolidator(userId, q, limit, drop, requested) { _ =>
+          searchKeepRecipients(userId, q, limit, drop, requested)
         }
     }
   }
 
-  private def searchKeepRecipients(userId: Id[User], query: String, limitOpt: Option[Int], dropOpt: Option[Int], requested: Set[TypeaheadRequest]): Future[Seq[TypeaheadSearchResult]] = {
-    val drop = dropOpt.map(Math.min(_, maxSearchHistory)).getOrElse(0)
-    val limit = limitOpt.map(Math.min(_, maxBatchSize)).getOrElse(10) // Fetch too many, we'll drop later.
+  private def searchKeepRecipients(userId: Id[User], query: String, limit: Int, drop: Int, requested: Set[TypeaheadRequest]): Future[Seq[TypeaheadSearchResult]] = {
     val rawTypeaheadRecordsToFetch = maxSearchHistory + maxBatchSize
 
     val friendsF = if (requested.contains(TypeaheadRequest.User) || requested.contains(TypeaheadRequest.Email)) {
@@ -431,11 +431,8 @@ class TypeaheadCommander @Inject() (
     }
   }
 
-  private def suggestResults(userId: Id[User], limitOpt: Option[Int], dropOpt: Option[Int], requested: Set[TypeaheadRequest]): Seq[TypeaheadSearchResult] = {
-    if (!dropOpt.exists(_ > 0)) { prefetchTypeaheads(userId) } // side effects, preloads result into cache
-
-    val drop = dropOpt.map(Math.min(_, maxSuggestHistory)).getOrElse(0)
-    val limit = limitOpt.map(Math.min(_, maxBatchSize)).getOrElse(10)
+  private def suggestResults(userId: Id[User], limit: Int, drop: Int, requested: Set[TypeaheadRequest]): Seq[TypeaheadSearchResult] = {
+    if (drop == 0) { prefetchTypeaheads(userId) } // side effects, preloads result into cache
 
     val interactions = interactionCommander.getRecentInteractions(userId)
 
@@ -479,10 +476,13 @@ class TypeaheadCommander @Inject() (
     }.take(max)
   }
 
+  private[this] val prefetchTypeaheadConsolidator = new RequestConsolidator[Id[User], Unit](20.seconds)
   private def prefetchTypeaheads(userId: Id[User]): Unit = {
-    Future {
-      libraryTypeahead.prefetch(userId, refreshAlways = true).map { _ =>
-        kifiUserTypeahead.prefetch(userId, refreshAlways = false)
+    prefetchTypeaheadConsolidator(userId) { _ =>
+      Future {
+        libraryTypeahead.prefetch(userId, refreshAlways = true).map { _ =>
+          kifiUserTypeahead.prefetch(userId, refreshAlways = false)
+        }
       }
     }
   }
