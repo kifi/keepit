@@ -190,11 +190,7 @@ class PageInfoController @Inject() (
       for {
         intersectionKeepIds <- db.readOnlyReplicaAsync { implicit s => queryCommander.getKeeps(Some(viewer), query) }
         _ = stopwatch.logTimeWith(s"query_complete_n_${intersectionKeepIds.length}")
-        onThisPageKeepIdsBySection <- if (initialRequest) {
-          db.readOnlyReplicaAsync { implicit s => keepRepo.getSectionedKeepsOnUri(viewer, uriId, intersectionKeepIds.toSet, limit = 5) }
-        } else Future.successful(Map.empty[KeepProximitySection, Seq[Id[Keep]]])
-
-        keepInfosFut = keepInfoAssembler.assembleKeepInfos(Some(viewer), intersectionKeepIds.toSet ++ onThisPageKeepIdsBySection.values.flatten.toSet)
+        keepInfosFut = keepInfoAssembler.assembleKeepInfos(Some(viewer), intersectionKeepIds.toSet)
 
         pageInfo <- pageInfoFut
         keepInfos <- keepInfosFut
@@ -202,15 +198,11 @@ class PageInfoController @Inject() (
       } yield {
         stopwatch.logTimeWith("done")
         val sortedIntersectionKeepInfos = intersectionKeepIds.flatMap(kId => keepInfos.get(kId).flatMap(_.getRight))
-        val onThisPageKeepInfosWithSection = onThisPageKeepIdsBySection.flatMap {
-          case (section, kIds) => kIds.flatMap(kId => keepInfos.get(kId).flatMap(_.getRight).map(_ -> section))
-        }.toSeq
         NewKeepInfosForIntersection(
           pageInfo,
           PaginationContext.fromSet[Keep](seenKeeps ++ intersectionKeepIds.toSet),
           sortedIntersectionKeepInfos,
-          onThisPageKeepInfosWithSection,
-          entityName = entityName
+          entityName
         )
       }
     }
