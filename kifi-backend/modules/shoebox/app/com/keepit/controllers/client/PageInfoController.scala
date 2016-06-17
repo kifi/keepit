@@ -181,9 +181,10 @@ class PageInfoController @Inject() (
     uriOpt.fold(Future.successful(NewKeepInfosForIntersection.empty)) { uriId =>
       val pageInfoFut = if (initialRequest) keepInfoAssembler.assemblePageInfos(Some(viewer), Set(uriId)).map(_.get(uriId)) else Future.successful(None)
       val entityNameFut = if (initialRequest && (recipients.numLibraries + recipients.numParticipants > 0)) db.readOnlyReplicaAsync(implicit s => getNameOfFirstEntity(recipients)) else Future.successful(None)
+      val seenKeeps = paginationContext.toSet
       val query = KeepQuery(
         target = ForUriAndRecipients(uriId, viewer, recipients),
-        paging = KeepQuery.Paging(filter = Some(KeepQuery.Seen(paginationContext.toSet)), offset = 0, limit = 5),
+        paging = KeepQuery.Paging(filter = Some(KeepQuery.Seen(seenKeeps)), offset = 0, limit = 5),
         arrangement = None
       )
       for {
@@ -206,7 +207,7 @@ class PageInfoController @Inject() (
         }.toSeq
         NewKeepInfosForIntersection(
           pageInfo,
-          PaginationContext.fromSet[Keep](intersectionKeepIds.toSet),
+          PaginationContext.fromSet[Keep](seenKeeps ++ intersectionKeepIds.toSet),
           sortedIntersectionKeepInfos,
           onThisPageKeepInfosWithSection,
           entityName = entityName
