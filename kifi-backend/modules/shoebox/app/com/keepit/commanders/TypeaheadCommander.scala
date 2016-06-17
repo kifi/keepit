@@ -389,37 +389,45 @@ class TypeaheadCommander @Inject() (
       (userScore, emailScore, libScore)
     }
 
+    sealed trait TAHolder
+    case class BUHolder(bu: BasicUser) extends TAHolder
+    case class BCHolder(bc: BasicContact) extends TAHolder
+    case class LHolder(lid: Id[Library]) extends TAHolder
+
     for {
       (users, contacts) <- friendsF
       libraryHits <- librariesF
     } yield {
-      // (interactionIdx, typeaheadIdx, priority, value). Lower scores are better for both.
+      // (interactionIdx, typeaheadIdx, priority, value). Lower scores are better for all.
       val userRes = users.distinctBy(_._1).zipWithIndex.map {
         case ((id, bu), idx) =>
-          (userScore(id), idx, 0, UserContactResult(name = bu.fullName, id = bu.externalId, pictureName = Some(bu.pictureName), username = bu.username, firstName = bu.firstName, lastName = bu.lastName))
+          (userScore(id), idx, 0, BUHolder(bu))
       }
       val emailRes = contacts.distinctBy(_.email).zipWithIndex.map {
         case (contact, idx) =>
-          (emailScore(contact.email), idx + limit, 2, EmailContactResult(email = contact.email, name = contact.name))
+          (emailScore(contact.email), idx + limit, 2, BCHolder(contact))
       }
-      val libRes = {
-        val libraries = libraryHits.map(_.info)
-        val libIdToImportance = libraries.map(r => r.id -> r.importance).toMap
-        val libsById = libToResult(userId, libraries.map(_.id))
-        libraries.flatMap(l => libsById.get(l.id).map(r => l.id -> r)).zipWithIndex.map {
-          case ((id, lib), idx) =>
-            (libScore(id), idx + libIdToImportance(id), 1, lib)
-        }
+      val libRes = libraryHits.map(_.info).zipWithIndex.map {
+        case (libr, idx) =>
+          (libScore(libr.id), idx + libr.importance, 1, LHolder(libr.id))
       }
 
-      val combinedAll = (userRes ++ emailRes ++ libRes).filter {
-        case (_, _, _, u: UserContactResult) if requested.contains(TypeaheadRequest.User) => true
-        case (_, _, _, e: EmailContactResult) if requested.contains(TypeaheadRequest.Email) => true
-        case (_, _, _, l: LibraryResult) if requested.contains(TypeaheadRequest.Library) => true
+      val combinedRaw = (userRes ++ emailRes ++ libRes).filter {
+        case (_, _, _, bu: BUHolder) if requested.contains(TypeaheadRequest.User) => true
+        case (_, _, _, bc: BCHolder) if requested.contains(TypeaheadRequest.Email) => true
+        case (_, _, _, l: LHolder) if requested.contains(TypeaheadRequest.Library) => true
         case _ => false
-      }.sortBy(d => (d._1, d._2, d._3)).map { case (_, _, _, res) => res }
+      }.sortBy(d => (d._1, d._2, d._3)).map { case (_, _, _, res) => res }.slice(drop, drop + limit)
 
-      combinedAll.slice(drop, drop + limit)
+      val libsById = libToResult(userId, combinedRaw.collect { case lh: LHolder => lh.lid })
+      combinedRaw.flatMap {
+        case BUHolder(bu) =>
+          Some(UserContactResult(name = bu.fullName, id = bu.externalId, pictureName = Some(bu.pictureName), username = bu.username, firstName = bu.firstName, lastName = bu.lastName))
+        case BCHolder(contact) =>
+          Some(EmailContactResult(email = contact.email, name = contact.name))
+        case LHolder(id) =>
+          libsById.get(id)
+      }
     }
   }
 
