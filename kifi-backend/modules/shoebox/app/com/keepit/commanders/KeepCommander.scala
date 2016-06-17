@@ -456,7 +456,7 @@ class KeepCommanderImpl @Inject() (
     // we can't accurately know how much to drop if we're going to filter keep recipients after so,
     // request the true sequence up to this page, filter, then slice using offset, offset+limit
 
-    typeaheadCommander.searchAndSuggestKeepRecipients(userId, query, limitOpt = Some(offset + limit + excludeSize), dropOpt = Some(0), requested = requestedSet).imap { result =>
+    typeaheadCommander.searchAndSuggestKeepRecipients(userId, query, limitOpt = Some(offset + limit + excludeSize), dropOpt = None, requested = requestedSet).imap { result =>
       result.filterNot {
         case u: UserContactResult => usersToExclude.contains(u.id)
         case e: EmailContactResult => emailsToExclude.contains(e.email)
