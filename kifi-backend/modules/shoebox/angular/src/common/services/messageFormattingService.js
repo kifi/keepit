@@ -253,10 +253,32 @@ angular.module('kifi')
       }());
 
 
+      var processActivityEventElements = function (elements, keep) {
+        var processedElements = [];
+        if (elements) {
+          elements.forEach(function (element) {
+            if (element.kind === 'text') {
+              var parts = trimExtraSpaces(format(element.text));
+              parts.forEach(function (part) {
+                if (part.type === 'LOOK_HERE' && keep) {
+                  part.url = keep.url;
+                  part.locator = '/messages/' + keep.pubId;
+                }
+                processedElements.push(part);
+              });
+            } else {
+              processedElements.push(element);
+            }
+          });
+        }
+        return processedElements;
+      };
+
       return {
         full: format,
         trimExtraSpaces: trimExtraSpaces,
-        formatPlainText: formatKifiSelRangeTextToParts
+        formatPlainText: formatKifiSelRangeTextToParts,
+        processActivityEventElements: processActivityEventElements
       };
     }
   ]);

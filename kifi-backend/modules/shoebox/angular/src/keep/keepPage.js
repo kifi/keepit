@@ -4,11 +4,11 @@ angular.module('kifi')
 
 .controller('KeepPageCtrl', [
   '$rootScope', '$location', '$scope', '$state', '$stateParams', '$timeout',
-  '$window', '$analytics', 'keepActionService', 'modalService', 'profileService',
+  '$window', '$analytics', 'keepService', 'keepActionService', 'messageFormattingService', 'modalService', 'profileService',
   'util',
   function ($rootScope, $location, $scope, $state, $stateParams, $timeout,
-    $window, $analytics, keepActionService, modalService, profileService,
-    util) {
+    $window, $analytics, keepService, keepActionService, messageFormattingService,
+    modalService, profileService, util) {
 
     $scope.unkeepFromLibrary = function (event, keep) {
       if (keep.libraryId && keep.id) {
@@ -45,7 +45,11 @@ angular.module('kifi')
       } else {
         $window.document.title = 'Kifi';
       }
-
+      keepService.contextForPage($scope.keep.url, null, { numEventsPerKeep: 1 }).then(function (data) {
+          $scope.otherKeeps = (data.keeps || []).filter(function (keep) {
+            return keep.id !== $scope.keep.pubId;
+          });
+      });
       $timeout(trackPageView);
     })['catch'](function(reason){
       $scope.loaded = true;

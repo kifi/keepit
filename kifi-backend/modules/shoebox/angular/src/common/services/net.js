@@ -129,6 +129,7 @@ angular.module('kifi')
       deleteMessageFromKeepDiscussion: post(shoebox, '/keeps/:id/messages/delete'),
       markDiscussionAsRead: post(shoebox, '/keeps/markAsRead'),
       suggestRecipientsForKeep: get(api, '/1/keeps/suggestRecipients', 60),
+      getPageContext: post(api, '/1/pages/context'),
 
       // twitter
       twitterSync: post(shoebox, '/twitterSync')

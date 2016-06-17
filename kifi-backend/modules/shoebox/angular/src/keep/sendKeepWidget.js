@@ -239,7 +239,9 @@ angular.module('kifi')
               return (s.id || s.email) !== (suggestion.id || suggestion.email);
             });
             highlightedIndex = 0;
-            scope.suggestions[highlightedIndex].isHighlighted = true;
+            if (scope.suggestions.length > 0) {
+              scope.suggestions[highlightedIndex].isHighlighted = true;
+            }
             adjustScroll(highlightedIndex);
           });
           clickTrack('selectedParticipant');
