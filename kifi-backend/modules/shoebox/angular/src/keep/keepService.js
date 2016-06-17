@@ -83,6 +83,16 @@ angular.module('kifi')
           .then(function (result) {
             return result.data;
           });
+      },
+
+      contextForPage: function (url, paginationContext, config) {
+        return net.getPageContext({
+            url: url,
+            paginationContext: paginationContext,
+            config: config
+          }).then(function (result) {
+            return result.data;
+          });
       }
     };
 

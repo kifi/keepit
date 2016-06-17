@@ -14,6 +14,16 @@ angular.module('kifi')
   };
 })
 
+.filter('firstName', function () {
+  return function (o) {
+    if (o) {
+      if (o.firstName) { return o.firstName; }
+      if (o.name) { return o.name.split(' ')[0]; }
+    }
+    return '';
+  };
+})
+
 .filter('slug', function () {
   return function (o) {
     return o.handle || o.username;
@@ -279,6 +289,17 @@ angular.module('kifi')
 
 .filter('localTime', function () {
   return Date;
+})
+
+.filter('ellipsize', function() {
+  return function (text, maxLength) {
+    if (text.length > maxLength) {
+      var lastIndex = Math.min(text.lastIndexOf(' ', maxLength), maxLength);
+      return text.substr(0, lastIndex) + '…';
+    } else {
+      return text;
+    }
+  };
 })
 
 .filter('noteHtml', [
