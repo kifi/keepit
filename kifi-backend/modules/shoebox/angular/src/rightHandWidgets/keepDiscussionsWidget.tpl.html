@@ -23,9 +23,9 @@
         --><span ng-if="extraRecipients[keep].count" ng-bind-template="+{{extraRecipients[keep].count}}"></span>
       </div>
       <div class="kf-keep-discussions-widget-message"
-           ng-if="latestActivityElements[keep].length">
+           ng-if="latestActivityElements[keep.id].length">
         <span class="kf-keep-discussions-widget-message-sender" ng-bind="keep.activity.latestEvent.author|firstName"></span>:
-        <span kf-activity-event-segments="latestActivityElements[keep]"></span>
+        <span kf-activity-event-segments="latestActivityElements[keep.id]"></span>
       </div>
       <time class="kf-keep-discussions-widget-message-time"
           ng-attr-datetime="{{::keep.activity.latestEvent.timestamp}}"

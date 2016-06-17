@@ -23,13 +23,13 @@ angular.module('kifi')
           scope.extraRecipients = {};
           if(scope.keeps) {
             scope.keeps.forEach(function (keep) {
-              scope.latestActivityElements[keep] = keep.activity && keep.activity.latestEvent &&
+              scope.latestActivityElements[keep.id] = keep.activity && keep.activity.latestEvent &&
                 messageFormattingService.processActivityEventElements(keep.activity.latestEvent.body);
 
               var extraLibraries = _.drop(keep.recipients.libraries || [], scope.maxDiscussionRecipientsPerType);
               var extraUsers = _.drop(keep.recipients.users || [], scope.maxDiscussionRecipientsPerType);
               var extraEmails = _.drop(keep.recipients.emails || [], scope.maxDiscussionRecipientsPerType);
-              scope.extraRecipients[keep] = {
+              scope.extraRecipients[keep.id] = {
                 libraries: extraLibraries,
                 users: extraUsers,
                 emails: extraEmails,
