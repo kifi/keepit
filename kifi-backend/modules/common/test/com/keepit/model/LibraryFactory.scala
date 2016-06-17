@@ -13,7 +13,7 @@ object LibraryFactory {
 
   def library(): PartialLibrary = {
     new PartialLibrary(Library(id = Some(Id[Library](idx.incrementAndGet())), name = randomAlphabetic(5), slug = LibrarySlug(randomAlphabetic(5)),
-      visibility = LibraryVisibility.SECRET, ownerId = Id[User](idx.incrementAndGet()), memberCount = 1, keepCount = 0))
+      visibility = LibraryVisibility.SECRET, ownerId = Id[User](-idx.incrementAndGet()), memberCount = 1, keepCount = 0))
   }
 
   def libraries(count: Int): Seq[PartialLibrary] = List.fill(count)(library())
