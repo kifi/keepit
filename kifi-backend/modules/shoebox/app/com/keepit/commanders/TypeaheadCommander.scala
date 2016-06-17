@@ -356,7 +356,7 @@ class TypeaheadCommander @Inject() (
       case q if q.nonEmpty && dropOpt.exists(_ >= maxSearchHistory) => Future.successful(Seq.empty)
       case q if q.isEmpty =>
         suggestKeepRecipientsConsolidator(userId, limit, drop, requested) { _ =>
-          if (dropOpt.exists(_ == 0)) { prefetchTypeaheads(userId) } // side effects, preloads result into cache
+          if (drop == 0) { prefetchTypeaheads(userId) } // side effects, preloads result into cache
           Future.successful(suggestResults(userId, limit, drop, requested))
         }
       case q =>
