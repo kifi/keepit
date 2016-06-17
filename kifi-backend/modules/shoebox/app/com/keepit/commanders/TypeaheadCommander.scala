@@ -362,17 +362,19 @@ class TypeaheadCommander @Inject() (
     }
   }
 
+  private val batchMaxReordering = 10
   private def searchKeepRecipients(userId: Id[User], query: String, limitOpt: Option[Int], dropOpt: Option[Int], requested: Set[TypeaheadRequest]): Future[Seq[TypeaheadSearchResult]] = {
     val drop = dropOpt.map(Math.min(_, 40)).getOrElse(0)
     val limit = limitOpt.map(Math.min(_, 20)).getOrElse(10) // Fetch too many, we'll drop later.
     val ceil = drop + limit
-    val libsToFetch = ceil + 7 // A bit tricky. Libraries can move 6 records ahead by being more important than contacts. So, we must fetch extra to ensure stability.
+    val typeaheadRecordsToFetch = ceil + batchMaxReordering // A bit tricky. Ordering can change below due to interaction, max `batchMaxReordering` spots.
 
     val friendsF = if (requested.contains(TypeaheadRequest.User) || requested.contains(TypeaheadRequest.Email)) {
-      searchFriendsAndContacts(userId, query, includeSelf = true, Some(ceil))
+      searchFriendsAndContacts(userId, query, includeSelf = true, Some(typeaheadRecordsToFetch))
     } else Future.successful((Seq.empty, Seq.empty))
     val librariesF = if (requested.contains(TypeaheadRequest.Library)) {
-      libraryTypeahead.topN(userId, query, Some(libsToFetch))(TypeaheadHit.defaultOrdering[LibraryTypeaheadResult])
+      // Fetch _additional_ 6 because libraries uniquely can move forward 6 spots based on importance.
+      libraryTypeahead.topN(userId, query, Some(typeaheadRecordsToFetch + 6))(TypeaheadHit.defaultOrdering[LibraryTypeaheadResult])
     } else Future.successful(Seq.empty)
 
     val (userScore, emailScore, libScore) = {
@@ -396,11 +398,11 @@ class TypeaheadCommander @Inject() (
       // (interactionIdx, typeaheadIdx, priority, value). Lower scores are better for both.
       val userRes = users.distinctBy(_._1).zipWithIndex.map {
         case ((id, bu), idx) =>
-          (userScore(id), idx, 0, UserContactResult(name = bu.fullName, id = bu.externalId, pictureName = Some(bu.pictureName), username = bu.username, firstName = bu.firstName, lastName = bu.lastName))
+          (Math.max(userScore(id), batchMaxReordering), idx, 0, UserContactResult(name = bu.fullName, id = bu.externalId, pictureName = Some(bu.pictureName), username = bu.username, firstName = bu.firstName, lastName = bu.lastName))
       }
       val emailRes = contacts.distinctBy(_.email).zipWithIndex.map {
         case (contact, idx) =>
-          (emailScore(contact.email), idx + limit, 2, EmailContactResult(email = contact.email, name = contact.name))
+          (Math.max(emailScore(contact.email), batchMaxReordering), idx + limit, 2, EmailContactResult(email = contact.email, name = contact.name))
       }
       val libRes = {
         val libraries = libraryHits.map(_.info)
@@ -408,7 +410,7 @@ class TypeaheadCommander @Inject() (
         val libsById = libToResult(userId, libraries.map(_.id))
         libraries.flatMap(l => libsById.get(l.id).map(r => l.id -> r)).zipWithIndex.map {
           case ((id, lib), idx) =>
-            (libScore(id), idx + libIdToImportance(id), 1, lib)
+            (Math.min(libScore(id), 10), idx + libIdToImportance(id), 1, lib)
         }
       }
 
