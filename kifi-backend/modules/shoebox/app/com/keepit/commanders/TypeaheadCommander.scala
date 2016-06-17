@@ -410,7 +410,7 @@ class TypeaheadCommander @Inject() (
         val libsById = libToResult(userId, libraries.map(_.id))
         libraries.flatMap(l => libsById.get(l.id).map(r => l.id -> r)).zipWithIndex.map {
           case ((id, lib), idx) =>
-            (Math.min(libScore(id), 10), idx + libIdToImportance(id), 1, lib)
+            (Math.min(libScore(id), batchMaxReordering), idx + libIdToImportance(id), 1, lib)
         }
       }
 
