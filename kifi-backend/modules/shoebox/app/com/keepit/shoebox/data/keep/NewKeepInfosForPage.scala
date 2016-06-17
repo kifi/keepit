@@ -27,7 +27,7 @@ case class NewKeepInfosForIntersection(
   intersectionKeeps: Seq[NewKeepInfo],
   onThisPageKeeps: Seq[(NewKeepInfo, KeepProximitySection)],
   entityName: Option[String] // name of either user or library we're filtering on
-)
+  )
 
 object NewKeepInfosForIntersection {
   val empty = NewKeepInfosForIntersection(page = Option.empty, paginationContext = PaginationContext.empty, intersectionKeeps = Seq.empty, onThisPageKeeps = Seq.empty, entityName = None)
