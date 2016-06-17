@@ -3,7 +3,7 @@ package com.keepit.model
 import java.sql.SQLException
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
-import com.keepit.commanders.{ RelevantSuggestedLibrariesKey, RelevantSuggestedLibrariesCache }
+import com.keepit.commanders.{ LibraryResultKey, LibraryResultCache, RelevantSuggestedLibrariesKey, RelevantSuggestedLibrariesCache }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.{ DbSequenceAssigner, State, Id }
@@ -78,7 +78,8 @@ class LibraryMembershipRepoImpl @Inject() (
   followersCountCache: FollowersCountCache,
   countWithLibraryIdByAccessCache: CountWithLibraryIdByAccessCache,
   librariesWithWriteAccessCache: LibrariesWithWriteAccessCache,
-  countByLibIdAndAccessCache: LibraryMembershipCountByLibIdAndAccessCache)
+  countByLibIdAndAccessCache: LibraryMembershipCountByLibIdAndAccessCache,
+  libraryResultCache: LibraryResultCache)
     extends DbRepo[LibraryMembership] with DbRepoWithDelete[LibraryMembership] with LibraryMembershipRepo with SeqNumberDbFunction[LibraryMembership] with Logging {
 
   import DBSession._
@@ -317,6 +318,7 @@ class LibraryMembershipRepoImpl @Inject() (
 
   override def deleteCache(libMem: LibraryMembership)(implicit session: RSession): Unit = {
     relevantSuggestedLibrariesCache.remove(RelevantSuggestedLibrariesKey(libMem.userId))
+    libraryResultCache.remove(LibraryResultKey(libMem.userId, libMem.libraryId))
     libraryFilterTypeaheadCache.remove(LibraryFilterTypeaheadKey(libMem.userId))
     countWithLibraryIdByAccessCache.remove(CountWithLibraryIdByAccessKey(libMem.libraryId))
     countByLibIdAndAccessCache.remove(LibraryMembershipCountByLibIdAndAccessKey(libMem.libraryId, libMem.access))
@@ -329,6 +331,7 @@ class LibraryMembershipRepoImpl @Inject() (
 
   override def invalidateCache(libMem: LibraryMembership)(implicit session: RSession): Unit = {
     relevantSuggestedLibrariesCache.remove(RelevantSuggestedLibrariesKey(libMem.userId))
+    libraryResultCache.remove(LibraryResultKey(libMem.userId, libMem.libraryId))
     libraryFilterTypeaheadCache.remove(LibraryFilterTypeaheadKey(libMem.userId))
     countByLibIdAndAccessCache.remove(LibraryMembershipCountByLibIdAndAccessKey(libMem.libraryId, libMem.access))
     libraryMembershipCountCache.remove(LibraryMembershipCountKey(libMem.userId, libMem.access))

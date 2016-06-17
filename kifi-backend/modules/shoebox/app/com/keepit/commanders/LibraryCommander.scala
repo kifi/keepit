@@ -1,24 +1,21 @@
 package com.keepit.commanders
 
-import com.google.inject.{ Provider, ImplementedBy, Inject, Singleton }
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.akka.SafeFuture
-
 import com.keepit.common.core._
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.logging.{ SlackLog, Logging }
-import com.keepit.common.service.RequestConsolidator
+import com.keepit.common.logging.{ Logging, SlackLog }
 import com.keepit.common.time._
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
-import com.keepit.model.OrganizationPermission.{ ADD_LIBRARIES, REMOVE_LIBRARIES, FORCE_EDIT_LIBRARIES }
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
+import com.keepit.slack.models.{ LibraryToSlackChannelRepo, SlackChannelToLibraryRepo }
 import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
-import com.keepit.slack.models.{ SlackChannelToLibraryRepo, LibraryToSlackChannelRepo, SlackChannelToLibrary }
 import com.keepit.typeahead.LibraryTypeahead
 import com.kifi.macros.json
 import org.apache.commons.lang3.RandomStringUtils
@@ -89,6 +86,7 @@ class LibraryCommanderImpl @Inject() (
   libraryAnalytics: LibraryAnalytics,
   tagCommander: TagCommander,
   libraryTypeahead: LibraryTypeahead,
+  libraryResultCache: LibraryResultCache,
   implicit val defaultContext: ExecutionContext,
   implicit val publicIdConfig: PublicIdConfiguration,
   implicit val inhouseSlackClient: InhouseSlackClient,
@@ -293,6 +291,7 @@ class LibraryCommanderImpl @Inject() (
       case None =>
         val modifyResponse = unsafeModifyLibrary(library, modifyReq)
         Future {
+          libraryResultCache.direct.remove(LibraryResultKey(userId, libraryId))
           libraryAnalytics.editLibrary(userId, modifyResponse.modifiedLibrary, context, None, modifyResponse.edits)
           searchClient.updateLibraryIndex()
         }
@@ -336,7 +335,9 @@ class LibraryCommanderImpl @Inject() (
       )
     }
 
-    libraryTypeahead.refreshForAllCollaborators(library.id.get)
+    if (newVisibility != library.visibility || newOrgMemberAccessOpt != library.organizationMemberAccess) {
+      libraryTypeahead.refreshForAllCollaborators(library.id.get)
+    }
 
     def updateKeepVisibility(changedVisibility: LibraryVisibility, iter: Int): Future[Unit] = Future {
       val (ktls, lib, curViz) = db.readOnlyMaster { implicit s =>
@@ -430,6 +431,7 @@ class LibraryCommanderImpl @Inject() (
       }
 
       libraryTypeahead.refreshForAllCollaborators(oldLibrary.id.get)
+      libraryResultCache.direct.remove(LibraryResultKey(userId, libraryId))
       searchClient.updateLibraryIndex()
       None
     }
@@ -465,6 +467,7 @@ class LibraryCommanderImpl @Inject() (
     for {
       deletedMembers <- deletedMembersFut
       deletedInvites <- deletedInvitesFut
+      refreshedTypeahead <- libraryTypeahead.refreshForAllCollaborators(libraryId)
       deletedKeeps <- deletedKeepsFut
       deletedIntegrations <- deletedIntegrationsFut
     } yield {
