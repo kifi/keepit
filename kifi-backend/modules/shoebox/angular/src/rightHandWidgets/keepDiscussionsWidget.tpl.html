@@ -20,7 +20,7 @@
         --><span class="kf-keep-discussions-widget-participant"
               ng-repeat="email in keep.recipients.emails | limitTo: maxDiscussionRecipientsPerType"
               ng-bind="email.email"></span><!--
-        --><span ng-if="extraRecipients[keep].count" ng-bind-template="+{{extraRecipients[keep].count}}"></span>
+        --><span ng-if="extraRecipients[keep.id].count" ng-bind-template="+{{extraRecipients[keep.id].count}}"></span>
       </div>
       <div class="kf-keep-discussions-widget-message"
            ng-if="latestActivityText[keep.id].length">
