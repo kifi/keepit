@@ -19,13 +19,12 @@ angular.module('kifi')
           }
         };
         scope.$watch('keeps', function () {
-          scope.latestActivityElements = {};
+          scope.latestActivityText = {};
           scope.extraRecipients = {};
           if(scope.keeps) {
             scope.keeps.forEach(function (keep) {
-              scope.latestActivityElements[keep.id] = keep.activity && keep.activity.latestEvent &&
-                messageFormattingService.processActivityEventElements(keep.activity.latestEvent.body);
-
+              scope.latestActivityText[keep.id] = keep.activity.latestEvent &&
+                messageFormattingService.activityEventToPlainText(keep.activity.latestEvent);
               var extraLibraries = _.drop(keep.recipients.libraries || [], scope.maxDiscussionRecipientsPerType);
               var extraUsers = _.drop(keep.recipients.users || [], scope.maxDiscussionRecipientsPerType);
               var extraEmails = _.drop(keep.recipients.emails || [], scope.maxDiscussionRecipientsPerType);
