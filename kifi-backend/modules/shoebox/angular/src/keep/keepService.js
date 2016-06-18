@@ -93,6 +93,15 @@ angular.module('kifi')
           }).then(function (result) {
             return result.data;
           });
+      },
+
+      getKeepsAtIntersection: function(url, intersectors, paginationContext) {
+        var params = _.extend({ url: url, paginationContext: paginationContext }, (intersectors || {}));
+        return net.getKeepsAtIntersection(params).then(getResponseData);
+      },
+
+      getPageInfo: function(url, config) {
+        return net.getPageInfo({ url: url, config: config }).then(getResponseData);
       }
     };
 

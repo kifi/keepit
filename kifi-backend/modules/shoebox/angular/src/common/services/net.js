@@ -81,6 +81,7 @@ angular.module('kifi')
 
       getKeep: get(shoebox, '/keeps/:id?authToken=:authToken'),
       getActivityForKeepId: get(shoebox, '/keeps/:keepId/activity'),
+      getKeepsAtIntersection: post(api, '/1/pages/intersection'),
       modifyKeep: post(shoebox, '/keeps/:id/title'),
       getKeepsInLibrary: get(shoebox, '/libraries/:id/keeps', 30),
       addKeepsToLibrary: post(shoebox, '/libraries/:id/keeps'),
@@ -129,7 +130,8 @@ angular.module('kifi')
       deleteMessageFromKeepDiscussion: post(shoebox, '/keeps/:id/messages/delete'),
       markDiscussionAsRead: post(shoebox, '/keeps/markAsRead'),
       suggestRecipientsForKeep: get(api, '/1/keeps/suggestRecipients', 60),
-      getPageContext: post(api, '/1/pages/context'),
+      getPageContext: post(api, '/1/pages/context', 60),
+      getPageInfo: post(api, '/1/pages/info', 60),
 
       // twitter
       twitterSync: post(shoebox, '/twitterSync')
