@@ -9,16 +9,14 @@ import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, Use
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.json.EitherFormat
 import com.keepit.common.logging.SlackLog
 import com.keepit.common.time._
-import com.keepit.export.{ FullExportCommander, FullStreamingExport, S3KifiExportStore }
+import com.keepit.export.{ FullExportCommander, FullExportFormatter, S3KifiExportStore }
 import com.keepit.model.UserValues.UserValueIntHandler
 import com.keepit.model._
 import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
-import com.keepit.social.BasicUser
-import play.api.libs.iteratee.{ Enumeratee, Enumerator, Iteratee }
-import play.api.libs.json.{ JsArray, JsValue, Json }
+import play.api.libs.iteratee.{ Enumerator, Iteratee }
+import play.api.libs.json.Json
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
@@ -29,6 +27,7 @@ class KeepExportController @Inject() (
   keepRepo: KeepRepo,
   keepExportCommander: KeepExportCommander,
   fullExportCommander: FullExportCommander,
+  formatter: FullExportFormatter,
   userValueRepo: UserValueRepo,
   clock: Clock,
   exportStore: S3KifiExportStore,
@@ -104,26 +103,19 @@ class KeepExportController @Inject() (
     val export = fullExportCommander.fullExport(request.userId)
 
     slackLog.info(s"[${clock.now}] Formatting user ${request.userId}'s export as JSON")
-    val fileEnum = export.spaces.flatMap { space =>
-      space.libraries.flatMap { library =>
-        library.keeps.flatMap { keep =>
-          fullKeepPage(keep)
-        } andThen fullLibraryPage(library)
-      } andThen fullSpacePage(space)
-    } andThen fullIndexPage(export)
+    val fileEnum = formatter.json(export)
 
     val exportBase = s"${request.user.externalId.id}-kifi-export"
-
     val exportFile = new File(exportBase + ".zip")
     val init = (Set.empty[String], new ZipOutputStream(new FileOutputStream(exportFile)))
     fileEnum.run(Iteratee.fold(init) {
-      case ((existingEntries, zip), (filename, value)) =>
-        if (!existingEntries.contains(filename)) {
-          zip.putNextEntry(new ZipEntry(s"$exportBase/$filename.json"))
-          zip.write(Json.prettyPrint(value).map(_.toByte).toArray)
+      case ((existingEntries, zip), (path, contents)) =>
+        if (!existingEntries.contains(path)) {
+          zip.putNextEntry(new ZipEntry(s"$exportBase/$path.json"))
+          zip.write(contents.map(_.toByte).toArray)
           zip.closeEntry()
         }
-        (existingEntries + filename, zip)
+        (existingEntries + path, zip)
     }).andThen {
       case Failure(fail) =>
         slackLog.error(s"[${clock.now}] Failed while writing user ${request.userId}'s export: ${fail.getMessage}")
@@ -142,68 +134,5 @@ class KeepExportController @Inject() (
         }
     }
     Ok(Json.obj("status" -> "started"))
-  }
-
-  private def fullIndexPage(export: FullStreamingExport.Root): Enumerator[(String, JsValue)] = {
-    implicit val spaceWrites = EitherFormat.keyedWrites[BasicUser, BasicOrganization]("user", "org")
-    slackLog.info(s"[${clock.now}] Writing ${export.user.firstName}'s index page")
-    export.spaces.map(_.space).through(Enumeratee.grouped(Iteratee.getChunks)).through(Enumeratee.map { spaces =>
-      log.info(s"Exporting ${spaces.length} spaces")
-      "index" -> Json.obj(
-        "me" -> export.user,
-        "spaces" -> JsArray(spaces.map { space =>
-          val partialSpace = spaceWrites.writes(space)
-          partialSpace
-        })
-      )
-    })
-  }
-  private def fullSpacePage(space: FullStreamingExport.SpaceExport): Enumerator[(String, JsValue)] = {
-    implicit val spaceWrites = EitherFormat.keyedWrites[BasicUser, BasicOrganization]("user", "org")
-    val path = space.space.fold(u => "users/" + u.externalId.id, o => "orgs/" + o.orgId.id)
-    space.libraries.map(_.library).through(Enumeratee.grouped(Iteratee.getChunks)).through(Enumeratee.map { libs =>
-      val fullSpace = spaceWrites.writes(space.space)
-      path -> Json.obj(
-        "space" -> fullSpace,
-        "libraries" -> JsArray(libs.map { lib =>
-          val partialLibrary = Json.obj(
-            "id" -> Library.publicId(lib.id.get),
-            "name" -> lib.name,
-            "description" -> lib.description
-          )
-          partialLibrary
-        })
-      )
-    })
-  }
-  def fullLibraryPage(library: FullStreamingExport.LibraryExport): Enumerator[(String, JsValue)] = {
-    val path = "libraries/" + Library.publicId(library.library.id.get).id
-    val fullLibrary = Json.obj("name" -> library.library.name)
-    library.keeps.map(_.keep).through(Enumeratee.grouped(Iteratee.getChunks)).through(Enumeratee.map { keeps =>
-      path -> Json.obj(
-        "library" -> fullLibrary,
-        "keeps" -> JsArray(keeps.map { keep =>
-          val partialKeep = Json.obj(
-            "id" -> Keep.publicId(keep.id.get),
-            "title" -> keep.title,
-            "url" -> keep.url,
-            "keptAt" -> keep.keptAt
-          )
-          partialKeep
-        })
-      )
-    })
-  }
-
-  def fullKeepPage(keep: FullStreamingExport.KeepExport): Enumerator[(String, JsValue)] = {
-    val path = "keeps/" + Keep.publicId(keep.keep.id.get).id
-    if (keep.discussion.isEmpty) Enumerator.empty
-    else Enumerator {
-      path -> Json.obj(
-        "id" -> Keep.publicId(keep.keep.id.get),
-        "summary" -> keep.uri.flatMap(_.article.description),
-        "messages" -> keep.discussion.fold(Seq.empty[String])(_.messages.map(_.text))
-      )
-    }
   }
 }

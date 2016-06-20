@@ -3,7 +3,7 @@ package com.keepit.export
 import com.google.inject.Injector
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.json.EitherFormat
-import com.keepit.common.util.{ EnglishProperNouns, TimedComputation }
+import com.keepit.common.util.{EnglishProperNouns, TimedComputation}
 import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.OrganizationFactoryHelper._
@@ -11,13 +11,13 @@ import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
 import com.keepit.rover.model.RoverUriSummary
 import com.keepit.social.BasicUser
-import com.keepit.test.{ ShoeboxInjectionHelpers, ShoeboxTestInjector }
+import com.keepit.test.{ShoeboxInjectionHelpers, ShoeboxTestInjector}
 import org.specs2.mutable.Specification
-import play.api.libs.iteratee.{ Enumeratee, Enumerator, Iteratee }
+import play.api.libs.iteratee.{Enumeratee, Enumerator, Iteratee}
 import play.api.libs.json._
 
-import scala.concurrent.{ ExecutionContext, Future, Await }
 import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 class FullExportCommanderTest extends Specification with ShoeboxTestInjector with ShoeboxInjectionHelpers {
   def modules = Seq(
