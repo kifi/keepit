@@ -11,7 +11,7 @@ import play.api.libs.json._
 
 import scala.concurrent.ExecutionContext
 
-@ImplementedBy(classOf[FullExportProducerImpl])
+@ImplementedBy(classOf[FullExportFormatterImpl])
 trait FullExportFormatter {
   type FilePath = String
   type FileContents = String
