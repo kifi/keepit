@@ -115,18 +115,21 @@ class KeepExportController @Inject() (
     val exportBase = s"${request.user.externalId.id}-kifi-export"
 
     val exportFile = new File(exportBase + ".zip")
-    fileEnum.run(Iteratee.fold(new ZipOutputStream(new FileOutputStream(exportFile))) {
-      case (zip, (filename, value)) =>
-        zip.putNextEntry(new ZipEntry(s"$exportBase/$filename.json"))
-        zip.write(Json.prettyPrint(value).map(_.toByte).toArray)
-        zip.closeEntry()
-        zip
+    val init = (Set.empty[String], new ZipOutputStream(new FileOutputStream(exportFile)))
+    fileEnum.run(Iteratee.fold(init) {
+      case ((existingEntries, zip), (filename, value)) =>
+        if (!existingEntries.contains(filename)) {
+          zip.putNextEntry(new ZipEntry(s"$exportBase/$filename.json"))
+          zip.write(Json.prettyPrint(value).map(_.toByte).toArray)
+          zip.closeEntry()
+        }
+        (existingEntries + filename, zip)
     }).andThen {
       case Failure(fail) =>
         slackLog.error(s"[${clock.now}] Failed while writing user ${request.userId}'s export: ${fail.getMessage}")
-      case Success(zip) =>
+      case Success((entries, zip)) =>
         zip.close()
-        slackLog.info(s"[${clock.now}] Done writing user ${request.userId}'s export to $exportBase.zip, uploading to S3")
+        slackLog.info(s"[${clock.now}] Done writing user ${request.userId}'s export to $exportFile (${entries.size} entries), uploading to S3")
         exportStore.store(exportFile).andThen {
           case Success(yay) =>
             slackLog.info(s"[${clock.now}] Uploaded $exportBase.zip, key = ${yay.getKey}")
