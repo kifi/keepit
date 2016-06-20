@@ -115,14 +115,16 @@ class KeepExportController @Inject() (
     val exportBase = s"${request.user.externalId.id}-kifi-export"
 
     val exportFile = new File(exportBase + ".zip")
-    val zip = new ZipOutputStream(new FileOutputStream(exportFile))
-    fileEnum.run(Iteratee.foreach {
-      case (filename, value) =>
+    fileEnum.run(Iteratee.fold(new ZipOutputStream(new FileOutputStream(exportFile))) {
+      case (zip, (filename, value)) =>
         zip.putNextEntry(new ZipEntry(s"$exportBase/$filename.json"))
         zip.write(Json.prettyPrint(value).map(_.toByte).toArray)
         zip.closeEntry()
+        zip
     }).andThen {
-      case res =>
+      case Failure(fail) =>
+        slackLog.error(s"[${clock.now}] Failed while writing user ${request.userId}'s export: ${fail.getMessage}")
+      case Success(zip) =>
         zip.close()
         slackLog.info(s"[${clock.now}] Done writing user ${request.userId}'s export to $exportBase.zip, uploading to S3")
         exportStore.store(exportFile).andThen {
@@ -141,6 +143,7 @@ class KeepExportController @Inject() (
 
   private def fullIndexPage(export: FullStreamingExport.Root): Enumerator[(String, JsValue)] = {
     implicit val spaceWrites = EitherFormat.keyedWrites[BasicUser, BasicOrganization]("user", "org")
+    slackLog.info(s"[${clock.now}] Writing ${export.user.firstName}'s index page")
     export.spaces.map(_.space).through(Enumeratee.grouped(Iteratee.getChunks)).through(Enumeratee.map { spaces =>
       log.info(s"Exporting ${spaces.length} spaces")
       "index" -> Json.obj(

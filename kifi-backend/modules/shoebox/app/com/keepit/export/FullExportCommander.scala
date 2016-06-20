@@ -1,19 +1,19 @@
 package com.keepit.export
 
-import com.google.inject.{ImplementedBy, Inject, Singleton}
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders.TagCommander
 import com.keepit.commanders.gen.BasicOrganizationGen
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick._
-import com.keepit.common.logging.{Logging, SlackLog}
+import com.keepit.common.logging.{ Logging, SlackLog }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time._
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 import com.keepit.rover.RoverServiceClient
-import com.keepit.slack.{InhouseSlackChannel, InhouseSlackClient}
-import play.api.libs.iteratee.{Enumeratee, Enumerator}
+import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
+import play.api.libs.iteratee.{ Enumeratee, Enumerator }
 
 import scala.concurrent.ExecutionContext
 
