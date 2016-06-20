@@ -136,7 +136,6 @@ class PageInfoController @Inject() (
   private object GetKeepsByUriAndRecipients {
     import json.SchemaReads._
     final case class GetKeepsByUriAndRecipients(
-      initialRequest: Boolean,
       url: String,
       limit: Option[Int],
       users: Set[ExternalId[User]],
@@ -145,7 +144,6 @@ class PageInfoController @Inject() (
       paginationContext: PaginationContext[Keep],
       config: KeepViewAssemblyOptions)
     val schemaReads: SchemaReads[GetKeepsByUriAndRecipients] = (
-      (__ \ 'initialRequest).readWithSchema[Boolean] and
       (__ \ 'url).readWithSchema[String] and
       (__ \ 'limit).readNullableWithSchema[Int] and
       (__ \ 'users).readNullableWithSchema[Set[ExternalId[User]]].map(_ getOrElse Set.empty) and
@@ -170,7 +168,7 @@ class PageInfoController @Inject() (
           libraries <- input.libraries.fragileMap(pubId => Library.decodePublicId(pubId).toOption.withLeft("invalid_library_id"))
         } yield KeepRecipients(libraries, input.emails, users)
       }
-    } yield getKeepInfosForIntersection(request.userId, input.url, recipients, input.paginationContext, input.initialRequest, input.limit)
+    } yield getKeepInfosForIntersection(request.userId, input.url, recipients, input.paginationContext, input.limit)
 
     resultIfEverythingChecksOut.fold(
       fail => Future.successful(schemaHelper.hintResponse(request.body, schema)),
@@ -178,14 +176,14 @@ class PageInfoController @Inject() (
     )
   }
 
-  private def getKeepInfosForIntersection(viewer: Id[User], url: String, recipients: KeepRecipients, paginationContext: PaginationContext[Keep], initialRequest: Boolean, limitOpt: Option[Int]): Future[NewKeepInfosForIntersection] = {
+  private def getKeepInfosForIntersection(viewer: Id[User], url: String, recipients: KeepRecipients, paginationContext: PaginationContext[Keep], limitOpt: Option[Int]): Future[NewKeepInfosForIntersection] = {
     val stopwatch = new Stopwatch(s"[PIC-PAGE-${RandomStringUtils.randomAlphanumeric(5)}]")
     val uriOpt = db.readOnlyReplica { implicit s =>
       uriInterner.getByUri(url).map(_.id.get)
     }
     stopwatch.logTimeWith("uri_retrieved")
     uriOpt.fold(Future.successful(NewKeepInfosForIntersection.empty)) { uriId =>
-      val intersectorFut = if (initialRequest && (recipients.numLibraries + recipients.numParticipants > 0)) db.readOnlyReplicaAsync(implicit s => getIntersectedEntity(recipients)) else Future.successful(None)
+      val intersectorFut = if (recipients.numLibraries + recipients.numParticipants > 0) db.readOnlyReplicaAsync(implicit s => getIntersectedEntity(recipients)) else Future.successful(None)
       val seenKeeps = paginationContext.toSet
       val query = KeepQuery(
         target = ForUriAndRecipients(uriId, viewer, recipients),
