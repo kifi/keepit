@@ -219,4 +219,33 @@ class PageInfoController @Inject() (
     }
   }
 
+  private object GetPageInfo {
+    import json.SchemaReads._
+    final case class GetPageInfo(url: String, config: KeepViewAssemblyOptions)
+    val schemaReads: SchemaReads[GetPageInfo] = (
+      (__ \ 'url).readWithSchema[String] and
+      (__ \ 'config).readNullableWithSchema(KeepInfoAssemblerConfig.useDefaultForMissing).map(_ getOrElse KeepInfoAssemblerConfig.default)
+    )(GetPageInfo.apply _)
+    implicit val reads = schemaReads.reads
+    val schema = schemaReads.schema
+    val schemaHelper = json.schemaHelper(reads)
+  }
+
+  def getPageInfo = UserAction.async(parse.tolerantJson) { implicit request =>
+    import GetPageInfo._
+    request.body.asOpt[GetPageInfo] match {
+      case None => Future.successful(schemaHelper.hintResponse(request.body, schema))
+      case Some(input) =>
+        db.readOnlyReplica { implicit s => uriInterner.getByUri(input.url).map(_.id.get) } match {
+          case None => Future.successful(NotFound)
+          case Some(uriId) =>
+            keepInfoAssembler.assemblePageInfos(Some(request.userId), Set(uriId), input.config).map {
+              _.get(uriId) match {
+                case None => NotFound
+                case Some(page) => Ok(Json.obj("page" -> page))
+              }
+            }
+        }
+    }
+  }
 }
