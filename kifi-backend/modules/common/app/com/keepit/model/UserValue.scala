@@ -107,6 +107,9 @@ object UserValueName {
   val HORRIFYING_LOGGING_METHOD = UserValueName("horrifying_logging_method")
   val LAST_RECORDED_LOCATION = UserValueName("last_recorded_location")
 
+  val FULL_EXPORT_LOCATION = UserValueName("full_export_location")
+  val FULL_EXPORT_DOWNLOAD_COUNT = UserValueName("full_export_download_count")
+
   // Please use lower_underscore_case for new value names (and not lowerCamelCase)
 
   def bookmarkImportContextName(newImportId: String) = UserValueName(s"bookmark_import_${newImportId}_context")

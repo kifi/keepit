@@ -1,9 +1,11 @@
 package com.keepit.shoebox.data.keep
 
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.util.PaginationContext
-import com.keepit.model.Keep
-import play.api.libs.json.{ JsString, Json, Writes }
+import com.keepit.model.{ BasicLibrary, Keep }
+import com.keepit.social.BasicUser
+import play.api.libs.json.{ JsNull, JsString, Json, Writes }
 import play.api.libs.functional.syntax._
 
 case class NewKeepInfosForPage(
@@ -22,18 +24,25 @@ object NewKeepInfosForPage {
 }
 
 case class NewKeepInfosForIntersection(
-  page: Option[NewPageInfo],
   paginationContext: PaginationContext[Keep],
-  intersectionKeeps: Seq[NewKeepInfo],
-  onThisPageKeeps: Seq[(NewKeepInfo, KeepProximitySection)],
-  entityName: Option[String] // name of either user or library we're filtering on
-  )
+  keeps: Seq[NewKeepInfo],
+  intersector: Option[ExternalKeepRecipient]) // name of either user or library we're filtering on
+
+sealed trait ExternalKeepRecipient
+object ExternalKeepRecipient {
+  case class UserRecipient(bu: BasicUser) extends ExternalKeepRecipient
+  case class LibraryRecipient(bl: BasicLibrary) extends ExternalKeepRecipient
+  case class EmailRecipient(ea: EmailAddress) extends ExternalKeepRecipient
+}
 
 object NewKeepInfosForIntersection {
-  val empty = NewKeepInfosForIntersection(page = Option.empty, paginationContext = PaginationContext.empty, intersectionKeeps = Seq.empty, onThisPageKeeps = Seq.empty, entityName = None)
+  val empty = NewKeepInfosForIntersection(paginationContext = PaginationContext.empty, keeps = Seq.empty, intersector = None)
   implicit val writes: Writes[NewKeepInfosForIntersection] = {
-    implicit val helper: Writes[(NewKeepInfo, KeepProximitySection)] = Writes {
-      case (info, section) => NewKeepInfo.writes.writes(info) + ("section" -> KeepProximitySection.writes.writes(section))
+    import ExternalKeepRecipient._
+    implicit val tupleWrites: Writes[ExternalKeepRecipient] = Writes {
+      case UserRecipient(bu) => Json.obj("intersector" -> bu)
+      case LibraryRecipient(bl) => Json.obj("intersector" -> bl)
+      case EmailRecipient(ea) => Json.obj("intersector" -> ea)
     }
     Json.writes[NewKeepInfosForIntersection]
   }

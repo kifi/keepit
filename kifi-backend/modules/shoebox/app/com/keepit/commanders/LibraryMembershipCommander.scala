@@ -1,7 +1,8 @@
 package com.keepit.commanders
 
-import com.google.inject.{ Provider, ImplementedBy, Inject, Singleton }
+import com.google.inject.{ ImplementedBy, Inject, Provider, Singleton }
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.core._
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
@@ -9,19 +10,17 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.BasicContact
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.store.S3ImageStore
 import com.keepit.common.time._
 import com.keepit.eliza.{ ElizaServiceClient, PushNotificationExperiment, UserPushNotificationCategory }
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.notify.model.Recipient
-import com.keepit.notify.model.event.{ OwnedLibraryNewFollower, OwnedLibraryNewCollaborator }
+import com.keepit.notify.model.event.{ OwnedLibraryNewCollaborator, OwnedLibraryNewFollower }
 import com.keepit.search.SearchServiceClient
-import com.keepit.typeahead.{ LibraryTypeahead, KifiUserTypeahead }
+import com.keepit.typeahead.{ KifiUserTypeahead, LibraryTypeahead }
 import org.joda.time.DateTime
 import play.api.Mode.Mode
 import play.api.http.Status._
-import com.keepit.common.core._
 
 import scala.concurrent.{ ExecutionContext, Future }
 
@@ -70,6 +69,7 @@ class LibraryMembershipCommanderImpl @Inject() (
     libraryAnalytics: LibraryAnalytics,
     elizaClient: ElizaServiceClient,
     searchClient: SearchServiceClient,
+    libraryResultCache: LibraryResultCache,
     implicit val defaultContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration,
     kifiInstallationCommander: KifiInstallationCommander, // Only used by notifyOwnerOfNewFollowerOrCollaborator
@@ -284,8 +284,10 @@ class LibraryMembershipCommanderImpl @Inject() (
   }
 
   private def refreshTypeaheads(userId: Id[User], libraryId: Id[Library]): Future[Unit] = {
+    libraryResultCache.direct.remove(LibraryResultKey(userId, libraryId))
+    relevantSuggestedLibrariesCache.direct.remove(RelevantSuggestedLibrariesKey(userId))
     libraryTypeahead.get.refresh(userId).map { _ =>
-      relevantSuggestedLibrariesCache.direct.remove(RelevantSuggestedLibrariesKey(userId))
+      // Each of the existing collaborators can now message `userId`, so refresh their user typeaheads.
       val collaboratorIds = db.readOnlyMaster { implicit session =>
         libraryMembershipRepo.getCollaboratorsByLibrary(Set(libraryId)).get(libraryId).toSet.flatten
       }

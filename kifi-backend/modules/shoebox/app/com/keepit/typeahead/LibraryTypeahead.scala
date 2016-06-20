@@ -1,13 +1,12 @@
 package com.keepit.typeahead
 
 import com.amazonaws.services.s3.AmazonS3
-import com.google.inject.{ Provider, Inject, Singleton }
+import com.google.inject.{ Inject, Provider, Singleton }
 import com.keepit.commanders._
-import com.keepit.common.concurrent.FutureHelpers
-import com.keepit.common.core._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.common.cache._
+import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
@@ -18,7 +17,6 @@ import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.typeahead.LibraryTypeahead.UserLibraryTypeahead
 import com.kifi.macros.json
-import org.joda.time.Minutes
 
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }

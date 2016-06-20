@@ -274,10 +274,40 @@ angular.module('kifi')
         return processedElements;
       };
 
+      var slackUrlEntityRe = /<(\S*?)\|(.*?)>|<(\S*?)>/g;
+      var activityEventToPlainText = function (activity) {
+        var activityString = activity.body.map(function (element) {
+          return element.text;
+        }).join('');
+
+        if (activity.source && activity.source.kind === 'Slack') {
+          activityString = activityString.replace(slackUrlEntityRe, '$1$3');
+        } else {
+          var parts = activityString.split(kifiSelMarkdownToLinkRe);
+          var items = [];
+
+          // the first item will always be a non markdown string
+          // if there are groupings that are found, they will be
+          // found as: [parts[i + 1][(parts[i + 2])]
+          for (var i = 0; i < parts.length; i += 3) {
+            items.push(parts[i]);
+            // if there is kifi markdown to process
+            if (i + 2 < parts.length) {
+              items.push(parts[i+1]);
+            }
+          }
+
+          activityString = items.join('');
+        }
+
+        return emojiService.supported() ? emojiService.decode(activityString) : activityString;
+      };
+
       return {
         full: format,
         trimExtraSpaces: trimExtraSpaces,
         formatPlainText: formatKifiSelRangeTextToParts,
+        activityEventToPlainText: activityEventToPlainText,
         processActivityEventElements: processActivityEventElements
       };
     }
