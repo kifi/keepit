@@ -5,6 +5,7 @@ import com.keepit.commanders.TagCommander
 import com.keepit.commanders.gen.BasicOrganizationGen
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.{ Logging, SlackLog }
 import com.keepit.common.social.BasicUserRepo
@@ -17,8 +18,8 @@ import play.api.libs.iteratee.{ Enumeratee, Enumerator }
 
 import scala.concurrent.ExecutionContext
 
-@ImplementedBy(classOf[FullExportCommanderImpl])
-trait FullExportCommander {
+@ImplementedBy(classOf[FullExportProducerImpl])
+trait FullExportProducer {
   def fullExport(userId: Id[User]): FullStreamingExport.Root
 }
 
@@ -30,7 +31,7 @@ object FullExportCommanderConfig {
 }
 
 @Singleton
-class FullExportCommanderImpl @Inject() (
+class FullExportProducerImpl @Inject() (
   db: Database,
   basicUserGen: BasicUserRepo,
   basicOrgGen: BasicOrganizationGen,
@@ -46,7 +47,7 @@ class FullExportCommanderImpl @Inject() (
   implicit val defaultContext: ExecutionContext,
   implicit val publicIdConfig: PublicIdConfiguration,
   implicit val inhouseSlackClient: InhouseSlackClient)
-    extends FullExportCommander with Logging {
+    extends FullExportProducer with Logging {
   val slackLog = new SlackLog(InhouseSlackChannel.TEST_RYAN)
   import FullExportCommanderConfig._
 
