@@ -70,6 +70,11 @@ angular.module('kifi')
         },
         reloadOnSearch: false  // controller handles search query changes itself
       })
+      .state('intersectionPage', {
+        url: '/int?url&user&library&email',
+        templateUrl: 'keeps/intersectionPage.tpl.html',
+        controller: 'IntersectionPageCtrl'
+      })
       .state('userOrOrg', {
         // Any params you want passed to redirected states need to be listed here
         url: '/:handle?authToken&openCreateLibrary&signUpWithSlack&slackTeamId&userId&keepId&libraryId&error',

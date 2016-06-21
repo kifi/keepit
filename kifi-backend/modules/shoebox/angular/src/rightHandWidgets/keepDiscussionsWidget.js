@@ -8,7 +8,8 @@ angular.module('kifi')
     return {
       restrict: 'A',
       scope: {
-        keeps: '=keeps'
+        keeps: '=keeps',
+        header: '='
       },
       templateUrl: 'rightHandWidgets/keepDiscussionsWidget.tpl.html',
       link: function (scope) {
