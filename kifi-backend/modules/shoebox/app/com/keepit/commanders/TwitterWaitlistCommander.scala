@@ -110,15 +110,21 @@ class TwitterWaitlistCommanderImpl @Inject() (
   // Goes through un-accepted waitlisted users, sees if we can turn it on for them now.
   private val processLock = new ReactiveLock(1)
   def processQueue(): Unit = {
-    processLock.withLock {
-      db.readOnlyReplica { implicit session =>
-        val pending = twitterWaitlistRepo.getPending.sortBy(_.createdAt)(implicitly[Ordering[DateTime]].reverse)
-        pending.toStream.filter { p =>
-          usersTwitterSui(p.userId).isDefined
-        }.take(10).toList // Not super efficient but fine for now, especially for testing
-      }.map { p =>
-        log.info(s"[processQueue] Creating sync for ${p.userId}")
-        createSyncFromWaitlist(p.id.get)
+    if (processLock.waiting + processLock.running > 0) {
+      log.info(s"[processQueue] Already going. ${processLock.running} ${processLock.waiting}")
+    } else {
+      log.info(s"[processQueue] Queuing to check")
+      processLock.withLock {
+        log.info(s"[processQueue] Checking")
+        db.readOnlyReplica { implicit session =>
+          val pending = twitterWaitlistRepo.getPending.sortBy(_.createdAt)(implicitly[Ordering[DateTime]].reverse)
+          pending.toStream.filter { p =>
+            usersTwitterSui(p.userId).isDefined
+          }.take(10).toList // Not super efficient but fine for now, especially for testing
+        }.map { p =>
+          log.info(s"[processQueue] Creating sync for ${p.userId}")
+          createSyncFromWaitlist(p.id.get)
+        }
       }
     }
   }
