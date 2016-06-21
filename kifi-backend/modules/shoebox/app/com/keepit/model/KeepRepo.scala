@@ -11,7 +11,7 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
 import com.keepit.discussion.Message
 import com.keepit.model.FeedFilter._
-import com.keepit.shoebox.data.keep.KeepProximitySection
+import com.keepit.shoebox.data.keep.{ KeepRecipientId, KeepProximitySection }
 import org.joda.time.DateTime
 
 import scala.slick.jdbc.{ GetResult, PositionedResult }
@@ -50,7 +50,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getRecentKeepsByActivity(userId: Id[User], limit: Int, beforeIdOpt: Option[ExternalId[Keep]], afterIdOpt: Option[ExternalId[Keep]], filterOpt: Option[ShoeboxFeedFilter] = None)(implicit session: RSession): Seq[(Keep, DateTime)]
   def pageByLibrary(libraryId: Id[Library], offset: Int, limit: Int, excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
   def getKeepIdsForQuery(query: KeepQuery)(implicit session: RSession): Seq[Id[Keep]]
-  def getSectionedKeepsOnUri(viewer: Id[User], uri: Id[NormalizedURI], seen: Set[Id[Keep]], limit: Int)(implicit session: RSession): Map[KeepProximitySection, Seq[Id[Keep]]]
+  def getSectionedKeepsOnUri(viewer: Id[User], uri: Id[NormalizedURI], seen: Set[Id[Keep]], limit: Int, filterRecipientOpt: Option[KeepRecipientId])(implicit session: RSession): Map[KeepProximitySection, Seq[Id[Keep]]]
   def getChangedKeepsFromLibrary(libraryId: Id[Library], seq: SequenceNumber[Keep])(implicit session: RSession): Seq[Keep]
   def getByUriAndLibrariesHash(uriId: Id[NormalizedURI], libIds: Set[Id[Library]])(implicit session: RSession): Seq[Keep]
   def getByUriAndParticipantsHash(uriId: Id[NormalizedURI], users: Set[Id[User]], emails: Set[EmailAddress])(implicit session: RSession): Seq[Keep]
@@ -604,7 +604,7 @@ class KeepRepoImpl @Inject() (
     q.list
   }
 
-  def getSectionedKeepsOnUri(viewer: Id[User], uri: Id[NormalizedURI], seen: Set[Id[Keep]], limit: Int)(implicit session: RSession): Map[KeepProximitySection, Seq[Id[Keep]]] = {
+  def getSectionedKeepsOnUri(viewer: Id[User], uri: Id[NormalizedURI], seen: Set[Id[Keep]], limit: Int, filterRecipientOpt: Option[KeepRecipientId])(implicit session: RSession): Map[KeepProximitySection, Seq[Id[Keep]]] = {
     /*
     I am sorry that this method exists.
     It is a testament to the disasterous combination of my hubris and incompetence.
@@ -615,27 +615,38 @@ class KeepRepoImpl @Inject() (
       2 --> indirect via org library
       3 --> indirect via published visibility
      */
+
+    def keepConnectedToFilterRecipient(keepId: Column[Id[Keep]]): Column[Boolean] = {
+      import KeepRecipientId._
+      filterRecipientOpt match {
+        case Some(UserId(uid)) => ktuRows.filter(ktu => ktu.keepId === keepId && ktu.userId === uid).exists
+        case Some(LibraryId(lid)) => ktlRows.filter(ktl => ktl.keepId === keepId && ktl.libraryId === lid).exists
+        case Some(email: Email) => kteRows.filter(kte => kte.keepId === keepId && kte.emailAddressHash === email.addressHash).exists
+        case None => false
+      }
+    }
+
     val orgVisibilities: Set[LibraryVisibility] = Set(LibraryVisibility.ORGANIZATION, LibraryVisibility.PUBLISHED)
     val pubVisibility: LibraryVisibility = LibraryVisibility.PUBLISHED
 
     val direct = ktuRows.filter { ktu =>
-      ktu.uriId === uri && ktu.userId === viewer && !ktu.keepId.inSet(seen)
+      ktu.uriId === uri && ktu.userId === viewer && !ktu.keepId.inSet(seen) && !keepConnectedToFilterRecipient(ktu.keepId)
     }.map(ktu => (KeepProximitySection.Direct.priority, ktu.keepId, ktu.lastActivityAt)).take(limit)
 
     val lib = ktlRows.filter { ktl =>
       ktl.uriId === uri && ktl.libraryId.in {
         lmRows.filter(_.userId === viewer).map(_.libraryId)
-      } && !ktl.keepId.inSet(seen)
+      } && !ktl.keepId.inSet(seen) && !keepConnectedToFilterRecipient(ktl.keepId)
     }.map(ktl => (KeepProximitySection.LibraryMembership.priority, ktl.keepId, ktl.lastActivityAt)).take(limit)
 
     val org = ktlRows.filter { ktl =>
       ktl.uriId === uri && ktl.visibility.inSet(orgVisibilities) && ktl.organizationId.in {
         omRows.filter(_.userId === viewer).map(_.organizationId)
-      } && !ktl.keepId.inSet(seen)
+      } && !ktl.keepId.inSet(seen) && !keepConnectedToFilterRecipient(ktl.keepId)
     }.map(ktl => (KeepProximitySection.OrganizationLibrary.priority, ktl.keepId, ktl.lastActivityAt)).take(limit)
 
     val published = ktlRows.filter { ktl =>
-      ktl.uriId === uri && ktl.visibility === pubVisibility && !ktl.keepId.inSet(seen)
+      ktl.uriId === uri && ktl.visibility === pubVisibility && !ktl.keepId.inSet(seen) && !keepConnectedToFilterRecipient(ktl.keepId)
     }.map(ktl => (KeepProximitySection.PublishedLibrary.priority, ktl.keepId, ktl.lastActivityAt)).take(limit)
 
     (direct union lib union org union published).list.distinctBy(_._2).take(limit).groupBy(_._1).map {

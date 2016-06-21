@@ -9,6 +9,7 @@ import com.keepit.model.KeepFactory._
 import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.OrganizationFactoryHelper._
+import com.keepit.shoebox.data.keep.KeepRecipientId
 import com.keepit.test._
 import org.joda.time.DateTime
 import org.specs2.mutable._
@@ -65,8 +66,9 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
         // Just to ensure that the syntax is valid
         db.readOnlyMaster { implicit s =>
           (ktuRepo.count, ktlRepo.count, libraryMembershipRepo.count, orgMembershipRepo.count)
-          keepRepo.getSectionedKeepsOnUri(Id(1), Id(1), Set.empty, limit = 10)
-          keepRepo.getSectionedKeepsOnUri(Id(1), Id(1), Set(Id(42)), limit = 10)
+          keepRepo.getSectionedKeepsOnUri(Id(1), Id(1), Set.empty, limit = 10, None)
+          keepRepo.getSectionedKeepsOnUri(Id(1), Id(1), Set(Id(42)), limit = 10, None)
+          keepRepo.getSectionedKeepsOnUri(Id(1), Id(1), Set(Id(42)), limit = 10, Some(KeepRecipientId.UserId(Id(1))))
         }
         1 === 1
       }
