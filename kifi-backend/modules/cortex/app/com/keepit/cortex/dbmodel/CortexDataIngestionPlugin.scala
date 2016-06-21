@@ -83,7 +83,7 @@ class CortexDataIngestionActor @Inject() (
           if (sz == fetchSize) context.system.scheduler.scheduleOnce(randomDelay, self, UpdateKeep)
         }.onComplete {
           case Success(_) => isUpdatingKeep = false
-          case Failure(fail) => { isUpdatingKeep = false; airbrake.notify(fail.getMessage) }
+          case Failure(fail) => { isUpdatingKeep = false; airbrake.notify("Could not update keep", fail) }
         }
       }
 
