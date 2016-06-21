@@ -3,12 +3,12 @@ package com.keepit.shoebox.data.keep
 import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.json.{ JsonSchema, SchemaReads }
-import com.keepit.common.mail.EmailAddress
+import com.keepit.common.mail.{ EmailAddressHash, EmailAddress }
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.util.PaginationContext
 import com.keepit.model.{ KeepRecipients, User, Library, BasicLibrary, Keep }
 import com.keepit.social.BasicUser
-import play.api.libs.json.{ JsNull, JsString, Json, Writes }
+import play.api.libs.json.{Reads, JsNull, JsString, Json, Writes}
 import play.api.libs.functional.syntax._
 
 case class NewKeepInfosForPage(
@@ -51,12 +51,12 @@ object ExternalKeepRecipientId {
   }
 
   implicit def sreads: SchemaReads[ExternalKeepRecipientId] = {
-    SchemaReads(
-      SchemaReads.userId.map[ExternalKeepRecipientId](UserId).reads orElse
-      SchemaReads.libraryId.map[ExternalKeepRecipientId](LibraryId).reads orElse
-      SchemaReads.email.map[ExternalKeepRecipientId](Email).reads,
-      schema = JsonSchema.Single("either an external user id, public library id, or email address")
-    )
+    val reads: Reads[ExternalKeepRecipientId] = Seq(
+      Reads(ExternalId.format[User].reads).map[ExternalKeepRecipientId](UserId),
+      Reads(Library.readsPublicId.reads).map[ExternalKeepRecipientId](LibraryId),
+      Reads(EmailAddress.format.reads).map[ExternalKeepRecipientId](Email)
+    ).reduce(_ orElse _)
+    SchemaReads(reads, schema = JsonSchema.Single("either an external user id, public library id, or email address"))
   }
 }
 
@@ -71,6 +71,7 @@ object KeepRecipientId {
     def toKeepRecipients: KeepRecipients = KeepRecipients.EMPTY.plusLibrary(id)
   }
   case class Email(address: EmailAddress) extends KeepRecipientId {
+    lazy val addressHash: EmailAddressHash = EmailAddressHash.hashEmailAddress(address)
     def toKeepRecipients: KeepRecipients = KeepRecipients.EMPTY.plusEmailAddress(address)
   }
 }

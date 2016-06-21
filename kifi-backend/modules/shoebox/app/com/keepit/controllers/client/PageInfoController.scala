@@ -6,14 +6,13 @@ import com.keepit.commanders.gen.BasicLibraryGen
 import com.keepit.commanders.{ KeepQuery, KeepQueryCommander }
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.core.mapExtensionOps
-import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.DBSession.RSession
-import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.json
 import com.keepit.common.json.SchemaReads
-import com.keepit.common.mail.EmailAddress
 import com.keepit.common.performance.Stopwatch
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time._
@@ -95,11 +94,12 @@ class PageInfoController @Inject() (
 
   private object GetKeepsByUri {
     import json.SchemaReads._
-    final case class Input(url: String, paginationContext: Option[PaginationContext[Keep]], config: KeepViewAssemblyOptions)
+    final case class Input(url: String, paginationContext: Option[PaginationContext[Keep]], config: KeepViewAssemblyOptions, filterRecipient: Option[ExternalKeepRecipientId])
     val schemaReads: SchemaReads[Input] = (
       (__ \ 'url).readWithSchema[String] and
       (__ \ 'paginationContext).readNullableWithSchema[PaginationContext[Keep]] and
-      (__ \ 'config).readNullableWithSchema(KeepInfoAssemblerConfig.useDefaultForMissing).map(_ getOrElse KeepInfoAssemblerConfig.default)
+      (__ \ 'config).readNullableWithSchema(KeepInfoAssemblerConfig.useDefaultForMissing).map(_ getOrElse KeepInfoAssemblerConfig.default) and
+      (__ \ 'filterRecipient).readNullableWithSchema[ExternalKeepRecipientId]
     )(Input.apply _)
     implicit val reads = schemaReads.reads
     val schema = schemaReads.schema
@@ -112,8 +112,16 @@ class PageInfoController @Inject() (
       val seenIds = input.paginationContext.fold(Set.empty[Id[Keep]])(_.toSet)
       val uriIdOpt = db.readOnlyReplica { implicit s => uriInterner.getByUri(input.url).map(_.id.get) }
       val newIdsBySection = uriIdOpt.map { uriId =>
-        db.readOnlyReplica { implicit s => keepRepo.getSectionedKeepsOnUri(request.userId, uriId, seenIds, limit = 10) }
+        val stopwatch = new Stopwatch(s"[OTP-KEEPS-${RandomStringUtils.randomAlphanumeric(5)}}] filtering=${input.filterRecipient}}")
+        db.readOnlyReplica { implicit s =>
+          import com.keepit.common.core._
+          val recipientToFilter = input.filterRecipient.flatMap(convertExternalRecipientId)
+          keepRepo.getSectionedKeepsOnUri(request.userId, uriId, seenIds, limit = 10, recipientToFilter).tap { _ =>
+            stopwatch.logTimeWith("fetched_keeps")
+          }
+        }
       }.getOrElse(Map.empty)
+
       val sectionById = newIdsBySection.flatMap {
         case (section, ids) => ids.map(_ -> section)
       }
@@ -131,6 +139,12 @@ class PageInfoController @Inject() (
       }
       result.map(ans => Ok(outputWrites.writes(ans)))
     }
+  }
+
+  private def convertExternalRecipientId(extId: ExternalKeepRecipientId)(implicit session: RSession): Option[KeepRecipientId] = extId match {
+    case ExternalKeepRecipientId.Email(emailAddress) => Some(KeepRecipientId.Email(emailAddress))
+    case ExternalKeepRecipientId.UserId(externalId) => Some(KeepRecipientId.UserId(userRepo.convertExternalId(externalId)))
+    case ExternalKeepRecipientId.LibraryId(publicId) => Library.decodePublicId(publicId).map(libId => KeepRecipientId.LibraryId(libId)).toOption
   }
 
   private object GetKeepsByUriAndRecipients {
@@ -157,11 +171,7 @@ class PageInfoController @Inject() (
     import GetKeepsByUriAndRecipients._
     val resultIfEverythingChecksOut = for {
       input <- request.body.asOpt[GetKeepsByUriAndRecipients].withLeft("malformed_input")
-      intersectorId = input.intersector.flatMap {
-        case ExternalKeepRecipientId.Email(emailAddress) => Some(KeepRecipientId.Email(emailAddress))
-        case ExternalKeepRecipientId.UserId(externalId) => db.readOnlyReplica(implicit s => Some(KeepRecipientId.UserId(userRepo.convertExternalId(externalId))))
-        case ExternalKeepRecipientId.LibraryId(publicId) => Library.decodePublicId(publicId).map(libId => KeepRecipientId.LibraryId(libId)).toOption
-      }
+      intersectorId = input.intersector.flatMap(extId => db.readOnlyReplica(implicit s => convertExternalRecipientId(extId)))
     } yield getKeepInfosForIntersection(request.userId, input.url, intersectorId, input.paginationContext, input.limit)
 
     resultIfEverythingChecksOut.fold(
