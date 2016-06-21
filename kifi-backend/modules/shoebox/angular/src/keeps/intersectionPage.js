@@ -5,7 +5,9 @@ angular.module('kifi')
 .controller('IntersectionPageCtrl', [ '$scope', '$rootScope', '$state', '$q', 'keepService', 'Paginator', 'util',
   function(scope, $rootScope, $state, $q, keepService, Paginator, util) {
 
-    var paginationContext = null;
+    var PAGE_SIZE = 4;
+
+    var paginationContext = '';
     var pageInfo = null;
     var init = false;
 
@@ -18,26 +20,23 @@ angular.module('kifi')
         pageInfo = result.page;
       });
     }
-    scope.keepsOnThisPage = null;
+    scope.keepsOnThisPage = [];
     scope.displayUrl = util.formatTitleFromUrl(scope.url);
     scope.entityType = $state.params.user ? 'user' : $state.params.library ? 'library' : $state.params.email ? 'email' : null;
 
-    var intersectors =
-      $state.params.user ? { users: [$state.params.user] } :
-      $state.params.library ? { libraries: [$state.params.library] } :
-      $state.params.email ? { emails: [$state.params.email] } : null;
+    var intersectorId = $state.params.user || $state.params.library || $state.params.email;
 
     function keepSource() {
-      return keepService.getKeepsAtIntersection(scope.url, intersectors, paginationContext).then(function (intResult) {
+      return keepService.getKeepsAtIntersection(scope.url, intersectorId, paginationContext, PAGE_SIZE).then(function (intResult) {
         paginationContext = intResult.paginationContext;
-        scope.intersector = intResult.intersector.intersector || intResult.intersector;
+        scope.intersector = intResult.intersector;
 
 
         if (!init && intResult.keeps.length === 1) {
           var keep = intResult.keeps[0];
           $state.go('keepPage', { title: keep.title.slice(0,5), pubId: keep.id });
         } else {
-          if (!init) {
+          if (!init && intersectorId) {
             keepService.contextForPage(scope.url, paginationContext).then(function(contextResult) {
               scope.keepsOnThisPage = contextResult.keeps;
             });

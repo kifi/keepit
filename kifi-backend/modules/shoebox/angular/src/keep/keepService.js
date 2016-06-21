@@ -95,8 +95,8 @@ angular.module('kifi')
           });
       },
 
-      getKeepsAtIntersection: function(url, intersectors, paginationContext) {
-        var params = _.extend({ url: url, paginationContext: paginationContext }, (intersectors || {}));
+      getKeepsAtIntersection: function(url, intersector, paginationContext, limit) {
+        var params = _.extend({ url: url, intersector: intersector, paginationContext: paginationContext, limit: limit });
         return net.getKeepsAtIntersection(params).then(getResponseData);
       },
 

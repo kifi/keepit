@@ -1,10 +1,10 @@
 
 <div class="kf-int" ui-view smart-scroll scroll-distance="'0%'" scroll-next="fetchKeeps()">
   <div class="kf-int-container">
-    <div class="kf-int-left">
+    <div class="kf-int-left" ng-style="keepsOnThisPage.length === 0 ? {'align-items': 'center'} : {'align-items': 'flex-start'};">
       <div class="kf-int-header">
         <div class="kf-int-header-keeps" ng-if="intersectionKeeps.length > 0">
-          Keeps on
+          Showing keeps on
           <a class="kf-link" ng-href="{{url}}" target="_blank" ng-bind="displayUrl || 'this page'"></a>
           <span ng-if="intersector">
             <span ng-bind="entityType === 'library' ? ' within ' : ' connected to '"></span>
