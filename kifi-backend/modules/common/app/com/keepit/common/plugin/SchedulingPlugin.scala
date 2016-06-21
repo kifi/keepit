@@ -120,9 +120,11 @@ trait SchedulerPlugin extends Plugin with Logging {
       log.info(s"Scheduling $taskName")
       scheduleTask(system, initialDelay, frequency, taskName) {
         if (scheduling.enabledOnlyForLeader) {
-          timing(s"executing scheduled task: $taskName") {
+          timing(s"executing scheduled task (leader): $taskName") {
             f
           }
+        } else {
+          log.info(s"Not executing scheduled task $taskName because not leader")
         }
       }
     } else {
@@ -139,6 +141,8 @@ trait SchedulerPlugin extends Plugin with Logging {
           timing(s"executing scheduled task: $taskName") {
             f
           }
+        } else {
+          log.info(s"Not executing scheduled task $taskName because not correct machine")
         }
       }
     } else {
