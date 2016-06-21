@@ -10,7 +10,7 @@ import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.http._
-import com.keepit.common.mail.KifiMobileAppLinkFlag
+import com.keepit.common.mail.{ EmailAddress, KifiMobileAppLinkFlag }
 import com.keepit.common.net.{ Param, Query }
 import com.keepit.common.path.Path
 import com.keepit.controllers.core.PostRegIntent
@@ -37,6 +37,7 @@ class KifiSiteRouter @Inject() (
   libraryRepo: LibraryRepo,
   libraryMembershipRepo: LibraryMembershipRepo,
   keepRepo: KeepRepo,
+  normalizedUriRepo: NormalizedURIRepo,
   orgMembershipRepo: OrganizationMembershipRepo,
   handleCommander: HandleCommander,
   val userIpAddressCommander: UserIpAddressCommander,
@@ -279,11 +280,6 @@ class KifiSiteRouter @Inject() (
   }
 
   def serveWebAppIfKeepFound(title: String, pubId: PublicId[Keep], authTokenOpt: Option[String]) = WebAppPage.async { implicit request =>
-    import UserExperimentType._
-    val experiments = request match {
-      case ur: UserRequest[_] => ur.experiments
-      case _ => Set.empty[UserExperimentType]
-    }
     Keep.decodePublicId(pubId) match {
       case Failure(ex) => Future.successful(notFound(request))
       case Success(keepId) => {
@@ -304,6 +300,13 @@ class KifiSiteRouter @Inject() (
         }
       }
     }
+  }
+
+  def serveWebAppIfNormalizedUriFound(url: String, user: Option[String], library: Option[String], email: Option[EmailAddress]) = WebAppPage { implicit request =>
+    db.readOnlyReplica { implicit s =>
+      normalizedUriRepo.getByNormalizedUrl(url)
+    }.map(_ => app())
+      .getOrElse(notFound(request))
   }
 
   private def lookupUser(handle: Handle) = {
