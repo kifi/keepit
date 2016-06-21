@@ -13,6 +13,7 @@ import play.api.Plugin
 import us.theatr.akka.quartz._
 import com.keepit.common.zookeeper.{ ServiceInstance, ServiceDiscovery }
 import scala.collection.mutable.ListBuffer
+import scala.util.Try
 
 case class NamedCancellable(underlying: Cancellable, taskName: String) extends Cancellable {
   def name() = taskName
@@ -29,7 +30,11 @@ trait SchedulerPlugin extends Plugin with Logging {
 
   private def scheduleTask(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration, taskName: String)(f: => Unit): Unit = _cancellables.synchronized {
     _cancellables +=
-      NamedCancellable(system.scheduler.schedule(initialDelay, frequency) { f }, taskName)
+      NamedCancellable(system.scheduler.schedule(initialDelay, frequency) {
+        Try(f).recover { case ex: Throwable =>
+          log.error(s"[scheduleTask] Failed to execute task $taskName", ex)
+        }
+      }, taskName)
   }
 
   /**
@@ -115,9 +120,11 @@ trait SchedulerPlugin extends Plugin with Logging {
       log.info(s"Scheduling $taskName")
       scheduleTask(system, initialDelay, frequency, taskName) {
         if (scheduling.enabledOnlyForLeader) {
-          timing(s"executing scheduled task: $taskName") {
+          timing(s"executing scheduled task (leader): $taskName") {
             f
           }
+        } else {
+          log.info(s"Not executing scheduled task $taskName because not leader")
         }
       }
     } else {
@@ -134,6 +141,8 @@ trait SchedulerPlugin extends Plugin with Logging {
           timing(s"executing scheduled task: $taskName") {
             f
           }
+        } else {
+          log.info(s"Not executing scheduled task $taskName because not correct machine")
         }
       }
     } else {

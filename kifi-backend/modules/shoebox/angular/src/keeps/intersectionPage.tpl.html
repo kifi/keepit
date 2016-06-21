@@ -1,0 +1,34 @@
+
+<div class="kf-int" ui-view smart-scroll scroll-distance="'0%'" scroll-next="fetchKeeps()">
+  <div class="kf-int-container">
+    <div class="kf-int-left">
+      <div class="kf-int-header">
+        <div class="kf-int-header-keeps" ng-if="intersectionKeeps.length > 0">
+          Keeps on
+          <a class="kf-link" ng-href="{{url}}" target="_blank" ng-bind="displayUrl || 'this page'"></a>
+          <span ng-if="intersector">
+            <span ng-bind="entityType === 'library' ? ' within ' : ' connected to '"></span>
+            <a ng-class="entityType === 'email' ? '' : 'kf-link'" ng-bind="entityType === 'email' ? intersector : (intersector|name)"
+              ng-href="{{entityType === 'user' ? (intersector|profileUrl) : entityType === 'library' ? intersector.path : null }}"></a>
+          </span>
+        </div>
+        <div class="kf-int-header-nokeeps" ng-if="!loading && intersectionKeeps.length === 0">
+          We couldn't find any keeps <span ng-if="intersector"> connected to that <span ng-bind="entityType"></span> and page</span>
+        </div>
+        <div class="kf-int-header-morekeeps" ng-if="intersectionKeeps.length === 0 && keepsOnThisPage.length > 0">Here are the keeps on that page that we did find</div>
+        <div class="kf-int-header-gohome" ng-if="intersectionKeeps.length === 0 && keepsOnThisPage.length === 0">
+          <a class="kf-link" ui-sref="home.feed">Okay, take me home.</a>
+        </div>
+      </div>
+      <div class="kf-int-keeps">
+        <div class="kf-int-keep" kf-keep-card="keep" boxed="false" is-first-item="::keep === intersectionKeeps[0]" ng-repeat="keep in intersectionKeeps"></div>
+        <div class="kf-loading-spinner-center" kf-loading-spinner hide="!loading"></div>
+        <div kf-keep-discussions-widget keeps="keepsOnThisPage" ng-if="intersectionKeeps.length === 0 && keepsOnThisPage.length > 0"></div>
+      </div>
+    </div>
+    <div class="kf-int-right" ng-if="intersectionKeeps.length > 0 && keepsOnThisPage.length > 0">
+      <div class="kf-int-header">Other discussions on <a class="kf-link" ng-href="{{url}}" target="_blank" ng-bind="displayUrl || 'this page'"></a></div>
+      <div kf-keep-discussions-widget keeps="keepsOnThisPage"></div>
+    </div>
+  </div>
+</div>

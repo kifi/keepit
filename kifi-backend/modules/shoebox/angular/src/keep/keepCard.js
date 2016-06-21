@@ -358,7 +358,8 @@ angular.module('kifi')
               return (pair[0] && pair[0].id) === keep.libraryId;
             });
           }
-          if (keep.libraries) {
+          // keep.recipients is on the new format, not compatible with keep.keepers and keep.libraries
+          if (!keep.recipients && keep.libraries) {
             // associate libraries with connected keepers
             var libsByUserId = _(keep.libraries).reverse().indexBy(function (pair) { return pair[1].id; }).mapValues(0).value();
             _.each(keep.keepers, function (keeper) {

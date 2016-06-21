@@ -33,14 +33,14 @@ package object strings {
 
   implicit class OptionWrappedMembersJsObject(obj: Seq[(String, Option[JsValueWrapper])]) {
     def stripOptions(): JsObject = {
-      Json.obj(obj.map { v =>
+      Json.obj(obj.flatMap { v =>
         if (v._2.nonEmpty) Some(v._1 -> v._2.get) else None
-      }.flatten: _*)
+      }: _*)
     }
   }
   implicit class OptionWrappedJsObject(obj: JsObject) {
     def stripJsNulls(): JsObject = {
-      JsObject(obj.value.map { v =>
+      JsObject(obj.value.flatMap { v =>
         v._2 match {
           case null => None
           case s: JsUndefined => None
@@ -49,7 +49,7 @@ package object strings {
           case JsString("null") => None
           case other => Some(v._1 -> v._2)
         }
-      }.flatten.toSeq)
+      }.toSeq)
     }
   }
 
@@ -59,6 +59,10 @@ package object strings {
       val regex = replacement.keysIterator.map(Pattern.quote).mkString("|").r
       regex.replaceAllIn(str, m => Matcher.quoteReplacement(replacement(m.matched)))
     }
+  }
+
+  implicit class StringSplit(str: String) {
+    def words: Seq[String] = str.trim.split("\\s+")
   }
 
   object ValidLong {

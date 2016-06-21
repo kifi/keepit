@@ -40,9 +40,9 @@ object NewKeepInfosForIntersection {
   implicit val writes: Writes[NewKeepInfosForIntersection] = {
     import ExternalKeepRecipient._
     implicit val tupleWrites: Writes[ExternalKeepRecipient] = Writes {
-      case UserRecipient(bu) => Json.obj("intersector" -> bu)
-      case LibraryRecipient(bl) => Json.obj("intersector" -> bl)
-      case EmailRecipient(ea) => Json.obj("intersector" -> ea)
+      case UserRecipient(bu) => Json.toJson(bu)
+      case LibraryRecipient(bl) => Json.toJson(bl)
+      case EmailRecipient(ea) => Json.toJson(ea)
     }
     Json.writes[NewKeepInfosForIntersection]
   }

@@ -5,6 +5,7 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.common.path.Path
 import com.keepit.common.store.ImagePath
 import com.keepit.discussion.Message
+import com.keepit.export.{ FullExportRequestRepo, FullExportStatus, FullExportRequest }
 import com.keepit.model.LibrarySpace.UserSpace
 import com.keepit.shoebox.path.ShortenedPathRepo
 import com.keepit.slack.models._
@@ -199,6 +200,11 @@ class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
           val p = Path("/brewstercorp/buffalo")
           val sp = inject[ShortenedPathRepo].intern(p)
           inject[ShortenedPathRepo].get(sp.id.get) === sp
+        }
+
+        db.readWrite { implicit s =>
+          val req = inject[FullExportRequestRepo].intern(FullExportRequest(userId = user.id.get, status = FullExportStatus.NotStarted))
+          inject[FullExportRequestRepo].get(req.id.get) === req
         }
 
         1 === 1
