@@ -121,6 +121,55 @@ angular.module('util', [])
           .substr(0, 50)
           .replace(/-$/, '');
         return RESERVED_SLUGS.indexOf(slug) >= 0 ? slug + '-' : slug;
+      },
+
+      retrofitKeepFormat: function(newKeep, page) {
+        var oldKeep = _.clone(newKeep);
+
+        var oldUsers = newKeep.recipients.users.map(function(user) {
+          return { user: user };
+        });
+        var oldLibraries = newKeep.recipients.libraries.map(function(library) {
+          return { library: library };
+        });
+        var members = { users: oldUsers, libraries: oldLibraries, emails: newKeep.recipients.emails };
+
+        _.extend(oldKeep, {
+          createdAt: newKeep.keptAt,
+          discussion: {
+            locator: '/messages/' + newKeep.id,
+            messages: [],
+            numMessages: 0
+          },
+          hashtags: [],
+          keepers: page.context && page.context.keepers,
+          keepersOmitted: page.context && (page.context.numTotalKeepers - page.context.numVisibleKeepers),
+          keepersTotal: page.context && page.context.numTotalKeepers,
+          keeps: [],
+          libraries: page.context && page.context.libraries,
+          librariesOmitted: page.context && (page.context.numTotalLibraries - page.context.numVisibleLibraries),
+          members: members,
+          participants: newKeep.recipients.users,
+          permissions: newKeep.viewer.permissions,
+          pubId: newKeep.id,
+          siteName: page.content && page.content.summary.siteName,
+          sourceAttribution:
+            newKeep.source.kifi ? { kifi: newKeep.source.kifi.keptBy } :
+            newKeep.source.twitter ? { twitter: newKeep.source.twitter } :
+            newKeep.source.slack ? { slack: newKeep.source.slack } : null,
+          sources: page.context && page.context.sources,
+          summary: {
+            description: page.content && page.content.description,
+            hasContent: true,
+            imageHeight: newKeep.image && newKeep.image.dimensions.height,
+            imageUrl: newKeep.image && newKeep.image.url,
+            imageWidth: newKeep.image && newKeep.image.dimensions.width,
+            title: newKeep.title,
+            wordCount: page.content && page.content.wordCount
+          }
+        });
+
+    	  return oldKeep;
       }
     };
 

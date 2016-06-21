@@ -1,5 +1,5 @@
 <div class="kf-right-hand-widget-container" ng-if="keeps.length">
-  <div class="kf-keep-page-rhr-header">In these discussions</div>
+  <div class="kf-keep-page-rhr-header" ng-if="header" ng-bind="header"></div>
   <div class="kf-keep-discussions-widget-container"
         ng-repeat="keep in keeps">
     <a ng-href="{{::keep.activity.latestEvent.author.url|pathFromUrl}}"

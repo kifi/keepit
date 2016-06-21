@@ -32,8 +32,8 @@ GET    /api/1/keeps/:id/activity     @com.keepit.controllers.client.KeepInfoCont
 GET    /api/1/keeps/export/personal  @com.keepit.controllers.client.KeepExportController.exportPersonalKeeps()
 GET    /api/1/keeps/export/org       @com.keepit.controllers.client.KeepExportController.exportOrganizationKeeps()
 
-POST   /api/1/exports      @com.keepit.controllers.client.KeepExportController.createFullExport()
-GET    /api/1/exports      @com.keepit.controllers.client.KeepExportController.downloadFullExport()
+POST   /api/1/exports      @com.keepit.controllers.client.ExportController.requestFullExport()
+GET    /api/1/exports      @com.keepit.controllers.client.ExportController.downloadFullExport()
 
 ##
 # LIBRARIES
@@ -50,3 +50,4 @@ GET    /api/1/libraries/:id/keeps              @com.keepit.controllers.client.Li
 POST    /api/1/pages/query              @com.keepit.controllers.client.PageInfoController.getFirstOrderLibrariesForUserByUri()
 POST    /api/1/pages/context            @com.keepit.controllers.client.PageInfoController.getKeepsByUri()
 POST    /api/1/pages/intersection       @com.keepit.controllers.client.PageInfoController.getKeepsByUriAndRecipients()
+POST    /api/1/pages/info               @com.keepit.controllers.client.PageInfoController.getPageInfo()
