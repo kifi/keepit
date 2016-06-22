@@ -1,10 +1,10 @@
 package com.keepit.social
 
 import com.keepit.common.cache._
+import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.Id.mapOfIdToObjectFormat
 import com.keepit.common.logging.AccessLog
-import com.keepit.common.net.URI
 import com.keepit.common.path.Path
 import com.keepit.common.store.{ ImagePath, S3ImageConfig, S3UserPictureConfig }
 import com.keepit.model._
@@ -151,6 +151,13 @@ object BasicUser {
       pictureName = userToPictureName(user),
       username = user.username
     )
+  }
+}
+
+case class BasicUserWithUrlIntersection(user: BasicUser, uriId: PublicId[NormalizedURI])
+object BasicUserWithUrlIntersection {
+  implicit val writes: Writes[BasicUserWithUrlIntersection] = Writes {
+    case BasicUserWithUrlIntersection(user, uriId) => Json.toJson(user).as[JsObject] ++ Json.obj("intersection" -> s"/int?uri=${uriId.id}&user=${user.externalId.id}")
   }
 }
 

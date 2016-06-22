@@ -11,6 +11,7 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.URI
+import com.keepit.common.path.Path
 import com.keepit.common.performance.StatsdTiming
 import com.keepit.common.social._
 import com.keepit.common.time._
@@ -19,7 +20,7 @@ import com.keepit.model._
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.search.{ SearchFilter, SearchServiceClient }
 import com.keepit.slack.SlackInfoCommander
-import com.keepit.social.BasicUser
+import com.keepit.social.{ BasicUserWithUrlIntersection, BasicUser }
 import com.keepit.common.logging.{ AccessLog, Logging }
 import org.joda.time.DateTime
 import com.keepit.common.core._
@@ -92,13 +93,13 @@ class PageCommander @Inject() (
       nUriOpt.map { normUri =>
         augmentUriInfo(normUri, userId).map { info =>
           if (filteredPage(normUri.url)) {
-            KeeperPageInfo(nUriStr, position, neverOnSite, shown, Seq.empty[BasicUser], 0, Seq.empty[JsObject], Seq.empty[SourceAttribution], info.keeps)
+            KeeperPageInfo(nUriStr, position, neverOnSite, shown, Seq.empty[BasicUserWithUrlIntersection], 0, Seq.empty[JsObject], Seq.empty[SourceAttribution], info.keeps)
           } else {
             KeeperPageInfo(nUriStr, position, neverOnSite, shown, info.keepers, info.keepersTotal, info.libraries, info.sources, info.keeps)
           }
         }
       }.getOrElse {
-        Future.successful(KeeperPageInfo(nUriStr, position, neverOnSite, shown, Seq.empty[BasicUser], 0, Seq.empty[JsObject], Seq.empty[SourceAttribution], Seq.empty[KeepData]))
+        Future.successful(KeeperPageInfo(nUriStr, position, neverOnSite, shown, Seq.empty[BasicUserWithUrlIntersection], 0, Seq.empty[JsObject], Seq.empty[SourceAttribution], Seq.empty[KeepData]))
       }
     }
     infoF.flatten
@@ -202,6 +203,7 @@ class PageCommander @Inject() (
         val (basicUserMap, libraries, sources, followerCounts, paths, keepDatas) = db.readOnlyMaster { implicit session =>
           val relevantLibraries = Seq.empty[(Library, Id[User], DateTime)] //getRelevantLibraries(userId, info.libraries)
           val basicUserMap = basicUserRepo.loadAll(userIdSet ++ relevantLibraries.map(_._1.ownerId) ++ relevantLibraries.map(_._2))
+            .mapValuesStrict(bu => BasicUserWithUrlIntersection(bu, NormalizedURI.publicId(normUri.id.get)))
           val keepDatas = getWriteableKeepDatasForUri(userId, normUri.id.get)
 
           val sources = {
@@ -224,6 +226,7 @@ class PageCommander @Inject() (
         val libraryObjs = libraries.map {
           case (lib, addedBy, _) =>
             val followerCount: Int = followerCounts.getOrElse(lib.id.get, 0)
+            val intersectionPath = pathCommander.intersectionPageForLibrary(NormalizedURI.publicId(normUri.id.get), Library.publicId(lib.id.get))
             Json.obj(
               "name" -> lib.name,
               "path" -> paths.get(lib.id.get).map(_.relativeWithLeadingSlash),
@@ -231,7 +234,9 @@ class PageCommander @Inject() (
               "color" -> lib.color,
               "owner" -> Json.toJson(basicUserMap.getOrElse(addedBy, basicUserMap(lib.ownerId))),
               "keeps" -> lib.keepCount,
-              "followers" -> followerCount)
+              "followers" -> followerCount,
+              "intersection" -> intersectionPath.relativeWithLeadingSlash
+            )
         }
         KeeperPagePartialInfo(keepers, otherKeepersTotal, libraryObjs, sources, keepDatas)
     }
@@ -269,7 +274,7 @@ class InferredKeeperPositionCache(stats: CacheStatistics, accessLog: AccessLog, 
   extends JsonCacheImpl[InferredKeeperPositionKey, JsObject](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class KeeperPagePartialInfo(
-  keepers: Seq[BasicUser],
+  keepers: Seq[BasicUserWithUrlIntersection],
   keepersTotal: Int,
   libraries: Seq[JsObject],
   sources: Seq[SourceAttribution],
