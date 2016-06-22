@@ -85,9 +85,11 @@ angular.module('kifi')
           });
       },
 
-      contextForPage: function (url, paginationContext, config) {
+      //filterRecipient is either a user.id || library.id || email.address. result.data.keeps will not contain any keeps with that recipient
+      contextForPage: function (url, paginationContext,  config, filterRecipient) {
         return net.getPageContext({
             url: url,
+            filterRecipient: filterRecipient,
             paginationContext: paginationContext,
             config: config
           }).then(function (result) {
@@ -96,8 +98,7 @@ angular.module('kifi')
       },
 
       getKeepsAtIntersection: function(url, intersector, paginationContext, limit) {
-        var params = _.extend({ url: url, intersector: intersector, paginationContext: paginationContext, limit: limit });
-        return net.getKeepsAtIntersection(params).then(getResponseData);
+        return net.getKeepsAtIntersection({ url: url, intersector: intersector, paginationContext: paginationContext, limit: limit }).then(getResponseData);
       },
 
       getPageInfo: function(url, config) {

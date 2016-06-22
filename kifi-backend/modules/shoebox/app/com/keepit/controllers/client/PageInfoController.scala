@@ -108,7 +108,7 @@ class PageInfoController @Inject() (
   }
   def getKeepsByUri() = UserAction.async(parse.tolerantJson) { implicit request =>
     import GetKeepsByUri._
-    request.body.asOpt[Input].fold(Future.successful(schemaHelper.loudHintResponse(request.body, schema))) { input =>
+    request.body.asOpt[Input].fold(Future.successful(schemaHelper.hintResponse(request.body, schema))) { input =>
       val seenIds = input.paginationContext.fold(Set.empty[Id[Keep]])(_.toSet)
       val uriIdOpt = db.readOnlyReplica { implicit s => uriInterner.getByUri(input.url).map(_.id.get) }
       val newIdsBySection = uriIdOpt.map { uriId =>

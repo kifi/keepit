@@ -8,8 +8,7 @@ import com.keepit.common.reflection.Enumerator
 import com.keepit.common.util.PaginationContext
 import com.keepit.model.{ KeepRecipients, User, Library, BasicLibrary, Keep }
 import com.keepit.social.BasicUser
-import play.api.libs.json.{Reads, JsNull, JsString, Json, Writes}
-import play.api.libs.functional.syntax._
+import play.api.libs.json.{ JsString, Json, Writes, Reads }
 
 case class NewKeepInfosForPage(
   page: Option[NewPageInfo],
