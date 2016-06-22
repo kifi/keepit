@@ -17,6 +17,7 @@ import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
 import com.kifi.juggle.ConcurrentTaskProcessingActor
 import org.joda.time.Duration
 import play.api.libs.iteratee.Iteratee
+import play.api.libs.json.Json
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
@@ -68,24 +69,29 @@ class FullExportProcessingActor @Inject() (
   private def doExport(id: Id[FullExportRequest]): Future[Unit] = {
     slackLog.info(s"Processing export request $id")
     val request = db.readOnlyMaster { implicit s => exportRequestRepo.get(id) }
-    val fileEnum = exportCommander.fullExport(request.userId) |> exportFormatter.json
+    val enum = exportCommander.fullExport(request.userId) |> exportFormatter.assignments
     val user = db.readOnlyMaster { implicit s => userRepo.get(request.userId) }
     val exportBase = s"${user.fullName.words.mkString("-")}-kifi-export"
     val exportFile = new File(exportBase + ".zip")
-    val init = (Set.empty[String], new ZipOutputStream(new FileOutputStream(exportFile)))
-    fileEnum.run(Iteratee.fold(init) {
-      case ((existingEntries, zip), (path, contents)) =>
-        if (!existingEntries.contains(path)) {
-          zip.putNextEntry(new ZipEntry(s"$exportBase/$path.json"))
-          zip.write(contents.map(_.toByte).toArray)
-          zip.closeEntry()
+    val init = {
+      val zip = new ZipOutputStream(new FileOutputStream(exportFile))
+      zip.putNextEntry(new ZipEntry(s"$exportBase/export.js"))
+      (Set.empty[String], zip)
+    }
+    enum.run(Iteratee.fold(init) {
+      case ((existingEntities, zip), (entity, contents)) =>
+        if (!existingEntities.contains(entity)) {
+          zip.write {
+            s"$entity = ${Json.prettyPrint(contents)}".map(_.toByte).toArray
+          }
         }
-        (existingEntries + path, zip)
+        (existingEntities + entity, zip)
     }).andThen {
       case Failure(fail) =>
         slackLog.error(s"[${clock.now}] Failed while writing user ${request.userId}'s export: ${fail.getMessage}")
         db.readWrite { implicit s => exportRequestRepo.markAsFailed(request.id.get, fail.getMessage) }
       case Success((entries, zip)) =>
+        zip.closeEntry()
         zip.close()
         slackLog.info(s"[${clock.now}] Done writing user ${request.userId}'s export to $exportFile (${entries.size} entries), uploading to S3")
         exportStore.store(exportFile).andThen {

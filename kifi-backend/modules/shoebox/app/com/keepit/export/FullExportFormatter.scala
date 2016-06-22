@@ -15,8 +15,11 @@ import scala.concurrent.ExecutionContext
 trait FullExportFormatter {
   type FilePath = String
   type FileContents = String
+  type EntityId = String
+  type EntityContents = JsValue
 
   def json(export: FullStreamingExport.Root): Enumerator[(FilePath, FileContents)]
+  def assignments(export: FullStreamingExport.Root): Enumerator[(EntityId, EntityContents)]
 }
 
 class FullExportFormatterImpl @Inject() (
@@ -68,7 +71,7 @@ class FullExportFormatterImpl @Inject() (
       )
     })
   }
-  def fullLibraryPage(library: FullStreamingExport.LibraryExport): Enumerator[(String, JsValue)] = {
+  private def fullLibraryPage(library: FullStreamingExport.LibraryExport): Enumerator[(String, JsValue)] = {
     val path = "libraries/" + Library.publicId(library.library.id.get).id
     val fullLibrary = Json.obj("name" -> library.library.name)
     library.keeps.map(_.keep).through(Enumeratee.grouped(Iteratee.getChunks)).through(Enumeratee.map { keeps =>
@@ -87,14 +90,80 @@ class FullExportFormatterImpl @Inject() (
     })
   }
 
-  def fullKeepPage(keep: FullStreamingExport.KeepExport): Enumerator[(String, JsValue)] = {
+  private def fullKeepPage(keep: FullStreamingExport.KeepExport): Enumerator[(String, JsValue)] = {
     val path = "keeps/" + Keep.publicId(keep.keep.id.get).id
-    if (keep.discussion.isEmpty) Enumerator.empty
+    if (keep.messages.isEmpty) Enumerator.empty
     else Enumerator {
       path -> Json.obj(
         "id" -> Keep.publicId(keep.keep.id.get),
         "summary" -> keep.uri.flatMap(_.article.description),
-        "messages" -> keep.discussion.fold(Seq.empty[String])(_.messages.map(_.text))
+        "messages" -> keep.messages
+      )
+    }
+  }
+
+  def assignments(export: FullStreamingExport.Root): Enumerator[(String, JsValue)] = {
+    val init: Enumerator[(String, JsValue)] = Enumerator(
+      "users" -> Json.obj(),
+      "orgs" -> Json.obj(),
+      "libraries" -> Json.obj(),
+      "keeps" -> Json.obj()
+    )
+    init andThen indexBlob(export) andThen export.spaces.flatMap { space =>
+      spaceBlob(space) andThen space.libraries.flatMap { library =>
+        libraryBlob(library) andThen library.keeps.flatMap { keep =>
+          keepBlob(keep)
+        }
+      }
+    }
+  }
+
+  private def indexBlob(export: FullStreamingExport.Root): Enumerator[(String, JsValue)] = {
+    implicit val spaceWrites = EitherFormat.keyedWrites[BasicUser, BasicOrganization]("user", "org")
+    export.spaces.map(_.space).through(Enumeratee.grouped(Iteratee.getChunks)).through(Enumeratee.map { spaces =>
+      log.info(s"Exporting ${spaces.length} spaces")
+      "index" -> Json.obj(
+        "me" -> export.user,
+        "spaces" -> JsArray(spaces.map { space =>
+          val partialSpace = spaceWrites.writes(space)
+          partialSpace
+        })
+      )
+    })
+  }
+  private def spaceBlob(space: FullStreamingExport.SpaceExport): Enumerator[(String, JsValue)] = {
+    implicit val spaceWrites = EitherFormat.keyedWrites[BasicUser, BasicOrganization]("user", "org")
+    val entity = space.space.fold(
+      u => s"""users["${u.externalId.id}"]""",
+      o => s"""orgs["${o.orgId.id}"]"""
+    )
+    space.libraries.map(_.library.id.get).through(Enumeratee.grouped(Iteratee.getChunks)).through(Enumeratee.map { libIds =>
+      val fullSpace = spaceWrites.writes(space.space)
+      entity -> (fullSpace ++ Json.obj(
+        "libraries" -> libIds.map(Library.publicId)
+      ))
+    })
+  }
+  private def libraryBlob(library: FullStreamingExport.LibraryExport): Enumerator[(String, JsValue)] = {
+    val entity = s"""libraries["${Library.publicId(library.library.id.get).id}"]"""
+    val fullLibrary = Json.obj("name" -> library.library.name)
+    library.keeps.map(_.keep.id.get).through(Enumeratee.grouped(Iteratee.getChunks)).through(Enumeratee.map { keepIds =>
+      entity -> Json.obj(
+        "library" -> fullLibrary,
+        "keeps" -> keepIds.map(Keep.publicId)
+      )
+    })
+  }
+
+  private def keepBlob(keep: FullStreamingExport.KeepExport): Enumerator[(String, JsValue)] = {
+    val entity = s"""keeps["${Keep.publicId(keep.keep.id.get).id}"]"""
+    Enumerator {
+      entity -> Json.obj(
+        "id" -> Keep.publicId(keep.keep.id.get),
+        "keptAt" -> keep.keep.keptAt,
+        "note" -> keep.keep.note,
+        "summary" -> keep.uri.flatMap(_.article.description),
+        "messages" -> keep.messages
       )
     }
   }

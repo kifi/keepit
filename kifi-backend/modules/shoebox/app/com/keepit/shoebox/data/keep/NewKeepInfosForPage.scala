@@ -1,14 +1,14 @@
 package com.keepit.shoebox.data.keep
 
 import com.keepit.common.crypto.PublicId
-import com.keepit.common.db.{ Id, ExternalId }
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.json.{ JsonSchema, SchemaReads }
-import com.keepit.common.mail.{ EmailAddressHash, EmailAddress }
+import com.keepit.common.mail.{ EmailAddress, EmailAddressHash }
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.util.PaginationContext
-import com.keepit.model.{ KeepRecipients, User, Library, BasicLibrary, Keep }
+import com.keepit.model.{ BasicLibrary, Keep, KeepRecipients, Library, User }
 import com.keepit.social.BasicUser
-import play.api.libs.json.{ JsString, Json, Writes, Reads }
+import play.api.libs.json.{ JsString, Json, Reads, Writes }
 
 case class NewKeepInfosForPage(
   page: Option[NewPageInfo],
