@@ -154,6 +154,13 @@ object BasicUser {
   }
 }
 
+case class BasicUserWithUrlIntersection(user: BasicUser, urlHash: UrlHash)
+object BasicUserWithUrlIntersection {
+  implicit val writes: Writes[BasicUserWithUrlIntersection] = Writes {
+    case BasicUserWithUrlIntersection(user, urlHash) => Json.toJson(user).as[JsObject] ++ Json.obj("intersection" -> s"/int?url=${urlHash.hash}&user=${user.externalId.id}")
+  }
+}
+
 case class BasicUserUserIdKey(userId: Id[User]) extends Key[BasicUser] {
   override val version = 13
   val namespace = "basic_user_userid"

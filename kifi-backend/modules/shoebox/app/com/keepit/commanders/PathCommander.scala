@@ -4,9 +4,10 @@ import java.net.URLEncoder
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.Database
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.net.{ Query, Param }
 import com.keepit.common.path.Path
 import com.keepit.common.social.BasicUserRepo
@@ -112,6 +113,15 @@ class PathCommander @Inject() (
 
   def shortened(sp: ShortenedPath): Path = Path(s"/sp/${ShortenedPath.publicId(sp.id.get).id}")
   def shorten(path: Path)(implicit session: RWSession): ShortenedPath = shortenedPathRepo.intern(path)
+
+  /**
+   * INTERSECTION
+   */
+
+  def intersectionPage(urlHash: UrlHash): Path = Path(s"/int?url=${urlHash.hash}")
+  def intersectionPageForUser(urlHash: UrlHash, userId: ExternalId[User]): Path = Path(s"/int?url=${urlHash.hash}&user=${userId.id}")
+  def intersectionPageForLibrary(urlHash: UrlHash, libId: PublicId[Library]): Path = Path(s"/int?url=${urlHash.hash}&library=${libId.id}")
+  def intersectionPageForEmail(urlHash: UrlHash, email: EmailAddress): Path = Path(s"/int?url=${urlHash.hash}&email=${email.address}")
 
   /**
    * I'd prefer if you just didn't use these routes
