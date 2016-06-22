@@ -20,10 +20,10 @@ import scala.concurrent.Future
 import scala.util.Try
 
 object FullStreamingExport {
-  final case class Root(user: BasicUser, spaces: Enumerator[SpaceExport])
+  final case class Root(user: BasicUser, spaces: Enumerator[SpaceExport], looseKeeps: Enumerator[KeepExport])
   final case class SpaceExport(space: Either[BasicUser, BasicOrganization], libraries: Enumerator[LibraryExport])
   final case class LibraryExport(library: Library, keeps: Enumerator[KeepExport])
-  final case class KeepExport(keep: Keep, discussion: Option[CrossServiceDiscussion], uri: Option[RoverUriSummary])
+  final case class KeepExport(keep: Keep, messages: Seq[Message], uri: Option[RoverUriSummary])
 }
 
 case class KifiExportConfig(bucket: S3Bucket)
