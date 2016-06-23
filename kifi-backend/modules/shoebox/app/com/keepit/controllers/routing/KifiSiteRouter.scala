@@ -302,8 +302,8 @@ class KifiSiteRouter @Inject() (
     }
   }
 
-  def serveWebAppIfNormalizedUriFound(pubId: PublicId[NormalizedURI], user: Option[String], library: Option[String], email: Option[EmailAddress]) = WebAppPage { implicit request =>
-    NormalizedURI.decodePublicId(pubId).map { uriId =>
+  def serveWebAppIfNormalizedUriFound(uri: PublicId[NormalizedURI], user: Option[String], library: Option[String], email: Option[EmailAddress]) = WebAppPage { implicit request =>
+    NormalizedURI.decodePublicId(uri).map { uriId =>
       db.readOnlyReplica { implicit s => normalizedUriRepo.get(uriId) }
     }
       .map(_ => app())

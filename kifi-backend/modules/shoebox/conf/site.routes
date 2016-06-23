@@ -32,7 +32,7 @@ GET     /recommendations           @com.keepit.controllers.routing.KifiSiteRoute
 GET     /tags/manage               @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppToUser()
 GET     /redir                     @com.keepit.controllers.routing.KifiSiteRouter.generalRedirect(data: String)
 GET     /url                       @com.keepit.controllers.routing.KifiSiteRouter.urlRedirect(s: String, t: Option[String] ?= None)
-GET     /int                       @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppIfNormalizedUriFound(url: PublicId[NormalizedURI], user: Option[String] ?= None, library: Option[String] ?= None, email: Option[EmailAddress] ?= None)
+GET     /int                       @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppIfNormalizedUriFound(uri: PublicId[NormalizedURI], user: Option[String] ?= None, library: Option[String] ?= None, email: Option[EmailAddress] ?= None)
 GET     /sp/:sp                    @com.keepit.controllers.routing.KifiSiteRouter.shortenedPathRedirect(sp: String)
 
 GET     /k/:title/:id              @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppIfKeepFound(title: String, id: PublicId[Keep], authToken: Option[String] ?= None)
