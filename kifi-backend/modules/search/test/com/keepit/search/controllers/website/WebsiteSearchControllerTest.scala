@@ -1,15 +1,15 @@
 package com.keepit.search.controllers.website
 
-import com.keepit.search.engine.uri.{ UriShardHit, UriShardResult, UriSearchResult }
+import com.keepit.search.engine.uri.{ UriSearchResult, UriShardHit, UriShardResult }
 import org.specs2.mutable.SpecificationLike
 import com.keepit.search.test.SearchTestInjector
-import com.keepit.common.db.{ ExternalId }
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.search._
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.controller.{ FakeUserActionsHelper, FakeUserActionsModule }
 import com.keepit.common.util.PlayAppConfigurationModule
-import com.keepit.search.controllers.{ FixedResultUriSearchCommander, FixedResultIndexModule }
-import com.keepit.common.crypto.FakeCryptoModule
+import com.keepit.search.controllers.{ FixedResultIndexModule, FixedResultUriSearchCommander }
+import com.keepit.common.crypto.{ FakeCryptoModule, PublicIdConfiguration }
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.model._
 import play.api.test.FakeRequest
@@ -43,8 +43,9 @@ class WebsiteSearchControllerTest extends SpecificationLike with SearchTestInjec
         val result = inject[WebsiteSearchController].search("test", None, None, None, None, 2, None, None, 0, None, 0, None, false, false, None, None, None, None)(request)
         status(result) === OK
         contentType(result) === Some("application/json")
+        implicit val publicIdConfig = inject[PublicIdConfiguration]
 
-        val expected = Json.parse("""{
+        val expected = Json.parse(s"""{
           "query": "test",
           "uris": {
             "uuid":"98765432-1234-5678-9abc-fedcba987654",
@@ -58,6 +59,7 @@ class WebsiteSearchControllerTest extends SpecificationLike with SearchTestInjec
               "description":null,
               "wordCount":null,
               "url":"http://example.com",
+              "uriId":"${NormalizedURI.publicId(Id(ExtSearchControllerTest.plainTestResults("test").hits.head.id)).id}",
               "siteName":"example.com",
               "image":null,
               "score":-1.0,
