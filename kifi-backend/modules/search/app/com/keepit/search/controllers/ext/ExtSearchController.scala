@@ -72,6 +72,7 @@ class ExtSearchController @Inject() (
             "title" -> hit.titleJson,
             "url" -> hit.urlJson,
             "keepId" -> hit.externalIdJson,
+            "uriId" -> NormalizedURI.publicId(Id(hit.id)),
             "matches" -> textMatchesByHit(hit)
           ))
         }),
