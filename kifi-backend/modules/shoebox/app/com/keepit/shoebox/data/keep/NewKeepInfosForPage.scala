@@ -25,11 +25,6 @@ object NewKeepInfosForPage {
   }
 }
 
-case class NewKeepInfosForIntersection(
-  paginationContext: PaginationContext[Keep],
-  keeps: Seq[NewKeepInfo],
-  intersector: Option[ExternalKeepRecipient]) // name of either user or library we're filtering on
-
 sealed trait ExternalKeepRecipient
 object ExternalKeepRecipient {
   case class UserRecipient(bu: BasicUser) extends ExternalKeepRecipient
@@ -75,8 +70,14 @@ object KeepRecipientId {
   }
 }
 
+case class NewKeepInfosForIntersection(
+  url: String,
+  paginationContext: PaginationContext[Keep],
+  keeps: Seq[NewKeepInfo],
+  intersector: Option[ExternalKeepRecipient]) // name of either user or library we're filtering on
+
 object NewKeepInfosForIntersection {
-  val empty = NewKeepInfosForIntersection(paginationContext = PaginationContext.empty, keeps = Seq.empty, intersector = None)
+  val empty = NewKeepInfosForIntersection(url = "", paginationContext = PaginationContext.empty, keeps = Seq.empty, intersector = None)
   implicit val writes: Writes[NewKeepInfosForIntersection] = {
     import ExternalKeepRecipient._
     implicit val tupleWrites: Writes[ExternalKeepRecipient] = Writes {

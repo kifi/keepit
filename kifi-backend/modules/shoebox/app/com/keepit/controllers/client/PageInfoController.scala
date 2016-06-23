@@ -6,7 +6,7 @@ import com.keepit.commanders.gen.BasicLibraryGen
 import com.keepit.commanders.{ KeepQuery, KeepQueryCommander }
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.core.mapExtensionOps
-import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
@@ -35,6 +35,7 @@ class PageInfoController @Inject() (
   userRepo: UserRepo,
   keepRepo: KeepRepo,
   uriInterner: NormalizedURIInterner,
+  uriRepo: NormalizedURIRepo,
   queryCommander: KeepQueryCommander,
   keepInfoAssembler: KeepInfoAssembler,
   keepToLibraryRepo: KeepToLibraryRepo,
@@ -94,9 +95,10 @@ class PageInfoController @Inject() (
 
   private object GetKeepsByUri {
     import json.SchemaReads._
-    final case class Input(url: String, paginationContext: Option[PaginationContext[Keep]], config: KeepViewAssemblyOptions, filterRecipient: Option[ExternalKeepRecipientId])
+    final case class Input(url: Option[String], uriId: Option[PublicId[NormalizedURI]], paginationContext: Option[PaginationContext[Keep]], config: KeepViewAssemblyOptions, filterRecipient: Option[ExternalKeepRecipientId])
     val schemaReads: SchemaReads[Input] = (
-      (__ \ 'url).readWithSchema[String] and
+      (__ \ 'url).readNullableWithSchema[String] and
+      (__ \ 'uriId).readNullableWithSchema[String].map(_.map(PublicId[NormalizedURI])) and
       (__ \ 'paginationContext).readNullableWithSchema[PaginationContext[Keep]] and
       (__ \ 'config).readNullableWithSchema(KeepInfoAssemblerConfig.useDefaultForMissing).map(_ getOrElse KeepInfoAssemblerConfig.default) and
       (__ \ 'filterRecipient).readNullableWithSchema[ExternalKeepRecipientId]
@@ -110,13 +112,13 @@ class PageInfoController @Inject() (
     import GetKeepsByUri._
     request.body.asOpt[Input].fold(Future.successful(schemaHelper.hintResponse(request.body, schema))) { input =>
       val seenIds = input.paginationContext.fold(Set.empty[Id[Keep]])(_.toSet)
-      val uriIdOpt = db.readOnlyReplica { implicit s => uriInterner.getByUri(input.url).map(_.id.get) }
-      val newIdsBySection = uriIdOpt.map { uriId =>
+      val uriOpt = db.readOnlyReplica { implicit s => getNormalizedURI(input.uriId, input.url) }
+      val newIdsBySection = uriOpt.map { uri =>
         val stopwatch = new Stopwatch(s"[OTP-KEEPS-${RandomStringUtils.randomAlphanumeric(5)}}] filtering=${input.filterRecipient}}")
         db.readOnlyReplica { implicit s =>
           import com.keepit.common.core._
           val recipientToFilter = input.filterRecipient.flatMap(convertExternalRecipientId)
-          keepRepo.getSectionedKeepsOnUri(request.userId, uriId, seenIds, limit = 10, recipientToFilter).tap { _ =>
+          keepRepo.getSectionedKeepsOnUri(request.userId, uri.id.get, seenIds, limit = 10, recipientToFilter).tap { _ =>
             stopwatch.logTimeWith("fetched_keeps")
           }
         }
@@ -128,8 +130,8 @@ class PageInfoController @Inject() (
       val newIds = newIdsBySection.traverseByKey.flatten
       val result = {
         val keepInfosFut = keepInfoAssembler.assembleKeepInfos(viewer = Some(request.userId), keepSet = newIds.toSet, config = input.config)
-        val pageInfoFut = uriIdOpt.fold(Future.successful(Option.empty[NewPageInfo])) { uriId =>
-          keepInfoAssembler.assemblePageInfos(viewer = Some(request.userId), uriSet = Set(uriId), config = input.config).map(_.get(uriId))
+        val pageInfoFut = uriOpt.fold(Future.successful(Option.empty[NewPageInfo])) { uri =>
+          keepInfoAssembler.assemblePageInfos(viewer = Some(request.userId), uriSet = Set(uri.id.get), config = input.config).map(_.get(uri.id.get))
         }
         for { keepInfos <- keepInfosFut; pageInfo <- pageInfoFut } yield NewKeepInfosForPage(
           page = pageInfo,
@@ -147,16 +149,26 @@ class PageInfoController @Inject() (
     case ExternalKeepRecipientId.LibraryId(publicId) => Library.decodePublicId(publicId).map(libId => KeepRecipientId.LibraryId(libId)).toOption
   }
 
+  private def getNormalizedURI(uriIdOpt: Option[PublicId[NormalizedURI]], urlOpt: Option[String])(implicit session: RSession): Option[NormalizedURI] = {
+    (uriIdOpt, urlOpt) match {
+      case (Some(uriId), _) => NormalizedURI.decodePublicId(uriId).map(uriRepo.get).toOption
+      case (_, Some(url)) => uriInterner.getByUri(url)
+      case _ => None
+    }
+  }
+
   private object GetKeepsByUriAndRecipients {
     import json.SchemaReads._
     final case class GetKeepsByUriAndRecipients(
-      url: String,
+      url: Option[String],
+      uriId: Option[PublicId[NormalizedURI]],
       intersector: Option[ExternalKeepRecipientId],
       limit: Option[Int],
       paginationContext: PaginationContext[Keep],
       config: KeepViewAssemblyOptions)
     val schemaReads: SchemaReads[GetKeepsByUriAndRecipients] = (
-      (__ \ 'url).readWithSchema[String] and
+      (__ \ 'url).readNullableWithSchema[String] and
+      (__ \ 'uriId).readNullableWithSchema[String].map(_.map(PublicId[NormalizedURI])) and
       (__ \ 'intersector).readNullableWithSchema[ExternalKeepRecipientId] and
       (__ \ 'limit).readNullableWithSchema[Int] and
       (__ \ 'paginationContext).readNullableWithSchema[PaginationContext[Keep]].map(_ getOrElse PaginationContext.empty) and
@@ -169,43 +181,40 @@ class PageInfoController @Inject() (
   }
   def getKeepsByUriAndRecipients() = UserAction.async(parse.tolerantJson) { implicit request =>
     import GetKeepsByUriAndRecipients._
-    val resultIfEverythingChecksOut = for {
-      input <- request.body.asOpt[GetKeepsByUriAndRecipients].withLeft("malformed_input")
-      intersectorId = input.intersector.flatMap(extId => db.readOnlyReplica(implicit s => convertExternalRecipientId(extId)))
-    } yield getKeepInfosForIntersection(request.userId, input.url, intersectorId, input.paginationContext, input.limit)
-
-    resultIfEverythingChecksOut.fold(
-      fail => Future.successful(schemaHelper.hintResponse(request.body, schema)),
-      result => result.map(ans => Ok(outputWrites.writes(ans)))
-    )
+    request.body.asOpt[GetKeepsByUriAndRecipients] match {
+      case None => Future.successful(schemaHelper.hintResponse(request.body, schema))
+      case Some(input) =>
+        db.readOnlyReplica { implicit session =>
+          getNormalizedURI(input.uriId, input.url).map(uri => (uri, input.intersector.flatMap(convertExternalRecipientId)))
+        }
+          .map { case (uri, intersectorId) => getKeepInfosForIntersection(request.userId, uri, intersectorId, input.paginationContext, input.limit) }
+          .getOrElse(Future.successful(NewKeepInfosForIntersection.empty))
+          .map(result => Ok(outputWrites.writes(result)))
+    }
   }
 
-  private def getKeepInfosForIntersection(viewer: Id[User], url: String, recipientId: Option[KeepRecipientId], paginationContext: PaginationContext[Keep], limitOpt: Option[Int]): Future[NewKeepInfosForIntersection] = {
-    val uriOpt = db.readOnlyReplica { implicit s =>
-      uriInterner.getByUri(url).map(_.id.get)
-    }
-    uriOpt.fold(Future.successful(NewKeepInfosForIntersection.empty)) { uriId =>
-      val seenKeeps = paginationContext.toSet
-      val recipients = recipientId.map(_.toKeepRecipients).getOrElse(KeepRecipients.EMPTY)
-      val query = KeepQuery(
-        target = ForUriAndRecipients(uriId, viewer, recipients),
-        paging = KeepQuery.Paging(filter = Some(KeepQuery.Seen(seenKeeps)), offset = 0, limit = limitOpt.getOrElse(4)),
-        arrangement = None
+  private def getKeepInfosForIntersection(viewer: Id[User], uri: NormalizedURI, intersectorId: Option[KeepRecipientId], paginationContext: PaginationContext[Keep], limitOpt: Option[Int]): Future[NewKeepInfosForIntersection] = {
+    val seenKeeps = paginationContext.toSet
+    val recipients = intersectorId.map(_.toKeepRecipients).getOrElse(KeepRecipients.EMPTY)
+    val query = KeepQuery(
+      target = ForUriAndRecipients(uri.id.get, viewer, recipients),
+      paging = KeepQuery.Paging(filter = Some(KeepQuery.Seen(seenKeeps)), offset = 0, limit = limitOpt.getOrElse(4)),
+      arrangement = None
+    )
+    val keepIdsFut = db.readOnlyReplicaAsync { implicit s => queryCommander.getKeeps(Some(viewer), query) }
+    val intersectorFut = intersectorId.map(id => db.readOnlyMasterAsync { implicit s => getIntersectedEntity(id) }).getOrElse(Future.successful(None))
+    for {
+      keepIds <- keepIdsFut
+      keepInfos <- keepInfoAssembler.assembleKeepInfos(Some(viewer), keepIds.toSet)
+      intersectorOpt <- intersectorFut
+    } yield {
+      val sortedIntersectionKeepInfos = keepIds.flatMap(kId => keepInfos.get(kId).flatMap(_.getRight))
+      NewKeepInfosForIntersection(
+        uri.url,
+        PaginationContext.fromSet[Keep](seenKeeps ++ keepIds.toSet),
+        sortedIntersectionKeepInfos,
+        intersectorOpt
       )
-      val keepIdsFut = db.readOnlyReplicaAsync { implicit s => queryCommander.getKeeps(Some(viewer), query) }
-      val intersectorFut = recipientId.map(id => db.readOnlyMasterAsync { implicit s => getIntersectedEntity(id) }).getOrElse(Future.successful(None))
-      for {
-        keepIds <- keepIdsFut
-        keepInfos <- keepInfoAssembler.assembleKeepInfos(Some(viewer), keepIds.toSet)
-        intersectorOpt <- intersectorFut
-      } yield {
-        val sortedIntersectionKeepInfos = keepIds.flatMap(kId => keepInfos.get(kId).flatMap(_.getRight))
-        NewKeepInfosForIntersection(
-          PaginationContext.fromSet[Keep](seenKeeps ++ keepIds.toSet),
-          sortedIntersectionKeepInfos,
-          intersectorOpt
-        )
-      }
     }
   }
 
@@ -221,9 +230,10 @@ class PageInfoController @Inject() (
 
   private object GetPageInfo {
     import json.SchemaReads._
-    final case class GetPageInfo(url: String, config: KeepViewAssemblyOptions)
+    final case class GetPageInfo(url: Option[String], uriId: Option[PublicId[NormalizedURI]], config: KeepViewAssemblyOptions)
     val schemaReads: SchemaReads[GetPageInfo] = (
-      (__ \ 'url).readWithSchema[String] and
+      (__ \ 'url).readNullableWithSchema[String] and
+      (__ \ 'uriId).readNullableWithSchema[String].map(_.map(PublicId[NormalizedURI])) and
       (__ \ 'config).readNullableWithSchema(KeepInfoAssemblerConfig.useDefaultForMissing).map(_ getOrElse KeepInfoAssemblerConfig.default)
     )(GetPageInfo.apply _)
     implicit val reads = schemaReads.reads
@@ -236,16 +246,13 @@ class PageInfoController @Inject() (
     request.body.asOpt[GetPageInfo] match {
       case None => Future.successful(schemaHelper.hintResponse(request.body, schema))
       case Some(input) =>
-        db.readOnlyReplica { implicit s => uriInterner.getByUri(input.url).map(_.id.get) } match {
-          case None => Future.successful(NotFound)
-          case Some(uriId) =>
-            keepInfoAssembler.assemblePageInfos(Some(request.userId), Set(uriId), input.config).map {
-              _.get(uriId) match {
-                case None => NotFound
-                case Some(page) => Ok(Json.obj("page" -> page))
-              }
-            }
-        }
+        val uriOpt = db.readOnlyReplica(implicit s => getNormalizedURI(input.uriId, input.url))
+        uriOpt.map { uri =>
+          val uriId = uri.id.get
+          keepInfoAssembler.assemblePageInfos(Some(request.userId), Set(uriId), input.config)
+            .map(_.get(uriId))
+            .map(page => Ok(Json.obj("page" -> page)))
+        }.getOrElse(Future.successful(NotFound))
     }
   }
 }
