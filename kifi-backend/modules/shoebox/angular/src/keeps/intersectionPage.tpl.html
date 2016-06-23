@@ -1,10 +1,9 @@
 
 <div class="kf-int" ui-view smart-scroll scroll-distance="'0%'" scroll-next="fetchKeeps()">
   <div class="kf-int-container">
-    <div class="kf-int-left" ng-style="keepsOnThisPage.length === 0 ? {'align-items': 'center'} : {'align-items': 'flex-start'};">
+    <div class="kf-int-left">
       <div class="kf-int-header">
-        <div class="kf-int-header-keeps" ng-if="intersectionKeeps.length > 0"
-          ng-style="keepsOnThisPage.length === 0 ? { 'text-align': 'center' } : { 'text-align' : 'left', 'margin-left' : '10px' }">
+        <div class="kf-int-header-keeps" ng-if="intersectionKeeps.length > 0">
           Showing keeps on
           <a class="kf-link" ng-href="{{url}}" target="_blank" ng-bind="displayUrl || 'this page'"></a>
           <span ng-if="intersector">
@@ -24,12 +23,12 @@
       <div class="kf-int-keeps">
         <div class="kf-int-keep" kf-keep-card="keep" boxed="false" is-first-item="::keep === intersectionKeeps[0]" ng-repeat="keep in intersectionKeeps"></div>
         <div class="kf-loading-spinner-center" kf-loading-spinner hide="!loading"></div>
-        <div kf-keep-discussions-widget keeps="keepsOnThisPage" ng-if="intersectionKeeps.length === 0 && keepsOnThisPage.length > 0"></div>
+        <div class="kf-int-onthispage" kf-keep-discussions-widget keeps="keepsOnThisPage" ng-if="intersectionKeeps.length === 0 && keepsOnThisPage.length > 0"></div>
       </div>
     </div>
     <div class="kf-int-right" ng-if="intersectionKeeps.length > 0 && keepsOnThisPage.length > 0">
       <div class="kf-int-header">Other discussions on <a class="kf-link" ng-href="{{url}}" target="_blank" ng-bind="displayUrl || 'this page'"></a></div>
-      <div kf-keep-discussions-widget keeps="keepsOnThisPage"></div>
+      <div class="kf-int-onthispage" kf-keep-discussions-widget keeps="keepsOnThisPage"></div>
     </div>
   </div>
 </div>

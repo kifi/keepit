@@ -14,43 +14,49 @@ angular.module('kifi')
 
     scope.keepsOnThisPage = [];
     scope.entityType = $state.params.user ? 'user' : $state.params.library ? 'library' : $state.params.email ? 'email' : null;
-    scope.url = $state.params.url;
+    scope.uriId = $state.params.uri;
 
-    if (!scope.url) {
+    if (!scope.uriId) {
       $rootScope.$emit('errorImmediately');
-    } else {
-      scope.displayUrl = util.formatTitleFromUrl(scope.url);
+    }
 
-      // populate cache
-      keepService.getPageInfo(scope.url).then(function (result) {
-        pageInfo = result.page;
-      });
+    var pageInfoP = keepService.getPageInfo(null, scope.uriId).then(function (result) {
+      pageInfo = result.page;
+      return pageInfo;
+    });
 
-      keepService.contextForPage(scope.url, '', null, intersectorId).then(function(contextResult) {
-        scope.keepsOnThisPage = contextResult.keeps;
-      });
+    keepService.contextForPage('', scope.uriId, '', null, intersectorId).then(function(contextResult) {
+      scope.keepsOnThisPage = contextResult.keeps;
+    });
+
+    function trackView() {
+      var params = {
+        type: 'intersectionPage',
+        url: scope.url
+      };
+      params[scope.entityType] = intersectorId; // e.g. 'library': libraryId, 'user': userId
+      $analytics.eventTrack('user_viewed_page', params);
     }
 
     function keepSource() {
-      return keepService.getKeepsAtIntersection(scope.url, intersectorId, paginationContext, PAGE_SIZE).then(function (intResult) {
+      return keepService.getKeepsAtIntersection(null, scope.uriId, intersectorId, paginationContext, PAGE_SIZE).then(function (intResult) {
         paginationContext = intResult.paginationContext;
         scope.intersector = intResult.intersector;
 
         if (!init && intResult.keeps.length === 1) {
           var keep = intResult.keeps[0];
           $state.go('keepPage', { title: keep.title.slice(0,5), pubId: keep.id });
-        } else {
-          var pageInfoP = pageInfo ? $q.when(pageInfo) : keepService.getPageInfo(scope.url).then(function(pageResult) {
-            pageInfo = pageResult.page;
-            return pageResult.page;
-          });
-
-          return pageInfoP.then(function(page) {
-            return intResult.keeps.map(function(keep) {
-              return util.retrofitKeepFormat(keep, page);
-            });
-          });
+        } else if (!init) {
+          scope.url = intResult.url;
+          scope.displayUrl = util.formatTitleFromUrl(intResult.url);
+          trackView();
         }
+
+        return pageInfoP.then(function(page) {
+          return intResult.keeps.map(function(keep) {
+            return util.retrofitKeepFormat(keep, page);
+          });
+        });
       });
     }
 
@@ -68,15 +74,5 @@ angular.module('kifi')
     };
 
     scope.fetchKeeps();
-
-    (function trackView() {
-      var params = {
-        type: 'intersectionPage',
-        url: scope.url
-      };
-      params[scope.entityType] = intersectorId; // e.g. 'library': libraryId, 'user': userId
-      $analytics.eventTrack('user_viewed_page', params);
-    })();
-
   }
 ]);

@@ -12,6 +12,7 @@
 .kf-int-left
   display: flex
   flex-direction: column
+  align-items: center
   padding: 10px
   max-width: 585px
 
@@ -23,7 +24,7 @@
 
   .kf-int-header-keeps
     font-size: 22px
-    margin: 10px 0px 20px 0px
+    margin-bottom: 20px
 
   .kf-int-header-nokeeps
     font-size: 18px
@@ -32,8 +33,7 @@
   .kf-int-header-morekeeps
     font-size: 16px
     color: alpha(green, .8)
-    margin-top: 10px
-    margin-bottom: -10px
+    margin: 10px 0px
 
   .kf-int-header-gohome
     font-size: 17px
@@ -41,10 +41,14 @@
   .kf-int-keeps
     display: flex
     flex-direction: column
+    width: 550px
+
+    .kf-int-onthispage
+      min-width: 500px
+      align-self: center
 
     .kf-right-hand-widget-container
-      margin-top: 20px
-      max-width: 400px
+      margin: auto
 
   .kf-int-keep + .kf-int-keep
     margin-top: 10px
