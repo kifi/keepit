@@ -80,9 +80,7 @@ angular.module('kifi')
 
       suggestRecipientsForKeep: function (query, limit, offset, requested, keepId) {
         return net.suggestRecipientsForKeep({query: query, limit: limit, offset: offset, requested: requested, keepId: keepId})
-          .then(function (result) {
-            return result.data;
-          });
+          .then(getResponseData);
       },
 
       //filterRecipient is either a user.id || library.id || email.address. result.data.keeps will not contain any keeps with that recipient
@@ -93,13 +91,17 @@ angular.module('kifi')
             filterRecipient: filterRecipient,
             paginationContext: paginationContext,
             config: config
-          }).then(function (result) {
-            return result.data;
-          });
+          }).then(getResponseData);
       },
 
       getKeepsAtIntersection: function(url, uriId, intersector, paginationContext, limit) {
-        return net.getKeepsAtIntersection({ url: url, uriId: uriId, intersector: intersector, paginationContext: paginationContext, limit: limit }).then(getResponseData);
+        return net.getKeepsAtIntersection({
+          url: url,
+          uriId: uriId,
+          intersector: intersector,
+          paginationContext: paginationContext,
+          limit: limit
+        }).then(getResponseData);
       },
 
       getPageInfo: function(url, uriId, config) {
