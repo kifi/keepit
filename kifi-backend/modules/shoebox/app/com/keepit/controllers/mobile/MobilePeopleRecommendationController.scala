@@ -11,7 +11,7 @@ import com.keepit.controllers.website.UserLibraryCountSortingHelper
 import com.keepit.model._
 import com.keepit.social.BasicUser
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{ JsArray, JsNumber, Json }
+import play.api.libs.json.{ JsObject, JsArray, JsNumber, Json }
 
 class MobilePeopleRecommendationController @Inject() (
     val userActionsHelper: UserActionsHelper,
@@ -35,12 +35,12 @@ class MobilePeopleRecommendationController @Inject() (
 
         val recommendedUsersArray = JsArray(recommendedUsers.map { recommendedUserId =>
           val mutualFriendsArray = JsArray(mutualFriends(recommendedUserId).toSeq.map { mutualFriendId =>
-            BasicUser.format.writes(basicUsers(mutualFriendId)) + ("numFriends" -> JsNumber(userConnectionCounts(mutualFriendId)))
+            BasicUser.format.writes(basicUsers(mutualFriendId)).as[JsObject] + ("numFriends" -> JsNumber(userConnectionCounts(mutualFriendId)))
           })
           val numUserConnections = userConnectionCounts.get(recommendedUserId).getOrElse(0)
           val numMutualLibraries = mutualLibrariesCounts.get(recommendedUserId).getOrElse(0)
 
-          BasicUser.format.writes(basicUsers(recommendedUserId)) + ("numFriends" -> JsNumber(numUserConnections)) + ("mutualFriends" -> mutualFriendsArray) + ("mutualLibraries" -> JsNumber(numMutualLibraries))
+          BasicUser.format.writes(basicUsers(recommendedUserId)).as[JsObject] + ("numFriends" -> JsNumber(numUserConnections)) + ("mutualFriends" -> mutualFriendsArray) + ("mutualLibraries" -> JsNumber(numMutualLibraries))
         })
         val json = Json.obj("users" -> recommendedUsersArray)
         Ok(json)

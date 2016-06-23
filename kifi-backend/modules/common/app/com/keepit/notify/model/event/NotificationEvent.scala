@@ -68,7 +68,7 @@ object NewConnectionInvite extends GroupingNotificationKind[NewConnectionInvite,
     id => Json.obj("inviteeId" -> id)
   )
 
-  override implicit val format = (
+  override implicit val format: Format[NewConnectionInvite] = (
     (__ \ "recipient").format[Recipient] and
     (__ \ "time").format[DateTime] and
     inviteeFormat and
