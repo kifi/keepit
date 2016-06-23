@@ -82,7 +82,7 @@ class FullExportProcessingActor @Inject() (
       case ((existingEntities, zip), (entity, contents)) =>
         if (!existingEntities.contains(entity)) {
           zip.write {
-            s"$entity = ${Json.prettyPrint(contents)}".map(_.toByte).toArray
+            s"$entity = ${Json.prettyPrint(contents)}\n".getBytes("UTF-8")
           }
         }
         (existingEntities + entity, zip)
