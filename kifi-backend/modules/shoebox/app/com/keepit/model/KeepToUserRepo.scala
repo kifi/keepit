@@ -15,6 +15,7 @@ trait KeepToUserRepo extends Repo[KeepToUser] {
   def getAllByUserId(userId: Id[User], excludeStateOpt: Option[State[KeepToUser]] = Some(KeepToUserStates.INACTIVE))(implicit session: RSession): Seq[KeepToUser]
   def getByKeepIdAndUserId(keepId: Id[Keep], userId: Id[User], excludeStateOpt: Option[State[KeepToUser]] = Some(KeepToUserStates.INACTIVE))(implicit session: RSession): Option[KeepToUser]
   def getByUserIdAndUriIds(userId: Id[User], uriIds: Set[Id[NormalizedURI]], excludeStateOpt: Option[State[KeepToUser]] = Some(KeepToUserStates.INACTIVE))(implicit session: RSession): Set[KeepToUser]
+  def pageByUserId(userId: Id[User], offset: Int, limit: Int)(implicit session: RSession): Seq[KeepToUser]
   def deactivate(model: KeepToUser)(implicit session: RWSession): Unit
 }
 
@@ -98,6 +99,9 @@ class KeepToUserRepoImpl @Inject() (
   }
   def getByUserIdAndUriIds(userId: Id[User], uriIds: Set[Id[NormalizedURI]], excludeStateOpt: Option[State[KeepToUser]] = Some(KeepToUserStates.INACTIVE))(implicit session: RSession): Set[KeepToUser] = {
     getByUserIdsAndUriIdsHelper(Set(userId), uriIds, excludeStateOpt).list.toSet
+  }
+  def pageByUserId(userId: Id[User], offset: Int, limit: Int)(implicit session: RSession): Seq[KeepToUser] = {
+    activeRows.filter(_.userId === userId).sortBy(_.id).drop(offset).take(limit).list
   }
 
   def deactivate(model: KeepToUser)(implicit session: RWSession): Unit = {

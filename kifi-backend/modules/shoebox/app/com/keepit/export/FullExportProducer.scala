@@ -10,10 +10,12 @@ import com.keepit.common.db.slick._
 import com.keepit.common.logging.{ Logging, SlackLog }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time._
+import com.keepit.discussion.Message
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 import com.keepit.rover.RoverServiceClient
 import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
+import com.keepit.social.BasicUserLikeEntity
 import play.api.libs.iteratee.{ Enumeratee, Enumerator }
 
 import scala.concurrent.ExecutionContext
@@ -39,6 +41,7 @@ class FullExportProducerImpl @Inject() (
   libMemberRepo: LibraryMembershipRepo,
   keepRepo: KeepRepo,
   ktlRepo: KeepToLibraryRepo,
+  ktuRepo: KeepToUserRepo,
   libraryRepo: LibraryRepo,
   tagCommander: TagCommander,
   rover: RoverServiceClient,
@@ -55,7 +58,8 @@ class FullExportProducerImpl @Inject() (
     slackLog.info(s"[${clock.now}] Export for user $userId")
     val user = db.readOnlyMaster { implicit s => basicUserGen.load(userId) }
     val spaces = spacesExport(userId)
-    FullStreamingExport.Root(user, spaces)
+    val keeps = looseKeepsExport(userId)
+    FullStreamingExport.Root(user, spaces, keeps)
   }
   private def spacesExport(userId: Id[User]): Enumerator[FullStreamingExport.SpaceExport] = {
     // Should be small enough to fit into memory
@@ -104,16 +108,54 @@ class FullExportProducerImpl @Inject() (
       val batch = db.readOnlyMaster { implicit s => keepRepo.pageByLibrary(libId, offset = offset, limit = KEEP_BATCH_SIZE) }
       if (batch.isEmpty) None else Some((offset + batch.length, batch))
     }
-    val batchedExports = batchedKeeps.through(Enumeratee.mapM { keeps =>
-      val keepIds = keeps.map(_.id.get).toSet
-      val uriIds = keeps.map(_.uriId).toSet
-      for {
-        discussions <- eliza.getCrossServiceDiscussionsForKeeps(keepIds, fromTime = None, maxMessagesShown = 100)
-        summaries <- rover.getUriSummaryByUris(uriIds)
-      } yield keeps.map { keep =>
-        FullStreamingExport.KeepExport(keep, discussions.get(keep.id.get), summaries.get(keep.uriId))
+    batchedKeeps.through(keepDecorator).through(Enumeratee.mapConcat(identity))
+  }
+  private def looseKeepsExport(userId: Id[User]): Enumerator[FullStreamingExport.KeepExport] = {
+    val batchedKeeps = Enumerator.unfold(0) { offset =>
+      val batch = db.readOnlyMaster { implicit s =>
+        val keepIds = ktuRepo.pageByUserId(userId, offset = offset, limit = KEEP_BATCH_SIZE).map(_.keepId)
+        val keepsById = keepRepo.getActiveByIds(keepIds.toSet)
+        keepIds.flatMap(keepsById.get)
       }
-    })
-    batchedExports.through(Enumeratee.mapConcat(identity))
+      if (batch.isEmpty) None else Some((offset + KEEP_BATCH_SIZE, batch))
+    }
+    batchedKeeps.through(keepDecorator).through(Enumeratee.mapConcat(identity))
+  }
+
+  private val keepDecorator: Enumeratee[Seq[Keep], Seq[FullStreamingExport.KeepExport]] = Enumeratee.mapM { keeps =>
+    val discussionsFut = {
+      val keepIds = keeps.map(_.id.get).toSet
+      eliza.getCrossServiceDiscussionsForKeeps(keepIds, fromTime = None, maxMessagesShown = 100)
+    }
+    val summariesFut = {
+      val uriIds = keeps.map(_.uriId).toSet
+      rover.getUriSummaryByUris(uriIds)
+    }
+    for {
+      discussions <- discussionsFut
+      summaries <- summariesFut
+      users <- db.readOnlyReplicaAsync { implicit s =>
+        val relevantUsers = discussions.values.flatMap(_.messages.flatMap(_.sentBy.flatMap(_.left.toOption))).toSet
+        basicUserGen.loadAllActive(relevantUsers)
+      }
+    } yield keeps.map { keep =>
+      val messages = discussions.get(keep.id.get).fold(Seq.empty[Message]) { discussion =>
+        discussion.messages.flatMap { msg =>
+          msg.sentBy.flatMap {
+            case Left(uId) => users.get(uId).map(BasicUserLikeEntity.user(_))
+            case Right(nu) => Some(BasicUserLikeEntity.nonUser(nu))
+          }.map { sender =>
+            Message(
+              pubId = Message.publicId(msg.id),
+              sentAt = msg.sentAt,
+              sentBy = sender,
+              text = msg.text,
+              source = msg.source
+            )
+          }
+        }
+      }
+      FullStreamingExport.KeepExport(keep, messages, summaries.get(keep.uriId))
+    }
   }
 }

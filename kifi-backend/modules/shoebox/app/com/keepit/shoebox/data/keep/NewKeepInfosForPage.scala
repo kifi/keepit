@@ -1,12 +1,14 @@
 package com.keepit.shoebox.data.keep
 
-import com.keepit.common.mail.EmailAddress
+import com.keepit.common.crypto.PublicId
+import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.json.{ JsonSchema, SchemaReads }
+import com.keepit.common.mail.{ EmailAddress, EmailAddressHash }
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.util.PaginationContext
-import com.keepit.model.{ BasicLibrary, Keep }
+import com.keepit.model.{ BasicLibrary, Keep, KeepRecipients, Library, User }
 import com.keepit.social.BasicUser
-import play.api.libs.json.{ JsNull, JsString, Json, Writes }
-import play.api.libs.functional.syntax._
+import play.api.libs.json.{ JsString, Json, Reads, Writes }
 
 case class NewKeepInfosForPage(
   page: Option[NewPageInfo],
@@ -33,6 +35,44 @@ object ExternalKeepRecipient {
   case class UserRecipient(bu: BasicUser) extends ExternalKeepRecipient
   case class LibraryRecipient(bl: BasicLibrary) extends ExternalKeepRecipient
   case class EmailRecipient(ea: EmailAddress) extends ExternalKeepRecipient
+}
+
+sealed trait ExternalKeepRecipientId
+object ExternalKeepRecipientId {
+  case class UserId(id: ExternalId[User]) extends ExternalKeepRecipientId
+  case class LibraryId(id: PublicId[Library]) extends ExternalKeepRecipientId
+  case class Email(address: EmailAddress) extends ExternalKeepRecipientId
+
+  def fromStr(s: String): Option[ExternalKeepRecipientId] = {
+    ExternalId.asOpt[User](s).map(UserId)
+      .orElse(Library.validatePublicId(s).toOption.map(LibraryId))
+      .orElse(EmailAddress.validate(s).toOption.map(Email))
+  }
+
+  implicit def sreads: SchemaReads[ExternalKeepRecipientId] = {
+    val reads: Reads[ExternalKeepRecipientId] = Seq(
+      Reads(ExternalId.format[User].reads).map[ExternalKeepRecipientId](UserId),
+      Reads(Library.readsPublicId.reads).map[ExternalKeepRecipientId](LibraryId),
+      Reads(EmailAddress.format.reads).map[ExternalKeepRecipientId](Email)
+    ).reduce(_ orElse _)
+    SchemaReads(reads, schema = JsonSchema.Single("either an external user id, public library id, or email address"))
+  }
+}
+
+sealed trait KeepRecipientId {
+  def toKeepRecipients: KeepRecipients
+}
+object KeepRecipientId {
+  case class UserId(id: Id[User]) extends KeepRecipientId {
+    def toKeepRecipients: KeepRecipients = KeepRecipients.EMPTY.plusUser(id)
+  }
+  case class LibraryId(id: Id[Library]) extends KeepRecipientId {
+    def toKeepRecipients: KeepRecipients = KeepRecipients.EMPTY.plusLibrary(id)
+  }
+  case class Email(address: EmailAddress) extends KeepRecipientId {
+    lazy val addressHash: EmailAddressHash = EmailAddressHash.hashEmailAddress(address)
+    def toKeepRecipients: KeepRecipients = KeepRecipients.EMPTY.plusEmailAddress(address)
+  }
 }
 
 object NewKeepInfosForIntersection {

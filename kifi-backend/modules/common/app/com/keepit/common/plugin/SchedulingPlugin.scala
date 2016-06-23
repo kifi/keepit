@@ -31,8 +31,9 @@ trait SchedulerPlugin extends Plugin with Logging {
   private def scheduleTask(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration, taskName: String)(f: => Unit): Unit = _cancellables.synchronized {
     _cancellables +=
       NamedCancellable(system.scheduler.schedule(initialDelay, frequency) {
-        Try(f).recover { case ex: Throwable =>
-          log.error(s"[scheduleTask] Failed to execute task $taskName", ex)
+        Try(f).recover {
+          case ex: Throwable =>
+            log.error(s"[scheduleTask] Failed to execute task $taskName", ex)
         }
       }, taskName)
   }

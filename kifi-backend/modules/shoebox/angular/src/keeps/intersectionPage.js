@@ -2,47 +2,44 @@
 
 angular.module('kifi')
 
-.controller('IntersectionPageCtrl', [ '$scope', '$rootScope', '$state', '$q', 'keepService', 'Paginator', 'util',
-  function(scope, $rootScope, $state, $q, keepService, Paginator, util) {
+.controller('IntersectionPageCtrl', [ '$scope', '$rootScope', '$state', '$q', '$analytics', 'keepService', 'Paginator', 'util',
+  function(scope, $rootScope, $state, $q, $analytics, keepService, Paginator, util) {
 
-    var paginationContext = null;
+    var PAGE_SIZE = 4;
+
+    var paginationContext = '';
     var pageInfo = null;
     var init = false;
+    var intersectorId = $state.params.user || $state.params.library || $state.params.email;
 
+    scope.keepsOnThisPage = [];
+    scope.entityType = $state.params.user ? 'user' : $state.params.library ? 'library' : $state.params.email ? 'email' : null;
     scope.url = $state.params.url;
+
     if (!scope.url) {
       $rootScope.$emit('errorImmediately');
     } else {
+      scope.displayUrl = util.formatTitleFromUrl(scope.url);
+
       // populate cache
       keepService.getPageInfo(scope.url).then(function (result) {
         pageInfo = result.page;
       });
-    }
-    scope.keepsOnThisPage = null;
-    scope.displayUrl = util.formatTitleFromUrl(scope.url);
-    scope.entityType = $state.params.user ? 'user' : $state.params.library ? 'library' : $state.params.email ? 'email' : null;
 
-    var intersectors =
-      $state.params.user ? { users: [$state.params.user] } :
-      $state.params.library ? { libraries: [$state.params.library] } :
-      $state.params.email ? { emails: [$state.params.email] } : null;
+      keepService.contextForPage(scope.url, '', null, intersectorId).then(function(contextResult) {
+        scope.keepsOnThisPage = contextResult.keeps;
+      });
+    }
 
     function keepSource() {
-      return keepService.getKeepsAtIntersection(scope.url, intersectors, paginationContext).then(function (intResult) {
+      return keepService.getKeepsAtIntersection(scope.url, intersectorId, paginationContext, PAGE_SIZE).then(function (intResult) {
         paginationContext = intResult.paginationContext;
-        scope.intersector = intResult.intersector.intersector || intResult.intersector;
-
+        scope.intersector = intResult.intersector;
 
         if (!init && intResult.keeps.length === 1) {
           var keep = intResult.keeps[0];
           $state.go('keepPage', { title: keep.title.slice(0,5), pubId: keep.id });
         } else {
-          if (!init) {
-            keepService.contextForPage(scope.url, paginationContext).then(function(contextResult) {
-              scope.keepsOnThisPage = contextResult.keeps;
-            });
-          }
-
           var pageInfoP = pageInfo ? $q.when(pageInfo) : keepService.getPageInfo(scope.url).then(function(pageResult) {
             pageInfo = pageResult.page;
             return pageResult.page;
@@ -71,5 +68,15 @@ angular.module('kifi')
     };
 
     scope.fetchKeeps();
+
+    (function trackView() {
+      var params = {
+        type: 'intersectionPage',
+        url: scope.url
+      };
+      params[scope.entityType] = intersectorId; // e.g. 'library': libraryId, 'user': userId
+      $analytics.eventTrack('user_viewed_page', params);
+    })();
+
   }
 ]);

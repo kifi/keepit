@@ -107,6 +107,7 @@ class WebsiteSearchController @Inject() (
                 "description" -> summary.flatMap(_.article.description),
                 "wordCount" -> summary.flatMap(_.article.wordCount),
                 "url" -> url,
+                "uriId" -> NormalizedURI.publicId(uriId),
                 "siteName" -> siteName,
                 "image" -> imageOpt.map { image =>
                   Json.obj(

@@ -75,7 +75,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
           val exitingWaitlist = twitterWaitlistRepo.getByUser(userId).find(_.state == TwitterWaitlistEntryStates.ACTIVE) match {
             case Some(wl) if wl.twitterHandle.isEmpty && handle.nonEmpty => Some(twitterWaitlistRepo.save(wl.copy(twitterHandle = handle)))
             case None if handle.isEmpty =>
-              usersTwitterSui(userId).foreach(socialGraphPlugin.asyncFetch(_, broadcastToOthers = true))
+              usersAnyTwitterSui(userId).foreach(socialGraphPlugin.asyncFetch(_, broadcastToOthers = true))
               None
             case other => other
           }
@@ -83,7 +83,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
             twitterWaitlistRepo.save(TwitterWaitlistEntry(userId = userId, twitterHandle = handle))
           }))
         case None =>
-          (for { handle <- inferHandle(userId); sui <- usersTwitterSui(userId) } yield {
+          (for { handle <- inferHandle(userId); sui <- usersFullTwitterSui(userId) } yield {
             (handle, sui)
           }) match {
             case Some(sh) => Right(Left(sh))
@@ -110,15 +110,20 @@ class TwitterWaitlistCommanderImpl @Inject() (
   // Goes through un-accepted waitlisted users, sees if we can turn it on for them now.
   private val processLock = new ReactiveLock(1)
   def processQueue(): Unit = {
-    processLock.withLock {
-      db.readOnlyReplica { implicit session =>
-        val pending = twitterWaitlistRepo.getPending.sortBy(_.createdAt)(implicitly[Ordering[DateTime]].reverse)
-        pending.toStream.filter { p =>
-          usersTwitterSui(p.userId).isDefined
-        }.take(10).toList // Not super efficient but fine for now, especially for testing
-      }.map { p =>
-        log.info(s"[processQueue] Creating sync for ${p.userId}")
-        createSyncFromWaitlist(p.id.get)
+    if (processLock.waiting + processLock.running > 0) {
+      log.info(s"[processQueue] Already going. ${processLock.running} ${processLock.waiting}")
+    } else {
+      processLock.withLock {
+        log.info(s"[processQueue] Checking")
+        db.readOnlyReplica { implicit session =>
+          val pending = twitterWaitlistRepo.getPending.sortBy(_.createdAt)(implicitly[Ordering[DateTime]].reverse)
+          pending.toStream.filter { p =>
+            usersAnyTwitterSui(p.userId).isDefined
+          }.take(10).toList // Not super efficient but fine for now, especially for testing
+        }.map { p =>
+          log.info(s"[processQueue] Creating sync for ${p.userId}")
+          createSyncFromWaitlist(p.id.get)
+        }
       }
     }
   }
@@ -200,10 +205,16 @@ class TwitterWaitlistCommanderImpl @Inject() (
   }
 
   private def inferHandle(userId: Id[User])(implicit session: RSession) = {
-    usersTwitterSui(userId).flatMap(_.username.map(TwitterHandle(_)))
+    usersFullTwitterSui(userId).flatMap(_.username.map(TwitterHandle(_)))
   }
 
-  private def usersTwitterSui(userId: Id[User])(implicit session: RSession) = {
+  private def usersAnyTwitterSui(userId: Id[User])(implicit session: RSession) = {
+    socialUserInfoRepo.getByUser(userId)
+      .filter(s => s.networkType == SocialNetworks.TWITTER)
+      .lastOption
+  }
+
+  private def usersFullTwitterSui(userId: Id[User])(implicit session: RSession) = {
     socialUserInfoRepo.getByUser(userId)
       .filter(s => s.networkType == SocialNetworks.TWITTER && s.username.isDefined && s.state == SocialUserInfoStates.FETCHED_USING_SELF)
       .lastOption
@@ -214,7 +225,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
     val (entry, suiAndHandle) = db.readOnlyMaster { implicit session =>
       val entry = twitterWaitlistRepo.get(entryId)
       val suiAndHandle = if (entry.state == TwitterWaitlistEntryStates.ACTIVE) {
-        usersTwitterSui(entry.userId).map { sui =>
+        usersFullTwitterSui(entry.userId).map { sui =>
           (sui, entry.twitterHandle.orElse(sui.username.map(TwitterHandle(_))))
         }
       } else {
