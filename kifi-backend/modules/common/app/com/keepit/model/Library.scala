@@ -384,6 +384,13 @@ object BasicLibrary {
   )
 }
 
+case class BasicLibraryWithUrlIntersection(library: BasicLibrary, urlHash: UrlHash)
+object BasicLibraryWithUrlIntersection {
+  implicit val writes: Writes[BasicLibraryWithUrlIntersection] = Writes {
+    case BasicLibraryWithUrlIntersection(lib, urlHash) => Json.toJson(lib).as[JsObject] ++ Json.obj("intersection" -> s"/int?url=${urlHash.hash}&library=${lib.id.id}")
+  }
+}
+
 // Replaced by BasicLibraryDetails, please remove dependencies on this
 case class BasicLibraryStatistics(memberCount: Int, keepCount: Int)
 object BasicLibraryStatistics {

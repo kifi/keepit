@@ -1,7 +1,7 @@
 package com.keepit.commanders
 
 import com.keepit.common.store.ImagePath
-import com.keepit.social.BasicUser
+import com.keepit.social.{ BasicUserWithUrlIntersection, BasicUser }
 import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.ExternalId
 import com.keepit.common.time.DateTimeJsonFormat
@@ -15,7 +15,7 @@ case class KeeperPageInfo(
   position: Option[JsObject],
   neverOnSite: Boolean,
   shown: Boolean,
-  keepers: Seq[BasicUser],
+  keepers: Seq[BasicUserWithUrlIntersection],
   keepersTotal: Int,
   libraries: Seq[JsObject],
   sources: Seq[SourceAttribution],
@@ -29,7 +29,7 @@ object KeeperPageInfo {
       (__ \ 'position).writeNullable[JsObject] and
       (__ \ 'neverOnSite).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
       (__ \ 'shown).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
-      (__ \ 'keepers).writeNullable[Seq[BasicUser]].contramap[Seq[BasicUser]](Some(_).filter(_.nonEmpty)) and
+      (__ \ 'keepers).writeNullable[Seq[BasicUserWithUrlIntersection]].contramap[Seq[BasicUserWithUrlIntersection]](Some(_).filter(_.nonEmpty)) and
       (__ \ 'keepersTotal).writeNullable[Int].contramap[Int](Some(_).filter(_ > 0)) and
       (__ \ 'libraries).writeNullable[Seq[JsObject]].contramap[Seq[JsObject]](Some(_).filter(_.nonEmpty)) and
       (__ \ 'sources).writeNullable[Seq[SourceAttribution]].contramap[Seq[SourceAttribution]](Some(_).filter(_.nonEmpty)) and
