@@ -45,7 +45,7 @@ angular.module('kifi')
       } else {
         $window.document.title = 'Kifi';
       }
-      keepService.contextForPage($scope.keep.url, null, { numEventsPerKeep: 1 }).then(function (data) {
+      keepService.contextForPage($scope.keep.url, null, null, { numEventsPerKeep: 1 }).then(function (data) {
           $scope.otherKeeps = (data.keeps || []).filter(function (keep) {
             return keep.id !== $scope.keep.pubId;
           });

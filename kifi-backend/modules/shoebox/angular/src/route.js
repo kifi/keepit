@@ -71,7 +71,7 @@ angular.module('kifi')
         reloadOnSearch: false  // controller handles search query changes itself
       })
       .state('intersectionPage', {
-        url: '/int?url&user&library&email',
+        url: '/int?uri&user&library&email',
         templateUrl: 'keeps/intersectionPage.tpl.html',
         controller: 'IntersectionPageCtrl'
       })
