@@ -1,18 +1,18 @@
 package com.keepit.search.controllers.ext
 
-import com.keepit.common.crypto.FakeCryptoModule
-import com.keepit.search.engine.uri.{ UriShardHit, UriShardResult, UriSearchResult }
+import com.keepit.common.crypto.{ FakeCryptoModule, PublicIdConfiguration }
+import com.keepit.search.engine.uri.{ UriSearchResult, UriShardHit, UriShardResult }
 import com.keepit.search.test.SearchTestInjector
 import org.specs2.mutable._
 import com.keepit.model._
-import com.keepit.common.db.{ ExternalId }
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.controller.{ FakeUserActionsHelper, FakeUserActionsModule }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import com.keepit.search._
 import com.keepit.common.util.PlayAppConfigurationModule
-import com.keepit.search.controllers.{ FixedResultUriSearchCommander, FixedResultIndexModule }
+import com.keepit.search.controllers.{ FixedResultIndexModule, FixedResultUriSearchCommander }
 
 class ExtSearchControllerTest extends Specification with SearchTestInjector {
 
@@ -30,6 +30,7 @@ class ExtSearchControllerTest extends Specification with SearchTestInjector {
 
     "search keeps with library support and JSON response" in {
       withInjector(modules: _*) { implicit injector =>
+        implicit val publicIdConfig = inject[PublicIdConfiguration]
         val path = routes.ExtSearchController.search2("test", 2, None, None, None, None, None).url
         path === "/ext/search?q=test&n=2"
 
@@ -42,12 +43,12 @@ class ExtSearchControllerTest extends Specification with SearchTestInjector {
         contentType(result) === Some("application/json")
         contentAsString(result) === "1\r\n" + // chunk byte count
           "[\r\n" +
-          "122\r\n" + // chunk byte count
-          """
+          "13b\r\n" + // chunk byte count
+          s"""
           {
             "uuid":"98765432-1234-5678-9abc-fedcba987654",
             "query":"test",
-            "hits":[{"title":"Example Site","url":"http://example.com","keepId":"604754fb-182d-4c39-a314-2d1994b24159"}],
+            "hits":[{"title":"Example Site","url":"http://example.com","keepId":"604754fb-182d-4c39-a314-2d1994b24159","uriId":"${NormalizedURI.publicId(Id(ExtSearchControllerTest.plainTestResults("test").hits.head.id)).id}"}],
             "myTotal":12,
             "friendsTotal":23,
             "mayHaveMore":true,
@@ -69,6 +70,7 @@ class ExtSearchControllerTest extends Specification with SearchTestInjector {
 
     "search keeps with library support and a plain text response" in {
       withInjector(modules: _*) { implicit injector =>
+        implicit val publicIdConfig = inject[PublicIdConfiguration]
         val path = routes.ExtSearchController.search2("test", 2, None, None, None, None, None).url
         path === "/ext/search?q=test&n=2"
 
@@ -79,12 +81,12 @@ class ExtSearchControllerTest extends Specification with SearchTestInjector {
         val result = inject[ExtSearchController].search2("test", 2, None, None, None, None, None)(request)
         status(result) === OK
         contentType(result) === Some("text/plain")
-        contentAsString(result) === "122\r\n" + // chunk byte count
-          """
+        contentAsString(result) === "13b\r\n" + // chunk byte count
+          s"""
           {
             "uuid":"98765432-1234-5678-9abc-fedcba987654",
             "query":"test",
-            "hits":[{"title":"Example Site","url":"http://example.com","keepId":"604754fb-182d-4c39-a314-2d1994b24159"}],
+            "hits":[{"title":"Example Site","url":"http://example.com","keepId":"604754fb-182d-4c39-a314-2d1994b24159","uriId":"${NormalizedURI.publicId(Id(ExtSearchControllerTest.plainTestResults("test").hits.head.id)).id}"}],
             "myTotal":12,
             "friendsTotal":23,
             "mayHaveMore":true,
