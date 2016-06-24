@@ -5,7 +5,7 @@ import com.keepit.common.controller.{ UserActions, UserActionsHelper, ShoeboxSer
 import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
 import com.keepit.model._
-import play.api.libs.json.{ Json, JsNumber, JsArray }
+import play.api.libs.json.{ JsObject, Json, JsNumber, JsArray }
 import com.keepit.social.{ SocialNetworks, SocialNetworkType, BasicUser }
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.social.BasicUserRepo
@@ -34,9 +34,9 @@ class PeopleRecommendationController @Inject() (
 
         val recommendedUsersArray = JsArray(recommendedUsers.map { recommendedUserId =>
           val mutualFriendsArray = JsArray(mutualFriends(recommendedUserId).toSeq.map { mutualFriendId =>
-            BasicUser.format.writes(basicUsers(mutualFriendId)) + ("numFriends" -> JsNumber(mutualFriendConnectionCounts(mutualFriendId)))
+            BasicUser.format.writes(basicUsers(mutualFriendId)).as[JsObject] + ("numFriends" -> JsNumber(mutualFriendConnectionCounts(mutualFriendId)))
           })
-          BasicUser.format.writes(basicUsers(recommendedUserId)) + ("mutualFriends" -> mutualFriendsArray)
+          BasicUser.format.writes(basicUsers(recommendedUserId)).as[JsObject] + ("mutualFriends" -> mutualFriendsArray)
         })
         val json = Json.obj("users" -> recommendedUsersArray)
         Ok(json)

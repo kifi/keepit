@@ -122,7 +122,7 @@ class FullExportRequestRepoImpl @Inject() (
   def intern(model: FullExportRequest)(implicit session: RWSession): FullExportRequest = {
     if (model.id.isDefined) save(model)
     else {
-      val obstacle = deadRows.filter(_.userId === model.userId).firstOption
+      val obstacle = rows.filter(_.userId === model.userId).firstOption
       save(model.copy(id = obstacle.map(_.id.get)))
     }
   }

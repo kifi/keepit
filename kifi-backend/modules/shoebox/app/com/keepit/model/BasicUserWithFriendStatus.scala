@@ -22,7 +22,7 @@ case class BasicUserWithFriendStatus(
 
 object BasicUserWithFriendStatus {
   implicit val format = (
-    BasicUserFields.format and
+    BasicUserFields.formatBuilder and
     (__ \ 'isFriend).formatNullable[Boolean] and
     (__ \ 'friendRequestSentAt).formatNullable[DateTime] and
     (__ \ 'friendRequestReceivedAt).formatNullable[DateTime] and

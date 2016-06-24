@@ -8,7 +8,7 @@ import com.keepit.common.reflection.Enumerator
 import com.keepit.common.util.PaginationContext
 import com.keepit.model.{ BasicLibrary, Keep, KeepRecipients, Library, User }
 import com.keepit.social.BasicUser
-import play.api.libs.json.{ JsString, Json, Reads, Writes }
+import play.api.libs.json.{ JsString, Json, Writes, Reads }
 
 case class NewKeepInfosForPage(
   page: Option[NewPageInfo],
@@ -24,11 +24,6 @@ object NewKeepInfosForPage {
     Json.writes[NewKeepInfosForPage]
   }
 }
-
-case class NewKeepInfosForIntersection(
-  paginationContext: PaginationContext[Keep],
-  keeps: Seq[NewKeepInfo],
-  intersector: Option[ExternalKeepRecipient]) // name of either user or library we're filtering on
 
 sealed trait ExternalKeepRecipient
 object ExternalKeepRecipient {
@@ -75,8 +70,14 @@ object KeepRecipientId {
   }
 }
 
+case class NewKeepInfosForIntersection(
+  url: String,
+  paginationContext: PaginationContext[Keep],
+  keeps: Seq[NewKeepInfo],
+  intersector: Option[ExternalKeepRecipient]) // name of either user or library we're filtering on
+
 object NewKeepInfosForIntersection {
-  val empty = NewKeepInfosForIntersection(paginationContext = PaginationContext.empty, keeps = Seq.empty, intersector = None)
+  val empty = NewKeepInfosForIntersection(url = "", paginationContext = PaginationContext.empty, keeps = Seq.empty, intersector = None)
   implicit val writes: Writes[NewKeepInfosForIntersection] = {
     import ExternalKeepRecipient._
     implicit val tupleWrites: Writes[ExternalKeepRecipient] = Writes {

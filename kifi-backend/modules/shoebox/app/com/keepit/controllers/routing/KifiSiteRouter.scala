@@ -302,10 +302,11 @@ class KifiSiteRouter @Inject() (
     }
   }
 
-  def serveWebAppIfNormalizedUriFound(url: String, user: Option[String], library: Option[String], email: Option[EmailAddress]) = WebAppPage { implicit request =>
-    db.readOnlyReplica { implicit s =>
-      normalizedUriRepo.getByNormalizedUrl(url)
-    }.map(_ => app())
+  def serveWebAppIfNormalizedUriFound(uri: PublicId[NormalizedURI], user: Option[String], library: Option[String], email: Option[EmailAddress]) = WebAppPage { implicit request =>
+    NormalizedURI.decodePublicId(uri).map { uriId =>
+      db.readOnlyReplica { implicit s => normalizedUriRepo.get(uriId) }
+    }
+      .map(_ => app())
       .getOrElse(notFound(request))
   }
 

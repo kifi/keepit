@@ -50,7 +50,7 @@
     </div>
     <div class="kifi-keepers-libs">
     {{#libs}}
-      <a class="kifi-keepers-lib" href="{{origin}}{{path}}" target="_blank" tabindex="-1">
+      <a class="kifi-keepers-lib" href="{{origin}}{{intersection}}" target="_blank" tabindex="-1">
         <div class="kifi-keepers-lib-icon"{{#color}} style="background-color:{{color}}"{{/color}}></div>
         <img class="kifi-keepers-lib-owner-pic" src="{{cdnBase}}/users/{{owner.id}}/pics/100/{{owner.pictureName}}"/>
         <div class="kifi-keepers-lib-name">{{name}}</div>
@@ -68,7 +68,7 @@
       {{^noCloseButton}}<a class="kifi-keepers-h-close" href="javascript:"></a>{{/noCloseButton}}</div>
     <div class="kifi-keepers-pics">
     {{#keepers}}
-      <a class="kifi-keepers-pic" href="{{origin}}/{{username}}" target="_blank" style="background-image:url({{cdnBase}}/users/{{id}}/pics/100/{{pictureName}})" data-id="{{id}}"></a>
+      <a class="kifi-keepers-pic" href="{{origin}}{{intersection}}" target="_blank" style="background-image:url({{cdnBase}}/users/{{id}}/pics/100/{{pictureName}})" data-id="{{id}}"></a>
     {{/keepers}}
     {{#numMore}}
       <span class="kifi-keepers-more">{{numMore}}</span>

@@ -866,13 +866,18 @@ if (searchUrlRe.test(document.URL)) !function () {
     var matches = hit.matches || (hit.matches = {});
     matches.title || (matches.title = []);
     matches.url || (matches.url = []);
+    var intersectionBase = '/int?uri=' + hit.uriId;
     var userForIndex = intoOrElse(this.users, this.me);
-    hit.keepers = (hit.keepers || []).map(userForIndex);
+    hit.keepers = (hit.keepers || []).map(userForIndex).map(function (user) {
+      user.intersection = intersectionBase + '&user=' + user.id;
+      return user;
+    });
     if (hit.libraries) {
       var indexes = hit.libraries;
       var libs = hit.libraries = new Array(indexes.length / 2);
       for (var i = 0, j = 0; i < libs.length; i++, j += 2) {
         libs[i] = $.extend({keeper: userForIndex(indexes[j + 1])}, this.libraries[indexes[j]]);
+        libs[i].intersection = intersectionBase + '&library=' + libs[i].id;
       }
     } else {
       hit.libraries = [];
@@ -918,7 +923,8 @@ if (searchUrlRe.test(document.URL)) !function () {
       tags: hit.tags,
       tagsMore: hit.tagsOmitted || '',
       sources: (hit.sources || []).sort(prioritizeSlack),
-      origin: response.origin
+      origin: response.origin,
+      uriId: hit.uriId
     };
   }
 

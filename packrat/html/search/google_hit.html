@@ -15,7 +15,7 @@
     <span class="kifi-res-users"></span>
     {{#users.length}}
       {{#users}}
-        <a class="kifi-res-user{{#secret}} kifi-secret{{/secret}}{{#duplicate}} kifi-duplicate{{/duplicate}}" href="{{origin}}/{{username}}" target="_blank" style="background-image:url({{cdnBase}}/users/{{id}}/pics/100/{{pictureName}})"></a>
+        <a class="kifi-res-user{{#secret}} kifi-secret{{/secret}}{{#duplicate}} kifi-duplicate{{/duplicate}}" href="{{origin}}{{intersection}}" target="_blank" style="background-image:url({{cdnBase}}/users/{{id}}/pics/100/{{pictureName}})"></a>
       {{/users}}
       <a class="kifi-res-users-n" href="javascript:">{{usersMore}}</a>
       {{^libraries.length}}
@@ -30,7 +30,7 @@
     {{#libraries.length}}
       <span class="kifi-res-libs"></span>
       {{#libraries}}
-        <a class="kifi-res-lib{{#secret}} kifi-secret{{/secret}}" href="{{origin}}{{path}}" target="_blank" style="background-image:url({{cdnBase}}/users/{{keeper.id}}/pics/100/{{keeper.pictureName}})">{{name}}</a>
+        <a class="kifi-res-lib{{#secret}} kifi-secret{{/secret}}" href="{{origin}}{{intersection}}" target="_blank" style="background-image:url({{cdnBase}}/users/{{keeper.id}}/pics/100/{{keeper.pictureName}})">{{name}}</a>
       {{/libraries}}
       <a class="kifi-res-libs-n" href="javascript:">{{librariesMore}}</a>
     {{/libraries.length}}

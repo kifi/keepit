@@ -132,26 +132,29 @@ class FullExportFormatterImpl @Inject() (
     })
   }
   private def spaceBlob(space: FullStreamingExport.SpaceExport): Enumerator[(String, JsValue)] = {
-    implicit val spaceWrites = EitherFormat.keyedWrites[BasicUser, BasicOrganization]("user", "org")
+    implicit val spaceWrites: OWrites[Either[BasicUser, BasicOrganization]] = OWrites {
+      case Left(u) => BasicUser.format.writes(u)
+      case Right(o) => BasicOrganization.defaultFormat.writes(o)
+    }
     val entity = space.space.fold(
       u => s"""users["${u.externalId.id}"]""",
       o => s"""orgs["${o.orgId.id}"]"""
     )
     space.libraries.map(_.library.id.get).through(Enumeratee.grouped(Iteratee.getChunks)).through(Enumeratee.map { libIds =>
       val fullSpace = spaceWrites.writes(space.space)
-      entity -> (fullSpace ++ Json.obj(
-        "libraries" -> libIds.map(Library.publicId)
-      ))
+      entity -> (fullSpace ++ Json.obj("libraries" -> libIds.map(Library.publicId)))
     })
   }
   private def libraryBlob(library: FullStreamingExport.LibraryExport): Enumerator[(String, JsValue)] = {
     val entity = s"""libraries["${Library.publicId(library.library.id.get).id}"]"""
-    val fullLibrary = Json.obj("name" -> library.library.name)
+    val fullLibrary = Json.obj(
+      "id" -> Library.publicId(library.library.id.get),
+      "name" -> library.library.name,
+      "description" -> library.library.description,
+      "numKeeps" -> library.library.keepCount
+    )
     library.keeps.map(_.keep.id.get).through(Enumeratee.grouped(Iteratee.getChunks)).through(Enumeratee.map { keepIds =>
-      entity -> Json.obj(
-        "library" -> fullLibrary,
-        "keeps" -> keepIds.map(Keep.publicId)
-      )
+      entity -> (fullLibrary ++ Json.obj("keeps" -> keepIds.map(Keep.publicId)))
     })
   }
 
@@ -161,7 +164,10 @@ class FullExportFormatterImpl @Inject() (
       entity -> Json.obj(
         "id" -> Keep.publicId(keep.keep.id.get),
         "keptAt" -> keep.keep.keptAt,
+        "title" -> keep.keep.title,
+        "url" -> keep.keep.url,
         "note" -> keep.keep.note,
+        "tags" -> keep.tags,
         "summary" -> keep.uri.flatMap(_.article.description),
         "messages" -> keep.messages
       )

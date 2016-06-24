@@ -40,8 +40,10 @@ class FullExportSchedulerImpl @Inject() (
   }
 
   def internExportRequest(userId: Id[User])(implicit session: RWSession): FullExportRequest = {
-    requestRepo.getByUser(userId).filterNot(oldEnoughToBeReprocessed(_, clock.now)).getOrElse {
-      requestRepo.save(FullExportRequest(userId = userId, status = FullExportStatus.NotStarted))
-    }
+    requestRepo.getByUser(userId)
+      .filterNot(oldEnoughToBeReprocessed(_, clock.now))
+      .getOrElse {
+        requestRepo.intern(FullExportRequest(userId = userId, status = FullExportStatus.NotStarted))
+      }
   }
 }
