@@ -493,7 +493,7 @@ GET     /site/user/settings         @com.keepit.controllers.website.UserControll
 POST    /site/user/settings         @com.keepit.controllers.website.UserController.setSettings()
 GET     /site/user/leftHandRail     @com.keepit.controllers.website.UserProfileController.getLeftHandRail(numLibs: Int ?= 6, windowSize: Option[Int] ?= None)
 
-GET     /user/buzzState             @com.keepit.controllers.website.UserController.getBuzzState(userId: Option[Id[User]] ?= None)
+GET     /user/buzzState             @com.keepit.controllers.website.UserController.getBuzzState(userId: Option[Long] ?= None)
 
 # regex below prevents route from usurping requests intended for other routes, like /site/user/friends
 GET     /site/user/$id<[0-9a-f-]{36}> @com.keepit.controllers.website.UserController.basicUserInfo(id: ExternalId[User], friendCount: Boolean ?= false)
