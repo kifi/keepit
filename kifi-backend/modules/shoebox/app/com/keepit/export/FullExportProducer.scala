@@ -123,17 +123,15 @@ class FullExportProducerImpl @Inject() (
   }
 
   private val keepDecorator: Enumeratee[Seq[Keep], Seq[FullStreamingExport.KeepExport]] = Enumeratee.mapM { keeps =>
-    val discussionsFut = {
-      val keepIds = keeps.map(_.id.get).toSet
-      eliza.getCrossServiceDiscussionsForKeeps(keepIds, fromTime = None, maxMessagesShown = 100)
-    }
-    val summariesFut = {
-      val uriIds = keeps.map(_.uriId).toSet
-      rover.getUriSummaryByUris(uriIds)
-    }
+    val keepIds = keeps.map(_.id.get).toSet
+    val uriIds = keeps.map(_.uriId).toSet
+    val discussionsFut = eliza.getCrossServiceDiscussionsForKeeps(keepIds, fromTime = None, maxMessagesShown = 100)
+    val tagsFut = db.readOnlyReplicaAsync { implicit s => tagCommander.getTagsForKeeps(keepIds) }
+    val summariesFut = rover.getUriSummaryByUris(uriIds)
     for {
       discussions <- discussionsFut
       summaries <- summariesFut
+      tags <- tagsFut
       users <- db.readOnlyReplicaAsync { implicit s =>
         val relevantUsers = discussions.values.flatMap(_.messages.flatMap(_.sentBy.flatMap(_.left.toOption))).toSet
         basicUserGen.loadAllActive(relevantUsers)
@@ -155,7 +153,7 @@ class FullExportProducerImpl @Inject() (
           }
         }
       }
-      FullStreamingExport.KeepExport(keep, messages, summaries.get(keep.uriId))
+      FullStreamingExport.KeepExport(keep, tags.getOrElse(keep.id.get, Seq.empty), messages, summaries.get(keep.uriId))
     }
   }
 }
