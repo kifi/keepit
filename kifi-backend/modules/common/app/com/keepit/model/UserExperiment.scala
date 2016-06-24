@@ -84,6 +84,10 @@ object UserExperimentType {
   val RHR_ALPHA_SORTING = UserExperimentType("rhr_alpha_sorting")
   val ADD_KEEP_RECIPIENTS = UserExperimentType("add_keep_recipients")
 
+  val ANNOUNCED_WIND_DOWN = UserExperimentType("announced_wind_down")
+  val SYSTEM_READ_ONLY = UserExperimentType("system_read_only")
+  val SYSTEM_EXPORT_ONLY = UserExperimentType("system_export_only")
+
   val _ALL = ADMIN :: AUTO_GEN :: FAKE :: BYPASS_ABUSE_CHECKS :: VISITED :: NO_SEARCH_EXPERIMENTS ::
     DEMO :: EXTENSION_LOGGING :: SHOW_HIT_SCORES :: SHOW_DISCUSSIONS ::
     MOBILE_REDIRECT :: DELIGHTED_SURVEY_PERMANENT :: SPECIAL_CURATOR ::
@@ -91,7 +95,8 @@ object UserExperimentType {
     ACTIVITY_EMAIL :: EXPLICIT_SOCIAL_POSTING :: RELATED_PAGE_INFO :: NEXT_GEN_RECOS ::
     RECO_FASTLANE :: RECO_SUBSAMPLE :: APPLY_RECO_FEEDBACK :: PLAIN_EMAIL :: SEARCH_LAB ::
     NEW_NOTIFS_SYSTEM :: CREATE_TEAM :: SLACK :: CUSTOM_LIBRARY_ORDERING ::
-    DISCUSSION_FEED_FILTERS :: KEEP_PAGE_RHR :: RHR_ALPHA_SORTING :: ANNOUNCE_NEW_TWITTER_LIBRARY :: ADD_KEEP_RECIPIENTS :: Nil
+    DISCUSSION_FEED_FILTERS :: KEEP_PAGE_RHR :: RHR_ALPHA_SORTING :: ANNOUNCE_NEW_TWITTER_LIBRARY :: ADD_KEEP_RECIPIENTS ::
+    ANNOUNCED_WIND_DOWN :: SYSTEM_READ_ONLY :: SYSTEM_EXPORT_ONLY :: Nil
 
   // only the ExperimentTypes in this list will be tracked as user properties in analytics
   val _TRACK_FOR_ANALYTICS = Set(EXPLICIT_SOCIAL_POSTING, RELATED_PAGE_INFO, ACTIVITY_EMAIL)
@@ -104,6 +109,17 @@ object UserExperimentType {
     if (experiments.contains(FAKE)) FAKE.value
     else if (experiments.contains(ADMIN)) ADMIN.value
     else "standard"
+  }
+
+  def getBuzzState(experiments: Set[UserExperimentType]): String = {
+    val DEFAULT_BUZZ_STATE = ""
+    val highestPriorityExperiment = {
+      if (experiments.contains(SYSTEM_EXPORT_ONLY)) Some(SYSTEM_EXPORT_ONLY)
+      else if (experiments.contains(SYSTEM_READ_ONLY)) Some(SYSTEM_READ_ONLY)
+      else if (experiments.contains(ANNOUNCED_WIND_DOWN)) Some(ANNOUNCED_WIND_DOWN)
+      else None
+    }
+    highestPriorityExperiment.map(_.value).getOrElse(DEFAULT_BUZZ_STATE)
   }
 
   private val kifiDomains = Set("kifi.com", "42go.com")

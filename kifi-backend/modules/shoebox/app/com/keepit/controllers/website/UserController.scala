@@ -39,6 +39,7 @@ class UserController @Inject() (
     db: Database,
     userRepo: UserRepo,
     userExperimentCommander: LocalUserExperimentCommander,
+    userExperimentRepo: UserExperimentRepo,
     userConnectionRepo: UserConnectionRepo,
     emailRepo: UserEmailAddressRepo,
     userEmailAddressCommander: UserEmailAddressCommander,
@@ -505,6 +506,16 @@ class UserController @Inject() (
     } yield {
       Ok(JsObject(Seq("network" -> n, "abook" -> a)))
     }
+  }
+
+  def getBuzzState() = MaybeUserAction { implicit request =>
+    val experiments = request.userIdOpt.map { uid =>
+      db.readOnlyMaster(implicit s => userExperimentRepo.getUserExperiments(uid))
+    }.getOrElse(Set.empty[UserExperimentType])
+
+    val buzzState = UserExperimentType.getBuzzState(experiments)
+
+    Ok(Json.obj("state" -> buzzState))
   }
 
   def postDelightedAnswer = UserAction.async(parse.tolerantJson) { request =>
