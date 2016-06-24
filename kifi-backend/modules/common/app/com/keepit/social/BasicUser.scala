@@ -28,7 +28,7 @@ trait BasicUserFields {
 }
 
 object BasicUserFields {
-  val format =
+  val formatBuilder =
     (__ \ 'id).format[ExternalId[User]] and
       (__ \ 'firstName).format[String] and
       (__ \ 'lastName).format[String] and
@@ -51,7 +51,7 @@ object BasicUser {
   private implicit val usernameFormat = Username.jsonAnnotationFormat
 
   // Be aware that BasicUserLikeEntity uses the `kind` field to detect if its a BasicUser or BasicNonUser
-  implicit val format: Format[BasicUser] = (BasicUserFields.format)(BasicUser.apply, unlift(BasicUser.unapply))
+  implicit val format: OFormat[BasicUser] = BasicUserFields.formatBuilder(BasicUser.apply, unlift(BasicUser.unapply))
 
   implicit val mapUserIdToInt = mapOfIdToObjectFormat[User, Int]
   implicit val mapUserIdToBasicUser = mapOfIdToObjectFormat[User, BasicUser]
