@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .directive('kfKeepToLibraryWidget', [
   '$rootElement', '$compile', '$document', '$filter', '$rootScope', '$templateCache', '$timeout', '$window',
-  'KEY', 'libraryService', 'util', 'profileService',
+  'KEY', 'libraryService', 'util', 'profileService', 'modalService',
   function ($rootElement, $compile, $document, $filter, $rootScope, $templateCache, $timeout, $window,
-    KEY, libraryService, util, profileService) {
+    KEY, libraryService, util, profileService, modalService) {
     return {
       restrict: 'A',
       /*
@@ -71,7 +71,11 @@ angular.module('kifi')
         //
         function init() {
           element.on('click', function () {
-            initWidget();
+            if (profileService.shouldBeWindingDown()) {
+              modalService.showWindingDownModal();
+            } else {
+              initWidget();
+            }
           });
 
           scope.$on('$destroy', removeWidget);

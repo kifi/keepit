@@ -60,11 +60,16 @@ angular.module('kifi')
       return modals.length > 0;
     }
 
+    function showWindingDownModal() {
+      open({ template: 'common/modal/windingDownModal.tpl.html' });
+    }
+
     return {
       open: open,
       close: close,
       isDialogOpen: isDialogOpen,
-      openGenericErrorModal: openGenericErrorModal
+      openGenericErrorModal: openGenericErrorModal,
+      showWindingDownModal: showWindingDownModal
     };
   }
 ]);

@@ -34,8 +34,12 @@ angular.module('kifi')
 
         function listenForInit() {
           element.on('click', function () {
-            initWidget();
-            clickTrack('open');
+            if (profileService.shouldBeWindingDown()) {
+              modalService.showWindingDownModal();
+            } else {
+              initWidget();
+              clickTrack('open');
+            }
           });
 
           scope.$on('$destroy', scope.removeWidget);

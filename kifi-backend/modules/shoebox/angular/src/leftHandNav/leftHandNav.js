@@ -147,11 +147,19 @@ angular.module('kifi')
         };
 
         scope.createOwnLibrary = function () {
-          $state.go('userProfile.libraries.own', { handle: scope.me.username, openCreateLibrary: true }, {reload: true});
+          if (profileService.shouldBeWindingDown()) {
+            modalService.showWindingDownModal();
+          } else {
+            $state.go('userProfile.libraries.own', { handle: scope.me.username, openCreateLibrary: true }, {reload: true});
+          }
         };
 
         scope.createOrgLibrary = function (org) {
-          $state.go('orgProfile.libraries', { handle: org.handle, openCreateLibrary: true }, {reload: true});
+          if (profileService.shouldBeWindingDown()) {
+            modalService.showWindingDownModal();
+          } else {
+            $state.go('orgProfile.libraries', { handle: org.handle, openCreateLibrary: true }, {reload: true});
+          }
         };
 
 

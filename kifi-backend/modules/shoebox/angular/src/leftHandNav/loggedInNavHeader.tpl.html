@@ -36,37 +36,37 @@
         <button class="kf-lih-add-link sprite sprite-add-link-2">Add a link</button>
         <!-- <button class="kf-lih-friends"><span class="svg-friends-white"></span>Connections</button> -->
         <menu class="kf-dropdown-menu">
-          <button class="kf-dropdown-menu-item" ng-click="addKeeps()">
+          <button class="kf-dropdown-menu-item" ng-click="maybeShowWindingDown() || addKeeps()">
             <span class="kf-lih-create-icon kf-lih-create-org">
               <svg kf-symbol-sprite icon="hearts"></svg>
             </span><!--
          -->Add a keep
           </button>
-          <button class="kf-dropdown-menu-item" ng-click="createLibrary()">
+          <button class="kf-dropdown-menu-item" ng-click="maybeShowWindingDown() || createLibrary()">
             <span class="kf-lih-create-icon kf-lih-create-org">
               <svg kf-symbol-sprite icon="create-library"></svg>
             </span><!--
          -->Create a library
           </button>
-          <button class="kf-dropdown-menu-item" ng-click="createTeam()">
+          <button class="kf-dropdown-menu-item" ng-click="maybeShowWindingDown() || createTeam()">
             <span class="kf-lih-create-icon kf-lih-create-org">
               <svg kf-symbol-sprite icon="team"></svg>
             </span><!--
          -->Create a team
           </button>
-          <a class="kf-dropdown-menu-item" href="/invite">
+          <a class="kf-dropdown-menu-item" href="/invite" ng-click="maybeShowWindingDown($event)">
             <span class="kf-lih-create-icon kf-lih-create-org">
               <svg kf-symbol-sprite icon="invite-friend"></svg>
             </span><!--
          -->Invite someone to Kifi
           </a>
-          <button class="kf-dropdown-menu-item" ng-click="importBookmarks()">
+          <button class="kf-dropdown-menu-item" ng-click="maybeShowWindingDown() || importBookmarks()">
             <span class="kf-lih-create-icon kf-lih-create-org">
               <svg kf-symbol-sprite icon="import-bookmarks"></svg>
             </span><!--
          --> Import browser bookmarks
           </button>
-          <button class="kf-dropdown-menu-item" ng-click="importBookmarkFile()">
+          <button class="kf-dropdown-menu-item" ng-click="maybeShowWindingDown() || importBookmarkFile()">
             <span class="kf-lih-create-icon kf-lih-create-org">
               <svg kf-symbol-sprite icon="import"></svg>
             </span><!--

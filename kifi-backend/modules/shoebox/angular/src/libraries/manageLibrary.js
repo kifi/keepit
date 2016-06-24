@@ -101,6 +101,11 @@ angular.module('kifi')
 
         scope.saveLibrary = function () {
 
+          if (profileService.shouldBeWindingDown()) {
+            modalService.showWindingDownModal();
+            return;
+          }
+
           if (submitting) {
             return;
           }

@@ -33,15 +33,15 @@
         <button class="kf-lih-add-link sprite sprite-add-link">Add a link</button>
         <!-- <button class="kf-lih-friends"><span class="svg-friends-white"></span>Connections</button> -->
         <menu class="kf-dropdown-menu">
-          <button class="kf-dropdown-menu-item" ng-click="addKeeps()">
+          <button class="kf-dropdown-menu-item" ng-click="maybeShowWindingDown() || addKeeps()">
             <span class="kf-lih-create-icon kf-lih-create-keep">&#10084;</span><!--
          -->Add a keep
           </button>
-          <button class="kf-dropdown-menu-item" ng-click="createLibrary()">
+          <button class="kf-dropdown-menu-item"  ng-click="maybeShowWindingDown() || createLibrary()">
             <span class="kf-lih-create-icon kf-lih-create-lib">+</span><!--
          -->Create a library
           </button>
-          <button class="kf-dropdown-menu-item" ng-click="createTeam()">
+          <button class="kf-dropdown-menu-item"  ng-click="maybeShowWindingDown() || createTeam()">
             <span class="kf-lih-create-icon kf-lih-create-org">
               <svg kf-symbol-sprite icon="org"></svg>
             </span><!--
