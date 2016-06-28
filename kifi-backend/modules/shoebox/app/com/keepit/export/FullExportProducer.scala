@@ -133,7 +133,7 @@ class FullExportProducerImpl @Inject() (
       summaries <- summariesFut
       tags <- tagsFut
       users <- db.readOnlyReplicaAsync { implicit s =>
-        val relevantUsers = discussions.values.flatMap(_.messages.flatMap(_.sentBy.flatMap(_.left.toOption))).toSet
+        val relevantUsers = keeps.flatMap(_.recipients.users).toSet ++ discussions.values.flatMap(_.messages.flatMap(_.sentBy.flatMap(_.left.toOption))).toSet
         basicUserGen.loadAllActive(relevantUsers)
       }
     } yield keeps.map { keep =>
@@ -153,7 +153,13 @@ class FullExportProducerImpl @Inject() (
           }
         }
       }
-      FullStreamingExport.KeepExport(keep, tags.getOrElse(keep.id.get, Seq.empty), messages, summaries.get(keep.uriId))
+      FullStreamingExport.KeepExport(
+        keep,
+        keep.recipients.users.toSeq.sorted.flatMap(users.get),
+        tags.getOrElse(keep.id.get, Seq.empty),
+        messages,
+        summaries.get(keep.uriId)
+      )
     }
   }
 }
