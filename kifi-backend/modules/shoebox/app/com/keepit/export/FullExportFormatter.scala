@@ -3,7 +3,6 @@ package com.keepit.export
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.json.EitherFormat
-import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.social.BasicUser
 import play.api.libs.iteratee._
@@ -25,7 +24,7 @@ trait FullExportFormatter {
 class FullExportFormatterImpl @Inject() (
   implicit val defaultContext: ExecutionContext,
   implicit val publicIdConfig: PublicIdConfiguration)
-    extends FullExportFormatter with Logging {
+    extends FullExportFormatter {
 
   def json(export: FullStreamingExport.Root): Enumerator[(FilePath, FileContents)] = {
     val enum = export.spaces.flatMap { space =>
@@ -43,7 +42,6 @@ class FullExportFormatterImpl @Inject() (
   private def fullIndexPage(export: FullStreamingExport.Root): Enumerator[(String, JsValue)] = {
     implicit val spaceWrites = EitherFormat.keyedWrites[BasicUser, BasicOrganization]("user", "org")
     export.spaces.map(_.space).through(Enumeratee.grouped(Iteratee.getChunks)).through(Enumeratee.map { spaces =>
-      log.info(s"Exporting ${spaces.length} spaces")
       "index" -> Json.obj(
         "me" -> export.user,
         "spaces" -> JsArray(spaces.map { space =>
@@ -115,13 +113,12 @@ class FullExportFormatterImpl @Inject() (
           keepBlob(keep)
         }
       }
-    }
+    } andThen export.looseKeeps.flatMap(keepBlob)
   }
 
   private def indexBlob(export: FullStreamingExport.Root): Enumerator[(String, JsValue)] = {
     implicit val spaceWrites = EitherFormat.keyedWrites[BasicUser, BasicOrganization]("user", "org")
     export.spaces.map(_.space).through(Enumeratee.grouped(Iteratee.getChunks)).through(Enumeratee.map { spaces =>
-      log.info(s"Exporting ${spaces.length} spaces")
       "index" -> Json.obj(
         "me" -> export.user,
         "spaces" -> JsArray(spaces.map { space =>
@@ -164,10 +161,13 @@ class FullExportFormatterImpl @Inject() (
       entity -> Json.obj(
         "id" -> Keep.publicId(keep.keep.id.get),
         "keptAt" -> keep.keep.keptAt,
+        "lastActivityAt" -> keep.keep.lastActivityAt,
         "title" -> keep.keep.title,
         "url" -> keep.keep.url,
         "note" -> keep.keep.note,
         "tags" -> keep.tags,
+        "users" -> keep.users,
+        "libraries" -> keep.keep.recipients.libraries.toSeq.sorted.map(Library.publicId),
         "summary" -> keep.uri.flatMap(_.article.description),
         "messages" -> keep.messages
       )
