@@ -77,8 +77,6 @@ class FullExportProcessingActor @Inject() (
       val zip = new ZipOutputStream(new FileOutputStream(exportFile))
       zip.putNextEntry(new ZipEntry(s"$exportBase/index.html"))
       zip.write(HackyExportAssets.index.getBytes("UTF-8"))
-      zip.putNextEntry(new ZipEntry(s"$exportBase/viewer.js"))
-      zip.write(HackyExportAssets.viewer.getBytes("UTF-8"))
       zip.putNextEntry(new ZipEntry(s"$exportBase/export.js"))
       (Set.empty[String], zip)
     }

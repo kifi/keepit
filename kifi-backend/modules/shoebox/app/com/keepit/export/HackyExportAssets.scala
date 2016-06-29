@@ -12,17 +12,26 @@ object HackyExportAssets {
       |<div id="body"></div>
       |
       |<script src="export.js" charset="UTF-8"></script>
-      |<script src="viewer.js" charset="UTF-8"></script>
-    """.stripMargin
-
-  val viewer =
-    """
+      |<script>
       |function clear(el) {
       |  while (el.firstChild) {
       |    el.removeChild(el.firstChild);
       |  }
       |}
       |
+      |// Function to asynchronously add HTML elements to a particular node
+      |function incrementallyFillElement(el, items, fill) {
+      |  if (items.length > 0) {
+      |    window.setTimeout(function() {
+      |      for (i=0; i < 100 && i < items.length; i++) {
+      |        el.appendChild(fill(items[i]));
+      |      }
+      |      incrementallyFillElement(el, items.slice(100), fill);
+      |    }, 0);
+      |  }
+      |}
+      |
+      |// Main "router". Inspects the hash and loads the appropriate view
       |function dispatch() {
       |  var h = window.location.hash.substr(1);
       |  if (users[h]) {
@@ -40,6 +49,19 @@ object HackyExportAssets {
       |  }
       |}
       |
+      |window.onhashchange = function () { dispatch(); };
+      |window.onload = function () { dispatch(); };
+      |
+      |var sortedKeepIdsFut = new Promise(
+      |  function (resolve, reject) {
+      |    var ans = Object.keys(keeps).sort(function (k1, k2) {
+      |      // Sorted reverse chronologically (most recent first)
+      |      return -( keeps[k1].lastActivityAt - keeps[k2].lastActivityAt );
+      |    });
+      |    resolve(ans);
+      |  }
+      |);
+      |
       |function viewIndex() {
       |  var head = document.getElementById("head");
       |  var body = document.getElementById("body");
@@ -48,14 +70,17 @@ object HackyExportAssets {
       |
       |  clear(body);
       |
+      |  var libraries = document.createElement("h3");
+      |  libraries.innerText = "Your libraries:";
+      |  body.appendChild(libraries);
+      |  var spacesList = drawSpaces(index.spaces)
+      |  body.appendChild(spacesList);
+      |
       |  var allKeeps = document.createElement("a");
       |  allKeeps.href = "#allkeeps";
       |  allKeeps.innerText = "All Your Keeps";
       |  body.appendChild(allKeeps);
       |  body.appendChild(document.createElement("br"));
-      |
-      |  var spacesList = drawSpaces(index.spaces)
-      |  body.appendChild(spacesList);
       |}
       |
       |function viewAllKeeps() {
@@ -63,21 +88,16 @@ object HackyExportAssets {
       |  var body = document.getElementById("body");
       |
       |  clear(body);
-      |  Object.keys(keeps).sort(function (k1, k2) {
-      |    // Sorted reverse chronologically (most recent first)
-      |    return -( keeps[k1].keptAt - keeps[k2].keptAt );
-      |  }).forEach(function (keepId) {
-      |    var keep = keeps[keepId];
-      |    var el = document.createElement("a");
-      |    el.href = "#" + keep.id;
-      |    if (keep.title) {
-      |      el.innerText = keep.title;
-      |    } else {
-      |      el.innerText = keep.url;
-      |    }
-      |    body.appendChild(el);
-      |    body.appendChild(document.createElement("br"));
+      |  var keeplist = document.createElement("ol");
+      |  sortedKeepIdsFut.then(function (sortedKeepIds) {
+      |    incrementallyFillElement(keeplist, sortedKeepIds, function (keepId) {
+      |      var k = drawKeep(keeps[keepId]);
+      |      var el = document.createElement("li")
+      |      el.appendChild(k);
+      |      return el;
+      |    });
       |  });
+      |  body.appendChild(keeplist);
       |
       |  clear(head);
       |  var downloadButton = document.createElement("button");
@@ -124,7 +144,15 @@ object HackyExportAssets {
       |  head.appendChild(drawLibHeader(l));
       |
       |  clear(body);
-      |  var keepsList = drawKeeps(l.keeps);
+      |  var keepsList = document.createElement("ol");
+      |  var sortedKeepIds = l.keeps.sort(function (keep1, keep2) {
+      |    return keeps[keep2].lastActivityAt - keeps[keep1].lastActivityAt;
+      |  });
+      |  incrementallyFillElement(keepsList, sortedKeepIds, function (keepId) {
+      |    var el = document.createElement("li");
+      |    el.appendChild(drawKeep(keeps[keepId]));
+      |    return el;
+      |  });
       |  body.appendChild(keepsList);
       |}
       |
@@ -212,20 +240,13 @@ object HackyExportAssets {
       |}
       |
       |function drawLibraries(libIds) {
+      |  var sortedLibIds = libIds.sort(function (lib1, lib2) {
+      |    return libraries[lib1].name.localeCompare(libraries[lib2].name);
+      |  });
       |  var big = document.createElement("ol");
-      |  libIds.forEach(function (libId) {
+      |  sortedLibIds.forEach(function (libId) {
       |    var el = document.createElement("li");
       |    el.appendChild(drawLibrary(libraries[libId]));
-      |    big.appendChild(el);
-      |  });
-      |  return big;
-      |}
-      |
-      |function drawKeeps(keepIds) {
-      |  var big = document.createElement("ol");
-      |  keepIds.forEach(function (keepId) {
-      |    var el = document.createElement("li");
-      |    el.appendChild(drawKeep(keeps[keepId]));
       |    big.appendChild(el);
       |  });
       |  return big;
@@ -246,8 +267,6 @@ object HackyExportAssets {
       |  });
       |  return big;
       |}
-      |
-      |window.onhashchange = function () { dispatch(); };
-      |window.onload = function () { dispatch(); };
+      |</script>
     """.stripMargin
 }
