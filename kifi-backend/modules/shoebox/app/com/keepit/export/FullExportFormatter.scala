@@ -166,7 +166,6 @@ class FullExportFormatterImpl @Inject() (
         "url" -> keep.keep.url,
         "note" -> keep.keep.note,
         "tags" -> keep.tags,
-        "users" -> keep.users,
         "libraries" -> keep.keep.recipients.libraries.toSeq.sorted.map(Library.publicId),
         "summary" -> keep.uri.flatMap(_.article.description),
         "messages" -> keep.messages
