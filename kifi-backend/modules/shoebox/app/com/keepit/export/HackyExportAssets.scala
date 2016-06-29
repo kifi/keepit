@@ -31,6 +31,24 @@ object HackyExportAssets {
       |  }
       |}
       |
+      |function downloadNetscape(keepIds, filename) {
+      |  var download = document.createElement("div");
+      |  keepIds.forEach(function (keepId) {
+      |    var keep = keeps[keepId];
+      |    var keepElement = document.createElement("a");
+      |    keepElement.innerText = keep.title ? keep.title : keep.url;
+      |    keepElement.href = keep.url;
+      |    download.appendChild(keepElement);
+      |    download.appendChild(document.createElement("br"));
+      |  });
+      |
+      |  var tmp = document.createElement("a");
+      |  tmp.href = window.URL.createObjectURL(new Blob([download.innerHTML], {type: "text/html"}));
+      |  tmp.download = filename;
+      |  tmp.click();
+      |  tmp.remove();
+      |}
+      |
       |// Main "router". Inspects the hash and loads the appropriate view
       |function dispatch() {
       |  var h = window.location.hash.substr(1);
@@ -51,16 +69,6 @@ object HackyExportAssets {
       |
       |window.onhashchange = function () { dispatch(); };
       |window.onload = function () { dispatch(); };
-      |
-      |var sortedKeepIdsFut = new Promise(
-      |  function (resolve, reject) {
-      |    var ans = Object.keys(keeps).sort(function (k1, k2) {
-      |      // Sorted reverse chronologically (most recent first)
-      |      return -( keeps[k1].lastActivityAt - keeps[k2].lastActivityAt );
-      |    });
-      |    resolve(ans);
-      |  }
-      |);
       |
       |function viewIndex() {
       |  var head = document.getElementById("head");
@@ -89,26 +97,22 @@ object HackyExportAssets {
       |
       |  clear(body);
       |  var keeplist = document.createElement("ol");
-      |  sortedKeepIdsFut.then(function (sortedKeepIds) {
-      |    incrementallyFillElement(keeplist, sortedKeepIds, function (keepId) {
-      |      var k = drawKeep(keeps[keepId]);
-      |      var el = document.createElement("li")
-      |      el.appendChild(k);
-      |      return el;
-      |    });
+      |  var sortedKeepIds = Object.keys(keeps).sort(function (k1, k2) {
+      |    // Sorted reverse chronologically (most recent first)
+      |    return -( keeps[k1].lastActivityAt - keeps[k2].lastActivityAt );
+      |  });
+      |  incrementallyFillElement(keeplist, sortedKeepIds, function (keepId) {
+      |    var k = drawKeep(keeps[keepId]);
+      |    var el = document.createElement("li")
+      |    el.appendChild(k);
+      |    return el;
       |  });
       |  body.appendChild(keeplist);
       |
       |  clear(head);
       |  var downloadButton = document.createElement("button");
       |  downloadButton.innerText = "Download all your keeps";
-      |  downloadButton.onclick = function () {
-      |    var tmp = document.createElement("a");
-      |    tmp.href = window.URL.createObjectURL(new Blob([body.innerHTML], {type: "text/html"}));
-      |    tmp.download = "allkeeps.html";
-      |    tmp.click();
-      |    tmp.remove();
-      |  };
+      |  downloadButton.onclick = function () { downloadNetscape(sortedKeepIds, "Everything.netscape.html"); };
       |  head.appendChild(downloadButton);
       |}
       |
@@ -119,6 +123,19 @@ object HackyExportAssets {
       |
       |  clear(head);
       |  head.appendChild(drawUserHeader(u));
+      |  var downloadButton = document.createElement("button");
+      |  downloadButton.innerText = "Download all these keeps";
+      |  downloadButton.onclick = function () {
+      |    var keepsToDownload = new Set();
+      |    u.libraries.forEach(function (libId) {
+      |      libraries[libId].keeps.forEach(function (keepId) {
+      |        keepsToDownload.add(keepId);
+      |      });
+      |    });
+      |    var username = (u.firstName.toLowerCase() + " " + u.lastName.toLowerCase()).replace(/\s+/g, "-");
+      |    downloadNetscape(Array.from(keepsToDownload), username + ".netscape.html");
+      |  };
+      |  head.appendChild(downloadButton);
       |
       |  clear(body);
       |  body.appendChild(drawLibraries(u.libraries));
@@ -131,6 +148,19 @@ object HackyExportAssets {
       |
       |  clear(head);
       |  head.appendChild(drawOrgHeader(o));
+      |  var downloadButton = document.createElement("button");
+      |  downloadButton.innerText = "Download all these keeps";
+      |  downloadButton.onclick = function () {
+      |    var keepsToDownload = new Set();
+      |    o.libraries.forEach(function (libId) {
+      |      libraries[libId].keeps.forEach(function (keepId) {
+      |        keepsToDownload.add(keepId);
+      |      });
+      |    });
+      |    var orgname = o.name.toLowerCase().replace(/\s+/g, "-");
+      |    downloadNetscape(Array.from(keepsToDownload), orgname + ".netscape.html");
+      |  };
+      |  head.appendChild(downloadButton);
       |
       |  clear(body);
       |  body.appendChild(drawLibraries(o.libraries));
@@ -142,6 +172,13 @@ object HackyExportAssets {
       |  var l = libraries[libId];
       |  clear(head);
       |  head.appendChild(drawLibHeader(l));
+      |  var downloadButton = document.createElement("button");
+      |  downloadButton.innerText = "Download all these keeps";
+      |  downloadButton.onclick = function () {
+      |    var libname = l.name.toLowerCase().replace(/\s+/g, "-");
+      |    downloadNetscape(Array.from(l.keeps), libname + ".netscape.html");
+      |  };
+      |  head.appendChild(downloadButton);
       |
       |  clear(body);
       |  var keepsList = document.createElement("ol");
@@ -258,11 +295,13 @@ object HackyExportAssets {
       |  return el;
       |}
       |
+      |
+      |var lookHereRegex = /\[([^\]\\]*(?:\\[\]\\][^\]\\]*)*)\]\(x-kifi-sel:([^\)\\]*(?:\\[\)\\][^\)\\]*)*)\)/;
       |function drawMessages(messages) {
       |  var big = document.createElement("ol");
       |  messages.forEach(function (msg) {
       |    var el = document.createElement("li");
-      |    el.innerText = msg.sentBy.firstName + ": " + msg.text;
+      |    el.innerText = msg.sentBy.firstName + ": " + msg.text.replace(lookHereRegex, "$1");
       |    big.appendChild(el);
       |  });
       |  return big;
