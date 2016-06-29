@@ -126,12 +126,9 @@ object HackyExportAssets {
       |  var downloadButton = document.createElement("button");
       |  downloadButton.innerText = "Download all these keeps";
       |  downloadButton.onclick = function () {
-      |    var keepsToDownload = new Set();
-      |    u.libraries.forEach(function (libId) {
-      |      libraries[libId].keeps.forEach(function (keepId) {
-      |        keepsToDownload.add(keepId);
-      |      });
-      |    });
+      |    var keepsToDownload = new Set(u.libraries.reduce(function (acc, libId) {
+      |      return acc.concat(libraries[libId].keeps);
+      |    }, []));
       |    var username = (u.firstName.toLowerCase() + " " + u.lastName.toLowerCase()).replace(/\s+/g, "-");
       |    downloadNetscape(Array.from(keepsToDownload), username + ".netscape.html");
       |  };
@@ -151,12 +148,9 @@ object HackyExportAssets {
       |  var downloadButton = document.createElement("button");
       |  downloadButton.innerText = "Download all these keeps";
       |  downloadButton.onclick = function () {
-      |    var keepsToDownload = new Set();
-      |    o.libraries.forEach(function (libId) {
-      |      libraries[libId].keeps.forEach(function (keepId) {
-      |        keepsToDownload.add(keepId);
-      |      });
-      |    });
+      |    var keepsToDownload = new Set(o.libraries.reduce(function (acc, libId) {
+      |      return acc.concat(libraries[libId].keeps);
+      |    }, []));
       |    var orgname = o.name.toLowerCase().replace(/\s+/g, "-");
       |    downloadNetscape(Array.from(keepsToDownload), orgname + ".netscape.html");
       |  };
