@@ -23,7 +23,7 @@ object HackyExportAssets {
       |function incrementallyFillElement(el, items, fill) {
       |  if (items.length > 0) {
       |    window.setTimeout(function() {
-      |      for (i=0; i < 100 && i < items.length; i++) {
+      |      for (var i=0; i < 100 && i < items.length; i++) {
       |        el.appendChild(fill(items[i]));
       |      }
       |      incrementallyFillElement(el, items.slice(100), fill);

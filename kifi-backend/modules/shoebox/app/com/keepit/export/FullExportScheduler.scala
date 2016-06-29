@@ -16,7 +16,7 @@ trait FullExportScheduler {
 }
 
 object FullExportSchedulerConfig {
-  val COOLDOWN_AFTER_SUCCESSFUL_EXPORT = Duration.standardHours(24)
+  val COOLDOWN_AFTER_SUCCESSFUL_EXPORT = Duration.standardMinutes(5)
 
   def oldEnoughToBeReprocessed(old: FullExportRequest, now: DateTime): Boolean = {
     old.status match {
