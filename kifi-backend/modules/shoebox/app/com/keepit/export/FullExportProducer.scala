@@ -5,7 +5,6 @@ import com.keepit.commanders.TagCommander
 import com.keepit.commanders.gen.BasicOrganizationGen
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.{ Logging, SlackLog }
 import com.keepit.common.social.BasicUserRepo
@@ -154,7 +153,7 @@ class FullExportProducerImpl @Inject() (
         }
       }
       FullStreamingExport.KeepExport(
-        keep,
+        keep.clean,
         keep.recipients.users.toSeq.sorted.flatMap(users.get),
         tags.getOrElse(keep.id.get, Seq.empty),
         messages,

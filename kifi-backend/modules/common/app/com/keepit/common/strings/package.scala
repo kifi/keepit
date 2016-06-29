@@ -29,8 +29,8 @@ package object strings {
 
   implicit class StringWithNoLineBreaks(str: String) {
     private val UNICODE_LINE_SEPARATOR = 8232
-    def simplifyWhitespace: String = str.filterNot(_.toInt == UNICODE_LINE_SEPARATOR).replaceAll( """[\t\n\x0B\f\r]""", " ")
-    def removeRepeatedWhitespace: String = str.replaceAll( """[ ]{2,}""", " ")
+    def simplifyWhitespace: String = str.filterNot(_.toInt == UNICODE_LINE_SEPARATOR).replaceAll("""[\t\n\x0B\f\r]""", " ")
+    def removeRepeatedWhitespace: String = str.replaceAll("""[ ]{2,}""", " ")
     def trimAndRemoveLineBreaks: String = str.simplifyWhitespace.removeRepeatedWhitespace.trim
   }
 

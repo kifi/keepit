@@ -55,7 +55,7 @@ case class ElectronicMail(
     category: ElectronicMailCategory, //type of mail in free form, will be use for tracking
     extraHeaders: Option[Map[String, String]] = None) extends ModelWithExternalId[ElectronicMail] {
 
-  def clean(): ElectronicMail = copy(subject = subject.trimAndRemoveLineBreaks())
+  def clean(): ElectronicMail = copy(subject = subject.trimAndRemoveLineBreaks)
 
   if (subject.length > 1024) {
     throw new IllegalArgumentException(s"email subject length is ${subject.length} (more then 1024 chars): $subject")

@@ -57,8 +57,8 @@ class FullExportFormatterTest extends Specification with ShoeboxTestInjector wit
         val enum = inject[FullExportFormatter].assignments(stream)
         Await.result(enum.run(Iteratee.foreach {
           case (e, v) =>
-            // Uncomment to view the expected output
-            // println(s"$e = ${Json.prettyPrint(v)}")
+          // Uncomment to view the expected output
+          // println(s"$e = ${Json.prettyPrint(v)}")
         }), Duration.Inf)
         1 === 1
       }

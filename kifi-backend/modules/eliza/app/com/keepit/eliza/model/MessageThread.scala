@@ -31,7 +31,7 @@ case class MessageThread(
   def pubKeepId(implicit publicIdConfig: PublicIdConfiguration): PublicId[Keep] = Keep.publicId(keepId)
   def deepLocator(implicit publicIdConfig: PublicIdConfiguration): DeepLocator = MessageThread.locator(pubKeepId)
 
-  def clean(): MessageThread = this.copy(pageTitle = pageTitle.map(_.trimAndRemoveLineBreaks()))
+  def clean(): MessageThread = this.copy(pageTitle = pageTitle.map(_.trimAndRemoveLineBreaks))
 
   def withId(id: Id[MessageThread]): MessageThread = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt = updateTime)
