@@ -109,7 +109,7 @@ class NormalizedURIRepoImpl @Inject() (
     } else uriWithSeq
 
     val cleaned = {
-      val cleanTitle = validatedUri.title.map(_.trimAndRemoveLineBreaks().abbreviate(NormalizedURI.TitleMaxLen))
+      val cleanTitle = validatedUri.title.map(_.trimAndRemoveLineBreaks.abbreviate(NormalizedURI.TitleMaxLen))
       validatedUri.copy(title = cleanTitle)
     }
     val saved = try {
