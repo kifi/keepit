@@ -200,6 +200,7 @@ object HackyExportAssets {
       |  var url = document.createElement("a");
       |  url.innerText = keep.url;
       |  url.href = keep.url;
+      |  url.target = "_blank";
       |  head.appendChild(url);
       |
       |  clear(body);
