@@ -13,6 +13,8 @@ object HackyExportAssets {
       |
       |<script src="export.js" charset="UTF-8"></script>
       |<script>
+      |var head = document.getElementById("head");
+      |var body = document.getElementById("body");
       |function clear(el) {
       |  while (el.firstChild) {
       |    el.removeChild(el.firstChild);
@@ -31,7 +33,7 @@ object HackyExportAssets {
       |  }
       |}
       |
-      |function downloadNetscape(keepIds, filename) {
+      |function triggerNetscapeDownload(keepIds, filename) {
       |  var download = document.createElement("div");
       |  keepIds.forEach(function (keepId) {
       |    var keep = keeps[keepId];
@@ -60,8 +62,12 @@ object HackyExportAssets {
       |    viewLibrary(h);
       |  } else if (keeps[h]) {
       |    viewKeep(h);
-      |  } else if (h === "allkeeps") {
+      |  } else if (h === "mykeeps") {
       |    viewAllKeeps();
+      |  } else if (h === "mydiscussions") {
+      |    viewDiscussions();
+      |  } else if (h === "readme") {
+      |    viewReadme();
       |  } else {
       |    viewIndex();
       |  }
@@ -71,33 +77,63 @@ object HackyExportAssets {
       |window.onload = function () { dispatch(); };
       |
       |function viewIndex() {
-      |  var head = document.getElementById("head");
-      |  var body = document.getElementById("body");
       |  clear(head);
       |  head.appendChild(drawMeHeader(index.me));
       |
       |  clear(body);
+      |
+      |  var allKeeps = document.createElement("a");
+      |  allKeeps.href = "#mykeeps";
+      |  allKeeps.innerText = "All Your Keeps";
+      |  body.appendChild(allKeeps);
+      |  body.appendChild(document.createElement("br"));
+      |
+      |  var discussions = document.createElement("a");
+      |  discussions.href = "#mydiscussions";
+      |  discussions.innerText = "Your Discussions";
+      |  body.appendChild(discussions);
+      |  body.appendChild(document.createElement("br"));
+      |
+      |  var readme = document.createElement("a");
+      |  readme.href = "#readme";
+      |  readme.innerText = "Technical information about this export";
+      |  body.appendChild(readme);
+      |  body.appendChild(document.createElement("br"));
       |
       |  var libraries = document.createElement("h3");
       |  libraries.innerText = "Your libraries:";
       |  body.appendChild(libraries);
       |  var spacesList = drawSpaces(index.spaces)
       |  body.appendChild(spacesList);
-      |
-      |  var allKeeps = document.createElement("a");
-      |  allKeeps.href = "#allkeeps";
-      |  allKeeps.innerText = "All Your Keeps";
-      |  body.appendChild(allKeeps);
-      |  body.appendChild(document.createElement("br"));
       |}
       |
       |function viewAllKeeps() {
-      |  var head = document.getElementById("head");
-      |  var body = document.getElementById("body");
-      |
       |  clear(body);
       |  var keeplist = document.createElement("ol");
       |  var sortedKeepIds = Object.keys(keeps).sort(function (k1, k2) {
+      |    return keeps[k2].lastActivityAt - keeps[k1].lastActivityAt; // most recent first
+      |  });
+      |  incrementallyFillElement(keeplist, sortedKeepIds, function (keepId) {
+      |    var k = drawKeep(keeps[keepId]);
+      |    var el = document.createElement("li")
+      |    el.appendChild(k);
+      |    return el;
+      |  });
+      |  body.appendChild(keeplist);
+      |
+      |  clear(head);
+      |  var downloadButton = document.createElement("button");
+      |  downloadButton.innerText = "Download these keeps";
+      |  downloadButton.onclick = function () { triggerNetscapeDownload(sortedKeepIds, "Everything.netscape.html"); };
+      |  head.appendChild(downloadButton);
+      |}
+      |
+      |function viewDiscussions() {
+      |  clear(body);
+      |  var keeplist = document.createElement("ol");
+      |  var sortedKeepIds = Object.keys(keeps).filter(function (k) {
+      |    return keeps[k].messages.length > 0;
+      |  }).sort(function (k1, k2) {
       |    // Sorted reverse chronologically (most recent first)
       |    return -( keeps[k1].lastActivityAt - keeps[k2].lastActivityAt );
       |  });
@@ -111,26 +147,61 @@ object HackyExportAssets {
       |
       |  clear(head);
       |  var downloadButton = document.createElement("button");
-      |  downloadButton.innerText = "Download all your keeps";
-      |  downloadButton.onclick = function () { downloadNetscape(sortedKeepIds, "Everything.netscape.html"); };
+      |  downloadButton.innerText = "Download these keeps";
+      |  downloadButton.onclick = function () { triggerNetscapeDownload(sortedKeepIds, "Discussions.netscape.html"); };
       |  head.appendChild(downloadButton);
       |}
       |
-      |function viewUser(userId) {
-      |  var head = document.getElementById("head");
-      |  var body = document.getElementById("body");
-      |  var u = users[userId];
+      |function viewReadme() {
+      |  clear(head);
+      |  var readmeHeader = document.createElement("h2");
+      |  readmeHeader.innerText = "Technical Documentation";
+      |  head.appendChild(readmeHeader);
       |
+      |  clear(body);
+      |  body.appendChild(document.createElement("p"));
+      |  body.lastChild.innerText = "\
+      |    All of your export data is located in \"export.js\", a javascript file that\
+      |    constructs five objects: [index, users, orgs, libraries, keeps].";
+      |
+      |  body.appendChild(document.createElement("p"));
+      |  body.lastChild.innerText = "\
+      |    You are currently browsing through your export data using a standalone javascript\
+      |    \"export explorer\". This script performs two main tasks: data presentation (allowing you to interactively\
+      |    browse your export data from your browser), and data formatting (allowing you to choose a subset\
+      |    of your data and download it in a format suitable for import into another service)."
+      |
+      |  body.appendChild(document.createElement("p"));
+      |  body.lastChild.innerText = "\
+      |    It is our hope that the capabilities of this explorer will suffice for most purposes, but\
+      |    if not we hope that the provided explorer will serve as a useful starting point for any\
+      |    modifications you may wish to explore."
+      |
+      |  body.appendChild(document.createElement("p"));
+      |  body.lastChild.innerText = "\
+      |    The most useful code snippet is likely to be the function triggerNetscapeDownload, which\
+      |    formats a selection of keeps into the Netscape Bookmark File Format, then triggers a download.\
+      |    If you want to export your data in any HTML-based format, it should be fairly straightforward\
+      |    to modify that method."
+      |
+      |  body.appendChild(document.createElement("p"));
+      |  body.lastChild.innerText = "\
+      |    As a last resort, you may want to directly investigate \"export.js\" and directly access the data.\
+      |    Do note that the file is UTF-8 encoded."
+      |}
+      |
+      |function viewUser(userId) {
+      |  var u = users[userId];
       |  clear(head);
       |  head.appendChild(drawUserHeader(u));
       |  var downloadButton = document.createElement("button");
-      |  downloadButton.innerText = "Download all these keeps";
+      |  downloadButton.innerText = "Download these keeps";
       |  downloadButton.onclick = function () {
       |    var keepsToDownload = new Set(u.libraries.reduce(function (acc, libId) {
       |      return acc.concat(libraries[libId].keeps);
       |    }, []));
       |    var username = (u.firstName.toLowerCase() + " " + u.lastName.toLowerCase()).replace(/\s+/g, "-");
-      |    downloadNetscape(Array.from(keepsToDownload), username + ".netscape.html");
+      |    triggerNetscapeDownload(Array.from(keepsToDownload), username + ".netscape.html");
       |  };
       |  head.appendChild(downloadButton);
       |
@@ -139,20 +210,18 @@ object HackyExportAssets {
       |}
       |
       |function viewOrg(orgId) {
-      |  var head = document.getElementById("head");
-      |  var body = document.getElementById("body");
       |  var o = orgs[orgId];
       |
       |  clear(head);
       |  head.appendChild(drawOrgHeader(o));
       |  var downloadButton = document.createElement("button");
-      |  downloadButton.innerText = "Download all these keeps";
+      |  downloadButton.innerText = "Download these keeps";
       |  downloadButton.onclick = function () {
       |    var keepsToDownload = new Set(o.libraries.reduce(function (acc, libId) {
       |      return acc.concat(libraries[libId].keeps);
       |    }, []));
       |    var orgname = o.name.toLowerCase().replace(/\s+/g, "-");
-      |    downloadNetscape(Array.from(keepsToDownload), orgname + ".netscape.html");
+      |    triggerNetscapeDownload(Array.from(keepsToDownload), orgname + ".netscape.html");
       |  };
       |  head.appendChild(downloadButton);
       |
@@ -161,16 +230,14 @@ object HackyExportAssets {
       |}
       |
       |function viewLibrary(libId) {
-      |  var head = document.getElementById("head");
-      |  var body = document.getElementById("body");
       |  var l = libraries[libId];
       |  clear(head);
       |  head.appendChild(drawLibHeader(l));
       |  var downloadButton = document.createElement("button");
-      |  downloadButton.innerText = "Download all these keeps";
+      |  downloadButton.innerText = "Download these keeps";
       |  downloadButton.onclick = function () {
       |    var libname = l.name.toLowerCase().replace(/\s+/g, "-");
-      |    downloadNetscape(Array.from(l.keeps), libname + ".netscape.html");
+      |    triggerNetscapeDownload(Array.from(l.keeps), libname + ".netscape.html");
       |  };
       |  head.appendChild(downloadButton);
       |
@@ -188,8 +255,6 @@ object HackyExportAssets {
       |}
       |
       |function viewKeep(keepId) {
-      |  var head = document.getElementById("head");
-      |  var body = document.getElementById("body");
       |  var keep = keeps[keepId];
       |  clear(head);
       |  if (keep.title) {
@@ -294,7 +359,9 @@ object HackyExportAssets {
       |var lookHereRegex = /\[([^\]\\]*(?:\\[\]\\][^\]\\]*)*)\]\(x-kifi-sel:([^\)\\]*(?:\\[\)\\][^\)\\]*)*)\)/;
       |function drawMessages(messages) {
       |  var big = document.createElement("ol");
-      |  messages.forEach(function (msg) {
+      |  messages.sort(function (m1, m2) {
+      |    return m1.sentAt - m2.sentAt; // oldest first
+      |  }).forEach(function (msg) {
       |    var el = document.createElement("li");
       |    el.innerText = msg.sentBy.firstName + ": " + msg.text.replace(lookHereRegex, "$1");
       |    big.appendChild(el);
