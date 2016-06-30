@@ -322,6 +322,10 @@ angular.module('kifi')
       return me.experiments && me.experiments.indexOf(experiment) > -1;
     }
 
+    function shouldBeWindingDown() {
+      return hasExperiment('system_read_only') || hasExperiment('system_export_only');
+    }
+
     return {
       initLoggedOut: function () {
         updateLoginState(false);
@@ -356,7 +360,8 @@ angular.module('kifi')
       hideOrgDomain: hideOrgDomain,
       isAdmin: isAdmin,
       isFakeUser: isFakeUser,
-      hasExperiment: hasExperiment
+      hasExperiment: hasExperiment,
+      shouldBeWindingDown: shouldBeWindingDown
     };
   }
 ]);

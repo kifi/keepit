@@ -3,9 +3,9 @@
 angular.module('kifi')
 
 .directive('kfQuickKeep', [
-  'util', 'keepActionService', 'installService', 'libraryService',
+  'util', 'keepActionService', 'installService', 'libraryService', 'profileService',
   'modalService', '$rootScope', 'LIB_PERMISSION',
-  function (util, keepActionService, installService, libraryService,
+  function (util, keepActionService, installService, libraryService, profileService,
             modalService, $rootScope, LIB_PERMISSION) {
     return {
       restrict: 'A',
@@ -23,30 +23,38 @@ angular.module('kifi')
         };
 
         scope.doQuickKeep = function () {
-          var url = (scope.quickKeep.url) || '';
-          scope.quickKeep.quickCheck = true;
-          libraryService.trackEvent('user_clicked_page', scope.library, { action: 'clickedQuickKeep' });
-          url = sanitizeUrl(url);
-          if (url && util.validateUrl(url)) {
-            keepUrls([url]);
+          if (profileService.shouldBeWindingDown()) {
+            modalService.showWindingDownModal();
           } else {
-            scope.quickKeep.invalidUrl = true;
+            var url = (scope.quickKeep.url) || '';
+            scope.quickKeep.quickCheck = true;
+            libraryService.trackEvent('user_clicked_page', scope.library, { action: 'clickedQuickKeep' });
+            url = sanitizeUrl(url);
+            if (url && util.validateUrl(url)) {
+              keepUrls([url]);
+            } else {
+              scope.quickKeep.invalidUrl = true;
+            }
           }
         };
 
         scope.doQuickKeeps = function () {
-          var urls = scope.quickKeep.urls.split('\n');
-          var sanitized = urls.map(sanitizeUrl).filter(function (e) { return e.length > 1; });
-          var validated = sanitized.filter(util.validateUrl);
-          var invalid = sanitized.filter(function (a) { return !util.validateUrl(a); });
-          keepUrls(validated);
-          var modalScope = scope.$new();
-          modalScope.numKeepsProcessed = validated.length;
-          modalScope.invalid = invalid;
-          modalService.open({
-            template: 'libraries/quickKeepsConfirmModal.tpl.html',
-            scope: modalScope
-          });
+          if (profileService.shouldBeWindingDown()) {
+            modalService.showWindingDownModal();
+          } else {
+            var urls = scope.quickKeep.urls.split('\n');
+            var sanitized = urls.map(sanitizeUrl).filter(function (e) { return e.length > 1; });
+            var validated = sanitized.filter(util.validateUrl);
+            var invalid = sanitized.filter(function (a) { return !util.validateUrl(a); });
+            keepUrls(validated);
+            var modalScope = scope.$new();
+            modalScope.numKeepsProcessed = validated.length;
+            modalScope.invalid = invalid;
+            modalService.open({
+              template: 'libraries/quickKeepsConfirmModal.tpl.html',
+              scope: modalScope
+            });
+          }
         };
 
         function keepUrls(urls) {

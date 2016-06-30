@@ -48,6 +48,12 @@ angular.module('kifi')
     }
 
     $scope.createOrg = function() {
+
+      if (profileService.shouldBeWindingDown()) {
+        modalService.showWindingDownModal();
+        return;
+      }
+
       if (!this.orgName) {
         $scope.$error = { message: 'Please enter a name for your team' };
         return;

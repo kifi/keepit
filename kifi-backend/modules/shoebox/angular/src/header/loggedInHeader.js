@@ -39,6 +39,16 @@ angular.module('kifi')
 
     $scope.showMobileInterstitial = (mobileOS === 'iOS' || mobileOS === 'Android');
 
+    $scope.maybeShowWindingDown = function(event) {
+      event.preventDefault();
+      if (profileService.shouldBeWindingDown()) {
+        modalService.showWindingDownModal();
+        return true;
+      } else {
+        return false;
+      }
+    };
+
     //
     // Watchers & Listeners
     //

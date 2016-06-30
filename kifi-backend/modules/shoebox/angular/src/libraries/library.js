@@ -381,33 +381,36 @@ angular.module('kifi')
     };
 
     $scope.processSlackRequest = function() {
-      libraryService.trackEvent('user_clicked_page', $scope.library, { type: 'slack', action: 'clicked_slack_button'});
-      // queue random logic
-      if (!$rootScope.userLoggedIn) {
-        // handle user needs to log in
-        signupService.register({ libraryId: $scope.library.id, libAuthToken: $stateParams.authToken, intent: 'follow' });
-      } else if (profileService.me && profileService.me.orgs.length > 0) {
+      if (profileService.shouldBeWindingDown()) {
+        modalService.showWindingDownModal();
+      } else {
+        libraryService.trackEvent('user_clicked_page', $scope.library, { type: 'slack', action: 'clicked_slack_button'});
+        // queue random logic
+        if (!$rootScope.userLoggedIn) {
+          // handle user needs to log in
+          signupService.register({ libraryId: $scope.library.id, libAuthToken: $stateParams.authToken, intent: 'follow' });
+        } else if (profileService.me && profileService.me.orgs.length > 0) {
 
-        if ((library.permissions || []).indexOf('create_slack_integration') !== -1) {
-          if (library.slack && library.slack.integrations && library.slack.integrations.length > 0) {
-            $scope.openSlackIntegrations();
+          if ((library.permissions || []).indexOf('create_slack_integration') !== -1) {
+            if (library.slack && library.slack.integrations && library.slack.integrations.length > 0) {
+              $scope.openSlackIntegrations();
+            } else {
+              $scope.addChannel();
+            }
           } else {
-            $scope.addChannel();
+            // show ask for more info modal
+            modalService.open({
+              template: 'libraries/modals/librarySlackNoSlackIntegrationPermissionFoundModal.tpl.html',
+              scope: $scope
+            });
           }
         } else {
-          // show ask for more info modal
           modalService.open({
-            template: 'libraries/modals/librarySlackNoSlackIntegrationPermissionFoundModal.tpl.html',
+            template: 'libraries/modals/librarySlackCreateTeamNeededModal.tpl.html',
             scope: $scope
           });
         }
-      } else {
-        modalService.open({
-          template: 'libraries/modals/librarySlackCreateTeamNeededModal.tpl.html',
-          scope: $scope
-        });
       }
-
     };
 
     // query param handling
