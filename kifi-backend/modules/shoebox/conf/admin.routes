@@ -71,6 +71,7 @@ GET     /admin/users                @com.keepit.controllers.admin.AdminUserContr
 GET     /admin/users/message        @com.keepit.controllers.admin.AdminUserController.bulkMessageUsers()
 POST    /admin/users/announceToAllUsers  @com.keepit.controllers.admin.AdminUserController.announceToAllUsers()
 POST    /admin/users/reNormalizedUsername        @com.keepit.controllers.admin.AdminUserController.reNormalizedUsername(readOnly: Boolean ?= true, max: Int ?= 10)
+POST    /admin/users/sendWindDownSlackDM  @com.keepit.controllers.admin.AdminUserController.sendWindDownSlackDM()
 GET     /admin/realUsers            @com.keepit.controllers.admin.AdminUserController.allRegisteredUsersView
 GET     /admin/fakeUsers            @com.keepit.controllers.admin.AdminUserController.allFakeUsersView
 POST    /admin/users/merge          @com.keepit.controllers.admin.AdminUserController.merge
