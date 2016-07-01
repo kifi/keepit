@@ -33,7 +33,6 @@ class EventTrackingController @Inject() (
     libraryViewTrackingCommander: LibraryViewTrackingCommander,
     shoeboxClient: ShoeboxServiceClient,
     mixpanelClient: MixpanelClient,
-    amplitudeClient: AmplitudeClient,
     airbrake: AirbrakeNotifier,
     eventContextHelper: EventContextHelper,
     slackTeamInfoCache: InternalSlackTeamInfoCache,
@@ -60,11 +59,6 @@ class EventTrackingController @Inject() (
       mixpanelClient.track(event)
     } catch {
       case t: Throwable => airbrake.notify(s"error tracking event $event to mixpanel", t)
-    }
-    try {
-      amplitudeClient.track(event)
-    } catch {
-      case t: Throwable => airbrake.notify(s"error tracking event $event to amplitude", t)
     }
   }
 

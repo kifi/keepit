@@ -171,7 +171,6 @@ class HeimdalContextBuilder extends Logging {
     addRemoteAddress(IpAddress.fromRequest(request).ip)
     addUserAgent(request.headers.get("User-Agent").getOrElse(""))
     addKifiClientAndVersion(request)
-    addDistinctId(request)
 
     request match {
       case userRequest: UserRequest[_] =>
@@ -180,22 +179,6 @@ class HeimdalContextBuilder extends Logging {
         addExperiments(userRequest.experiments)
         Try(SocialNetworkType(userRequest.identityId.get.providerId)).foreach { socialNetwork => this += ("identityProvider", socialNetwork.toString) }
       case _ =>
-    }
-  }
-
-  def addDistinctId(request: RequestHeader): Unit = {
-    request.cookies.get("amplitude_idkifi.com").foreach { cookie =>
-      try {
-        val json = new String(DatatypeConverter.parseBase64Binary(cookie.value), "UTF-8")
-        val amplitudeCookieData = Json.parse(json)
-        amplitudeCookieData \ "deviceId" match {
-          case JsString(value) => this += ("distinct_id", value)
-          case _ =>
-        }
-      } catch {
-        // don't let these exceptions bubble up, but still log them
-        case t: Throwable => log.warn(s"HeimdalContextBuilder.addDistinctid(): amplitude_idkifi.com cookie is invalid: ${cookie.value}")
-      }
     }
   }
 

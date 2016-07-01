@@ -17,7 +17,7 @@ import views.html
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future, Promise }
 
-class AnalyticsController @Inject() (mixpanelClient: MixpanelClient, amplitudeClient: AmplitudeClient)
+class AnalyticsController @Inject() (mixpanelClient: MixpanelClient)
     extends HeimdalServiceController {
 
   def deleteUser(userId: Id[User]) = Action.async { request =>
@@ -28,7 +28,6 @@ class AnalyticsController @Inject() (mixpanelClient: MixpanelClient, amplitudeCl
     }
   }
 
-  // an amplitude equivalent of this doesn't, exist; use setUserProperties instead
   def incrementUserProperties(userId: Id[User]) = Action.async { request =>
     val increments = request.body.asJson.get.as[JsObject].value.mapValues(_.as[Double]).toMap
     SafeFuture {
@@ -41,7 +40,6 @@ class AnalyticsController @Inject() (mixpanelClient: MixpanelClient, amplitudeCl
     val properties = Json.fromJson[HeimdalContext](request.body.asJson.get).get
     SafeFuture {
       mixpanelClient.setUserProperties(userId, properties)
-      amplitudeClient.setUserProperties(userId, properties)
       Ok
     }
   }
@@ -49,7 +47,6 @@ class AnalyticsController @Inject() (mixpanelClient: MixpanelClient, amplitudeCl
   def setUserAlias(userId: Id[User], externalId: ExternalId[User]) = Action.async { request =>
     SafeFuture {
       mixpanelClient.alias(userId, externalId)
-      amplitudeClient.alias(userId, externalId)
       Ok
     }
   }

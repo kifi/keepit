@@ -31,10 +31,6 @@
   var identifiedViewEventQueue = [];
   var userId;
 
-  // used for sanity check against user id; the pattern matches UUID (very
-  // loose match) and mixpanel's distinct_id (which is a 54 characters)
-  var distinctIdRegex = /^[a-z0-9\-]{36,54}$/;
-
   var locations = {
     homeFeed: /^\/$/,  // TODO: this is now recommendations!
     yourFriends: /^\/connections$/,
@@ -43,7 +39,7 @@
   };
 
   function isAnalyticsEnabled() {
-    return $window.amplitude || $window.mixpanel;
+    return $window.mixpanel;
   }
 
   function trackEventThroughProxy(event, properties)  {
@@ -57,25 +53,6 @@
 
   function trackEventDirectly(action, props) {
     if ($window.mixpanel) { $window.mixpanel.track(action, props); }
-    if ($window.amplitude) {
-      // filter out events we don't care about (this may duplicate some
-      // server-side logic for events sent to the proxy)
-      if (!_.str.startsWith($window.navigator.userAgent, 'Pingdom')) {
-
-        // translates Object keys to snake_case from camelCase
-        var snakeCaseProps = _.mapKeys(props, function(value, key) {
-          var newKey = key.replace(/([A-Z])/g, function($1) { return '_' + $1.toLowerCase(); });
-          if (newKey[0] === '_' && key[0] !== '_') {
-            // ignore leading underscore if the original key didn't have one
-            return newKey.slice(1);
-          } else {
-            return newKey;
-          }
-        });
-
-        $window.amplitude.logEvent(action, snakeCaseProps);
-      }
-    }
   }
 
   function trackPage(path, attributes) {
@@ -113,14 +90,6 @@
   function setUserId(userId) {
     if ($window.mixpanel) {
       $window.mixpanel.identify(userId);
-    }
-
-    // sanity check shouldn't be necessary, but it's to make sure user.id is
-    // valid and doesn't accidentally get set to a value that's not unique
-    // across users
-    if ($window.amplitude && userId && distinctIdRegex.test(userId)) {
-      // does not call amplitude.setUserId because this id is internal only and will not be known here
-      $window.amplitude.setDeviceId(userId);
     }
   }
 
@@ -225,15 +194,10 @@
   }
 
   function getAgentProperties() {
-    var amplitude = $window.amplitude;
-    var ua = amplitude && amplitude._ua;
-
-    // since most of these properties depend on the amplitude SDK, additional
-    // checks are made to ensure we're not referencing undefined/null objects
     return {
-      os_name: ua && ua.browser && ua.browser.name || null,
-      os_version: ua && ua.browser && ua.browser.major || null,
-      device_model: ua && ua.os && ua.os.name || null
+      os_name: null,
+      os_version: null,
+      device_model: null
     };
   }
 

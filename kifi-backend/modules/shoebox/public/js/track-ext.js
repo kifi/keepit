@@ -1,11 +1,10 @@
-/* global mixpanel,amplitude */
+/* global mixpanel */
 (function (win) {
 	'use strict';
 
 	var $ = win.jQuery,
 		document = win.document,
-		$html = $('html'),
-		amplitude = win.amplitude;
+		$html = $('html');
 
 	var registerProperties = $html.data('trackRegister');
 	// jQuery will parse the string into a JS Object if it's valid JSON
@@ -53,9 +52,6 @@
 		initUserCalled = true;
 
 		var distinctId = mixpanel.get_distinct_id();
-		if (amplitude && distinctId) {
-			amplitude.setDeviceId(distinctId);
-		}
 	}
 
 	function getClickEventName() {
@@ -98,8 +94,7 @@
 	var initUserCalled = false;
 
 	// it's possible this function is called before mixpanel is done initializing. window.mixpanel is initially an
-	// array before the javascript file is downloaded, but we don't want to record any events until
-	// mixpanel is initialized and we've set the amplitude deviceId to mixpanel distinct_id property
+	// array before the javascript file is downloaded, but we don't want to record any events until mixpanel is initialized
 	function track(name, data) {
 		eventQueue.push({name: name, data: data});
 		return processEventQueue();
@@ -112,12 +107,6 @@
 			eventQueue.forEach(function(event) {
 				var properties = addDefaultValues(event.data);
 				mixpanel.track(event.name, properties);
-
-				if (amplitude) {
-					// amplitude doesn't have an equivalent to mixpanel.register so we need to add these super properties to each event
-					properties = addRegisteredProperties(properties);
-					amplitude.logEvent(event.name, properties);
-				}
 			});
 
 			eventQueue.length = 0;
