@@ -275,21 +275,6 @@ angular.module('kifi')
       }
     }
 
-    function postDelightedAnswer(score, comment, answerId) {
-      var data = {
-        score: score || undefined,
-        comment: comment || undefined,
-        answerId: answerId || undefined
-      };
-      return $http.post(routeService.postDelightedAnswer, data).then(function (res) {
-        return res.data && res.data.answerId;
-      });
-    }
-
-    function cancelDelightedSurvey() {
-      return $http.post(routeService.cancelDelightedSurvey, {});
-    }
-
     function closeAccountRequest(data) {
       return $http.post(routeService.userCloseAccount, data);
     }
@@ -350,8 +335,6 @@ angular.module('kifi')
       successInputActionResult: successInputActionResult,
       getEmailValidationError: getEmailValidationError,
       sendChangePassword: sendChangePassword,
-      postDelightedAnswer: postDelightedAnswer,
-      cancelDelightedSurvey: cancelDelightedSurvey,
       closeAccountRequest: closeAccountRequest,
       hideOrgDomain: hideOrgDomain,
       isAdmin: isAdmin,

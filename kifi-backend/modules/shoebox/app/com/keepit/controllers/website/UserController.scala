@@ -16,7 +16,6 @@ import com.keepit.common.store.{ ImageCropAttributes, S3ImageStore }
 import com.keepit.common.time._
 import com.keepit.controllers.core.NetworkInfoLoader
 import com.keepit.eliza.ElizaServiceClient
-import com.keepit.heimdal.{ BasicDelightedAnswer, DelightedAnswerSources }
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import com.keepit.notify.model.Recipient
@@ -329,7 +328,6 @@ class UserController @Inject() (
     import UserValueName._
     Set(
       AUTO_SHOW_GUIDE,
-      SHOW_DELIGHTED_QUESTION,
       HAS_NO_PASSWORD,
       USE_MINIMAL_KEEP_CARD,
       HAS_SEEN_FTUE,
@@ -518,22 +516,9 @@ class UserController @Inject() (
     Ok(Json.obj("state" -> buzzState))
   }
 
-  def postDelightedAnswer = UserAction.async(parse.tolerantJson) { request =>
-    implicit val source = DelightedAnswerSources.fromUserAgent(request.userAgentOpt)
-    Json.fromJson[BasicDelightedAnswer](request.body) map { answer =>
-      userCommander.postDelightedAnswer(request.userId, answer) map { externalIdOpt =>
-        externalIdOpt map { externalId =>
-          Ok(Json.obj("answerId" -> externalId))
-        } getOrElse NotFound
-      }
-    } getOrElse Future.successful(BadRequest)
-  }
+  def postDelightedAnswer = UserAction { request => Ok }
 
-  def cancelDelightedSurvey = UserAction.async { implicit request =>
-    userCommander.cancelDelightedSurvey(request.userId) map { success =>
-      if (success) Ok else BadRequest
-    }
-  }
+  def cancelDelightedSurvey = UserAction { implicit request => Ok }
 
   def getSettings() = UserAction { request =>
     val storedBody = db.readOnlyMaster { implicit s =>

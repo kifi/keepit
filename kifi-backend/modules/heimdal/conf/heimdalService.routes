@@ -10,10 +10,6 @@ POST /internal/heimdal/user/set                        @com.keepit.controllers.A
 POST /internal/heimdal/user/increment                  @com.keepit.controllers.AnalyticsController.incrementUserProperties(userId: Id[User])
 GET  /internal/heimdal/user/alias                      @com.keepit.controllers.AnalyticsController.setUserAlias(userId: Id[User], externalId: ExternalId[User])
 
-GET  /internal/heimdal/user/delighted/time             @com.keepit.controllers.DelightedController.getUserLastInteractedDate(userId: Id[User])
-POST /internal/heimdal/user/delighted/answer           @com.keepit.controllers.DelightedController.postDelightedAnswer()
-POST /internal/heimdal/user/delighted/cancel           @com.keepit.controllers.DelightedController.cancelDelightedSurvey()
-
 GET  /internal/heimdal/data/keepDiscovery/page/:page   @com.keepit.controllers.KeepDiscoveryController.page(page:Int, size:Int)
 GET  /internal/heimdal/data/keepDiscovery/count        @com.keepit.controllers.KeepDiscoveryController.count
 GET  /internal/heimdal/data/keepDiscovery/getUriDiscoveriesWithCountsByKeeper   @com.keepit.controllers.KeepDiscoveryController.getUriDiscoveriesWithCountsByKeeper(userId: Id[User])

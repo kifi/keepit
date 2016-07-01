@@ -27,7 +27,6 @@ trait HeimdalServices { self: FortyTwoGlobal =>
     require(injector.instance[HealthcheckPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[FortyTwoCachePlugin] != null) //make sure its not lazy loaded
     require(injector.instance[InMemoryCachePlugin] != null) //make sure its not lazy loaded
-    require(injector.instance[DelightedPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[ReKeepStatsUpdaterPlugin] != null) //make sure its not lazy loaded
   }
 }

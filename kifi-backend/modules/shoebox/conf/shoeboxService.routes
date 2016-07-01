@@ -697,7 +697,6 @@ GET     /internal/shoebox/database/userSegment                                 @
 GET     /internal/shoebox/database/extensionVersion                            @com.keepit.controllers.internal.ShoeboxController.getExtensionVersion(installationId: ExternalId[KifiInstallation])
 POST    /internal/shoebox/database/triggerRawKeepImport                        @com.keepit.controllers.internal.ShoeboxController.triggerRawKeepImport()
 POST    /internal/shoebox/database/triggerSocialGraphFetch                     @com.keepit.controllers.internal.ShoeboxController.triggerSocialGraphFetch(id: Id[SocialUserInfo])
-GET     /internal/shoebox/database/getLapsedUsersForDelighted                  @com.keepit.controllers.internal.ShoeboxController.getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime] ?= None)
 
 GET      /internal/shoebox/emailSenderTest                 @com.keepit.controllers.internal.EmailTestController.testEmailSender(name: String)
 

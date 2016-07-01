@@ -89,8 +89,6 @@ angular.module('kifi')
       },
       exportPersonalKeeps: route('/keeps/personalExport'),
       exportOrganizationKeeps: route('/keeps/organizationExport'),
-      postDelightedAnswer: route('/user/delighted/answer'),
-      cancelDelightedSurvey: route('/user/delighted/cancel'),
       userCloseAccount: route('/user/close'),
       basicUserInfo: function (id, friendCount) {
         return route('/user/' + id, {friendCount: friendCount ? 1 : []});

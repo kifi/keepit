@@ -14,7 +14,6 @@ import com.keepit.common.store.ImagePath
 import com.keepit.common.time._
 import com.keepit.common.util.DollarAmount
 import com.keepit.cortex.models.lda.LDATopic
-import com.keepit.heimdal.DelightedAnswerSource
 import com.keepit.model._
 import java.sql.{ Clob, Timestamp }
 import com.keepit.notify.model.event.NotificationEvent
@@ -88,7 +87,6 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   implicit val orgExperimentTypeMapper = MappedColumnType.base[OrganizationExperimentType, String](_.value, OrganizationExperimentType.apply)
   implicit val hitUUIDTypeMapper = MappedColumnType.base[ExternalId[ArticleSearchResult], String](_.id, ExternalId[ArticleSearchResult])
   implicit val uriImageSourceTypeMapper = MappedColumnType.base[ImageFormat, String](_.value, ImageFormat.apply)
-  implicit val delightedAnswerSourceTypeMapper = MappedColumnType.base[DelightedAnswerSource, String](_.value, DelightedAnswerSource.apply)
   implicit val libraryVisibilityTypeMapper = MappedColumnType.base[LibraryVisibility, String](_.value, LibraryVisibility.apply)
   implicit val librarySlugTypeMapper = MappedColumnType.base[LibrarySlug, String](_.value, LibrarySlug.apply)
   implicit val libraryAccessTypeMapper = MappedColumnType.base[LibraryAccess, String](_.value, LibraryAccess.apply)

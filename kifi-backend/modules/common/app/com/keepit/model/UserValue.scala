@@ -83,7 +83,6 @@ object UserValueName {
   val USE_MINIMAL_KEEP_CARD = UserValueName("use_minimal_keep_card")
   val AUTO_SHOW_GUIDE = UserValueName("auto_show_guide")
   val HAS_NO_PASSWORD = UserValueName("has_no_password")
-  val SHOW_DELIGHTED_QUESTION = UserValueName("show_delighted_question")
   val HAS_SEEN_FTUE = UserValueName("has_seen_ftue")
   val STORED_CREDIT_CODE = UserValueName("stored_credit_code")
   val SLACK_INT_PROMO = UserValueName("slack_int_promo")
@@ -181,7 +180,6 @@ object UserValues {
   val hasSeenInstall = UserValueBooleanHandler(UserValueName.HAS_SEEN_INSTALL, false)
   val welcomeEmailSent = UserValueBooleanHandler(UserValueName.WELCOME_EMAIL_SENT, false)
 
-  val showDelightedQuestion = UserValueBooleanHandler(UserValueName.SHOW_DELIGHTED_QUESTION, false)
   val lastActive = UserValueDateTimeHandler(UserValueName.LAST_ACTIVE, START_OF_TIME)
 
   val tagOrdering = UserValueJsValueHandler(UserValueName.USER_COLLECTION_ORDERING, JsArray())

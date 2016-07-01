@@ -12,7 +12,6 @@ case class HeimdalProdModule() extends HeimdalModule(
   cacheModule = HeimdalCacheModule(MemcachedCacheModule(), EhCacheCacheModule()),
   analyticsModule = ProdAnalyticsModule(),
   heimdalQueueModule = HeimdalQueueProdModule(),
-  rekeepStatsUpdaterModule = ProdReKeepStatsUpdaterModule(),
-  delightedModule = ProdDelightedModule()
+  rekeepStatsUpdaterModule = ProdReKeepStatsUpdaterModule()
 ) with CommonProdModule
 

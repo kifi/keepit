@@ -137,7 +137,6 @@ object Shoebox extends Service {
     def getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getEmailAccountUpdates", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getKeepsAndTagsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getCrossServiceKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getCrossServiceKeepsAndTagsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
-    def getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime]) = ServiceRoute(GET, "/internal/shoebox/database/getLapsedUsersForDelighted", Param("maxCount", maxCount), Param("skipCount", skipCount), Param("after", after), Param("before", before))
     def getAllFakeUsers() = ServiceRoute(GET, "/internal/shoebox/database/getAllFakeUsers")
     def getInvitations(senderId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getInvitations", Param("senderId", senderId))
     def getSocialConnections(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getSocialConnections", Param("userId", userId))
@@ -292,9 +291,6 @@ object Heimdal extends Service {
     def incrementUserProperties(userId: Id[User]) = ServiceRoute(POST, s"/internal/heimdal/user/increment", Param("userId", userId))
     def setUserProperties(userId: Id[User]) = ServiceRoute(POST, s"/internal/heimdal/user/set", Param("userId", userId))
     def setUserAlias(userId: Id[User], externalId: ExternalId[User]) = ServiceRoute(GET, "/internal/heimdal/user/alias", Param("userId", userId), Param("externalId", externalId))
-    def getLastDelightedAnswerDate(userId: Id[User]) = ServiceRoute(GET, s"/internal/heimdal/user/delighted/time", Param("userId", userId))
-    def postDelightedAnswer() = ServiceRoute(POST, s"/internal/heimdal/user/delighted/answer")
-    def cancelDelightedSurvey() = ServiceRoute(POST, s"/internal/heimdal/user/delighted/cancel")
 
     def getPagedKeepDiscoveries(page: Int, size: Int) = ServiceRoute(GET, s"/internal/heimdal/data/keepDiscovery/page/$page", Param("size", size))
     def getDiscoveryCount() = ServiceRoute(GET, "/internal/heimdal/data/keepDiscovery/count")

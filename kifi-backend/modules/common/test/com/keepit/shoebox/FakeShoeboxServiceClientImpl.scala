@@ -585,8 +585,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   }
   def getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int): Future[Seq[KeepAndTags]] = Future.successful(Seq.empty)
 
-  def getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime]): Future[Seq[DelightedUserRegistrationInfo]] = Future.successful(Seq.empty)
-
   def getAllFakeUsers(): Future[Set[Id[User]]] = Future.successful(Set.empty)
 
   def getInvitations(senderId: Id[User]): Future[Seq[Invitation]] = Future.successful(Seq.empty)

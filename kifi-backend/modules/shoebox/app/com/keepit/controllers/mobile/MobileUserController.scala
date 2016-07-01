@@ -7,7 +7,6 @@ import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail.{ EmailAddress, SystemEmailAddress, ElectronicMail, LocalPostOffice }
 import com.keepit.common.store.S3ImageStore
-import com.keepit.heimdal.{ DelightedAnswerSources, BasicDelightedAnswer }
 import com.keepit.model._
 import com.keepit.commanders._
 import com.keepit.social.BasicUser
@@ -193,22 +192,9 @@ class MobileUserController @Inject() (
     Ok(Json.toJson(users))
   }
 
-  def postDelightedAnswer = UserAction.async(parse.tolerantJson) { request =>
-    implicit val source = DelightedAnswerSources.fromUserAgent(request.userAgentOpt)
-    Json.fromJson[BasicDelightedAnswer](request.body) map { answer =>
-      userCommander.postDelightedAnswer(request.userId, answer) map { externalIdOpt =>
-        externalIdOpt map { externalId =>
-          Ok(Json.obj("answerId" -> externalId))
-        } getOrElse NotFound
-      }
-    } getOrElse Future.successful(BadRequest)
-  }
+  def postDelightedAnswer = UserAction { request => Ok }
 
-  def cancelDelightedSurvey = UserAction.async { implicit request =>
-    userCommander.cancelDelightedSurvey(request.userId) map { success =>
-      if (success) Ok else BadRequest
-    }
-  }
+  def cancelDelightedSurvey = UserAction { implicit request => Ok }
 
   def disconnect(networkString: String) = UserAction { implicit request =>
     val (suiOpt, code) = userConnectionsCommander.disconnect(request.userId, networkString)
@@ -245,7 +231,7 @@ class MobileUserController @Inject() (
     }
   }
 
-  private val MobilePrefNames = Set(UserValueName.SHOW_DELIGHTED_QUESTION)
+  private val MobilePrefNames: Set[UserValueName] = Set()
 
   def getPrefs() = UserAction { request =>
     // Make sure the user's last active date has been updated before returning the result

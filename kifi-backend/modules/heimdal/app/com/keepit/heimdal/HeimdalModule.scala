@@ -20,8 +20,7 @@ abstract class HeimdalModule(
     val cacheModule: CacheModule,
     val analyticsModule: AnalyticsModule,
     val heimdalQueueModule: HeimdalQueueModule,
-    val rekeepStatsUpdaterModule: ReKeepStatsUpdaterModule,
-    val delightedModule: DelightedModule) extends ConfigurationModule with CommonServiceModule {
+    val rekeepStatsUpdaterModule: ReKeepStatsUpdaterModule) extends ConfigurationModule with CommonServiceModule {
   // Service clients
   val serviceTypeModule = HeimdalServiceTypeModule()
   val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()

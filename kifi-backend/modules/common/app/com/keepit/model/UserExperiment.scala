@@ -58,7 +58,6 @@ object UserExperimentType {
   val SHOW_HIT_SCORES = UserExperimentType("show_hit_scores")
   val SHOW_DISCUSSIONS = UserExperimentType("show_discussions")
   val MOBILE_REDIRECT = UserExperimentType("mobile_redirect")
-  val DELIGHTED_SURVEY_PERMANENT = UserExperimentType("permanent_delighted_survey")
   val SPECIAL_CURATOR = UserExperimentType("special_curator")
   val GRAPH_BASED_PEOPLE_TO_INVITE = UserExperimentType("graph_based_people_to_invite")
   val CORTEX_NEW_MODEL = UserExperimentType("cortex_new_model")
@@ -90,7 +89,7 @@ object UserExperimentType {
 
   val _ALL = ADMIN :: AUTO_GEN :: FAKE :: BYPASS_ABUSE_CHECKS :: VISITED :: NO_SEARCH_EXPERIMENTS ::
     DEMO :: EXTENSION_LOGGING :: SHOW_HIT_SCORES :: SHOW_DISCUSSIONS ::
-    MOBILE_REDIRECT :: DELIGHTED_SURVEY_PERMANENT :: SPECIAL_CURATOR ::
+    MOBILE_REDIRECT :: SPECIAL_CURATOR ::
     GRAPH_BASED_PEOPLE_TO_INVITE :: CORTEX_NEW_MODEL :: CURATOR_DIVERSE_TOPIC_RECOS ::
     ACTIVITY_EMAIL :: EXPLICIT_SOCIAL_POSTING :: RELATED_PAGE_INFO :: NEXT_GEN_RECOS ::
     RECO_FASTLANE :: RECO_SUBSAMPLE :: APPLY_RECO_FEEDBACK :: PLAIN_EMAIL :: SEARCH_LAB ::

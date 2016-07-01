@@ -75,12 +75,6 @@ class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def setUserAlias(userId: Id[User], externalId: ExternalId[User]) = {}
 
-  def getLastDelightedAnswerDate(userId: Id[User]): Future[Option[DateTime]] = Future.successful(None)
-
-  def postDelightedAnswer(userRegistrationInfo: DelightedUserRegistrationInfo, answer: BasicDelightedAnswer): Future[Option[BasicDelightedAnswer]] = Future.successful(None)
-
-  def cancelDelightedSurvey(userRegistrationInfo: DelightedUserRegistrationInfo): Future[Boolean] = Future.successful(true)
-
   def getKeepAttributionInfo(userId: Id[User]): Future[UserKeepAttributionInfo] = Future.successful(UserKeepAttributionInfo(userId, 0, 0, 0, 0, 0))
 
   def getHelpRankInfos(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[HelpRankInfo]] = Future.successful {

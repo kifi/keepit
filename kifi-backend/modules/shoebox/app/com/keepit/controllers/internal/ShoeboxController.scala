@@ -404,17 +404,6 @@ class ShoeboxController @Inject() (
     }
   }
 
-  def getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime]) = Action { request =>
-    val userInfos = db.readOnlyMaster { implicit session =>
-      userRepo.getUsers(userValueRepo.getLastActive(after, before, maxCount, skipCount)) map {
-        case (userId, user) =>
-          val emailAddress = Try(emailAddressRepo.getByUser(userId)).toOption
-          DelightedUserRegistrationInfo(userId, user.externalId, emailAddress, user.fullName)
-      }
-    }
-    Ok(Json.toJson(userInfos))
-  }
-
   def getAllFakeUsers() = Action { request =>
     Ok(Json.toJson(userCommander.getAllFakeUsers()))
   }

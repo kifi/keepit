@@ -149,8 +149,6 @@ trait UserCommander {
   def getPrefs(prefSet: Set[UserValueName], userId: Id[User], experiments: Set[UserExperimentType]): JsObject
   def savePrefs(userId: Id[User], o: Map[UserValueName, JsValue]): Unit
   def setLastUserActive(userId: Id[User]): Unit
-  def postDelightedAnswer(userId: Id[User], answer: BasicDelightedAnswer): Future[Option[ExternalId[DelightedAnswer]]]
-  def cancelDelightedSurvey(userId: Id[User]): Future[Boolean]
   def setUsername(userId: Id[User], username: Username, overrideValidityCheck: Boolean = false, overrideProtection: Boolean = false): Either[String, Username]
   def getFriendRecommendations(userId: Id[User], offset: Int, limit: Int): Future[Option[FriendRecommendations]]
   def loadBasicUsersAndConnectionCounts(idsForUsers: Set[Id[User]], idsForCounts: Set[Id[User]]): (Map[Id[User], BasicUser], Map[Id[User], Int])
@@ -533,39 +531,10 @@ class UserCommanderImpl @Inject() (
   }
 
   def getPrefs(prefSet: Set[UserValueName], userId: Id[User], experiments: Set[UserExperimentType]): JsObject = {
-    updatePrefs(prefSet, userId, experiments)
-
     val staticPrefs = readUserValuePrefs(prefSet, userId)
     val missing = prefSet.diff(staticPrefs.keySet)
     val allPrefs = (staticPrefs ++ generateDynamicPrefs(missing, userId)).map(r => r._1.name -> r._2)
     JsObject(allPrefs.toSeq)
-  }
-
-  private def getPrefUpdates(prefSet: Set[UserValueName], userId: Id[User], experiments: Set[UserExperimentType]): Future[Map[UserValueName, JsValue]] = {
-    if (prefSet.contains(UserValueName.SHOW_DELIGHTED_QUESTION)) {
-      // Check if user should be shown Delighted question
-      val user = db.readOnlyMaster { implicit s =>
-        userRepo.get(userId)
-      }
-      val time = clock.now()
-      val shouldShowDelightedQuestionFut = if (experiments.contains(UserExperimentType.DELIGHTED_SURVEY_PERMANENT)) {
-        Future.successful(true)
-      } else if (time.minusDays(DELIGHTED_INITIAL_DELAY) > user.createdAt) {
-        heimdalClient.getLastDelightedAnswerDate(userId).map { lastDelightedAnswerDate =>
-          val minDate = lastDelightedAnswerDate getOrElse START_OF_TIME
-          time.minusDays(DELIGHTED_MIN_INTERVAL) > minDate
-        }.recover {
-          case ex: Throwable =>
-            airbrake.notify(s"Heimdal call to get delighted pref failed for $userId", ex)
-            false
-        }
-      } else {
-        Future.successful(false)
-      }
-      shouldShowDelightedQuestionFut map { shouldShowDelightedQuestion =>
-        Map(UserValueName.SHOW_DELIGHTED_QUESTION -> JsBoolean(shouldShowDelightedQuestion))
-      }
-    } else Future.successful(Map())
   }
 
   private def readUserValuePrefs(prefSet: Set[UserValueName], userId: Id[User]): Map[UserValueName, JsValue] = {
@@ -594,14 +563,6 @@ class UserCommanderImpl @Inject() (
     }
   }
 
-  private def updatePrefs(prefSet: Set[UserValueName], userId: Id[User], experiments: Set[UserExperimentType]) = {
-    getPrefUpdates(prefSet, userId, experiments) map { updates =>
-      savePrefs(userId, updates)
-    } recover {
-      case t: Throwable => airbrake.notify(s"Error updating prefs for user $userId", t)
-    }
-  }
-
   def savePrefs(userId: Id[User], o: Map[UserValueName, JsValue]): Unit = {
     db.readWrite(attempts = 3) { implicit s =>
       o.map {
@@ -614,30 +575,11 @@ class UserCommanderImpl @Inject() (
     ()
   }
 
-  val DELIGHTED_MIN_INTERVAL = 90 // days
-  val DELIGHTED_INITIAL_DELAY = 28 // days
-
   def setLastUserActive(userId: Id[User]): Unit = {
     val time = clock.now
     db.readWrite(attempts = 3) { implicit s =>
       userValueRepo.setValue(userId, UserValueName.LAST_ACTIVE, time)
     }
-  }
-
-  def postDelightedAnswer(userId: Id[User], answer: BasicDelightedAnswer): Future[Option[ExternalId[DelightedAnswer]]] = {
-    val (user, emailAddress) = db.readOnlyReplica { implicit s =>
-      (userRepo.get(userId), Try(emailRepo.getByUser(userId)).toOption)
-    }
-    heimdalClient.postDelightedAnswer(DelightedUserRegistrationInfo(userId, user.externalId, emailAddress, user.fullName), answer) map { answerOpt =>
-      answerOpt flatMap (_.answerId)
-    }
-  }
-
-  def cancelDelightedSurvey(userId: Id[User]): Future[Boolean] = {
-    val (user, emailAddress) = db.readOnlyReplica { implicit s =>
-      (userRepo.get(userId), Try(emailRepo.getByUser(userId)).toOption)
-    }
-    heimdalClient.cancelDelightedSurvey(DelightedUserRegistrationInfo(userId, user.externalId, emailAddress, user.fullName))
   }
 
   def setUsername(userId: Id[User], username: Username, overrideValidityCheck: Boolean = false, overrideProtection: Boolean = false): Either[String, Username] = {

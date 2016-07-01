@@ -144,23 +144,19 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         db.readOnlyMaster(s => inject[InvitationRepo].aTonOfRecords()(s))
         val path = routes.UserController.savePrefs().url
 
-        val inputJson1 = Json.obj("show_delighted_question" -> false)
+        val inputJson1 = Json.obj("auto_show_guide" -> false)
         val request1 = FakeRequest("POST", path).withBody(inputJson1)
         val result1: Future[Result] = userController.savePrefs()(request1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
         Json.parse(contentAsString(result1)) === inputJson1
 
-        db.readOnlyMaster { implicit s =>
-          inject[UserValueRepo].getValue(user.id.get, UserValues.showDelightedQuestion) === false
-        }
-
         val request2 = FakeRequest("GET", path)
         val result2: Future[Result] = userController.getPrefs()(request2)
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
         val expected = Json.obj(
-          "show_delighted_question" -> false)
+          "auto_show_guide" -> false)
 
         def subsetOf(json1: JsObject, json2: JsObject): Boolean = {
           json1.fieldSet.map {
