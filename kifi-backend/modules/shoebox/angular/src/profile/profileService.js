@@ -322,6 +322,10 @@ angular.module('kifi')
       return me.experiments && me.experiments.indexOf(experiment) > -1;
     }
 
+    function updateLastSeenAnnouncement() {
+      return net.updateLastSeenAnnouncement();
+    }
+
     return {
       initLoggedOut: function () {
         updateLoginState(false);
@@ -356,7 +360,8 @@ angular.module('kifi')
       hideOrgDomain: hideOrgDomain,
       isAdmin: isAdmin,
       isFakeUser: isFakeUser,
-      hasExperiment: hasExperiment
+      hasExperiment: hasExperiment,
+      updateLastSeenAnnouncement: updateLastSeenAnnouncement
     };
   }
 ]);

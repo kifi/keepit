@@ -110,6 +110,9 @@ object UserValueName {
   val FULL_EXPORT_LOCATION = UserValueName("full_export_location")
   val FULL_EXPORT_DOWNLOAD_COUNT = UserValueName("full_export_download_count")
 
+  val LAST_SEEN_ANNOUNCEMENT = UserValueName("last_seen_announcement")
+  val SHOW_ANNOUNCEMENT = UserValueName("show_announcement")
+
   // Please use lower_underscore_case for new value names (and not lowerCamelCase)
 
   def bookmarkImportContextName(newImportId: String) = UserValueName(s"bookmark_import_${newImportId}_context")
@@ -202,4 +205,6 @@ object UserValues {
   val hideEmailDomainOrganizations = UserValueJsValueHandler(UserValueName.HIDE_EMAIL_DOMAIN_ORGANIZATIONS, default = JsArray())
 
   val pendingOrgDomainOwnershipByEmail = UserValueJsValueHandler(UserValueName.PENDING_ORG_DOMAIN_OWNERSHIP_BY_EMAIL, default = Json.obj())
+
+  val lastSeenAnnouncement = UserValueDateTimeHandler(UserValueName.LAST_SEEN_ANNOUNCEMENT, START_OF_TIME)
 }

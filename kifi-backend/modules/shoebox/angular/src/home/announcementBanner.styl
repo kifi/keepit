@@ -1,0 +1,57 @@
+.kf-announcement-wrap
+  max-height: 200px
+  overflow: hidden
+  flex: 1 100%
+  margin: 0 10%
+
+  &.ng-leave
+    transition: opacity .4s, max-height .4s
+
+  &.ng-leave-active
+    max-height: 0
+    opacity: 0
+
+  @media (max-width: 759px)
+    display: none
+
+.kf-announcement-title
+  padding: 8px 28px // make sure the title doesn't underlap the cancel button
+  font-size: 18px
+
+.kf-announcement-body
+  background-color: #fff
+  border-radius: 0 0 10px 10px
+  border: defaultBorder
+  border-top: none
+  text-align: center
+  position: relative
+  padding-bottom: 15px
+
+.kf-announcement-export-btn
+  padding: 5px
+  background-color: libraryGreen
+  color: #fff
+  border: none
+  border-radius: 6px
+  font-size: 14px
+  font-weight: 300
+  font-smoothing: antialiased
+  cursor: pointer
+  transition: background-color .1s
+
+  &:focus
+  &:hover
+    background-color: alpha(libraryGreen, .8)
+
+  &.dialog-cancel
+    background-color: #ccc
+    &:hover
+      background-color: #d6d6d6
+    &:active
+      background-color: #ccc
+
+.kf-announcement-cancel
+  position: absolute
+  top: 10px
+  right: 10px
+  cursor: pointer

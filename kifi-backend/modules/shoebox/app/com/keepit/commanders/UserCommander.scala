@@ -22,9 +22,11 @@ import com.keepit.common.store.S3ImageStore
 import com.keepit.common.time._
 import com.keepit.common.usersegment.{ UserSegment, UserSegmentFactory }
 import com.keepit.eliza.{ UserPushNotificationCategory, PushNotificationExperiment, ElizaServiceClient }
+import com.keepit.export.FullExportRequestRepo
 import com.keepit.graph.GraphServiceClient
 import com.keepit.heimdal.{ ContextStringData, HeimdalServiceClient, _ }
 import com.keepit.model.UserValueName._
+import com.keepit.model.UserValues.{ UserValueDateTimeHandler, UserValueBooleanHandler }
 import com.keepit.model._
 import com.keepit.notify.model.Recipient
 import com.keepit.notify.model.event.SocialContactJoined
@@ -200,6 +202,7 @@ class UserCommanderImpl @Inject() (
     slackTeamMembershipRepo: SlackTeamMembershipRepo,
     slackTeamRepo: SlackTeamRepo,
     slackInfoCommander: SlackInfoCommander,
+    exportRequestRepo: FullExportRequestRepo,
     airbrake: AirbrakeNotifier) extends UserCommander with Logging { self =>
 
   def userFromUsername(username: Username): Option[User] = db.readOnlyReplica { implicit session =>
@@ -590,6 +593,21 @@ class UserCommanderImpl @Inject() (
           def hasAnOrg = orgIds.nonEmpty
           def hasIntegrations = slackTeamRepo.getByOrganizationIds(orgIds).nonEmpty || slackTeamMembershipRepo.getByUserId(userId).nonEmpty
           pref -> JsBoolean(hasAnOrg && !hasIntegrations)
+        case SHOW_ANNOUNCEMENT =>
+          val showAnnouncement = {
+            val announcementMade = {
+              val experiments = userExperimentRepo.getUserExperiments(userId)
+              UserExperimentType.getBuzzState(experiments).isDefined
+            }
+            val hasExported = exportRequestRepo.getByUser(userId).isDefined
+            val hasntSeenInLastWeek = {
+              val lastSeen = userValueRepo.getValue(userId, UserValueDateTimeHandler(LAST_SEEN_ANNOUNCEMENT, default = START_OF_TIME))
+              lastSeen.plusDays(7) < currentDateTime
+            }
+            announcementMade && !hasExported && hasntSeenInLastWeek
+          }
+
+          SHOW_ANNOUNCEMENT -> JsBoolean(showAnnouncement)
       }.toMap
     }
   }

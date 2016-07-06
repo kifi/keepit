@@ -23,6 +23,7 @@ import com.keepit.notify.model.Recipient
 import com.keepit.notify.model.event.NewConnectionInvite
 import com.keepit.social.BasicUser
 import com.keepit.common.core._
+import org.joda.time.DateTime
 
 import play.api.data.Form
 import play.api.data.Forms._
@@ -340,7 +341,8 @@ class UserController @Inject() (
       SLACK_UPSELL_WIDGET,
       SHOW_SLACK_CREATE_TEAM_POPUP,
       HIDE_EXTENSION_UPSELL,
-      TWITTER_SYNC_PROMO
+      TWITTER_SYNC_PROMO,
+      SHOW_ANNOUNCEMENT
     )
   }
 
@@ -513,9 +515,17 @@ class UserController @Inject() (
       db.readOnlyMaster(implicit s => userExperimentRepo.getUserExperiments(uid))
     }.getOrElse(Set.empty[UserExperimentType])
 
-    val buzzState = UserExperimentType.getBuzzState(experiments)
+    val buzzState = UserExperimentType.getBuzzState(experiments).map(_.value).getOrElse("")
 
     Ok(Json.obj("state" -> buzzState))
+  }
+
+  def updateLastSeenAnnouncement() = UserAction { implicit request =>
+    db.readWriteAsync { implicit s =>
+      userValueRepo.setValue[DateTime](request.userId, UserValueName.LAST_SEEN_ANNOUNCEMENT, currentDateTime)
+    }
+
+    NoContent
   }
 
   def postDelightedAnswer = UserAction.async(parse.tolerantJson) { request =>
