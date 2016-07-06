@@ -36,10 +36,13 @@ object ServiceType {
       val capabilities = instance.capabilities
       if (capabilities.contains(ServiceStatus.OFFLINE.name)) ServiceStatus.OFFLINE else ServiceStatus.UP
     }
-    override val minInstances = 2
-    override val warnInstances = 3
+    override val minInstances = 1
+    override val warnInstances = 2
   }
-  case object ELIZA extends ServiceType("ELIZA", "EZ")
+  case object ELIZA extends ServiceType("ELIZA", "EZ") {
+    override val minInstances = 1
+    override val warnInstances = 2
+  }
   case object HEIMDAL extends ServiceType("HEIMDAL", "HD", loadFactor = 2)
   case object ABOOK extends ServiceType("ABOOK", "AB", loadFactor = 2)
   case object DEV_MODE extends ServiceType("DEV_MODE", "DM")
@@ -59,6 +62,8 @@ object ServiceType {
       val capabilities = instance.capabilities
       if (capabilities.contains("backup")) ServiceStatus.BACKING_UP else ServiceStatus.UP
     }
+    override val minInstances = 0
+    override val warnInstances = 0
   }
 
   case object C_SHOEBOX extends ServiceType("C_SHOEBOX", "C_SB", loadFactor = 1, true) {
@@ -66,7 +71,10 @@ object ServiceType {
     override val warnInstances = 0
   }
 
-  case object CORTEX extends ServiceType("CORTEX", "CT", loadFactor = 5)
+  case object CORTEX extends ServiceType("CORTEX", "CT", loadFactor = 5) {
+    override val minInstances = 0
+    override val warnInstances = 0
+  }
 
   case object ROVER extends ServiceType("ROVER", "RO", loadFactor = 5)
 
