@@ -41,6 +41,7 @@ class FullExportProcessingActor @Inject() (
   implicit val executionContext: ExecutionContext,
   implicit val inhouseSlackClient: InhouseSlackClient)
     extends FortyTwoActor(airbrake) with ConcurrentTaskProcessingActor[Id[FullExportRequest]] {
+
   import FullExportProcessingConfig._
 
   val slackLog = new SlackLog(InhouseSlackChannel.TEST_RYAN)
@@ -69,7 +70,7 @@ class FullExportProcessingActor @Inject() (
   private def doExport(id: Id[FullExportRequest]): Future[Unit] = {
     slackLog.info(s"Processing export request $id")
     val request = db.readOnlyMaster { implicit s => exportRequestRepo.get(id) }
-    val enum = exportCommander.fullExport(request.userId) |> exportFormatter.assignments
+    val enum = exportCommander.fullExport(request.userId)
     val user = db.readOnlyMaster { implicit s => userRepo.get(request.userId) }
     val exportBase = s"${user.fullName.words.mkString("-")}-kifi-export"
     val exportFile = new File(exportBase + ".zip")
@@ -80,7 +81,7 @@ class FullExportProcessingActor @Inject() (
       zip.putNextEntry(new ZipEntry(s"$exportBase/export.js"))
       (Set.empty[String], zip)
     }
-    enum.run(Iteratee.fold(init) {
+    exportFormatter.assignments(enum).run(Iteratee.fold(init) {
       case ((existingEntities, zip), (entity, contents)) =>
         if (!existingEntities.contains(entity)) {
           zip.write {
@@ -88,7 +89,14 @@ class FullExportProcessingActor @Inject() (
           }
         }
         (existingEntities + entity, zip)
-    }).andThen {
+    }).flatMap {
+      case (entries, zip) =>
+        zip.closeEntry()
+        zip.putNextEntry(new ZipEntry(s"$exportBase/NetscapeBookmarkFormattedExport.html"))
+        (enum.looseKeeps andThen enum.spaces.flatMap(_.libraries.flatMap(_.keeps))).run(Iteratee.foreach { k =>
+          zip.write("foo\n".getBytes("UTF-8"))
+        }).map(_ => (entries, zip))
+    }.andThen {
       case Failure(fail) =>
         slackLog.error(s"[${clock.now}] Failed while writing user ${request.userId}'s export: ${fail.getMessage}")
         db.readWrite { implicit s => exportRequestRepo.markAsFailed(request.id.get, fail.getMessage) }
@@ -107,5 +115,6 @@ class FullExportProcessingActor @Inject() (
         }
     }.map(_ => ())
   }
+}
 }
 
