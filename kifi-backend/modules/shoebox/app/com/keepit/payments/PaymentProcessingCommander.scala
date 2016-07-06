@@ -70,23 +70,24 @@ class PaymentProcessingCommanderImpl @Inject() (
   private val processingLock = new ReactiveLock(1)
 
   def processDuePayments(): Future[Unit] = processingLock.withLockFuture {
-    val relevantAccounts = db.readOnlyMaster { implicit session => paidAccountRepo.getPayable(MAX_BALANCE) }
-    if (relevantAccounts.nonEmpty) {
-      inhouseSlackClient.sendToSlack(InhouseSlackChannel.BILLING_ALERTS, SlackMessageRequest.inhouse(DescriptionElements("Processing payments for", relevantAccounts.length, "accounts.")))
-      FutureHelpers.foldLeft(relevantAccounts)(0) {
-        case (processed, account) =>
-          processAccount(account).imap(_ => processed + 1) recover {
-            case e: Exception => {
-              val message = s"Fatal error processing organization ${account.orgId}"
-              log.error(message, e)
-              airbrake.notify(message, e)
-              processed
-            }
-          }
-      } imap { processed =>
-        inhouseSlackClient.sendToSlack(InhouseSlackChannel.BILLING_ALERTS, SlackMessageRequest.inhouse(DescriptionElements(s"Processed $processed/${relevantAccounts.length} due payments.")))
-      }
-    } else Future.successful(())
+//    val relevantAccounts = Seq.empty//db.readOnlyMaster { implicit session => paidAccountRepo.getPayable(MAX_BALANCE) }
+//    if (relevantAccounts.nonEmpty) {
+//      inhouseSlackClient.sendToSlack(InhouseSlackChannel.BILLING_ALERTS, SlackMessageRequest.inhouse(DescriptionElements("Processing payments for", relevantAccounts.length, "accounts.")))
+//      FutureHelpers.foldLeft(relevantAccounts)(0) {
+//        case (processed, account) =>
+//          processAccount(account).imap(_ => processed + 1) recover {
+//            case e: Exception => {
+//              val message = s"Fatal error processing organization ${account.orgId}"
+//              log.error(message, e)
+//              airbrake.notify(message, e)
+//              processed
+//            }
+//          }
+//      } imap { processed =>
+//        inhouseSlackClient.sendToSlack(InhouseSlackChannel.BILLING_ALERTS, SlackMessageRequest.inhouse(DescriptionElements(s"Processed $processed/${relevantAccounts.length} due payments.")))
+//      }
+//    } else
+    Future.successful(())
   }
 
   def processAccount(orgId: Id[Organization]): Future[(PaidAccount, AccountEvent)] = {
@@ -99,7 +100,8 @@ class PaymentProcessingCommanderImpl @Inject() (
       log.info(s"[PPC][${account.orgId}] Starting Processing")
       if (!account.frozen) {
         if (account.owed > MIN_BALANCE) {
-          chargeAccount(account, account.owed)
+          //chargeAccount(account, account.owed)
+          Future.successful(ignoreLowBalance(account))
         } else {
           Future.successful(ignoreLowBalance(account))
         }
@@ -111,7 +113,8 @@ class PaymentProcessingCommanderImpl @Inject() (
     accountLockHelper.maybeWithAccountLockAsync(orgId) {
       val account = db.readOnlyMaster { implicit session => paidAccountRepo.getByOrgId(orgId) }
       if (!account.frozen) {
-        chargeAccount(account, amount)
+        //chargeAccount(account, amount)
+        Future.failed(FrozenAccountException(orgId))
       } else {
         Future.failed(FrozenAccountException(orgId))
       }

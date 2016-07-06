@@ -17,10 +17,14 @@ class UserCreationCommander @Inject() (
     searchClient: SearchServiceClient,
     libraryCommander: LibraryCommander,
     libraryMembershipCommander: LibraryMembershipCommander,
+    systemValueRepo: SystemValueRepo,
     implicit val executionContext: ExecutionContext) {
 
   def createUser(firstName: String, lastName: String, state: State[User]): User = {
     val newUser: User = db.readWrite(attempts = 3) { implicit session =>
+      if (systemValueRepo.ripKifi()) {
+        throw new Exception("Registrations closed.")
+      }
       val user = userRepo.save(User(firstName = firstName, lastName = lastName, state = state))
       val userWithUsername = handleCommander.autoSetUsername(user) getOrElse {
         throw new Exception(s"COULD NOT CREATE USER [$firstName $lastName] SINCE WE DIDN'T FIND A USERNAME!!!")

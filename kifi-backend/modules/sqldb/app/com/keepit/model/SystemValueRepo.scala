@@ -19,6 +19,8 @@ trait SystemValueRepo extends Repo[SystemValue] {
   def getSequenceNumber[T](name: Name[SequenceNumber[T]])(implicit session: RSession): Option[SequenceNumber[T]]
   def setSequenceNumber[T](name: Name[SequenceNumber[T]], seq: SequenceNumber[T])(implicit session: RWSession): Unit
 
+  def ripKifi()(implicit session: RSession): Boolean
+
   //Need to find a better home for this.
   def getDbConnectionStats()(implicit session: RSession): Map[String, Int]
 }
@@ -74,6 +76,10 @@ class SystemValueRepoImpl @Inject() (
   def getDbConnectionStats()(implicit session: RSession): Map[String, Int] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     sql"SELECT LEFT(host, (LOCATE(':', host) -1)) hostname, count(host) AS connections FROM information_schema.processlist GROUP BY hostname order by connections;".as[(String, Int)].list.toMap
+  }
+
+  def ripKifi()(implicit session: RSession): Boolean = {
+    scala.util.Try(getValue(Name[SystemValue]("rip_kifi")).nonEmpty).getOrElse(false)
   }
 
   private def toSystemValueName[T](name: Name[SequenceNumber[T]]): Name[SystemValue] = Name(name.name + "_sequence")
