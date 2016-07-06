@@ -50,15 +50,15 @@ class EmailConfirmationCron @Inject() (
 
   // plugin lifecycle methods
   override def enabled: Boolean = true
-  override def onStart() {
+  override def onStart() { //kill
     // computes UTC hour for current 9am ET (EDT or EST)
-    val nowET = currentDateTime(zones.ET)
-    val offsetMillisToUtc = zones.ET.getOffset(nowET)
-    val offsetHoursToUtc = offsetMillisToUtc / 1000 / 60 / 60
-    val utcHourFor9amEasternTime = 9 + -offsetHoursToUtc
-
-    // <sec> <min> <hr> <day of mo> <mo> <day of wk> <yr>
-    val cronTime = s"0 0 $utcHourFor9amEasternTime ? * *" // 1pm UTC - send every Tuesday at 9am EDT / 6am PDT
-    cronTaskOnLeader(quartz, actor.ref, cronTime, SendEmailConfirmation)
+    //    val nowET = currentDateTime(zones.ET)
+    //    val offsetMillisToUtc = zones.ET.getOffset(nowET)
+    //    val offsetHoursToUtc = offsetMillisToUtc / 1000 / 60 / 60
+    //    val utcHourFor9amEasternTime = 9 + -offsetHoursToUtc
+    //
+    //    // <sec> <min> <hr> <day of mo> <mo> <day of wk> <yr>
+    //    val cronTime = s"0 0 $utcHourFor9amEasternTime ? * *" // 1pm UTC - send every Tuesday at 9am EDT / 6am PDT
+    //    cronTaskOnLeader(quartz, actor.ref, cronTime, SendEmailConfirmation)
   }
 }

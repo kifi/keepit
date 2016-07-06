@@ -92,7 +92,7 @@ class EmailAccountUpdaterPlugin @Inject() (
     val scheduling: SchedulingProperties) extends SchedulerPlugin {
   import EmailAccountUpdaterActorMessage._
 
-  override def onStart() {
-    scheduleTaskOnOneMachine(actor.system, 2 minutes, 5 minutes, actor.ref, FetchEmailUpdates(100), FetchEmailUpdates.getClass.getSimpleName)
+  override def onStart() { //kill
+    //   scheduleTaskOnOneMachine(actor.system, 2 minutes, 5 minutes, actor.ref, FetchEmailUpdates(100), FetchEmailUpdates.getClass.getSimpleName)
   }
 }

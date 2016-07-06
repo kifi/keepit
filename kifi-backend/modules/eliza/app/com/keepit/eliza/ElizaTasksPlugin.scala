@@ -23,7 +23,7 @@ class ElizaTasksPlugin @Inject() (
     messageByMessageIntegrityActor -> 1.minutes
   )
 
-  override def onStart() {
+  override def onStart() { //keep me alive!
     log.info("ElizaTasksPlugin onStart")
     taskActors.zipWithIndex.foreach {
       case ((actor, freq), idx) =>

@@ -40,8 +40,8 @@ class ForkJoinExecContextPluginImpl @Inject() (
     val scheduling: SchedulingProperties) extends ForkJoinExecContextPlugin with SchedulerPlugin with Logging {
 
   override def enabled: Boolean = true
-  override def onStart() {
+  override def onStart() { //keep me alive!
     log.info(s"[onStart] starting ForkJoinExecContextPluginImpl")
-    scheduleTaskOnAllMachines(actor.system, 45 seconds, 5 seconds, actor.ref, CheckFJContext)
+    scheduleTaskOnAllMachines(actor.system, 45 seconds, 5 minutes, actor.ref, CheckFJContext)
   }
 }

@@ -44,7 +44,7 @@ class LoadBalancerCheckPluginImpl @Inject() (
     extends LoadBalancerCheckPlugin with SchedulerPlugin with Logging {
 
   override def enabled: Boolean = true
-  override def onStart() {
-    scheduleTaskOnAllMachines(actor.system, 0 seconds, 2 minutes, actor.ref, CheckLoadBalancer)
+  override def onStart() { //keep me alive!
+    scheduleTaskOnAllMachines(actor.system, 0 seconds, 30 minutes, actor.ref, CheckLoadBalancer)
   }
 }
