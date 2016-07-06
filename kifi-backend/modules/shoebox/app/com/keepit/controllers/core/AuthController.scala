@@ -135,6 +135,7 @@ class AuthController @Inject() (
     userIdentityHelper: UserIdentityHelper,
     pathCommander: PathCommander,
     airbrake: AirbrakeNotifier,
+    systemValueRepo: SystemValueRepo,
     implicit val slackAnalytics: SlackAnalytics,
     implicit val secureSocialClientIds: SecureSocialClientIds,
     implicit val publicIdConfig: PublicIdConfiguration,
@@ -506,7 +507,8 @@ class AuthController @Inject() (
             }
           } else {
             temporaryReportSignupLoad()(requestNonUser)
-            Ok(views.html.authMinimal.signup())
+            val kifiClosed = db.readOnlyMaster(3) { implicit s => systemValueRepo.ripKifi() }
+            Ok(views.html.authMinimal.signup(kifiClosed))
           }
 
       }
