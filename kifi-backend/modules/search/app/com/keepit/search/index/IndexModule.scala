@@ -38,7 +38,7 @@ trait IndexModule extends ScalaModule with Logging {
       FileUtils.forceMkdir(tempDir)
       tempDir.deleteOnExit()
       val indexDirectory = new ArchivedIndexDirectory(dir, tempDir, indexStore)
-      if (!dir.exists()) {
+      if (!dir.exists() || dir.list.isEmpty) {
         try {
           val t1 = currentDateTime.getMillis
           indexDirectory.restoreFromBackup()
