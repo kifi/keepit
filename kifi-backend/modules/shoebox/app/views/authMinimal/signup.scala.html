@@ -22,38 +22,10 @@
 }
 @content = {
   <div class="page">
-    @if(!kifiClosed) {
-      <h1 class="login-h1">Create your Kifi account</h1>
-      <div id="center_container">
-        <div class="left">
-          <h3>Use a social network</h3>
-          <a href="/signup/slack" class="auth_button slack" data-track-action="clickedAuthSlack"><span class="fb"><i class="icon-slack"></i></span><span class="slacktext">Slack</span></a>
-          <a href="/signup/twitter" class="auth_button twitter" data-track-action="clickedAuthTwitter"><span class="twitter"><i class="icon-twitter"></i></span><span class="twittertext">Twitter</span></a>
-          <a href="/signup/facebook" class="auth_button facebook" data-track-action="clickedAuthFacebook"><span class="fb"><i class="icon-facebook"></i></span><span class="fbtext">Facebook</span></a>
-        </div>
-        <div class="right border-left">
-          <h3>Use your email address</h3>
-          <form class="signup-form signup-email-pass" method="POST" action="@authRoutes.userPasswordSignup">
-            <div class="input-wrapper">
-              <input type="email" name="email" class="form-input signup-email" placeholder="Your email address">
-              <div id="login-email" class="error"></div>
-            </div>
-            <div class="input-wrapper">
-              <input type="password" name="password" class="form-input signup-password" placeholder="Your password">
-              <div id="login-password" class="error"></div>
-            </div>
-            <button id="login-btn" class="btn-authentication btn-login" type="submit" data-track-action="clickedsignUpButton">
-              <span class="progress"></span>
-              <span class="text">Sign up</span>
-            </button>
-          </form>
-        </div>
-      </div>
-    } else {
-      <div id="center_container">
-        <h3>Signups closed</h3>
-      </div>
-    }
+    <h1 class="login-h1">Signups are closed.</h1>
+    <div id="center_container">
+      <h3>The Kifi team is joining Google. We have closed all new registrations. If you have an existing Kifi account, you may <a href="/login">log in here</a>. The Kifi service will remain fully functional for existing users until August 22nd, 2016. Learn more.</h3>
+    </div>
   </div>
 }
 @scripts = {
