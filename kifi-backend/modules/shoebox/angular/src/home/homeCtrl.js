@@ -25,14 +25,12 @@ angular.module('kifi')
       messageTicker({ text: text, type: 'red', delay: 5000 });
     }
 
-    $scope.showDelightedSurvey = profileService.prefs.show_delighted_question;
 
-    $scope.$on('$destroy', $rootScope.$on('prefsChanged', function () {
-      $scope.showDelightedSurvey = profileService.prefs.show_delighted_question;
-    }));
+    $scope.showAnnouncement = false && profileService.prefs.show_announcement;
 
-    $scope.hideDelightedSurvey = function () {
-      $scope.showDelightedSurvey = false;
+    $scope.hideAnnouncement = function() {
+      $scope.showAnnouncement = false;
+      profileService.updateLastSeenAnnouncement();
     };
 
     if ($stateParams.openImportModal === 'importBookmarks') {
