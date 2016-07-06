@@ -116,5 +116,3 @@ class FullExportProcessingActor @Inject() (
     }.map(_ => ())
   }
 }
-}
-
