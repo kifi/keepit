@@ -110,14 +110,6 @@ object UserExperimentType {
     else "standard"
   }
 
-  def getBuzzState(experiments: Set[UserExperimentType]): Option[UserExperimentType] = {
-    val SYSTEM_DEFAULT = None
-
-    if (experiments.contains(SYSTEM_EXPORT_ONLY)) Some(SYSTEM_EXPORT_ONLY)
-    else if (experiments.contains(ANNOUNCED_WIND_DOWN)) Some(ANNOUNCED_WIND_DOWN)
-    else SYSTEM_DEFAULT
-  }
-
   private val kifiDomains = Set("kifi.com", "42go.com")
   private val testDomains = Set("tfbnw.net", "mailinator.com", "kyfy.com") // tfbnw.net is for fake facebook accounts
   private val tagRe = """(?<=\+)[^@+]*(?=(?:\+|$))""".r

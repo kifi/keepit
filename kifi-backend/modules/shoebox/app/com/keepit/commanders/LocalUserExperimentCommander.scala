@@ -57,4 +57,18 @@ class LocalUserExperimentCommander @Inject() (
     density: ProbabilityDensity[UserExperimentType],
     salt: Option[String] = None,
     condition: Option[UserExperimentType] = None): ProbabilisticExperimentGenerator = db.readWrite { implicit session => generatorRepo.internByName(name, density, salt, condition) }
+
+  def getBuzzState(userId: Option[Id[User]]): Option[UserExperimentType] = {
+    val experiments = userId.map { uid =>
+      db.readOnlyMaster(implicit s => userExperimentRepo.getUserExperiments(uid))
+    }.getOrElse(Set.empty)
+    val highestPriorityExperiment = {
+      val DEFAULT_BUZZ_STATE = None // set this to the system-wide value
+      import UserExperimentType._
+      if (experiments.contains(SYSTEM_EXPORT_ONLY)) Some(SYSTEM_EXPORT_ONLY)
+      else if (experiments.contains(ANNOUNCED_WIND_DOWN)) Some(ANNOUNCED_WIND_DOWN)
+      else DEFAULT_BUZZ_STATE
+    }
+    highestPriorityExperiment
+  }
 }

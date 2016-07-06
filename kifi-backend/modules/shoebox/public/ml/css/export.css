@@ -1,0 +1,108 @@
+#header_bar, #footer {
+  position: relative;
+}
+
+h1.export-h1 {
+  text-transform: uppercase;
+  text-align: center;
+  position: relative;
+}
+
+h3.export-h3 {
+  text-align: center;
+  position: relative;
+}
+
+.export-container {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  padding: 20px 30px;
+  border: 1px solid #EBEAEA;
+  border-radius: 25px;
+  margin: auto;
+  box-sizing: border-box;
+  box-shadow: 0px 3px 5px rgba(235,235,235,0.5);
+  max-width: 600px;
+}
+
+.export-container-header {
+  margin: 0px;
+  margin-bottom: 15px;
+  text-align: center;
+  font-size: 18px;
+}
+
+li {
+  display: list-item;
+  list-style: initial;
+}
+
+.export-container-cta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.export-cta-btn {
+  display: block;
+  color: white;
+  border: 0px solid black;
+  border-radius: 4px;
+  padding: 8px;
+  margin-bottom: 5px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.export-cta-btn:hover {
+  opacity: .75;
+}
+
+.export-submit-btn, .export-download-btn, .export-resubmit-btn {
+  background: #41c482;
+}
+
+.export-download-btn, .export-resubmit-form, .export-resubmit-btn {
+  display: inline;
+}
+
+.export-download-btn:hover {
+  color: white;
+}
+
+.export-progress-btn {
+  background: #909090;
+  color: white;
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 5px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.export-download-timestamp {
+  display: block;
+}
+
+.export-download-btn + .export-resubmit-form {
+  margin-left: 20px;
+}
+
+.export-download-timestamp {
+  margin-top: 5px;
+}
+
+.export-footer-txt {
+  position: relative;
+  margin: 20px auto;
+  text-align: center;
+}
+
+.export-footer {
+  display: none;
+}
+
+.green-txt {
+  color: #56b263;
+}

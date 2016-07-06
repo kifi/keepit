@@ -8,6 +8,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.model.User
 import org.joda.time.DateTime
+import org.joda.time.format.DateTimeFormat
 
 final case class FullExportRequest(
   id: Option[Id[FullExportRequest]] = None,
@@ -35,6 +36,13 @@ object FullExportStatus {
   case class InProgress(startedAt: DateTime) extends FullExportStatus
   case class Failed(startedAt: DateTime, failedAt: DateTime, message: String) extends FullExportStatus
   case class Finished(startedAt: DateTime, finishedAt: DateTime, uploadLocation: String) extends FullExportStatus
+
+  def finishedAtPrettyString(status: FullExportStatus.Finished): String = {
+    val format = DateTimeFormat.forPattern("d/M/yyyy 'at' h:mm")
+    val finishedAt = status.finishedAt.toDateTime(zones.PT)
+    val isAm = finishedAt.hourOfDay().get < 12
+    s"${finishedAt.toString(format)} ${if (isAm) "AM" else "PM"} PDT"
+  }
 }
 
 @ImplementedBy(classOf[FullExportRequestRepoImpl])

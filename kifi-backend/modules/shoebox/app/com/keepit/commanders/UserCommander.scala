@@ -194,6 +194,7 @@ class UserCommanderImpl @Inject() (
     welcomeEmailSender: Provider[WelcomeEmailSender],
     contactJoinedEmailSender: Provider[ContactJoinedEmailSender],
     userExperimentRepo: UserExperimentRepo,
+    userExperimentCommander: LocalUserExperimentCommander,
     allFakeUsersCache: AllFakeUsersCache,
     kifiInstallationCommander: KifiInstallationCommander,
     kifiInstallationRepo: KifiInstallationRepo,
@@ -595,10 +596,7 @@ class UserCommanderImpl @Inject() (
           pref -> JsBoolean(hasAnOrg && !hasIntegrations)
         case SHOW_ANNOUNCEMENT =>
           val showAnnouncement = {
-            val announcementMade = {
-              val experiments = userExperimentRepo.getUserExperiments(userId)
-              UserExperimentType.getBuzzState(experiments).isDefined
-            }
+            val announcementMade = userExperimentCommander.getBuzzState(Some(userId)).isDefined
             val hasExported = exportRequestRepo.getByUser(userId).isDefined
             val hasntSeenInLastWeek = {
               val lastSeen = userValueRepo.getValue(userId, UserValueDateTimeHandler(LAST_SEEN_ANNOUNCEMENT, default = START_OF_TIME))

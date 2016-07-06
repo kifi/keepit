@@ -511,12 +511,7 @@ class UserController @Inject() (
   }
 
   def getBuzzState(userId: Option[Long]) = MaybeUserAction { implicit request =>
-    val experiments = userId.map(Id[User]).orElse(request.userIdOpt).map { uid =>
-      db.readOnlyMaster(implicit s => userExperimentRepo.getUserExperiments(uid))
-    }.getOrElse(Set.empty[UserExperimentType])
-
-    val buzzState = UserExperimentType.getBuzzState(experiments).map(_.value).getOrElse("")
-
+    val buzzState = userExperimentCommander.getBuzzState(userId.map(Id[User])).map(_.value).getOrElse("")
     Ok(Json.obj("state" -> buzzState))
   }
 
