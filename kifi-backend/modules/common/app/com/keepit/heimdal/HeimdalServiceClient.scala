@@ -10,7 +10,7 @@ import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.common.actor.{ FlushEventQueueAndClose, BatchingActor, BatchingActorConfiguration, ActorInstance }
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
-import com.keepit.common.time.Clock
+import com.keepit.common.time._
 
 import scala.concurrent.{ Future, Await }
 import scala.concurrent.duration._
@@ -87,66 +87,71 @@ class HeimdalServiceClientImpl @Inject() (
   val shortTimeout = CallTimeouts(responseTimeout = Some(1000), maxWaitTime = Some(1000), maxJsonParseTime = Some(1000))
 
   override def onStop() {
-    val res = actor.ref ? FlushEventQueueAndClose
-    Await.result(res, Duration(5, SECONDS))
+    //    val res = actor.ref ? FlushEventQueueAndClose
+    //    Await.result(res, Duration(5, SECONDS))
     super.onStop()
   }
 
   def trackEvent(event: HeimdalEvent): Unit = {
-    actor.ref ! event
+    //actor.ref ! event
   }
 
-  def deleteUser(userId: Id[User]): Unit = call(Heimdal.internal.deleteUser(userId))
+  def deleteUser(userId: Id[User]): Unit = () //call(Heimdal.internal.deleteUser(userId))
 
   def incrementUserProperties(userId: Id[User], increments: (String, Double)*): Unit = {
     val payload = JsObject(increments.map { case (key, amount) => key -> JsNumber(amount) })
-    call(Heimdal.internal.incrementUserProperties(userId), payload)
+    //    call(Heimdal.internal.incrementUserProperties(userId), payload)
+    ()
   }
 
   def setUserProperties(userId: Id[User], properties: (String, ContextData)*): Unit = {
     val payload = JsObject(properties.map { case (key, value) => key -> Json.toJson(value) })
-    call(Heimdal.internal.setUserProperties(userId), payload, callTimeouts = longTimeout)
+    //call(Heimdal.internal.setUserProperties(userId), payload, callTimeouts = longTimeout)
+    ()
   }
 
   def setUserAlias(userId: Id[User], externalId: ExternalId[User]): Unit =
-    call(Heimdal.internal.setUserAlias(userId: Id[User], externalId: ExternalId[User]), callTimeouts = longTimeout)
+    () //call(Heimdal.internal.setUserAlias(userId: Id[User], externalId: ExternalId[User]), callTimeouts = longTimeout)
 
   def getLastDelightedAnswerDate(userId: Id[User]): Future[Option[DateTime]] = {
-    call(Heimdal.internal.getLastDelightedAnswerDate(userId), callTimeouts = shortTimeout).map { response =>
-      Json.parse(response.body).asOpt[DateTime]
-    }
+    //    call(Heimdal.internal.getLastDelightedAnswerDate(userId), callTimeouts = shortTimeout).map { response =>
+    //      Json.parse(response.body).asOpt[DateTime]
+    //    }
+    Future.successful(Some(clock.now))
   }
 
   def postDelightedAnswer(userRegistrationInfo: DelightedUserRegistrationInfo, answer: BasicDelightedAnswer): Future[Option[BasicDelightedAnswer]] = {
-    call(Heimdal.internal.postDelightedAnswer(), Json.obj(
-      "user" -> Json.toJson(userRegistrationInfo),
-      "answer" -> Json.toJson(answer)
-    )).map { response =>
-      val json = Json.parse(response.body)
-      json.asOpt[BasicDelightedAnswer] orElse {
-        (json \ "error").asOpt[String].map { msg =>
-          log.warn(s"Error posting delighted answer $answer for user ${userRegistrationInfo.userId}: $msg")
-        }
-        None
-      }
-    }
+    //    call(Heimdal.internal.postDelightedAnswer(), Json.obj(
+    //      "user" -> Json.toJson(userRegistrationInfo),
+    //      "answer" -> Json.toJson(answer)
+    //    )).map { response =>
+    //      val json = Json.parse(response.body)
+    //      json.asOpt[BasicDelightedAnswer] orElse {
+    //        (json \ "error").asOpt[String].map { msg =>
+    //          log.warn(s"Error posting delighted answer $answer for user ${userRegistrationInfo.userId}: $msg")
+    //        }
+    //        None
+    //      }
+    //    }
+    Future.successful(None)
   }
 
   def cancelDelightedSurvey(userRegistrationInfo: DelightedUserRegistrationInfo): Future[Boolean] = {
-    call(Heimdal.internal.cancelDelightedSurvey(), Json.obj(
-      "user" -> Json.toJson(userRegistrationInfo)
-    )).map { response =>
-      Json.parse(response.body) match {
-        case JsString(s) if s == "success" => true
-        case json =>
-          (json \ "error").asOpt[String].map { msg =>
-            log.warn(s"Error cancelling delighted survey for user ${userRegistrationInfo.userId}: $msg")
-          } getOrElse {
-            log.warn(s"Error cancelling delighted survey for user ${userRegistrationInfo.userId}")
-          }
-          false
-      }
-    }
+    //    call(Heimdal.internal.cancelDelightedSurvey(), Json.obj(
+    //      "user" -> Json.toJson(userRegistrationInfo)
+    //    )).map { response =>
+    //      Json.parse(response.body) match {
+    //        case JsString(s) if s == "success" => true
+    //        case json =>
+    //          (json \ "error").asOpt[String].map { msg =>
+    //            log.warn(s"Error cancelling delighted survey for user ${userRegistrationInfo.userId}: $msg")
+    //          } getOrElse {
+    //            log.warn(s"Error cancelling delighted survey for user ${userRegistrationInfo.userId}")
+    //          }
+    //          false
+    //      }
+    //    }
+    Future.successful(true)
   }
 
 }
