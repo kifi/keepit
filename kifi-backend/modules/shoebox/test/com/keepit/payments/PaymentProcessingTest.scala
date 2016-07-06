@@ -19,6 +19,8 @@ import scala.concurrent.duration.Duration
 
 class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
 
+  args(skipAll = true)
+
   val modules = Seq(
     FakeExecutionContextModule(),
     FakeStripeClientModule()
