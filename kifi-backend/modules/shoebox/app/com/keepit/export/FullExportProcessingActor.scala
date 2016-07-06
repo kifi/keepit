@@ -71,7 +71,7 @@ class FullExportProcessingActor @Inject() (
     val request = db.readOnlyMaster { implicit s => exportRequestRepo.get(id) }
     val enum = exportCommander.fullExport(request.userId) |> exportFormatter.assignments
     val user = db.readOnlyMaster { implicit s => userRepo.get(request.userId) }
-    val exportBase = s"${user.fullName.words.mkString("-")}-kifi-export"
+    val exportBase = s"${user.fullName.words.mkString("-")}-kifi-export-${user.externalId.id}"
     val exportFile = new File(exportBase + ".zip")
     val init = {
       val zip = new ZipOutputStream(new FileOutputStream(exportFile))
