@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.directive('kfPageBottomCta', ['$rootScope', '$window', '$stateParams',
-  function ($rootScope, $window, $stateParams) {
+.directive('kfPageBottomCta', ['$rootScope', '$window',
+  function ($rootScope, $window) {
     return {
       restrict: 'A',
       replace: true,
