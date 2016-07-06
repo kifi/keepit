@@ -47,7 +47,10 @@ object ServiceType {
     override val minInstances = 0
     override val warnInstances = 0
   }
-  case object ABOOK extends ServiceType("ABOOK", "AB", loadFactor = 2)
+  case object ABOOK extends ServiceType("ABOOK", "AB", loadFactor = 2) {
+    override val minInstances = 1
+    override val warnInstances = 1
+  }
   case object DEV_MODE extends ServiceType("DEV_MODE", "DM")
   case object TEST_MODE extends ServiceType("TEST_MODE", "TM")
   case object SEARCH extends ServiceType("SEARCH", "SR") {
@@ -57,7 +60,7 @@ object ServiceType {
     }
 
     override val minInstances = 2
-    override val warnInstances = 4
+    override val warnInstances = 3
   }
 
   case object GRAPH extends ServiceType("GRAPH", "GR", loadFactor = 2) {
@@ -79,7 +82,10 @@ object ServiceType {
     override val warnInstances = 0
   }
 
-  case object ROVER extends ServiceType("ROVER", "RO", loadFactor = 5)
+  case object ROVER extends ServiceType("ROVER", "RO", loadFactor = 5) {
+    override val minInstances = 2
+    override val warnInstances = 3
+  }
 
   // Possible initialization cycle/deadlock when one of the case objects above is first dereferenced before the ServiceType object
   lazy val inProduction: List[ServiceType] = SEARCH :: SHOEBOX :: ELIZA :: HEIMDAL :: ABOOK :: CORTEX :: GRAPH :: ROVER :: Nil
