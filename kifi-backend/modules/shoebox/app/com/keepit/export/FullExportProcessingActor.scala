@@ -74,36 +74,36 @@ class FullExportProcessingActor @Inject() (
     val user = db.readOnlyMaster { implicit s => userRepo.get(request.userId) }
     val exportBase = s"${user.fullName.words.mkString("-")}-kifi-export-${user.externalId.id}"
     val exportFile = new File(exportBase + ".zip")
-    val init = {
+    val zip = {
       val zip = new ZipOutputStream(new FileOutputStream(exportFile))
       zip.putNextEntry(new ZipEntry(s"$exportBase/index.html"))
       zip.write(HackyExportAssets.index.getBytes("UTF-8"))
       zip.putNextEntry(new ZipEntry(s"$exportBase/export.js"))
-      (Set.empty[String], zip)
+      zip
     }
-    exportFormatter.assignments(enum).run(Iteratee.fold(init) {
-      case ((existingEntities, zip), (entity, contents)) =>
+    exportFormatter.assignments(enum).run(Iteratee.fold(Set.empty[String]) {
+      case (existingEntities, (entity, contents)) =>
         if (!existingEntities.contains(entity)) {
           zip.write {
             s"$entity = ${Json.prettyPrint(contents)}\n".getBytes("UTF-8")
           }
         }
-        (existingEntities + entity, zip)
+        existingEntities + entity
     }).flatMap {
-      case (entries, zip) =>
+      case existingEntities =>
         zip.closeEntry()
         zip.putNextEntry(new ZipEntry(s"$exportBase/NetscapeBookmarkFormattedExport.html"))
         (enum.looseKeeps andThen enum.spaces.flatMap(_.libraries.flatMap(_.keeps))).run(Iteratee.foreach { k =>
           zip.write("foo\n".getBytes("UTF-8"))
-        }).map(_ => (entries, zip))
+        }).map(_ => existingEntities)
     }.andThen {
       case Failure(fail) =>
         slackLog.error(s"[${clock.now}] Failed while writing user ${request.userId}'s export: ${fail.getMessage}")
         db.readWrite { implicit s => exportRequestRepo.markAsFailed(request.id.get, fail.getMessage) }
-      case Success((entries, zip)) =>
+      case Success(existingEntities) =>
         zip.closeEntry()
         zip.close()
-        slackLog.info(s"[${clock.now}] Done writing user ${request.userId}'s export to $exportFile (${entries.size} entries), uploading to S3")
+        slackLog.info(s"[${clock.now}] Done writing user ${request.userId}'s export to $exportFile (${existingEntities.size} entities), uploading to S3")
         exportStore.store(exportFile).andThen {
           case Success(yay) =>
             slackLog.info(s"[${clock.now}] Uploaded $exportBase.zip, key = ${yay.getKey}")
