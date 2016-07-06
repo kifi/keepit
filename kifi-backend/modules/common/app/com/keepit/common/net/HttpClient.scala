@@ -21,7 +21,7 @@ import com.keepit.common.controller.{ MidFlightRequests, CommonHeaders }
 import com.keepit.common.zookeeper.ServiceDiscovery
 import scala.xml._
 import play.mvc.Http.Status
-import com.keepit.common.service.{RequestConsolidator, ServiceUri}
+import com.keepit.common.service.{ RequestConsolidator, ServiceUri }
 import java.util.Random
 import com.keepit.common.util.TrackingId
 import play.api.Play.current
