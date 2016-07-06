@@ -20,7 +20,12 @@ object HackyExportAssets {
       |    el.removeChild(el.firstChild);
       |  }
       |}
-      |
+      |function unique(array) {
+      |  var seen = {};
+      |  return array.filter(function(item) {
+      |    return seen.hasOwnProperty(item) ? false : (seen[item] = true);
+      |  });
+      |}
       |// Function to asynchronously add HTML elements to a particular node
       |function incrementallyFillElement(el, items, fill) {
       |  if (items.length > 0) {
@@ -45,7 +50,7 @@ object HackyExportAssets {
       |  });
       |
       |  var tmp = document.createElement("a");
-      |  tmp.href = window.URL.createObjectURL(new Blob([download.innerHTML], {type: "text/html"}));
+      |  tmp.href = "data:text/html;utf8," + download.innerHTML;
       |  tmp.download = filename;
       |  tmp.click();
       |  tmp.remove();
@@ -197,11 +202,11 @@ object HackyExportAssets {
       |  var downloadButton = document.createElement("button");
       |  downloadButton.innerText = "Download these keeps";
       |  downloadButton.onclick = function () {
-      |    var keepsToDownload = new Set(u.libraries.reduce(function (acc, libId) {
+      |    var keepsToDownload = unique(u.libraries.reduce(function (acc, libId) {
       |      return acc.concat(libraries[libId].keeps);
       |    }, []));
       |    var username = (u.firstName.toLowerCase() + " " + u.lastName.toLowerCase()).replace(/\s+/g, "-");
-      |    triggerNetscapeDownload(Array.from(keepsToDownload), username + ".netscape.html");
+      |    triggerNetscapeDownload(keepsToDownload, username + ".netscape.html");
       |  };
       |  head.appendChild(downloadButton);
       |
@@ -217,11 +222,11 @@ object HackyExportAssets {
       |  var downloadButton = document.createElement("button");
       |  downloadButton.innerText = "Download these keeps";
       |  downloadButton.onclick = function () {
-      |    var keepsToDownload = new Set(o.libraries.reduce(function (acc, libId) {
+      |    var keepsToDownload = unique(o.libraries.reduce(function (acc, libId) {
       |      return acc.concat(libraries[libId].keeps);
       |    }, []));
       |    var orgname = o.name.toLowerCase().replace(/\s+/g, "-");
-      |    triggerNetscapeDownload(Array.from(keepsToDownload), orgname + ".netscape.html");
+      |    triggerNetscapeDownload(keepsToDownload, orgname + ".netscape.html");
       |  };
       |  head.appendChild(downloadButton);
       |
@@ -237,7 +242,7 @@ object HackyExportAssets {
       |  downloadButton.innerText = "Download these keeps";
       |  downloadButton.onclick = function () {
       |    var libname = l.name.toLowerCase().replace(/\s+/g, "-");
-      |    triggerNetscapeDownload(Array.from(l.keeps), libname + ".netscape.html");
+      |    triggerNetscapeDownload(l.keeps, libname + ".netscape.html");
       |  };
       |  head.appendChild(downloadButton);
       |
