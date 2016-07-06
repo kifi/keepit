@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .controller('HomeCtrl', [
-  '$rootScope', '$scope', '$stateParams', 'profileService', 'messageTicker',
-  function($rootScope, $scope, $stateParams, profileService, messageTicker) {
+  '$rootScope', '$scope', '$stateParams', '$q', 'profileService', 'messageTicker',
+  function($rootScope, $scope, $stateParams, $q, profileService, messageTicker) {
 
     var error = $stateParams.error;
     if (error) {
@@ -26,7 +26,9 @@ angular.module('kifi')
     }
 
 
-    $scope.showAnnouncement = false && profileService.prefs.show_announcement;
+    (Object.keys(profileService.prefs).length === 0 ? profileService.fetchPrefs() : $q.when(profileService.prefs)).then(function(prefs) {
+      $scope.showAnnouncement = prefs.show_announcement;
+    });
 
     $scope.hideAnnouncement = function() {
       $scope.showAnnouncement = false;
