@@ -21,7 +21,7 @@ import com.keepit.common.controller.{ MidFlightRequests, CommonHeaders }
 import com.keepit.common.zookeeper.ServiceDiscovery
 import scala.xml._
 import play.mvc.Http.Status
-import com.keepit.common.service.ServiceUri
+import com.keepit.common.service.{RequestConsolidator, ServiceUri}
 import java.util.Random
 import com.keepit.common.util.TrackingId
 import play.api.Play.current
@@ -114,26 +114,31 @@ case class HttpClientImpl(
 
   private val validResponseClass = 2
 
+  private val dontAlertTooMuch = new RequestConsolidator[Unit, Unit](10.seconds)
+
   override val defaultFailureHandler: FailureHandler = { req =>
     {
       case e: Throwable =>
-        val remoteInstance = req.httpUri.serviceInstanceOpt
-        val duration: Int = accessLog.add(req.timer.done(
-          result = "fail",
-          query = req.queryString,
-          url = req.url,
-          remoteServiceType = remoteInstance.map(_.remoteService.serviceType.shortName).getOrElse(null),
-          remoteServiceId = remoteInstance.map(_.id.id.toString).getOrElse(null),
-          trackingId = req.trackingId,
-          error = e.toString)).duration
-        val fullException = req.tracer.withCause(e)
-        val error = AirbrakeError.outgoing(
-          exception = fullException,
-          request = req.req,
-          message = s"[${remoteServiceString(req)}] calling ${req.httpUri.summary} after ${duration}ms"
-        )
-        if (e.getMessage.contains("Too many open files")) airbrake.get.panic(error)
-        else airbrake.get.notify(error)
+        dontAlertTooMuch(()) { _ =>
+          val remoteInstance = req.httpUri.serviceInstanceOpt
+          val duration: Int = accessLog.add(req.timer.done(
+            result = "fail",
+            query = req.queryString,
+            url = req.url,
+            remoteServiceType = remoteInstance.map(_.remoteService.serviceType.shortName).getOrElse(null),
+            remoteServiceId = remoteInstance.map(_.id.id.toString).getOrElse(null),
+            trackingId = req.trackingId,
+            error = e.toString)).duration
+          val fullException = req.tracer.withCause(e)
+          val error = AirbrakeError.outgoing(
+            exception = fullException,
+            request = req.req,
+            message = s"[${remoteServiceString(req)}] calling ${req.httpUri.summary} after ${duration}ms"
+          )
+          if (e.getMessage.contains("Too many open files")) airbrake.get.panic(error)
+          else airbrake.get.notify(error)
+          Future.successful(())
+        }
     }
   }
 
