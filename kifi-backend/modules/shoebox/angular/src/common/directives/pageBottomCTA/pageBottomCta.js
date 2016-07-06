@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.directive('kfPageBottomCta', ['$rootScope', '$window', '$stateParams', 'signupService',
-  function ($rootScope, $window, $stateParams, signupService) {
+.directive('kfPageBottomCta', ['$rootScope', '$window', '$stateParams',
+  function ($rootScope, $window, $stateParams) {
     return {
       restrict: 'A',
       replace: true,
@@ -23,7 +23,6 @@ angular.module('kifi')
           if (!scope.twitterHandle) {
             $event.preventDefault();
             scope.visible = false;
-            signupService.register({ libraryId: scope.library.id, libAuthToken: $stateParams.authToken, intent: 'follow' });
           }
         };
 

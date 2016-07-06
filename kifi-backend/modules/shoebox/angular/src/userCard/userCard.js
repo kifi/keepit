@@ -4,10 +4,10 @@ angular.module('kifi')
 
 .directive('kfUserCard', [
   '$timeout', 'env', '$filter', 'modalService', 'profileService',
-  'friendService', 'inviteService', 'signupService', 'platformService',
+  'friendService', 'inviteService', 'platformService',
   function (
       $timeout, env, $filter, modalService, profileService,
-      friendService, inviteService, signupService, platformService) {
+      friendService, inviteService, platformService) {
     return {
       restrict: 'A',
       replace: true,
@@ -46,7 +46,7 @@ angular.module('kifi')
           } else if (scope.connectBtnChanging) {
             return; // ignore
           } else if (!scope.$root.userLoggedIn) {
-            signupService.register({toConnectWith: scope.user});
+            scope.asd = 'asd';
           } else if (scope.mutual.isFriend) {
             scope.unfriend();
           } else if (!scope.mutual.friendRequestSentAt) {

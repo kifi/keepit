@@ -5,12 +5,12 @@ angular.module('kifi')
 .controller('LibraryCtrl', [
   '$scope', '$rootScope', '$analytics', '$location', '$state', '$stateParams', '$timeout', '$window',
   'env', 'util', 'URI', 'AB', 'initParams', 'library', 'libraryService', 'modalService',
-  'platformService', 'profileService', 'originTrackingService', 'installService', 'signupService',
+  'platformService', 'profileService', 'originTrackingService', 'installService',
   'libraryImageLoaded', 'slackService',
   function (
     $scope, $rootScope, $analytics, $location, $state, $stateParams, $timeout, $window,
     env, util, URI, AB, initParams, library, libraryService, modalService,
-    platformService, profileService, originTrackingService, installService, signupService,
+    platformService, profileService, originTrackingService, installService,
     libraryImageLoaded, slackService) {
 
     //
@@ -356,10 +356,6 @@ angular.module('kifi')
       });
     };
 
-    $scope.slackDelegate = {
-      title: 'Join Kifi or log in to add this Slack integration'
-    };
-
     $scope.showUnableToKeepFromSlackModal = function(){
       modalService.open({
         template: 'common/modal/simpleModal.tpl.html',
@@ -385,7 +381,7 @@ angular.module('kifi')
       // queue random logic
       if (!$rootScope.userLoggedIn) {
         // handle user needs to log in
-        signupService.register({ libraryId: $scope.library.id, libAuthToken: $stateParams.authToken, intent: 'follow' });
+        $scope.asd = 'asd';
       } else if (profileService.me && profileService.me.orgs.length > 0) {
 
         if ((library.permissions || []).indexOf('create_slack_integration') !== -1) {

@@ -11,12 +11,8 @@
 <div class="kf-lib-content">
   <div class="kf-lib-content-1" ui-view></div>
   <section class="kf-lib-content-2">
-    <button class="kf-lib-rss" ng-click="showFeedModal()" ng-if="library.visibility === 'published'">
-      <span class="kf-lib-rss-icon svg-rss-feed"></span>
-    </button>
 
-    <div class="kf-lib-slack">
-      <div kf-cta-hover delegate="slackDelegate" ng-if="!isMobile && !$root.userLoggedIn"></div>
+    <div class="kf-lib-slack" ng-if="$root.userLoggedIn">
       <div ng-click="processSlackRequest()" class="kf-cta-hover-element kf-lib-slack-btn-bg">
         <img  ng-src="{{slackIntegrations.length == 0 ? '/img/add-to-slack.png' : '/img/edit-slack-sync.png'}}"
               class="kf-lib-slack-btn">
@@ -48,5 +44,3 @@
     <a class="kf-lib-footer-a" target="_top" href="/terms">Terms</a>
   </div>
 </footer>
-
-<div kf-page-bottom-cta library="library" ng-if="!$root.userLoggedIn && !isMobile"></div>

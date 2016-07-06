@@ -120,16 +120,14 @@
   <div class="kf-lh-buttons" ng-if="!isOwnerOrCollaborator()">
     <div kf-card-style-selector></div>
 
-    <div class="kf-lh-invite-banner" ng-style="{'background-color': library.color}" ng-if="library.invite">
+    <div class="kf-lh-invite-banner" ng-style="{'background-color': library.color}" ng-if="library.invite && $root.userLoggedIn">
       <img class="kf-lh-invite-pic" ng-src="{{library.invite.inviter|pic:100}}" alt="{{library.invite.inviter|name}}">
       <div class="kf-lh-invite-banner-text">{{library.invite.inviter|name}} {{library.invite.access === 'read_only' ? ' has invited you' : 'would like to'}}<span></span> {{ library.invite.access === 'read_only' ? ' to follow' : ' collaborate with you on'}} this library</div>
       <button class="kf-lh-invite-banner-button kf-ignore" ng-click="ignoreInvitation()" ng-if="$root.userLoggedIn">Ignore</button>
       <button class="kf-lh-invite-banner-button kf-accept" ng-click="acceptInvitation()" ng-style="{'color': library.color}" ng-if="$root.userLoggedIn">Accept</button>
-      <button class="kf-lh-invite-banner-button kf-continue" ng-click="signupFromInvitation()" ng-if="!$root.userLoggedIn">Continue</button>
     </div>
     <div class="kf-lh-buttons-divider"></div>
-    <div class="kf-lh-follow-btn-wrap" ng-if="!isMember() && library.visibility !== 'secret'">
-      <div kf-library-header-follow-button-cta library="library" ng-if="!isMobile && !$root.userLoggedIn && !library.invite"></div>
+    <div class="kf-lh-follow-btn-wrap" ng-if="$root.userLoggedIn && !isMember() && library.visibility !== 'secret'">
       <button class="kf-lh-follow-btn" ng-click="followLibrary({via: 'followBtn'})">Follow</button>
     </div>
     <div class="kf-lh-unfollow-btn-wrap" ng-class="{'kf-no-unfollow': followBtnJustClicked, 'kf-overflowing': overSubsBtn}" ng-if="isFollowing() || isCollaborating()">

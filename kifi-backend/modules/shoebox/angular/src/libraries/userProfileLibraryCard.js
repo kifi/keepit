@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .directive('kfUserProfileLibraryCard', [
   '$rootScope', '$location', '$stateParams', 'profileService', 'libraryService', 'modalService',
-  'platformService', 'signupService', 'LIB_PERMISSION', 'ORG_SETTING_VALUE', 'orgProfileService',
+  'platformService', 'LIB_PERMISSION', 'ORG_SETTING_VALUE', 'orgProfileService',
   function ($rootScope, $location, $stateParams, profileService, libraryService, modalService,
-            platformService, signupService, LIB_PERMISSION, ORG_SETTING_VALUE, orgProfileService) {
+            platformService, LIB_PERMISSION, ORG_SETTING_VALUE, orgProfileService) {
     // values that are the same for all cards that coexist at any one time
     var currentPageName;
     var currentPageOrigin;
@@ -67,8 +67,6 @@ angular.module('kifi')
         var url = $location.absUrl();
         platformService.goToAppOrStore(url + (url.indexOf('?') > 0 ? '&' : '?') + 'follow=true');
         return;
-      } else if ($rootScope.userLoggedIn === false) {
-        return signupService.register({libraryId: lib.id, libAuthToken: $stateParams.authToken, intent: 'follow'});
       }
       $event.target.disabled = true;
       libraryService[lib.membership ? 'leaveLibrary' : 'joinLibrary'](lib.id).then(function (membership) {
