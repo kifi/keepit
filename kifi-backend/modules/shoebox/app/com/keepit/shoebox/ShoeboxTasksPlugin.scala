@@ -2,9 +2,10 @@ package com.keepit.shoebox
 
 import akka.actor.ActorSystem
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.commanders.{ TwitterWaitlistCommander, TwitterSyncCommander }
+import com.keepit.commanders.{ TwitterSyncCommander, TwitterWaitlistCommander }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
+import com.keepit.export.FullExportProcessingActor
 import com.keepit.normalizer.NormalizationUpdatingActor
 import com.keepit.payments.{ PaymentProcessingCommander, PlanRenewalCommander }
 import com.keepit.shoebox.eliza.ShoeboxMessageIngestionActor
@@ -29,6 +30,7 @@ class ShoeboxTasksPlugin @Inject() (
     slackIngestingActor: ActorInstance[SlackIngestingActor],
     slackKeepAttributionActor: ActorInstance[SlackKeepAttributionActor],
     normalizationUpdatingActor: ActorInstance[NormalizationUpdatingActor],
+    exportingActor: ActorInstance[FullExportProcessingActor],
     planRenewalCommander: PlanRenewalCommander,
     paymentProcessingCommander: PaymentProcessingCommander,
     val scheduling: SchedulingProperties) extends SchedulerPlugin {
@@ -56,6 +58,7 @@ class ShoeboxTasksPlugin @Inject() (
     scheduleTaskOnLeader(slackTeamDigestActor.system, 3 minute, 5 minutes, slackTeamDigestActor.ref, IfYouCouldJustGoAhead)
     scheduleTaskOnLeader(slackPersonalDigestActor.system, 3 minute, 1 minute, slackPersonalDigestActor.ref, IfYouCouldJustGoAhead)
 
+    scheduleTaskOnAllMachines(exportingActor.system, 3 minute, 1 minute, exportingActor.ref, IfYouCouldJustGoAhead)
     scheduleTaskOnAllMachines(normalizationUpdatingActor.system, 3 minute, 1 minute, normalizationUpdatingActor.ref, IfYouCouldJustGoAhead)
   }
 
@@ -66,7 +69,8 @@ class ShoeboxTasksPlugin @Inject() (
       slackKeepAttributionActor,
       slackTeamDigestActor,
       slackPersonalDigestActor,
-      normalizationUpdatingActor
+      normalizationUpdatingActor,
+      exportingActor
     ).foreach(_.ref ! Close)
     super.onStop()
   }
