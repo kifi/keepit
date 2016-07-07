@@ -90,7 +90,7 @@ class FullExportProcessingActor @Inject() (
         }
         existingEntities + entity
     }).flatMap {
-      case existingEntities =>
+      case _ =>
         zip.closeEntry()
         zip.putNextEntry(new ZipEntry(s"$exportBase/NetscapeBookmarkFormattedExport.html"))
         zip.write(FullExportFormatter.beforeHtml.getBytes("UTF-8"))
@@ -99,25 +99,25 @@ class FullExportProcessingActor @Inject() (
         }).map { _ =>
           zip.write(FullExportFormatter.afterHtml.getBytes("UTF-8"))
           zip.closeEntry()
-          existingEntities
         }
     }.flatMap {
-      case existingEntities =>
-        exportFormatter.json(enum).run(Iteratee.foreach {
-          case (path, content) =>
-            zip.putNextEntry(new ZipEntry(s"$exportBase/$path"))
-            zip.write(content.getBytes("UTF-8"))
-            zip.closeEntry
-        }).map { _ =>
-          existingEntities
-        }
+      case _ =>
+        exportFormatter.json(enum).run(Iteratee.fold(Set.empty[String]) {
+          case (existingEntries, (path, content)) =>
+            if (!existingEntries.contains(path)) {
+              zip.putNextEntry(new ZipEntry(s"$exportBase/$path"))
+              zip.write(content.getBytes("UTF-8"))
+              zip.closeEntry
+            }
+            existingEntries + path
+        })
     }.andThen {
       case Failure(fail) =>
         slackLog.error(s"[${clock.now}] Failed while writing user ${request.userId}'s export: ${fail.getMessage}")
         db.readWrite { implicit s => exportRequestRepo.markAsFailed(request.id.get, fail.getMessage) }
-      case Success(existingEntities) =>
+      case Success(_) =>
         zip.close()
-        slackLog.info(s"[${clock.now}] Done writing user ${request.userId}'s export to $exportFile (${existingEntities.size} entities), uploading to S3")
+        slackLog.info(s"[${clock.now}] Done writing user ${request.userId}'s export to $exportFile, uploading to S3")
         exportStore.store(exportFile).andThen {
           case Success(yay) =>
             slackLog.info(s"[${clock.now}] Uploaded $exportBase.zip, key = ${yay.getKey}")
