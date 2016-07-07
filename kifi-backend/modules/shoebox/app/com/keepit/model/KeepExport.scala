@@ -1,6 +1,7 @@
 package com.keepit.model
 
 import com.keepit.common.db.Id
+import com.keepit.export.FullExportFormatter
 import org.joda.time.DateTime
 import play.api.libs.json._
 
@@ -34,16 +35,8 @@ object KeepExportFormat {
 
 case class KeepExportResponse(keeps: Seq[Keep], keepTags: Map[Id[Keep], Seq[String]], keepLibs: Map[Id[Keep], Seq[Library]]) {
   def formatAsHtml: String = {
-    val before = """<!DOCTYPE NETSCAPE-Bookmark-file-1>
-                   |<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
-                   |<!--This is an automatically generated file.
-                   |It will be read and overwritten.
-                   |Do Not Edit! -->
-                   |<Title>Kifi Bookmarks Export</Title>
-                   |<H1>Bookmarks</H1>
-                   |<DL>
-                   |""".stripMargin
-    val after = "\n</DL>"
+    val before = FullExportFormatter.beforeHtml
+    val after = FullExportFormatter.afterHtml
 
     def createExport(keep: Keep): String = {
       // Parse Tags
@@ -59,7 +52,7 @@ case class KeepExportResponse(keeps: Seq[Keep], keepTags: Map[Id[Keep], Seq[Stri
       }
       line
     }
-    before + keeps.map(createExport).mkString("\n") + after
+    before + (keeps.map(createExport) :+ after).mkString("\n")
   }
   def formatAsJson: JsValue = {
     val keepJsonArray = keeps.map { keep =>
