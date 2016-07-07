@@ -6,6 +6,7 @@ import java.util.zip.{ ZipEntry, ZipOutputStream }
 import com.google.inject.Inject
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.core._
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -39,7 +40,8 @@ class FullExportProcessingActor @Inject() (
   airbrake: AirbrakeNotifier,
   clock: Clock,
   implicit val executionContext: ExecutionContext,
-  implicit val inhouseSlackClient: InhouseSlackClient)
+  implicit val inhouseSlackClient: InhouseSlackClient,
+  implicit val publicIdConfig: PublicIdConfiguration)
     extends FortyTwoActor(airbrake) with ConcurrentTaskProcessingActor[Id[FullExportRequest]] {
 
   import FullExportProcessingConfig._
@@ -72,13 +74,13 @@ class FullExportProcessingActor @Inject() (
     val request = db.readOnlyMaster { implicit s => exportRequestRepo.get(id) }
     val enum = exportCommander.fullExport(request.userId)
     val user = db.readOnlyMaster { implicit s => userRepo.get(request.userId) }
-    val exportBase = s"${user.fullName.words.mkString("-")}-kifi-export-${user.externalId.id}"
+    val exportBase = s"[Kifi Export]${user.fullName.words.mkString("-")}-${user.externalId.id}"
     val exportFile = new File(exportBase + ".zip")
     val zip = {
       val zip = new ZipOutputStream(new FileOutputStream(exportFile))
-      zip.putNextEntry(new ZipEntry(s"$exportBase/index.html"))
+      zip.putNextEntry(new ZipEntry(s"$exportBase/explorer/index.html"))
       zip.write(HackyExportAssets.index.getBytes("UTF-8"))
-      zip.putNextEntry(new ZipEntry(s"$exportBase/export.js"))
+      zip.putNextEntry(new ZipEntry(s"$exportBase/explorer/data.js"))
       zip
     }
     exportFormatter.assignments(enum).run(Iteratee.fold(Set.empty[String]) {
@@ -92,7 +94,7 @@ class FullExportProcessingActor @Inject() (
     }).flatMap {
       case _ =>
         zip.closeEntry()
-        zip.putNextEntry(new ZipEntry(s"$exportBase/NetscapeBookmarkFormattedExport.html"))
+        zip.putNextEntry(new ZipEntry(s"$exportBase/importableBookmarks.html"))
         zip.write(FullExportFormatter.beforeHtml.getBytes("UTF-8"))
         exportFormatter.bookmarks(enum).run(Iteratee.foreach { bookmark =>
           zip.write((bookmark + "\n").getBytes("UTF-8"))
@@ -105,7 +107,7 @@ class FullExportProcessingActor @Inject() (
         exportFormatter.json(enum).run(Iteratee.fold(Set.empty[String]) {
           case (existingEntries, (path, content)) =>
             if (!existingEntries.contains(path)) {
-              zip.putNextEntry(new ZipEntry(s"$exportBase/$path"))
+              zip.putNextEntry(new ZipEntry(s"$exportBase/json/$path"))
               zip.write(content.getBytes("UTF-8"))
               zip.closeEntry
             }

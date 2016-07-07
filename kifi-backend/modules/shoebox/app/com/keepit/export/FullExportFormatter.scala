@@ -2,6 +2,7 @@ package com.keepit.export
 
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.db.Id
 import com.keepit.common.json.EitherFormat
 import com.keepit.model._
 import com.keepit.social.BasicUser
@@ -58,7 +59,7 @@ class FullExportFormatterImpl @Inject() (
   private def fullIndexPage(export: FullStreamingExport.Root): Enumerator[(String, JsValue)] = {
     implicit val spaceWrites = EitherFormat.keyedWrites[BasicUser, BasicOrganization]("user", "org")
     export.spaces.map(_.space).through(Enumeratee.grouped(Iteratee.getChunks)).through(Enumeratee.map { spaces =>
-      "index" -> Json.obj(
+      "index.json" -> Json.obj(
         "me" -> export.user,
         "spaces" -> JsArray(spaces.map { space =>
           val partialSpace = spaceWrites.writes(space)
@@ -69,7 +70,7 @@ class FullExportFormatterImpl @Inject() (
   }
   private def fullSpacePage(space: FullStreamingExport.SpaceExport): Enumerator[(String, JsValue)] = {
     implicit val spaceWrites = EitherFormat.keyedWrites[BasicUser, BasicOrganization]("user", "org")
-    val path = space.space.fold(u => "users/" + u.externalId.id, o => "orgs/" + o.orgId.id)
+    val path = space.space.fold(u => "users/" + u.externalId.id, o => "orgs/" + o.orgId.id) + ".json"
     space.libraries.map(_.library).through(Enumeratee.grouped(Iteratee.getChunks)).through(Enumeratee.map { libs =>
       val fullSpace = spaceWrites.writes(space.space)
       path -> Json.obj(
@@ -86,7 +87,7 @@ class FullExportFormatterImpl @Inject() (
     })
   }
   private def fullLibraryPage(library: FullStreamingExport.LibraryExport): Enumerator[(String, JsValue)] = {
-    val path = "libraries/" + Library.publicId(library.library.id.get).id
+    val path = "libraries/" + Library.publicId(library.library.id.get).id + ".json"
     val fullLibrary = Json.obj("name" -> library.library.name)
     library.keeps.map(_.keep).through(Enumeratee.grouped(Iteratee.getChunks)).through(Enumeratee.map { keeps =>
       path -> Json.obj(
@@ -105,7 +106,7 @@ class FullExportFormatterImpl @Inject() (
   }
 
   private def fullKeepPage(keep: FullStreamingExport.KeepExport): Enumerator[(String, JsValue)] = {
-    val path = "keeps/" + Keep.publicId(keep.keep.id.get).id
+    val path = "keeps/" + Keep.publicId(keep.keep.id.get).id + ".json"
     if (keep.messages.isEmpty) Enumerator.empty
     else Enumerator {
       path -> Json.obj(
@@ -190,18 +191,22 @@ class FullExportFormatterImpl @Inject() (
   }
 
   def bookmarks(export: FullStreamingExport.Root): Enumerator[BookmarkHtml] = {
-    val libraries = export.spaces.flatMap(_.libraries.map(_.library))
-    (export.looseKeeps andThen export.spaces.flatMap(_.libraries.flatMap(_.keeps))).map { keepExport =>
-      val keep = keepExport.keep
-      val title = keep.title.map(_.replace("&", "&amp;")) getOrElse ""
-      val date = keep.keptAt.getMillis / 1000
-      val tagString = {
-        def sanitize(tag: String): String = tag.replaceAllLiterally("&" -> "&amp;", "\"" -> "")
-        val tags = keepExport.tags.map(tag => sanitize(tag.tag))
-        val libraryNames = Seq() // todo(Léo): figure out how to dedup keeps and get library names
-        s""""${(tags ++ libraryNames).mkString(",")}""""
+    val futureLibrariesById = export.spaces.flatMap(_.libraries.map(_.library)).run(Iteratee.fold(Map.empty[Id[Library], Library]) { (previousLibraries, nextLibrary) =>
+      previousLibraries + (nextLibrary.id.get -> nextLibrary)
+    })
+    Enumerator.flatten(futureLibrariesById.map(Enumerator(_))).flatMap { librariesById =>
+      (export.looseKeeps andThen export.spaces.flatMap(_.libraries.flatMap(_.keeps))).map { keepExport =>
+        val keep = keepExport.keep
+        val title = keep.title.map(_.replace("&", "&amp;")) getOrElse ""
+        val date = keep.keptAt.getMillis / 1000
+        val tagString = {
+          def sanitize(tag: String): String = tag.replaceAllLiterally("&" -> "&amp;", "\"" -> "")
+          val tags = keepExport.tags.map(tag => sanitize(tag.tag))
+          val libraryNames = keep.recipients.libraries.map(id => librariesById(id).name)
+          s""""${(tags ++ libraryNames).mkString(",")}""""
+        }
+        s"""<DT><A HREF="${keep.url}" ADD_DATE="$date" TAGS=$tagString>$title</A>"""
       }
-      s"""<DT><A HREF="${keep.url}" ADD_DATE="$date" TAGS=$tagString>$title</A>"""
     }
   }
 }
