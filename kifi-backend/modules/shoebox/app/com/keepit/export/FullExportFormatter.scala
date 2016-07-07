@@ -202,7 +202,7 @@ class FullExportFormatterImpl @Inject() (
         val tagString = {
           def sanitize(tag: String): String = tag.replaceAllLiterally("&" -> "&amp;", "\"" -> "")
           val tags = keepExport.tags.map(tag => sanitize(tag.tag))
-          val libraryNames = keep.recipients.libraries.map(id => librariesById(id).name)
+          val libraryNames = keep.recipients.libraries.flatMap(id => librariesById.get(id).map(_.name))
           s""""${(tags ++ libraryNames).mkString(",")}""""
         }
         s"""<DT><A HREF="${keep.url}" ADD_DATE="$date" TAGS=$tagString>$title</A>"""
