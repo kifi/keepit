@@ -93,15 +93,29 @@ class FullExportProcessingActor @Inject() (
       case existingEntities =>
         zip.closeEntry()
         zip.putNextEntry(new ZipEntry(s"$exportBase/NetscapeBookmarkFormattedExport.html"))
-        (enum.looseKeeps andThen enum.spaces.flatMap(_.libraries.flatMap(_.keeps))).run(Iteratee.foreach { k =>
-          zip.write("foo\n".getBytes("UTF-8"))
-        }).map(_ => existingEntities)
+        zip.write(FullExportFormatter.beforeHtml.getBytes("UTF-8"))
+        exportFormatter.bookmarks(enum).run(Iteratee.foreach { bookmark =>
+          zip.write((bookmark + "\n").getBytes("UTF-8"))
+        }).map { _ =>
+          zip.write(FullExportFormatter.afterHtml.getBytes("UTF-8"))
+          zip.closeEntry()
+          existingEntities
+        }
+    }.flatMap {
+      case existingEntities =>
+        exportFormatter.json(enum).run(Iteratee.foreach {
+          case (path, content) =>
+            zip.putNextEntry(new ZipEntry(s"$exportBase/$path"))
+            zip.write(content.getBytes("UTF-8"))
+            zip.closeEntry
+        }).map { _ =>
+          existingEntities
+        }
     }.andThen {
       case Failure(fail) =>
         slackLog.error(s"[${clock.now}] Failed while writing user ${request.userId}'s export: ${fail.getMessage}")
         db.readWrite { implicit s => exportRequestRepo.markAsFailed(request.id.get, fail.getMessage) }
       case Success(existingEntities) =>
-        zip.closeEntry()
         zip.close()
         slackLog.info(s"[${clock.now}] Done writing user ${request.userId}'s export to $exportFile (${existingEntities.size} entities), uploading to S3")
         exportStore.store(exportFile).andThen {

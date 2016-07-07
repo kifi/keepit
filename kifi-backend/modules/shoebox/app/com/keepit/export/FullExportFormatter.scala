@@ -7,8 +7,22 @@ import com.keepit.model._
 import com.keepit.social.BasicUser
 import play.api.libs.iteratee._
 import play.api.libs.json._
+import com.keepit.common.strings.StringWithReplacements
 
 import scala.concurrent.ExecutionContext
+
+object FullExportFormatter {
+  val beforeHtml = """<!DOCTYPE NETSCAPE-Bookmark-file-1>
+                 |<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
+                 |<!--This is an automatically generated file.
+                 |It will be read and overwritten.
+                 |Do Not Edit! -->
+                 |<Title>Kifi Bookmarks Export</Title>
+                 |<H1>Bookmarks</H1>
+                 |<DL>
+                 |""".stripMargin
+  val afterHtml = "</DL>"
+}
 
 @ImplementedBy(classOf[FullExportFormatterImpl])
 trait FullExportFormatter {
@@ -16,9 +30,11 @@ trait FullExportFormatter {
   type FileContents = String
   type EntityId = String
   type EntityContents = JsValue
+  type BookmarkHtml = String
 
   def json(export: FullStreamingExport.Root): Enumerator[(FilePath, FileContents)]
   def assignments(export: FullStreamingExport.Root): Enumerator[(EntityId, EntityContents)]
+  def bookmarks(export: FullStreamingExport.Root): Enumerator[BookmarkHtml]
 }
 
 class FullExportFormatterImpl @Inject() (
@@ -170,6 +186,22 @@ class FullExportFormatterImpl @Inject() (
         "summary" -> keep.uri.flatMap(_.article.description),
         "messages" -> keep.messages
       )
+    }
+  }
+
+  def bookmarks(export: FullStreamingExport.Root): Enumerator[BookmarkHtml] = {
+    val libraries = export.spaces.flatMap(_.libraries.map(_.library))
+    (export.looseKeeps andThen export.spaces.flatMap(_.libraries.flatMap(_.keeps))).map { keepExport =>
+      val keep = keepExport.keep
+      val title = keep.title.map(_.replace("&", "&amp;")) getOrElse ""
+      val date = keep.keptAt.getMillis / 1000
+      val tagString = {
+        def sanitize(tag: String): String = tag.replaceAllLiterally("&" -> "&amp;", "\"" -> "")
+        val tags = keepExport.tags.map(tag => sanitize(tag.tag))
+        val libraryNames = Seq() // todo(Léo): figure out how to dedup keeps and get library names
+        s""""${(tags ++ libraryNames).mkString(",")}""""
+      }
+      s"""<DT><A HREF="${keep.url}" ADD_DATE="$date" TAGS=$tagString>$title</A>"""
     }
   }
 }
