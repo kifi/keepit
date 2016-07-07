@@ -1,21 +1,25 @@
 package com.keepit.eliza.commanders
 
-import com.google.inject.{ImplementedBy, Inject, Singleton}
+import com.google.inject.{Provider, ImplementedBy, Inject, Singleton}
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.core.{anyExtensionOps, iterableExtensionOps}
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
+import com.keepit.common.store.StaticImageUrls
 import com.keepit.common.util.{TimedComputation, Ord}
 import com.keepit.common.util.Ord.dateTimeOrdering
+import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.eliza.model._
-import com.keepit.model.Keep
-import com.keepit.notify.delivery.WsNotificationDelivery
+import com.keepit.model.{NotificationCategory, User, Keep}
+import com.keepit.notify.delivery.{NotificationJsonFormat, WsNotificationDelivery}
+import com.keepit.notify.info.{PublicImage, StandardNotificationInfo}
 import com.keepit.notify.model.event.{LibraryNewKeep, NotificationEvent}
 import com.keepit.notify.model.{NotificationKind, GroupingNotificationKind, NKind, Recipient}
+import play.api.libs.json.{JsArray, JsNull, Json}
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{Future, ExecutionContext}
 
 
 @ImplementedBy(classOf[NotificationCommanderImpl])
@@ -27,6 +31,7 @@ trait NotificationCommander {
   def processNewEvents(events: Seq[NotificationEvent]): Seq[NotificationWithItems]
   def completeNotification(kind: NKind, groupIdentifier: String, recipient: Recipient): Boolean
   def getUnreadNotificationsCount(recipient: Recipient): Int
+  def sendAnnouncementToUsers(userIds: Set[Id[User]]): Unit
 }
 
 @Singleton
@@ -35,6 +40,7 @@ class NotificationCommanderImpl @Inject() (
   notificationRepo: NotificationRepo,
   notificationItemRepo: NotificationItemRepo,
   wsNotificationDelivery: WsNotificationDelivery,
+  notificationRouter: WebSocketRouter,
   private implicit val publicIdConfiguration: PublicIdConfiguration,
   implicit val executionContext: ExecutionContext)
     extends NotificationCommander with Logging {
@@ -160,4 +166,26 @@ class NotificationCommanderImpl @Inject() (
     notificationRepo.getUnreadNotificationsCount(recipient)
   }
 
+  def sendAnnouncementToUsers(userIds: Set[Id[User]]): Unit = {
+    import com.keepit.common.time._
+    val notifJson = Json.obj(
+      "bodyHtml" -> "The last day to use the Kifi service will be August 22nd, 2016. Click to learn how to export all of your personal data and thank you for being a part of Kifi.",
+      "category" -> "global",
+      "fullCategory" -> NotificationCategory.User.ANNOUNCEMENT,
+      "id" -> "",
+      "image" -> StaticImageUrls.KIFI_LOGO,
+      "isSticky" -> true,
+      "linkText" -> "Learn how to export your keeps",
+      "locator" -> JsNull,
+      "thread" -> JsNull,
+      "time" -> currentDateTime,
+      "title" -> "The Kifi team is joining Google",
+      "unread" -> true,
+      "unreadAuthors" -> 1,
+      "unreadMessages" -> 1,
+      "url" -> "https://medium.com/p/f1cd2f2e116c"
+    )
+
+    userIds.foreach { userId => notificationRouter.sendToUser(userId, Json.arr("notification", notifJson)) }
+  }
 }

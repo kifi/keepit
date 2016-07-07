@@ -247,6 +247,7 @@ object Eliza extends Service {
     def connectedClientCount() = ServiceRoute(GET, "/internal/eliza/connectedClientCount")
     def sendNotificationEvents() = ServiceRoute(POST, "/internal/eliza/notifications/send")
     def completeNotification() = ServiceRoute(POST, "/internal/eliza/notifications/complete")
+    def sendAnnouncementToUsers() = ServiceRoute(POST, "/internal/eliza/notifications/sendAnnouncementToUsers")
     def importThread() = ServiceRoute(POST, "/internal/eliza/importThread")
     def getUserThreadStats(userId: Id[User]) = ServiceRoute(GET, "/internal/eliza/getUserThreadStats", Param("userId", userId))
     def getNonUserThreadMuteInfo(publicId: String) = ServiceRoute(GET, "/internal/eliza/getNonUserThreadMuteInfo", Param("publicId", publicId))
