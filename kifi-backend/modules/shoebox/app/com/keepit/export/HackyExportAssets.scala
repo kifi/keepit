@@ -94,10 +94,23 @@ object HackyExportAssets {
       |  }
       |
       |  var tmp = document.createElement('A');
-      |  tmp.href = 'data:text/html;base64,' + btoa(unescape(encodeURIComponent(bookmarkDocument)));
+      |  tmp.href = getDownloadURL(bookmarkDocument, 'text/html');
       |  tmp.download = filename;
       |  tmp.click();
       |  tmp.remove();
+      |}
+      |
+      |var existingBlobUrl = null;
+      |function getDownloadURL(data, type) {
+      |  if (window.Blob) {
+      |    var blob = new window.Blob([ data ], { type: type });
+      |    if (existingBlobUrl) {
+      |      window.URL.revokeObjectURL(existingBlobUrl);
+      |    }
+      |    return existingBlobUrl = window.URL.createObjectURL(blob);
+      |  } else {
+      |    return 'data:' + type + ';base64,' + btoa(unescape(encodeURIComponent(data)));
+      |  }
       |}
       |
       |function getPropertyOf(o) {

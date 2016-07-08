@@ -34,6 +34,7 @@ object FullExportCommanderConfig {
 @Singleton
 class FullExportProducerImpl @Inject() (
   db: Database,
+  userRepo: UserRepo,
   basicUserGen: BasicUserRepo,
   basicOrgGen: BasicOrganizationGen,
   orgMemberRepo: OrganizationMembershipRepo,
@@ -55,7 +56,7 @@ class FullExportProducerImpl @Inject() (
 
   def fullExport(userId: Id[User]): FullStreamingExport.Root = {
     slackLog.info(s"[${clock.now}] Export for user $userId")
-    val user = db.readOnlyMaster { implicit s => basicUserGen.load(userId) }
+    val user = db.readOnlyMaster { implicit s => userRepo.get(userId) }
     val spaces = spacesExport(userId)
     val keeps = looseKeepsExport(userId)
     FullStreamingExport.Root(user, spaces, keeps)

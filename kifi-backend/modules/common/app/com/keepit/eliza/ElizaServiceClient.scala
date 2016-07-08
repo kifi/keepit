@@ -110,6 +110,7 @@ trait ElizaServiceClient extends ServiceClient {
   def sendNotificationEvents(events: Seq[NotificationEvent]): Future[Unit]
   def sendNotificationEvent(event: NotificationEvent): Future[Unit] = sendNotificationEvents(Seq(event))
   def completeNotification[N <: NotificationEvent, G](kind: GroupingNotificationKind[N, G], params: G, recipient: Recipient): Future[Boolean]
+  def sendAnnouncementToUsers(userIds: Set[Id[User]]): Future[Unit]
   def getThreadContentForIndexing(sequenceNumber: SequenceNumber[ThreadContent], maxBatchSize: Long): Future[Seq[ThreadContent]]
   def getUserThreadStats(userId: Id[User]): Future[UserThreadStats]
   def getNonUserThreadMuteInfo(publicId: String): Future[Option[(String, Boolean)]]
@@ -223,6 +224,10 @@ class ElizaServiceClientImpl @Inject() (
     call(Eliza.internal.completeNotification(), payload).map { resp =>
        Json.parse(resp.body).as[Boolean]
     }
+  }
+
+  def sendAnnouncementToUsers(userIds: Set[Id[User]]): Future[Unit] = {
+    call(Eliza.internal.sendAnnouncementToUsers(), Json.obj("userIds" -> userIds)).map { _ => () }
   }
 
   def getThreadContentForIndexing(sequenceNumber: SequenceNumber[ThreadContent], maxBatchSize: Long): Future[Seq[ThreadContent]] = {

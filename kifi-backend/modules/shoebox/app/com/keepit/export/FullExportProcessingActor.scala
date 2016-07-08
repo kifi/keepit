@@ -61,7 +61,7 @@ class FullExportProcessingActor @Inject() (
       ids.filter(exportRequestRepo.markAsProcessing(_, threshold))
     }.andThen {
       case Success(tasks) =>
-        slackLog.info(s"Pulling $limit export tasks yields $tasks")
+        if (tasks.nonEmpty) { slackLog.info(s"Pulling $limit export tasks yields $tasks") }
       case Failure(fail) =>
         airbrake.notify(fail)
         slackLog.error(s"Pulling $limit export tasks failed: ${fail.getMessage}")
@@ -83,7 +83,7 @@ class FullExportProcessingActor @Inject() (
       val zip = new ZipOutputStream(new FileOutputStream(exportFile))
       zip.putNextEntry(new ZipEntry(s"$exportBase/explorer/index.html"))
       zip.write(HackyExportAssets.index.getBytes("UTF-8"))
-      zip.putNextEntry(new ZipEntry(s"$exportBase/explorer/data.js"))
+      zip.putNextEntry(new ZipEntry(s"$exportBase/explorer/export.js"))
       zip
     }
     exportFormatter.assignments(enum).run(Iteratee.fold(Set.empty[String]) {
@@ -99,10 +99,9 @@ class FullExportProcessingActor @Inject() (
         zip.closeEntry()
         zip.putNextEntry(new ZipEntry(s"$exportBase/importableBookmarks.html"))
         zip.write(FullExportFormatter.beforeHtml.getBytes("UTF-8"))
-        exportFormatter.bookmarks(enum).run(Iteratee.foreach { bookmark =>
-          zip.write((bookmark + "\n").getBytes("UTF-8"))
+        exportFormatter.bookmarks(enum).run(Iteratee.foreach { line =>
+          zip.write((line + "\n").getBytes("UTF-8"))
         }).map { _ =>
-          zip.write(FullExportFormatter.afterHtml.getBytes("UTF-8"))
           zip.closeEntry()
         }
     }.flatMap {
