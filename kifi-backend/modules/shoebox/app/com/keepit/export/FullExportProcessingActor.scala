@@ -83,7 +83,7 @@ class FullExportProcessingActor @Inject() (
       val zip = new ZipOutputStream(new FileOutputStream(exportFile))
       zip.putNextEntry(new ZipEntry(s"$exportBase/explorer/index.html"))
       zip.write(HackyExportAssets.index.getBytes("UTF-8"))
-      zip.putNextEntry(new ZipEntry(s"$exportBase/explorer/data.js"))
+      zip.putNextEntry(new ZipEntry(s"$exportBase/explorer/export.js"))
       zip
     }
     exportFormatter.assignments(enum).run(Iteratee.fold(Set.empty[String]) {
