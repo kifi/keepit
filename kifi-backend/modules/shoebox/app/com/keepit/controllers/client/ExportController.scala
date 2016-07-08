@@ -1,9 +1,12 @@
 package com.keepit.controllers.client
 
 import com.google.inject.Inject
+import com.keepit.commanders.LocalUserExperimentCommander
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
+import com.keepit.common.controller.{ NonUserRequest, UserRequest, ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.db.Id
+import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.SlackLog
@@ -17,6 +20,7 @@ import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.Json
 
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.Try
 
 class ExportController @Inject() (
   db: Database,
@@ -25,6 +29,8 @@ class ExportController @Inject() (
   exportStore: S3KifiExportStore,
   exportActor: ActorInstance[FullExportProcessingActor],
   userValueRepo: UserValueRepo,
+  userExperimentCommander: LocalUserExperimentCommander,
+  userEmailAddressRepo: UserEmailAddressRepo,
   clock: Clock,
   implicit val airbrake: AirbrakeNotifier,
   private implicit val defaultContext: ExecutionContext,
@@ -68,11 +74,14 @@ class ExportController @Inject() (
     }
   }
 
-  def requestFullExport() = UserAction(parse.tolerantJson) { request =>
-    val req = db.readWrite { implicit s =>
-      exportScheduler.internExportRequest(request.userId)
-    }
+  private def internFullExport(userId: Id[User])(implicit session: RWSession): FullExportRequest = {
+    val req = exportScheduler.internExportRequest(userId)
     exportActor.ref ! IfYouCouldJustGoAhead
+    req
+  }
+
+  def requestFullExport() = UserAction { request =>
+    val req = db.readWrite(implicit s => internFullExport(request.userId))
     req.status match {
       case FullExportStatus.NotStarted =>
         Ok(Json.obj("status" -> "queued"))
@@ -82,6 +91,30 @@ class ExportController @Inject() (
         Ok(Json.obj("status" -> "failed", "failed" -> failedAt, "note" -> "automatically retrying"))
       case FullExportStatus.Finished(startedAt, finishedAt, _) =>
         Ok(Json.obj("status" -> "finished", "finished" -> finishedAt))
+    }
+  }
+
+  def requestFullExportWithPage() = UserAction { request =>
+    db.readWrite(implicit s => internFullExport(request.userId))
+    Redirect(com.keepit.controllers.client.routes.ExportController.getExportPage())
+  }
+
+  def getExportPage() = MaybeUserAction { request =>
+    request match {
+      case nur: NonUserRequest[_] => Redirect(com.keepit.controllers.website.routes.HomeController.home())
+      case ur: UserRequest[_] =>
+        val userId = ur.userId
+
+        val (export, systemState, userEmail) = db.readOnlyMaster { implicit s =>
+          val export = exportScheduler.getExportRequest(userId)
+          val systemState = userExperimentCommander.getBuzzState(Some(userId))
+          val userEmail = Try(userEmailAddressRepo.getByUser(userId)).toOption
+          (export, systemState, userEmail)
+        }
+
+        val allowReexport = export.exists(ep => FullExportSchedulerConfig.oldEnoughToBeReprocessed(ep, currentDateTime))
+
+        Ok(views.html.website.export(export.map(_.status), systemState, userEmail, allowReexport))
     }
   }
 }

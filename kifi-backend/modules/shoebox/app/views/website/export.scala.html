@@ -1,0 +1,94 @@
+@import com.keepit.export.FullExportStatus
+@import com.keepit.export.FullExportStatus._
+@import com.keepit.export.FullExportSchedulerConfig._
+@(exportStatus: Option[FullExportStatus], systemState: Option[UserExperimentType], userEmail: Option[EmailAddress], allowReexport: Boolean)
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1, minimum-scale=1, maximum-scale=1">
+    <title>Kifi | Keep Your Keeps</title>
+
+    <link href="//fonts.googleapis.com/css?family=Lato:300,400,700" rel="stylesheet" type="text/css">
+    <link rel="stylesheet" type="text/css" href="/assets/ml/css/authentication.css">
+    <link rel="stylesheet" type="text/css" href="/assets/ml/css/export.css">
+    <link rel="stylesheet" type="text/css" href="/assets/ml/css/normalize.css">
+  </head>
+
+  <body>
+    <header id="header_bar">
+      <div id="header-wrapper">
+        <a href="/" id="kifi_logo"></a>
+      </div>
+    </header>
+
+    <div class="page">
+      <h1 class="export-h1">Keep your Keeps</h1>
+      <h3 class="export-h3">The last day Kifi will be fully operational is August 22nd, 2016.  We care about your data, so please be sure to take it with you.</h3>
+      <div class="export-container">
+        <h4 class="export-container-header">Export All of Your Data</h4>
+        <div class="export-container-body">
+          <span>The export will include <b>all</b> keeps you have access to:</span>
+          <ul>
+            <li>Everything you've kept or messaged</li>
+            <li>Everything in libraries you collaborate on or follow</li>
+            <li>Everything you have access to within your teams</li>
+          </ul>
+          <span>Data included for each keep will be the URL, date kept, notes, comments, and tags. The export files will include:</span>
+          <ul>
+            <li>HTML export that can be imported by your browser and many other bookmarking services</li>
+            <li>JSON file</li>
+            <li>Interactive and explorable page that you can render locally and via your browser</li>
+          </ul>
+          <div class="export-container-cta">
+            @{
+            if(exportStatus.isEmpty) {
+            <div class="export-container-cta-btns">
+              <form action="/api/2/exports" method="POST">
+                <button class="export-cta-btn export-submit-btn" type="submit">Export Your Keeps</button>
+              </form>
+            </div>
+            } else if (exportStatus.exists { case status: FullExportStatus.InProgress => true; case FullExportStatus.NotStarted => true; case _ => false }) {
+            if(userEmail.isDefined) {
+            if(!systemState.contains(UserExperimentType.SYSTEM_EXPORT_ONLY)) {
+            <span class="export-progress-btn">Currently exporting... This may take several hours.</span>
+            <span class="export-progress-txt">We'll send an email to <span class="green-txt">{userEmail.get.address}</span> when we're done.</span>
+            <span>Go to <a href="/settings">settings</a> if you'd like to update your email address.</span>
+            } else {
+            <span class="export-cta-btn export-progress-btn">Currently exporting... This may take several hours.</span>
+            <span class="export-progress-txt">We'll send an email to <span class="green-txt">{userEmail.get.address}</span> when we're done.</span>
+            }
+            } else {
+            <span class="export-cta-btn export-progress-btn">Currently exporting... This may take several hours.</span>
+                <span class="export-progress-noemail">
+                  We don't have an email on file for your account, and we need one to send to once your export is complete. Please contact support@kifi.com to resolve this issue.
+                </span>
+            }
+            } else if (exportStatus.exists { case status: FullExportStatus.Failed => true; case _ => false })  {
+              <span class="export-failed-txt">
+                Something went wrong with your export and we were unable to complete it. Please contact support@kifi.com to resolve the issue.
+              </span>
+            } else if (exportStatus.exists { case status: FullExportStatus.Finished => true; case _ => false }) {
+            exportStatus.map {
+            case finished: FullExportStatus.Finished =>
+            <div class="export-container-cta-btns">
+              <a class="export-cta-btn export-download-btn" href="/api/1/exports">Download</a>
+              <form class="export-resubmit-form" action="/api/2/exports" method="POST">
+                {if(allowReexport) <button class="export-cta-btn export-resubmit-btn" type="submit">Re-export</button>}
+              </form>
+            </div>
+                  <span class="export-download-timestamp">Last export generated on
+                    {finishedAtPrettyString(finished)}
+                  </span>
+            case _ =>
+            }
+            }
+            }
+          </div>
+        </div>
+      </div>
+      <h4 class="export-footer-txt">You can learn more about the <a href="/">next phase of our journey</a> or read the <a href="/">FAQs</a> regarding the shut down.</h4>
+    </div>
+  </body>
+</html>

@@ -131,7 +131,7 @@ class FullExportProcessingActor @Inject() (
           case Failure(aww) =>
             slackLog.error(s"[${clock.now}] Could not upload $exportBase.zip because ${aww.getMessage}")
             db.readWrite { implicit s => exportRequestRepo.markAsFailed(request.id.get, aww.getMessage) }
-            airbrake.notify(aww)
+            airbrake.notify(s"export failed for userId=${request.userId}. reason: $aww")
         }
     }.map(_ => ())
   }
