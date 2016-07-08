@@ -183,7 +183,7 @@ class NotificationCommanderImpl @Inject() (
       "unread" -> true,
       "unreadAuthors" -> 1,
       "unreadMessages" -> 1,
-      "url" -> "https://medium.com/p/f1cd2f2e116c"
+      "url" -> "https://www.kifi.com/keepmykeeps"
     )
 
     userIds.foreach { userId => notificationRouter.sendToUser(userId, Json.arr("notification", notifJson)) }
