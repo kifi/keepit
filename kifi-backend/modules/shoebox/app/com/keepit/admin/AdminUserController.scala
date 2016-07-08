@@ -1077,4 +1077,21 @@ class AdminUserController @Inject() (
 
     Ok("going!")
   }
+
+  def announceToAllUsers() = AdminUserAction(parse.tolerantJson) { implicit request =>
+    val userIds = Set(1L, 3L, 61L, 35713L, 98082L).map(Id[User])
+
+    val chunkSize = 100
+    val nUsers = userIds.size // db.readOnlyMaster(implicit s => userRepo.count)
+    val numChunks = nUsers / chunkSize
+
+    val enum = ChunkedResponseHelper.chunkedFuture(0 to numChunks) { chunk =>
+      //val userIds = db.readOnlyMaster(implicit s => userRepo.pageAscendingIds(chunk, chunkSize, excludeStates = UserStates.ALL - UserStates.ACTIVE))
+      eliza.sendAnnouncementToUsers(userIds).map { _ =>
+        s"sent to ${userIds.headOption}-${userIds.lastOption}"
+      }
+    }
+
+    Ok.chunked(enum)
+  }
 }

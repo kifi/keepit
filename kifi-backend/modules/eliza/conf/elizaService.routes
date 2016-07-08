@@ -101,6 +101,7 @@ POST /internal/eliza/disableDevice              @com.keepit.eliza.controllers.in
 POST /internal/eliza/notifications/post              @com.keepit.eliza.controllers.internal.NotificationController.postEvent
 POST /internal/eliza/notifications/send              @com.keepit.eliza.controllers.internal.NotificationController.postEvents
 POST /internal/eliza/notifications/complete           @com.keepit.eliza.controllers.internal.NotificationController.completeNotification
+POST /internal/eliza/notifications/sendAnnouncementToUsers @com.keepit.eliza.controllers.internal.NotificationController.sendAnnouncementToUsers
 
 ##########################################
 # IMPORTS
