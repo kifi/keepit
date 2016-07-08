@@ -35,8 +35,8 @@ object KeepExportFormat {
 
 case class KeepExportResponse(keeps: Seq[Keep], keepTags: Map[Id[Keep], Seq[String]], keepLibs: Map[Id[Keep], Seq[Library]]) {
   def formatAsHtml: String = {
-    val before = FullExportFormatter.beforeHtml
-    val after = FullExportFormatter.afterHtml
+    val before = FullExportFormatter.beforeHtml + "\n<DL>"
+    val after = "</DL\n>" + FullExportFormatter.afterHtml
 
     def createExport(keep: Keep): String = {
       // Parse Tags
