@@ -11,6 +11,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.SlackLog
+import com.keepit.common.mail.{ SystemEmailAddress, ElectronicMail, LocalPostOffice }
 import com.keepit.common.strings.StringSplit
 import com.keepit.common.time._
 import com.keepit.model._
@@ -21,7 +22,7 @@ import play.api.libs.iteratee.Iteratee
 import play.api.libs.json.Json
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Failure, Success }
+import scala.util.{ Try, Failure, Success }
 
 object FullExportProcessingConfig {
   val MAX_PROCESSING_DURATION = Duration.standardHours(4)
@@ -37,6 +38,8 @@ class FullExportProcessingActor @Inject() (
   exportCommander: FullExportProducer,
   exportFormatter: FullExportFormatter,
   exportStore: S3KifiExportStore,
+  userEmailAddressRepo: UserEmailAddressRepo,
+  postOffice: LocalPostOffice,
   airbrake: AirbrakeNotifier,
   clock: Clock,
   implicit val executionContext: ExecutionContext,
@@ -46,7 +49,7 @@ class FullExportProcessingActor @Inject() (
 
   import FullExportProcessingConfig._
 
-  val slackLog = new SlackLog(InhouseSlackChannel.TEST_RYAN)
+  val slackLog = new SlackLog(InhouseSlackChannel.ENG_SHOEBOX)
 
   protected val minConcurrentTasks = MIN_CONCURRENCY
   protected val maxConcurrentTasks = MAX_CONCURRENCY
@@ -124,11 +127,40 @@ class FullExportProcessingActor @Inject() (
           case Success(yay) =>
             slackLog.info(s"[${clock.now}] Uploaded $exportBase.zip, key = ${yay.getKey}")
             db.readWrite { implicit s => exportRequestRepo.markAsComplete(request.id.get, yay.getKey) }
+            sendSuccessEmail(user, request)
           case Failure(aww) =>
             slackLog.error(s"[${clock.now}] Could not upload $exportBase.zip because ${aww.getMessage}")
             db.readWrite { implicit s => exportRequestRepo.markAsFailed(request.id.get, aww.getMessage) }
             airbrake.notify(aww)
         }
     }.map(_ => ())
+  }
+
+  private def sendSuccessEmail(user: User, request: FullExportRequest): Future[Unit] = {
+    db.readOnlyMasterAsync { implicit s =>
+      Try(userEmailAddressRepo.getByUser(user.id.get)).toOption
+    }.map {
+      _.fold(ifEmpty = ()) { userEmailAddress =>
+        val email = ElectronicMail(
+          from = SystemEmailAddress.NOTIFICATIONS,
+          fromName = Some("Kifi"),
+          to = Seq(userEmailAddress),
+          subject = s"Your Kifi export is ready!",
+          htmlBody = s"""
+            |Visit <a href="https://www.kifi.com/keepmykeeps">www.kifi.com/keepmykeeps</a> to download the file for your export.
+            |You can refresh your exported keeps up until the last day the Kifi service is fully operational on August 22nd, 2016.
+            |After that, an export file will be available for several weeks. The latest status is available on <a href="https://www.kifi.com">Kifi.com</a> and you can <a href="https://medium.com/on-the-same-page-with-kifi">learn more on our blog</a>.
+          """.stripMargin,
+          textBody = Some(s"""
+            |Visit www.kifi.com/keepmykeeps to download the file for your export.
+            |You can refresh your exported keeps up until the last day the Kifi service is fully operational on August 22nd, 2016.
+            |After that, an export file will be available for several weeks. The latest status is available on Kifi.com and you can learn more on our blog (medium.com/on-the-same-page-with-kifi).
+          """.stripMargin),
+          category = NotificationCategory.User.EXPORT_READY
+        )
+
+        db.readWriteAsync(implicit s => postOffice.sendMail(email)).map(_ => ())
+      }
+    }
   }
 }
