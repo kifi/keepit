@@ -37,6 +37,8 @@ POST   /api/2/exports      @com.keepit.controllers.client.ExportController.reque
 GET    /api/1/exports      @com.keepit.controllers.client.ExportController.downloadFullExport()
 GET    /keepmykeeps       @com.keepit.controllers.client.ExportController.getExportPage()
 
+POST   /api/1/exports/addEmailToNotify  @com.keepit.controllers.client.ExportController.addEmailToNotify()
+
 ##
 # LIBRARIES
 ##

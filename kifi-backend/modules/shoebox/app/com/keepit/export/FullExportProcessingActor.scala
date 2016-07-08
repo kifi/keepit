@@ -138,7 +138,7 @@ class FullExportProcessingActor @Inject() (
 
   private def sendSuccessEmail(user: User, request: FullExportRequest): Future[Unit] = {
     db.readOnlyMasterAsync { implicit s =>
-      Try(userEmailAddressRepo.getByUser(user.id.get)).toOption
+      exportRequestRepo.getByUser(user.id.get).flatMap(_.notifyEmail) orElse Try(userEmailAddressRepo.getByUser(user.id.get)).toOption
     }.map {
       _.fold(ifEmpty = ()) { userEmailAddress =>
         val email = ElectronicMail(
