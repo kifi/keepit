@@ -19,9 +19,7 @@ object FullExportFormatter {
                  |It will be read and overwritten.
                  |Do Not Edit! -->
                  |<Title>Kifi Bookmarks Export</Title>
-                 |<H1>Bookmarks</H1>
-                 |""".stripMargin
-  val afterHtml = ""
+                 |<H1>Bookmarks</H1>""".stripMargin
 }
 
 @ImplementedBy(classOf[FullExportFormatterImpl])
