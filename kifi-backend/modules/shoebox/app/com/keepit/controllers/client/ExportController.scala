@@ -10,6 +10,7 @@ import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.SlackLog
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
 import com.keepit.export._
 import com.keepit.model.UserValues.UserValueIntHandler
@@ -20,11 +21,12 @@ import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.Json
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.Try
+import scala.util.{ Try, Success, Failure }
 
 class ExportController @Inject() (
   db: Database,
   val userActionsHelper: UserActionsHelper,
+  requestRepo: FullExportRequestRepo,
   exportScheduler: FullExportScheduler,
   exportStore: S3KifiExportStore,
   exportActor: ActorInstance[FullExportProcessingActor],
@@ -38,6 +40,17 @@ class ExportController @Inject() (
   private implicit val inhouseSlackClient: InhouseSlackClient)
     extends UserActions with ShoeboxServiceController {
   val slackLog = new SlackLog(InhouseSlackChannel.TEST_RYAN)
+
+  def addEmailToNotify() = UserAction(parse.tolerantJson) { request =>
+    val emailStr = (request.body \ "email").as[String]
+    EmailAddress.validate(emailStr) match {
+      case Failure(_) => BadRequest(Json.obj("error" -> "invalid_email"))
+      case Success(emailAddress) =>
+        val wasUpdated = db.readWrite(implicit s => requestRepo.updateNotifyEmail(request.userId, emailAddress))
+        if (wasUpdated) Ok(Json.obj("status" -> "success"))
+        else NotFound
+    }
+  }
 
   def downloadFullExport() = UserAction.async { request =>
     val status = db.readOnlyMaster { implicit s =>
@@ -74,14 +87,10 @@ class ExportController @Inject() (
     }
   }
 
-  private def internFullExport(userId: Id[User])(implicit session: RWSession): FullExportRequest = {
-    val req = exportScheduler.internExportRequest(userId)
+  def requestFullExport() = UserAction(parse.tolerantJson) { request =>
+    val emailOpt = (request.body \ "email").asOpt[String].flatMap(EmailAddress.validate(_).toOption)
+    val req = db.readWrite(implicit s => exportScheduler.internExportRequest(request.userId, emailOpt))
     exportActor.ref ! IfYouCouldJustGoAhead
-    req
-  }
-
-  def requestFullExport() = UserAction { request =>
-    val req = db.readWrite(implicit s => internFullExport(request.userId))
     req.status match {
       case FullExportStatus.NotStarted =>
         Ok(Json.obj("status" -> "queued"))
@@ -94,11 +103,6 @@ class ExportController @Inject() (
     }
   }
 
-  def requestFullExportWithPage() = UserAction { request =>
-    db.readWrite(implicit s => internFullExport(request.userId))
-    Redirect(com.keepit.controllers.client.routes.ExportController.getExportPage())
-  }
-
   def getExportPage() = MaybeUserAction { request =>
     request match {
       case nur: NonUserRequest[_] => Redirect(com.keepit.controllers.website.routes.HomeController.home())
@@ -108,7 +112,7 @@ class ExportController @Inject() (
         val (export, systemState, userEmail) = db.readOnlyMaster { implicit s =>
           val export = exportScheduler.getExportRequest(userId)
           val systemState = userExperimentCommander.getBuzzState(Some(userId))
-          val userEmail = Try(userEmailAddressRepo.getByUser(userId)).toOption
+          val userEmail = requestRepo.getByUser(userId).flatMap(_.notifyEmail) orElse Try(userEmailAddressRepo.getByUser(userId)).toOption
           (export, systemState, userEmail)
         }
 
