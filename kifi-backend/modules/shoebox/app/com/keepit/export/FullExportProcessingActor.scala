@@ -58,7 +58,7 @@ class FullExportProcessingActor @Inject() (
       ids.filter(exportRequestRepo.markAsProcessing(_, threshold))
     }.andThen {
       case Success(tasks) =>
-        slackLog.info(s"Pulling $limit export tasks yields $tasks")
+        if (tasks.nonEmpty) { slackLog.info(s"Pulling $limit export tasks yields $tasks") }
       case Failure(fail) =>
         airbrake.notify(fail)
         slackLog.error(s"Pulling $limit export tasks failed: ${fail.getMessage}")
