@@ -13,6 +13,7 @@ import com.keepit.common.oauth.SlackIdentity
 import com.keepit.common.performance.StatsdTiming
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.time._
+import com.keepit.export.FullExportRequestRepo
 import com.keepit.slack.SlackActionFail
 import com.keepit.model.User
 import com.keepit.social.{ IdentityUserIdCache, IdentityUserIdKey, UserIdentity }
@@ -145,6 +146,7 @@ trait SlackTeamMembershipRepo extends Repo[SlackTeamMembership] with SeqNumberFu
   //admin
   def getAllByIds(ids: Set[Id[SlackTeamMembership]])(implicit session: RSession): Set[SlackTeamMembership]
   def getByUserIdsAndSlackTeams(keys: Map[Id[User], SlackTeamId])(implicit session: RSession): Seq[SlackTeamMembership]
+  def getMembershipsOfKifiUsersWhoHaventExported(fromId: Option[Id[SlackTeamMembership]])(implicit session: RSession): Seq[SlackTeamMembership]
 }
 
 @Singleton
@@ -152,6 +154,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock,
     slackTeamRepo: SlackTeamRepo, // implicit dependency based in manual SQL query
+    exportRequestRepo: FullExportRequestRepo,
     userIdentityCache: IdentityUserIdCache) extends DbRepo[SlackTeamMembership] with SeqNumberDbFunction[SlackTeamMembership] with SlackTeamMembershipRepo {
   // Don't put a cache on the whole model. There's a bunch of
   // scheduling garbage that is changed via update statements.
@@ -406,6 +409,17 @@ class SlackTeamMembershipRepoImpl @Inject() (
     activeRows.filter(r => r.userId.inSet(userIds))
       .list
       .filter { stm => stm.userId.isDefined && stm.slackTeamId == teamByUserId(stm.userId.get) }
+  }
+
+  def getMembershipsOfKifiUsersWhoHaventExported(fromId: Option[Id[SlackTeamMembership]])(implicit session: RSession): Seq[SlackTeamMembership] = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    val ids = sql"""
+      select stm.id from slack_team_membership stm
+      where state = 'active' and user_id is not null and slack_username is not null and id >= ${fromId.map(_.id).getOrElse(0L)}
+      and not exists (select id from export_request er where er.user_id = stm.user_id);
+    """.as[Id[SlackTeamMembership]].list
+
+    getAllByIds(ids.toSet).toSeq.sortBy(_.id.get.id)
   }
 }
 
