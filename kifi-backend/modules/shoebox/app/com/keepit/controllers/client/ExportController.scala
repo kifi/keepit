@@ -44,10 +44,10 @@ class ExportController @Inject() (
   def addEmailToNotify() = UserAction(parse.tolerantJson) { request =>
     val emailStr = (request.body \ "email").as[String]
     EmailAddress.validate(emailStr) match {
-      case Failure(_) => BadRequest("invalid_email")
+      case Failure(_) => BadRequest(Json.obj("error" -> "invalid_email"))
       case Success(emailAddress) =>
         val wasUpdated = db.readWrite(implicit s => requestRepo.updateNotifyEmail(request.userId, emailAddress))
-        if (wasUpdated) Ok("success")
+        if (wasUpdated) Ok(Json.obj("status" -> "success"))
         else NotFound
     }
   }
@@ -87,14 +87,10 @@ class ExportController @Inject() (
     }
   }
 
-  private def internFullExport(userId: Id[User])(implicit session: RWSession): FullExportRequest = {
-    val req = exportScheduler.internExportRequest(userId)
+  def requestFullExport() = UserAction(parse.tolerantJson) { request =>
+    val emailOpt = (request.body \ "email").asOpt[String].flatMap(EmailAddress.validate(_).toOption)
+    val req = db.readWrite(implicit s => exportScheduler.internExportRequest(request.userId, emailOpt))
     exportActor.ref ! IfYouCouldJustGoAhead
-    req
-  }
-
-  def requestFullExport() = UserAction { request =>
-    val req = db.readWrite(implicit s => internFullExport(request.userId))
     req.status match {
       case FullExportStatus.NotStarted =>
         Ok(Json.obj("status" -> "queued"))
@@ -107,11 +103,6 @@ class ExportController @Inject() (
     }
   }
 
-  def requestFullExportWithPage() = UserAction { request =>
-    db.readWrite(implicit s => internFullExport(request.userId))
-    Redirect(com.keepit.controllers.client.routes.ExportController.getExportPage())
-  }
-
   def getExportPage() = MaybeUserAction { request =>
     request match {
       case nur: NonUserRequest[_] => Redirect(com.keepit.controllers.website.routes.HomeController.home())
@@ -121,7 +112,7 @@ class ExportController @Inject() (
         val (export, systemState, userEmail) = db.readOnlyMaster { implicit s =>
           val export = exportScheduler.getExportRequest(userId)
           val systemState = userExperimentCommander.getBuzzState(Some(userId))
-          val userEmail = Try(userEmailAddressRepo.getByUser(userId)).toOption
+          val userEmail = requestRepo.getByUser(userId).flatMap(_.notifyEmail) orElse Try(userEmailAddressRepo.getByUser(userId)).toOption
           (export, systemState, userEmail)
         }
 

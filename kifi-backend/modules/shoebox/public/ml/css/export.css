@@ -50,7 +50,6 @@ li {
   border: 0px solid black;
   border-radius: 4px;
   padding: 8px;
-  margin-bottom: 5px;
   font-size: 18px;
   font-weight: 600;
 }
@@ -59,7 +58,7 @@ li {
   opacity: .75;
 }
 
-.export-submit-btn, .export-download-btn, .export-resubmit-btn {
+.export-submit-btn, .export-download-btn, .export-resubmit-btn, .export-newemail-btn {
   background: #41c482;
 }
 
@@ -81,6 +80,50 @@ li {
   font-weight: 600;
 }
 
+.export-newemail-preclick {
+  text-style: underline;
+}
+
+.export-form {
+  display: flex;
+  flex-direction: column;
+  width: 250px;
+}
+
+.export-form * + * {
+  margin-top: 10px;
+}
+
+.export-newemail-form {
+  display: none;
+  margin-top: 10px;
+}
+
+.export-newemail-txt {
+  text-align: center;
+}
+
+.export-newemail-input {
+  padding: 10px;
+}
+
+.export-newemail-btn {
+  display: block;
+  color: white;
+  border: 0px solid black;
+  border-radius: 4px;
+  padding: 8px;
+  font-size: 18px;
+  font-weight: 600;
+  margin-top: 10px;
+}
+
+.export-newemail-error {
+  visibility: hidden;
+  color: red;
+  text-align: center;
+}
+
 .export-download-timestamp {
   display: block;
 }
@@ -90,7 +133,7 @@ li {
 }
 
 .export-download-timestamp {
-  margin-top: 5px;
+  margin-top: 15px;
 }
 
 .export-footer-txt {
