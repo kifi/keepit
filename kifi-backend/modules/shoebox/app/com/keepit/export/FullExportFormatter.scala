@@ -2,13 +2,13 @@ package com.keepit.export
 
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.common.crypto.PublicIdConfiguration
-import com.keepit.common.db.Id
 import com.keepit.common.json.EitherFormat
 import com.keepit.model._
 import com.keepit.social.BasicUser
 import play.api.libs.iteratee._
 import play.api.libs.json._
 import com.keepit.common.strings.StringWithReplacements
+import org.joda.time.DateTime
 
 import scala.concurrent.ExecutionContext
 
@@ -19,10 +19,7 @@ object FullExportFormatter {
                  |It will be read and overwritten.
                  |Do Not Edit! -->
                  |<Title>Kifi Bookmarks Export</Title>
-                 |<H1>Bookmarks</H1>
-                 |<DL>
-                 |""".stripMargin
-  val afterHtml = "</DL>"
+                 |<H1>Bookmarks</H1>""".stripMargin
 }
 
 @ImplementedBy(classOf[FullExportFormatterImpl])
@@ -60,7 +57,7 @@ class FullExportFormatterImpl @Inject() (
     implicit val spaceWrites = EitherFormat.keyedWrites[BasicUser, BasicOrganization]("user", "org")
     export.spaces.map(_.space).through(Enumeratee.grouped(Iteratee.getChunks)).through(Enumeratee.map { spaces =>
       "index.json" -> Json.obj(
-        "me" -> export.user,
+        "me" -> BasicUser.fromUser(export.user),
         "spaces" -> JsArray(spaces.map { space =>
           val partialSpace = spaceWrites.writes(space)
           partialSpace
@@ -137,7 +134,7 @@ class FullExportFormatterImpl @Inject() (
     implicit val spaceWrites = EitherFormat.keyedWrites[BasicUser, BasicOrganization]("user", "org")
     export.spaces.map(_.space).through(Enumeratee.grouped(Iteratee.getChunks)).through(Enumeratee.map { spaces =>
       "index" -> Json.obj(
-        "me" -> export.user,
+        "me" -> BasicUser.fromUser(export.user),
         "spaces" -> JsArray(spaces.map { space =>
           val partialSpace = spaceWrites.writes(space)
           partialSpace
@@ -191,22 +188,22 @@ class FullExportFormatterImpl @Inject() (
   }
 
   def bookmarks(export: FullStreamingExport.Root): Enumerator[BookmarkHtml] = {
-    val futureLibrariesById = export.spaces.flatMap(_.libraries.map(_.library)).run(Iteratee.fold(Map.empty[Id[Library], Library]) { (previousLibraries, nextLibrary) =>
-      previousLibraries + (nextLibrary.id.get -> nextLibrary)
+    bookmarkFolder("Discussions", export.user.createdAt, export.looseKeeps) andThen export.spaces.flatMap(_.libraries.flatMap { libraryExport =>
+      bookmarkFolder(libraryExport.library.name, libraryExport.library.createdAt, libraryExport.keeps)
     })
-    Enumerator.flatten(futureLibrariesById.map(Enumerator(_))).flatMap { librariesById =>
-      (export.looseKeeps andThen export.spaces.flatMap(_.libraries.flatMap(_.keeps))).map { keepExport =>
-        val keep = keepExport.keep
-        val title = keep.title.map(_.replace("&", "&amp;")) getOrElse ""
-        val date = keep.keptAt.getMillis / 1000
-        val tagString = {
-          def sanitize(tag: String): String = tag.replaceAllLiterally("&" -> "&amp;", "\"" -> "")
-          val tags = keepExport.tags.map(tag => sanitize(tag.tag))
-          val libraryNames = keep.recipients.libraries.flatMap(id => librariesById.get(id).map(_.name))
-          s""""${(tags ++ libraryNames).mkString(",")}""""
-        }
-        s"""<DT><A HREF="${keep.url}" ADD_DATE="$date" TAGS=$tagString>$title</A>"""
+  }
+
+  private def bookmarkFolder(name: String, createdAt: DateTime, keeps: Enumerator[FullStreamingExport.KeepExport]): Enumerator[BookmarkHtml] = {
+    Enumerator(s"""<DT><H3 FOLDED ADD_DATE="${createdAt.getMillis / 1000}">$name</H3>""", "<DL><p>") andThen keeps.map { keepExport =>
+      val keep = keepExport.keep
+      val title = keep.title.map(_.replace("&", "&amp;")) getOrElse ""
+      val date = keep.keptAt.getMillis / 1000
+      val tagString = {
+        def sanitize(tag: String): String = tag.replaceAllLiterally("&" -> "&amp;", "\"" -> "")
+        val tags = keepExport.tags.map(tag => sanitize(tag.tag))
+        s""""${(tags).mkString(",")}""""
       }
-    }
+      s"""<DT><a href="${keep.url}" add_date="$date" tags=$tagString>$title</a>"""
+    } andThen Enumerator("</DL><p>")
   }
 }
