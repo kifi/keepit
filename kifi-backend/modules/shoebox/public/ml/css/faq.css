@@ -1,0 +1,21 @@
+#header_bar, #footer {
+ position: relative;
+}
+
+.page {
+  padding: 20px;
+}
+
+li {
+  display: list-item;
+  list-style: initial;
+}
+
+.faq-h1 {
+  text-align: center;
+}
+
+.bold-italics {
+  font-weight: 600;
+  font-style: italic;
+}

@@ -5,6 +5,7 @@
 # Let's keep these routes alphabetized.
 
 GET     /connections               @com.keepit.controllers.routing.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/connections")
+GET     /faq                       @com.keepit.controllers.client.WindDownController.faq()
 GET     /find                      @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppToUser()
 GET     /friends                   @com.keepit.controllers.routing.KifiSiteRouter.redirectFromFriends(friend: Option[String])
 GET     /friends/invite            @com.keepit.controllers.routing.KifiSiteRouter.redirectUserTo(path = "/invite")
