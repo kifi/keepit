@@ -65,6 +65,23 @@ class SlackTeamMembershipTest extends TestKitSupport with SpecificationLike with
           1 === 1
         }
       }
+
+      "return memberships for users who haven't exported" in {
+        withDb(modules: _*) { implicit injector =>
+
+          db.readWrite { implicit s =>
+            val teams = (1 to 10).map(_ => SlackTeamFactory.team().saved)
+            teams.flatMap(team => (1 to 10).map(_ => SlackTeamMembershipFactory.membership().withTeam(team).saved))
+          }
+
+          db.readOnlyMaster { implicit s =>
+            val stms = inject[SlackTeamMembershipRepo].getMembershipsOfKifiUsersWhoHaventExported(fromId = None)
+            stms.length === inject[SlackTeamMembershipRepo].aTonOfRecords().length
+          }
+
+          1 === 1
+        }
+      }
     }
   }
 }

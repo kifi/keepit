@@ -11,8 +11,10 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.SlackLog
+import com.keepit.common.mail.{ SystemEmailAddress, ElectronicMail, LocalPostOffice }
 import com.keepit.common.strings.StringSplit
 import com.keepit.common.time._
+import com.keepit.common.util.{ LinkElement, DescriptionElements }
 import com.keepit.model._
 import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
 import com.kifi.juggle.ConcurrentTaskProcessingActor
@@ -21,7 +23,7 @@ import play.api.libs.iteratee.Iteratee
 import play.api.libs.json.Json
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Failure, Success }
+import scala.util.{ Try, Failure, Success }
 
 object FullExportProcessingConfig {
   val MAX_PROCESSING_DURATION = Duration.standardHours(4)
@@ -37,6 +39,8 @@ class FullExportProcessingActor @Inject() (
   exportCommander: FullExportProducer,
   exportFormatter: FullExportFormatter,
   exportStore: S3KifiExportStore,
+  userEmailAddressRepo: UserEmailAddressRepo,
+  postOffice: LocalPostOffice,
   airbrake: AirbrakeNotifier,
   clock: Clock,
   implicit val executionContext: ExecutionContext,
@@ -46,7 +50,7 @@ class FullExportProcessingActor @Inject() (
 
   import FullExportProcessingConfig._
 
-  val slackLog = new SlackLog(InhouseSlackChannel.TEST_RYAN)
+  val slackLog = new SlackLog(InhouseSlackChannel.ENG_SHOEBOX)
 
   protected val minConcurrentTasks = MIN_CONCURRENCY
   protected val maxConcurrentTasks = MAX_CONCURRENCY
@@ -70,8 +74,8 @@ class FullExportProcessingActor @Inject() (
   }
 
   private def doExport(id: Id[FullExportRequest]): Future[Unit] = {
-    slackLog.info(s"Processing export request $id")
     val request = db.readOnlyMaster { implicit s => exportRequestRepo.get(id) }
+    slackLog.info(s"Processing export request $id for user ${request.userId}")
     val enum = exportCommander.fullExport(request.userId)
     val user = db.readOnlyMaster { implicit s => userRepo.get(request.userId) }
     val exportBase = s"[Kifi Export]${user.fullName.words.mkString("-")}-${user.externalId.id}"
@@ -107,7 +111,7 @@ class FullExportProcessingActor @Inject() (
             if (!existingEntries.contains(path)) {
               zip.putNextEntry(new ZipEntry(s"$exportBase/json/$path"))
               zip.write(content.getBytes("UTF-8"))
-              zip.closeEntry
+              zip.closeEntry()
             }
             existingEntries + path
         })
@@ -122,11 +126,38 @@ class FullExportProcessingActor @Inject() (
           case Success(yay) =>
             slackLog.info(s"[${clock.now}] Uploaded $exportBase.zip, key = ${yay.getKey}")
             db.readWrite { implicit s => exportRequestRepo.markAsComplete(request.id.get, yay.getKey) }
+            sendSuccessEmail(user, request)
           case Failure(aww) =>
-            slackLog.error(s"[${clock.now}] Could not upload $exportBase.zip because ${aww.getMessage}")
+            slackLog.error(s"[${clock.now}] Could not upload $exportBase.zip for userId=${request.userId} because ${aww.getMessage}")
             db.readWrite { implicit s => exportRequestRepo.markAsFailed(request.id.get, aww.getMessage) }
-            airbrake.notify(aww)
+            airbrake.notify(s"export failed for userId=${request.userId}. reason: $aww")
         }
     }.map(_ => ())
+  }
+
+  private def sendSuccessEmail(user: User, request: FullExportRequest): Unit = {
+    import DescriptionElements._
+    db.readWrite { implicit s =>
+      val emailAddressOpt = exportRequestRepo.getByUser(user.id.get).flatMap(_.notifyEmail) orElse Try(userEmailAddressRepo.getByUser(user.id.get)).toOption
+      emailAddressOpt.foreach { userEmailAddress =>
+        val body = DescriptionElements.unlines(Seq(
+          DescriptionElements("Visit", "www.kifi.com/keepmykeeps" --> LinkElement("https://www.kifi.com/keepmykeeps"), "to download the file for your export."),
+          DescriptionElements("You can refresh your exported keeps up until the last day the Kifi service is fully operational on August 22nd, 2016."),
+          DescriptionElements(
+            "After that, an export file will be available for several weeks. The latest status is available on", "Kifi.com" --> LinkElement("https://www.kifi.com"),
+            "and you can", "learn more on our blog" --> LinkElement("https://medium.com/on-the-same-page-with-kifi"), "."
+          )
+        ))
+        postOffice.sendMail(ElectronicMail(
+          from = SystemEmailAddress.NOTIFICATIONS,
+          fromName = Some("Kifi"),
+          to = Seq(userEmailAddress),
+          subject = s"Your Kifi export is ready!",
+          htmlBody = DescriptionElements.formatAsHtml(body).body,
+          textBody = Some(DescriptionElements.formatPlain(body)),
+          category = NotificationCategory.User.EXPORT_READY
+        ))
+      }
+    }
   }
 }

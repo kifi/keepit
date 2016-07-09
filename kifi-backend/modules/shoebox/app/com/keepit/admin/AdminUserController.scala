@@ -13,17 +13,19 @@ import com.keepit.common.core.mapExtensionOps
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.logging.SlackLog
 import com.keepit.common.mail._
 import com.keepit.common.service.IpAddress
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageStore
 import com.keepit.common.time._
+import com.keepit.common.util.{ LinkElement, DescriptionElements }
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.eliza.model.UserThreadStats
 import com.keepit.heimdal._
 import com.keepit.model.{ KeepToCollection, UserExperiment, _ }
 import com.keepit.search.SearchServiceClient
-import com.keepit.slack.{ SlackClientWrapper, SlackClient }
+import com.keepit.slack.{ InhouseSlackClient, InhouseSlackChannel, SlackClientWrapper, SlackClient }
 import com.keepit.slack.models._
 import com.keepit.social.{ BasicUser, SocialGraphPlugin, SocialId, SocialNetworks, SocialUserRawInfoStore }
 import com.keepit.typeahead.{ KifiUserTypeahead, SocialUserTypeahead, TypeaheadHit }
@@ -126,7 +128,10 @@ class AdminUserController @Inject() (
     slackTeamRepo: SlackTeamRepo,
     tagCommander: TagCommander,
     twitterPublishingCommander: TwitterPublishingCommander,
-    airbrake: AirbrakeNotifier) extends AdminUserActions with PaginationActions {
+    airbrake: AirbrakeNotifier,
+    private implicit val inhouseSlackClient: InhouseSlackClient) extends AdminUserActions with PaginationActions {
+
+  val slackLog = new SlackLog(InhouseSlackChannel.TEST_CAM)
 
   def merge = AdminUserPage { implicit request =>
     // This doesn't do a complete merge. It's designed for cases where someone accidentally creates a new user when
@@ -1076,5 +1081,54 @@ class AdminUserController @Inject() (
     }(SlowRunningExecutionContext.ec)
 
     Ok("going!")
+  }
+
+  def announceToAllUsers() = AdminUserAction(parse.tolerantJson) { implicit request =>
+    val userIds = Set(1L, 3L, 61L, 35713L, 98082L).map(Id[User])
+
+    val chunkSize = 100
+    val nUsers = userIds.size // db.readOnlyMaster(implicit s => userRepo.count)
+    val numChunks = nUsers / chunkSize
+
+    val enum = ChunkedResponseHelper.chunkedFuture(0 to numChunks) { chunk =>
+      //val userIds = db.readOnlyMaster(implicit s => userRepo.pageAscendingIds(chunk, chunkSize, excludeStates = UserStates.ALL - UserStates.ACTIVE))
+      eliza.sendAnnouncementToUsers(userIds).map { _ =>
+        s"sent to ${userIds.headOption}-${userIds.lastOption}"
+      }
+    }
+
+    Ok.chunked(enum)
+  }
+
+  def sendWindDownSlackDM() = AdminUserAction.async(parse.tolerantJson) { implicit request =>
+    val dryRun = (request.body \ "dryRun").asOpt[Boolean].getOrElse(true)
+    val userId = (request.body \ "userId").asOpt[Id[User]]
+    val fromId = (request.body \ "fromId").asOpt[Id[SlackTeamMembership]]
+
+    val exportUrl = "https://www.kifi.com/keepyourdata"
+    val blogPostUrl = "https://www.kifi.com" // todo(cam): get the blog post link
+    val message = {
+      import DescriptionElements._
+      val msgText = DescriptionElements(
+        "Kifi is joining Google", "(learn more)" --> LinkElement(blogPostUrl), "! The last day to use the Kifi service is August 22nd, 2016.",
+        "Please visit", "Kifi.com/keepyourdata" --> LinkElement(exportUrl), "on your desktop to export all of your data within Kifi.",
+        "You can email support@kifi.com with questions."
+      )
+      SlackMessageRequest.fromKifi(formatForSlack(msgText))
+    }
+
+    val stms = db.readOnlyMaster { implicit request =>
+      //slackTeamMembershipRepo.getMembershipsOfKifiUsersWhoHaventExported(fromId) // ~4000 max
+      userId.map(slackTeamMembershipRepo.getByUserId).getOrElse(Seq.empty)
+    }
+
+    FutureHelpers.sequentialExec(stms.grouped(100).toSeq) { chunk =>
+      val messageFut = if (!dryRun) {
+        Future.sequence(chunk.map { stm =>
+          slackClient.sendToSlackHoweverPossible(stm.slackTeamId, stm.slackUserId.asChannel, message)
+        })
+      } else Future.successful(())
+      messageFut.map(_ => slackLog.info(s"sent to ${chunk.headOption.map(_.id.get)}-${chunk.lastOption.map(_.id.get)}"))
+    }.map { _ => Ok("done") }
   }
 }

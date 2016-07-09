@@ -7,7 +7,10 @@ object HackyExportAssets {
       |<head>
       |<meta charset="UTF-8">
       |</head>
-      |
+      |<img
+      |  src="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2072.7%2028.1%22%20width%3D%2272.7%22%20height%3D%2228.1%22%3E%3Cg%20fill%3D%22%23333%22%3E%3Cpath%20d%3D%22M38.9%2014.5h.7l2.4-3.7h5.2L43%2016.4l4.2%206.3h-5.1l-2.6-4.5h-.6v4.5h-4.3V5.4h4.3v9.1zM50.9%205.1c.3%200%20.7.1%201%20.2.3.1.6.3.8.5.2.2.4.5.5.8.1.3.2.6.2%201%200%20.3-.1.7-.2%201-.1.3-.3.6-.5.8-.2.2-.5.4-.8.5-.3.1-.6.2-1%20.2-.3%200-.7-.1-1-.2-.3-.1-.6-.3-.8-.5-.2-.2-.4-.5-.5-.8-.1-.3-.2-.6-.2-1%200-.3.1-.7.2-1%20.1-.3.3-.6.5-.8.2-.2.5-.4.8-.5.3-.1.7-.2%201-.2zM53.1%2023h-4.3V11h4.3v12zM64.4%2011h-2.7v-.4c0-.5.1-.8.3-1.1.2-.2.5-.3.9-.3s.7%200%20.9.1l.6.3V5.5c-.2-.1-.5-.1-.8-.2-.4-.1-.9-.1-1.4-.1-.7%200-1.3.1-1.9.3-.6.2-1.1.5-1.5%201-.4.4-.8%201-1%201.6-.2.7-.4%201.4-.4%202.3v.6h-1.9v3.8h1.9V23h4.3v-8.2h2.7V11zM68.9%205.1c.3%200%20.7.1%201%20.2.3.1.6.3.8.5.2.2.4.5.5.8.1.3.2.6.2%201%200%20.3-.1.7-.2%201-.1.3-.3.6-.5.8-.2.2-.5.4-.8.5-.3.1-.6.2-1%20.2-.3%200-.7-.1-1-.2-.3-.1-.6-.3-.8-.5-.2-.2-.4-.5-.5-.8-.1-.3-.2-.6-.2-1%200-.3.1-.7.2-1%20.1-.3.3-.6.5-.8.2-.2.5-.4.8-.5.3-.1.7-.2%201-.2zM71.1%2023h-4.3V11h4.3v12z%22%2F%3E%3C%2Fg%3E%3Cpath%20fill%3D%22%2371C885%22%20d%3D%22M27%206c0-3.3-2.7-6-6-6H6C2.7%200%200%202.7%200%206v16c0%203.3%202.7%206%206%206h15c3.3%200%206-2.7%206-6V6z%22%2F%3E%3Cg%20fill%3D%22%23FFF%22%3E%3Cpath%20d%3D%22M6.3%2014.1c.1.1.1.1%200%200%20.4.3.8.5.9.6.1%200%20.1.1.2.1%201.8.8%204.7.3%206%20.1%200-.4-.1-.8-.1-1.2-.4.1-1.1.2-1.8.3-1.6.1-2.9%200-3.7-.3-.8-.3-1.3-.9-1.6-1.4-.2-.5.1-1.2.1-1.2.8-1.8%203.8-.6%203.8-.6s-1-3.2.5-4c1.5-.8%202.1%201%202.1%201s.1-.6.6-1.3c0%200-.8-1.8-3.2-.8-.1.1-.3.3-.6.5-.5.6-.8%201.5-.7%202.6V9h-.5c-1%200-1.9.3-2.5.9-.2.2-.4.5-.5.7-.3.7-.3%201.4-.1%202.1.2.5.6%201%201.1%201.4zM22.8%2015.6c-.2-.6-.7-1.2-1.3-1.6-.2-.1-.5-.3-1-.5-1.9-.7-4.4-.3-5.6%200%200%20.2.1.8.2%201.2.4-.1.8-.2%201.5-.3%201.6-.1%202.9%200%203.7.3.8.3%201.3.9%201.6%201.4.2.5-.1%201.2-.1%201.2-.8%201.8-3.8.6-3.8.6s1.1%203.5-.5%204c-1.8.6-2.4-1-2.4-1.2%200%200-.2.6-.6%201.1%200%200%20.9%202%203.4%201.3%200%200%20.5-.2.8-.5.5-.6.8-1.5.8-2.6v-.5h.5c1%200%201.9-.3%202.5-.9.2-.2.4-.5.5-.7%200-.9.1-1.6-.2-2.3z%22%2F%3E%3Cpath%20d%3D%22M21.4%2011c.6%201.2-.5%202-.5%202%20.7.3%201.1.6%201.1.6.8-.8%201.2-2.4%200-3.9-.6-.6-1.4-.9-2.5-.8H19v-.5c0-1.1-.3-2-.8-2.6-.2-.2-.4-.4-.7-.5-.7-.4-1.4-.4-2.1-.1-5.6%202.5%201%2014-3.5%2016.4-.5.3-1.2-.1-1.2-.1-1.7-.9-.6-4-.6-4s-3%201-3.8-.5c-.6-1.2.4-2%20.4-2-.1-.1-.6-.3-1-.6-1.1.9-1.1%202.6.1%203.9.6.6%201.4.9%202.5.8h.5v.5c0%201.1.3%202%20.8%202.6.2.2.4.4.7.5.7.4%201.4.4%202.1.1.8-.3%201.5-1.1%202-2.3%201.6-3.8-2.5-12.3%201.5-14.1.4-.2%201.1.1%201.1.1%201.7.9.6%204%20.6%204s3.1-1.1%203.8.5z%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E"
+      |  alt="Kifi Logo"
+      |/>
       |<div id="head"></div>
       |<div id="body"></div>
       |
@@ -20,7 +23,12 @@ object HackyExportAssets {
       |    el.removeChild(el.firstChild);
       |  }
       |}
-      |
+      |function unique(array) {
+      |  var seen = {};
+      |  return array.filter(function(item) {
+      |    return seen.hasOwnProperty(item) ? false : (seen[item] = true);
+      |  });
+      |}
       |// Function to asynchronously add HTML elements to a particular node
       |function incrementallyFillElement(el, items, fill) {
       |  if (items.length > 0) {
@@ -34,21 +42,100 @@ object HackyExportAssets {
       |}
       |
       |function triggerNetscapeDownload(keepIds, filename) {
-      |  var download = document.createElement("div");
+      |  var dl = document.createElement("dl");
+      |  var bookmarkDocument = (
+      |    '<!DOCTYPE NETSCAPE-Bookmark-file-1>\n' +
+      |    '<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">\n' +
+      |    '<!--This is an automatically generated file.\n' +
+      |    'It will be read and overwritten.\n' +
+      |    'Do Not Edit! -->\n' +
+      |    '<Title>Kifi Bookmarks Export</Title>\n' +
+      |    '<H1>Bookmarks</H1>\n'
+      |  );
+      |
+      |  var keepLibraries = [];
+      |  var keepsWithoutLibraries = [];
+      |  var seenLibraryIds = {};
+      |
       |  keepIds.forEach(function (keepId) {
       |    var keep = keeps[keepId];
-      |    var keepElement = document.createElement("a");
-      |    keepElement.innerText = keep.title ? keep.title : keep.url;
-      |    keepElement.href = keep.url;
-      |    download.appendChild(keepElement);
-      |    download.appendChild(document.createElement("br"));
+      |
+      |    if (keep.libraries.length === 0) {
+      |      keepsWithoutLibraries.push(keep);
+      |    } else {
+      |      keep.libraries.forEach(function (libraryId) {
+      |        var wasSeen = seenLibraryIds[libraryId];
+      |        seenLibraryIds[libraryId] = true;
+      |        if (!wasSeen) {
+      |          var library = libraries[libraryId];
+      |          if (library) {
+      |            keepLibraries.push(library);
+      |          } else {
+      |            keepsWithoutLibraries.push(keep);
+      |          }
+      |        }
+      |      });
+      |    }
       |  });
       |
-      |  var tmp = document.createElement("a");
-      |  tmp.href = window.URL.createObjectURL(new Blob([download.innerHTML], {type: "text/html"}));
+      |  keepLibraries.forEach(function (library) {
+      |    var libraryKeeps = library.keeps.filter(isMemberOf(keepIds)).map(getPropertyOf(keeps));
+      |    bookmarkDocument += '<DT><H3 FOLDED ADD_DATE="' + libraryKeeps[0].keptAt + '">' + library.name + '</H3>\n';
+      |    bookmarkDocument += '<DL><p>\n';
+      |    bookmarkDocument += libraryKeeps.map(renderKeep).join('');
+      |    bookmarkDocument += '</DL><p>\n'
+      |  });
+      |
+      |  if (keepsWithoutLibraries.length) {
+      |    bookmarkDocument += '<DT><H3 FOLDED ADD_DATE="' + keepsWithoutLibraries[0].keptAt + '">Keeps without libraries</H3>\n';
+      |    bookmarkDocument += '<DL><p>\n';
+      |    bookmarkDocument += keepsWithoutLibraries.map(renderKeep).join('');
+      |    bookmarkDocument += '</DL><p>\n'
+      |  }
+      |
+      |  var tmp = document.createElement('A');
+      |  tmp.href = getDownloadURL(bookmarkDocument, 'text/html');
       |  tmp.download = filename;
       |  tmp.click();
       |  tmp.remove();
+      |}
+      |
+      |var existingBlobUrl = null;
+      |function getDownloadURL(data, type) {
+      |  if (window.Blob) {
+      |    var blob = new window.Blob([ data ], { type: type });
+      |    if (existingBlobUrl) {
+      |      window.URL.revokeObjectURL(existingBlobUrl);
+      |    }
+      |    return existingBlobUrl = window.URL.createObjectURL(blob);
+      |  } else {
+      |    return 'data:' + type + ';base64,' + btoa(unescape(encodeURIComponent(data)));
+      |  }
+      |}
+      |
+      |function getPropertyOf(o) {
+      |  return function (p) { return o[p]; };
+      |}
+      |
+      |function isMemberOf(set) {
+      |  return function (o) { return set.indexOf(o) !== -1; };
+      |}
+      |
+      |function renderKeep(keep) {
+      |  var keepElement = document.createElement("a");
+      |  var tags = getTags(keep);
+      |  keepElement.innerText = keep.title ? keep.title : keep.url;
+      |  keepElement.href = keep.url;
+      |  keepElement.setAttribute("add_date", keep.keptAt / 1000);
+      |  if (tags.length) {
+      |    keepElement.setAttribute("tags", tags.join(","));
+      |  }
+      |  return "<DT>" + keepElement.outerHTML + "\n";
+      |}
+      |
+      |function getTags(keep) {
+      |  var libraryNames = keep.libraries.map(function (id) { return libraries[id] && libraries[id].name; });
+      |  return keep.tags.concat(libraryNames);
       |}
       |
       |// Main "router". Inspects the hash and loads the appropriate view
@@ -197,11 +284,11 @@ object HackyExportAssets {
       |  var downloadButton = document.createElement("button");
       |  downloadButton.innerText = "Download these keeps";
       |  downloadButton.onclick = function () {
-      |    var keepsToDownload = new Set(u.libraries.reduce(function (acc, libId) {
+      |    var keepsToDownload = unique(u.libraries.reduce(function (acc, libId) {
       |      return acc.concat(libraries[libId].keeps);
       |    }, []));
       |    var username = (u.firstName.toLowerCase() + " " + u.lastName.toLowerCase()).replace(/\s+/g, "-");
-      |    triggerNetscapeDownload(Array.from(keepsToDownload), username + ".netscape.html");
+      |    triggerNetscapeDownload(keepsToDownload, username + ".netscape.html");
       |  };
       |  head.appendChild(downloadButton);
       |
@@ -217,11 +304,11 @@ object HackyExportAssets {
       |  var downloadButton = document.createElement("button");
       |  downloadButton.innerText = "Download these keeps";
       |  downloadButton.onclick = function () {
-      |    var keepsToDownload = new Set(o.libraries.reduce(function (acc, libId) {
+      |    var keepsToDownload = unique(o.libraries.reduce(function (acc, libId) {
       |      return acc.concat(libraries[libId].keeps);
       |    }, []));
       |    var orgname = o.name.toLowerCase().replace(/\s+/g, "-");
-      |    triggerNetscapeDownload(Array.from(keepsToDownload), orgname + ".netscape.html");
+      |    triggerNetscapeDownload(keepsToDownload, orgname + ".netscape.html");
       |  };
       |  head.appendChild(downloadButton);
       |
@@ -237,7 +324,7 @@ object HackyExportAssets {
       |  downloadButton.innerText = "Download these keeps";
       |  downloadButton.onclick = function () {
       |    var libname = l.name.toLowerCase().replace(/\s+/g, "-");
-      |    triggerNetscapeDownload(Array.from(l.keeps), libname + ".netscape.html");
+      |    triggerNetscapeDownload(l.keeps, libname + ".netscape.html");
       |  };
       |  head.appendChild(downloadButton);
       |
