@@ -53,7 +53,6 @@ class FullExportProducerImpl @Inject() (
   import FullExportCommanderConfig._
 
   def fullExport(userId: Id[User]): FullStreamingExport.Root = {
-    slackLog.info(s"[${clock.now}] Export for user $userId")
     val user = db.readOnlyMaster { implicit s => basicUserGen.load(userId) }
     val spaces = spacesExport(userId)
     val keeps = looseKeepsExport(userId)
