@@ -6,7 +6,7 @@ import com.keepit.commanders.gen.BasicOrganizationGen
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick._
-import com.keepit.common.logging.{ Logging, SlackLog }
+import com.keepit.common.logging.Logging
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time._
 import com.keepit.discussion.Message
@@ -46,7 +46,6 @@ class FullExportProducerImpl @Inject() (
   rover: RoverServiceClient,
   eliza: ElizaServiceClient,
   clock: Clock,
-  slackLog: SlackLog,
   implicit val defaultContext: ExecutionContext,
   implicit val publicIdConfig: PublicIdConfiguration,
   implicit val inhouseSlackClient: InhouseSlackClient)
