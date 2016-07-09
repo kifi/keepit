@@ -99,7 +99,6 @@ class FullExportProcessingActor @Inject() (
       case _ =>
         zip.closeEntry()
         zip.putNextEntry(new ZipEntry(s"$exportBase/importableBookmarks.html"))
-        zip.write(FullExportFormatter.beforeHtml.getBytes("UTF-8"))
         exportFormatter.bookmarks(enum).run(Iteratee.foreach { line =>
           zip.write((line + "\n").getBytes("UTF-8"))
         }).map { _ =>

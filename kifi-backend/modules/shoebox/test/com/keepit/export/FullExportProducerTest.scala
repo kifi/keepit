@@ -69,7 +69,7 @@ class FullExportProducerTest extends Specification with ShoeboxTestInjector with
 }
 
 object FullStaticExport {
-  final case class Root(user: User, spaces: Seq[SpaceExport], keeps: Seq[KeepExport])
+  final case class Root(user: BasicUser, spaces: Seq[SpaceExport], keeps: Seq[KeepExport])
   final case class SpaceExport(space: Either[BasicUser, BasicOrganization], libraries: Seq[LibraryExport])
   final case class LibraryExport(library: Library, keeps: Seq[KeepExport])
   final case class KeepExport(keep: Keep, messages: Seq[Message], uri: Option[RoverUriSummary])
@@ -100,7 +100,7 @@ object FullStaticExport {
 
   implicit val writes: Writes[Root] = OWrites { root =>
     Json.obj(
-      "user" -> BasicUser.fromUser(root.user),
+      "user" -> root.user,
       "spaces" -> JsObject(root.spaces.map { space =>
         space.space.fold(_.fullName, _.name) -> JsObject(space.libraries.map { library =>
           library.library.name -> JsArray(library.keeps.map(keep => JsString(keep.keep.url)))

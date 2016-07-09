@@ -1,6 +1,6 @@
 package com.keepit.export
 
-import com.google.inject.{ImplementedBy, Inject, Singleton}
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders.TagCommander
 import com.keepit.commanders.gen.BasicOrganizationGen
 import com.keepit.common.crypto.PublicIdConfiguration
@@ -15,7 +15,7 @@ import com.keepit.model._
 import com.keepit.rover.RoverServiceClient
 import com.keepit.slack.InhouseSlackClient
 import com.keepit.social.BasicUserLikeEntity
-import play.api.libs.iteratee.{Enumeratee, Enumerator}
+import play.api.libs.iteratee.{ Enumeratee, Enumerator }
 
 import scala.concurrent.ExecutionContext
 
@@ -34,7 +34,6 @@ object FullExportCommanderConfig {
 @Singleton
 class FullExportProducerImpl @Inject() (
   db: Database,
-  userRepo: UserRepo,
   basicUserGen: BasicUserRepo,
   basicOrgGen: BasicOrganizationGen,
   orgMemberRepo: OrganizationMembershipRepo,
@@ -54,7 +53,8 @@ class FullExportProducerImpl @Inject() (
   import FullExportCommanderConfig._
 
   def fullExport(userId: Id[User]): FullStreamingExport.Root = {
-    val user = db.readOnlyMaster { implicit s => userRepo.get(userId) }
+    slackLog.info(s"[${clock.now}] Export for user $userId")
+    val user = db.readOnlyMaster { implicit s => basicUserGen.load(userId) }
     val spaces = spacesExport(userId)
     val keeps = looseKeepsExport(userId)
     FullStreamingExport.Root(user, spaces, keeps)

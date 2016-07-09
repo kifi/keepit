@@ -20,7 +20,7 @@ import scala.concurrent.Future
 import scala.util.Try
 
 object FullStreamingExport {
-  final case class Root(user: User, spaces: Enumerator[SpaceExport], looseKeeps: Enumerator[KeepExport])
+  final case class Root(user: BasicUser, spaces: Enumerator[SpaceExport], looseKeeps: Enumerator[KeepExport])
   final case class SpaceExport(space: Either[BasicUser, BasicOrganization], libraries: Enumerator[LibraryExport])
   final case class LibraryExport(library: Library, keeps: Enumerator[KeepExport])
   final case class KeepExport(keep: Keep, users: Seq[BasicUser], tags: Seq[Hashtag], messages: Seq[Message], uri: Option[RoverUriSummary])
