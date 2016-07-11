@@ -1106,7 +1106,7 @@ class AdminUserController @Inject() (
     val fromId = (request.body \ "fromId").asOpt[Id[SlackTeamMembership]]
 
     val exportUrl = "https://www.kifi.com/keepmykeeps"
-    val blogPostUrl = "https://medium.com/p/f1cd2f2e116c/" // todo(cam): get the blog post link
+    val blogPostUrl = "https://medium.com/@kifi/f1cd2f2e116c"
     val message = {
       import DescriptionElements._
       val msgText = DescriptionElements(
