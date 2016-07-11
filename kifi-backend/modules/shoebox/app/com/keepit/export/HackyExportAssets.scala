@@ -82,8 +82,7 @@ object HackyExportAssets {
       |  librariesWithoutOrgs = keepLibraries.slice();
       |  Object.keys(orgs).forEach(function (k) {
       |    var org = orgs[k];
-      |    var index;
-      |    for (var i = 0; i < keepLibraries.length; i++) {
+      |    for (var i = 0, index; i < keepLibraries.length; i++) {
       |      if (org.libraries.indexOf(keepLibraries[i]) !== -1) {
       |        (orgsToLibraries[k] = orgsToLibraries[k] || []).push(keepLibraries[i]);
       |        index = librariesWithoutOrgs.indexOf(keepLibraries[i]);
