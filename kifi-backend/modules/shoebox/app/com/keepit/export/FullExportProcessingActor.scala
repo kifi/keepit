@@ -104,17 +104,6 @@ class FullExportProcessingActor @Inject() (
         }).map { _ =>
           zip.closeEntry()
         }
-    }.flatMap {
-      case _ =>
-        exportFormatter.json(enum).run(Iteratee.fold(Set.empty[String]) {
-          case (existingEntries, (path, content)) =>
-            if (!existingEntries.contains(path)) {
-              zip.putNextEntry(new ZipEntry(s"$exportBase/json/$path"))
-              zip.write(content.getBytes("UTF-8"))
-              zip.closeEntry()
-            }
-            existingEntries + path
-        })
     }.andThen {
       case Failure(fail) =>
         slackLog.error(s"[${clock.now}] Failed while writing user ${request.userId}'s export: ${fail.getMessage}")
