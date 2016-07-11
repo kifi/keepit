@@ -64,7 +64,7 @@ class LocalUserExperimentCommander @Inject() (
     }.getOrElse(Set.empty)
     val highestPriorityExperiment = {
       import UserExperimentType._
-      val DEFAULT_BUZZ_STATE = None // set this to the system-wide value
+      val DEFAULT_BUZZ_STATE = Some(ANNOUNCED_WIND_DOWN) // set this to the system-wide value
       if (experiments.contains(SYSTEM_EXPORT_ONLY)) Some(SYSTEM_EXPORT_ONLY)
       else if (experiments.contains(ANNOUNCED_WIND_DOWN)) Some(ANNOUNCED_WIND_DOWN)
       else DEFAULT_BUZZ_STATE
