@@ -10,7 +10,7 @@ $(function() {
     e.preventDefault();
     var emailElement = $('.export-newemail-input');
     var email = emailElement && emailElement.val();
-    if (email === null || EMAIL_REGEX.test(email)) {
+    if (email === null || email === undefined || EMAIL_REGEX.test(email)) {
       $.postJson('/api/1/exports', { email: email })
         .success(function(response) {
           window.setTimeout(function() {
