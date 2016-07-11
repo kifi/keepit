@@ -49,7 +49,7 @@
             <div class="export-container-cta-btns">
               <form class="export-form">
                 <div class="export-newemail-txt">Where should we send your export?</div>
-                <input class="export-newemail-input" type="text" placeholder="Enter an email address..."/>
+                <input class="export-newemail-input" type="text" placeholder="Enter an email address..." value={userEmail.map(_.address).getOrElse("")} />
                 <button class="export-cta-btn export-submit-btn">Export Your Keeps</button>
                 <div class="export-newemail-error"></div>
               </form>
@@ -60,7 +60,15 @@
             <span class="export-progress-txt">We'll send an email to <span class="green-txt">{userEmail.get.address}</span> when we're done.</span>
             <a class="export-newemail-preclick green-txt">Send to a different email address?</a>
             <form class="export-form export-newemail-form">
-              <input class="export-newemail-input" type="text" placeholder="Enter an email address..."/>
+              <input class="export-newemail-input" type="text" placeholder="Enter an email address..." value={userEmail.map(_.address).getOrElse("")} />
+              <button class="export-newemail-btn">Send to this email</button>
+              <div class="export-newemail-error"></div>
+            </form>
+            } else {
+            <span class="export-cta-btn export-progress-btn">Currently exporting... This may take several days.</span>
+            <form class="export-form">
+              <div class="export-newemail-txt">Where should we send your export?</div>
+              <input class="export-newemail-input" type="text" placeholder="Enter an email address..." value={userEmail.map(_.address).getOrElse("")} />
               <button class="export-newemail-btn">Send to this email</button>
               <div class="export-newemail-error"></div>
             </form>
