@@ -33,6 +33,10 @@ h3.export-h3 {
   font-size: 18px;
 }
 
+.export-container-body {
+  text-align: left;
+}
+
 li {
   display: list-item;
   list-style: initial;
