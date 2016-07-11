@@ -18,8 +18,6 @@ import scala.concurrent.duration.Duration
 class KeepExportControllerTest extends Specification with ShoeboxTestInjector {
   def createFakeRequest(route: Call) = FakeRequest(route.method, route.url)
   implicit def publicIdConfig(implicit injector: Injector) = inject[PublicIdConfiguration]
-  private def controller(implicit injector: Injector) = inject[KeepExportController]
-  private def route = com.keepit.controllers.client.routes.KeepExportController
 
   val modules = Seq(
     FakeHeimdalServiceClientModule(),
