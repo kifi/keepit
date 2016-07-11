@@ -5,16 +5,15 @@ import com.keepit.commanders.TagCommander
 import com.keepit.commanders.gen.BasicOrganizationGen
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick._
-import com.keepit.common.logging.{ Logging, SlackLog }
+import com.keepit.common.logging.Logging
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time._
 import com.keepit.discussion.Message
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 import com.keepit.rover.RoverServiceClient
-import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
+import com.keepit.slack.InhouseSlackClient
 import com.keepit.social.BasicUserLikeEntity
 import play.api.libs.iteratee.{ Enumeratee, Enumerator }
 
@@ -51,11 +50,9 @@ class FullExportProducerImpl @Inject() (
   implicit val publicIdConfig: PublicIdConfiguration,
   implicit val inhouseSlackClient: InhouseSlackClient)
     extends FullExportProducer with Logging {
-  val slackLog = new SlackLog(InhouseSlackChannel.TEST_RYAN)
   import FullExportCommanderConfig._
 
   def fullExport(userId: Id[User]): FullStreamingExport.Root = {
-    slackLog.info(s"[${clock.now}] Export for user $userId")
     val user = db.readOnlyMaster { implicit s => basicUserGen.load(userId) }
     val spaces = spacesExport(userId)
     val keeps = looseKeepsExport(userId)
@@ -123,19 +120,17 @@ class FullExportProducerImpl @Inject() (
   }
 
   private val keepDecorator: Enumeratee[Seq[Keep], Seq[FullStreamingExport.KeepExport]] = Enumeratee.mapM { keeps =>
-    val discussionsFut = {
-      val keepIds = keeps.map(_.id.get).toSet
-      eliza.getCrossServiceDiscussionsForKeeps(keepIds, fromTime = None, maxMessagesShown = 100)
-    }
-    val summariesFut = {
-      val uriIds = keeps.map(_.uriId).toSet
-      rover.getUriSummaryByUris(uriIds)
-    }
+    val keepIds = keeps.map(_.id.get).toSet
+    val uriIds = keeps.map(_.uriId).toSet
+    val discussionsFut = eliza.getCrossServiceDiscussionsForKeeps(keepIds, fromTime = None, maxMessagesShown = 100)
+    val tagsFut = db.readOnlyReplicaAsync { implicit s => tagCommander.getTagsForKeeps(keepIds) }
+    val summariesFut = rover.getUriSummaryByUris(uriIds)
     for {
       discussions <- discussionsFut
       summaries <- summariesFut
+      tags <- tagsFut
       users <- db.readOnlyReplicaAsync { implicit s =>
-        val relevantUsers = discussions.values.flatMap(_.messages.flatMap(_.sentBy.flatMap(_.left.toOption))).toSet
+        val relevantUsers = keeps.flatMap(_.recipients.users).toSet ++ discussions.values.flatMap(_.messages.flatMap(_.sentBy.flatMap(_.left.toOption))).toSet
         basicUserGen.loadAllActive(relevantUsers)
       }
     } yield keeps.map { keep =>
@@ -155,7 +150,13 @@ class FullExportProducerImpl @Inject() (
           }
         }
       }
-      FullStreamingExport.KeepExport(keep, messages, summaries.get(keep.uriId))
+      FullStreamingExport.KeepExport(
+        keep.clean,
+        keep.recipients.users.toSeq.sorted.flatMap(users.get),
+        tags.getOrElse(keep.id.get, Seq.empty),
+        messages,
+        summaries.get(keep.uriId)
+      )
     }
   }
 }

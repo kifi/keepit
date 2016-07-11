@@ -49,7 +49,7 @@ case class Keep(
 
   def sanitizeForDelete: Keep = copy(title = None, note = None, state = KeepStates.INACTIVE, recipients = KeepRecipients.EMPTY)
 
-  def clean(): Keep = copy(title = title.map(_.trimAndRemoveLineBreaks()))
+  def clean: Keep = copy(title = title.map(_.trimAndRemoveLineBreaks), note = note.map(_.trimAndRemoveLineBreaks))
 
   def withId(id: Id[Keep]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
@@ -58,7 +58,7 @@ case class Keep(
   def withUriId(normUriId: Id[NormalizedURI]) = copy(uriId = normUriId)
 
   def withOwner(newOwner: Id[User]) = this.copy(userId = Some(newOwner))
-  def withTitle(title: Option[String]) = copy(title = title.map(_.trimAndRemoveLineBreaks()).filter(title => title.nonEmpty && title != url))
+  def withTitle(title: Option[String]) = copy(title = title.map(_.trimAndRemoveLineBreaks).filter(title => title.nonEmpty && title != url))
   def withNote(newNote: Option[String]) = this.copy(note = newNote.filter(_.nonEmpty))
 
   def withRecipients(newRecipients: KeepRecipients): Keep = this.copy(recipients = newRecipients)

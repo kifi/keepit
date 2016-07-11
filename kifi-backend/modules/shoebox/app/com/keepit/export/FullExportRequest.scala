@@ -5,9 +5,11 @@ import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{ Id, ModelWithState, State, States }
 import com.keepit.common.logging.Logging
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
 import com.keepit.model.User
 import org.joda.time.DateTime
+import org.joda.time.format.DateTimeFormat
 
 final case class FullExportRequest(
   id: Option[Id[FullExportRequest]] = None,
@@ -15,12 +17,14 @@ final case class FullExportRequest(
   updatedAt: DateTime = currentDateTime,
   state: State[FullExportRequest] = FullExportRequestStates.ACTIVE,
   userId: Id[User],
-  status: FullExportStatus)
+  status: FullExportStatus,
+  notifyEmail: Option[EmailAddress] = None)
     extends ModelWithState[FullExportRequest] {
   def withId(id: Id[FullExportRequest]): FullExportRequest = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): FullExportRequest = this.copy(updatedAt = now)
   def withState(newState: State[FullExportRequest]): FullExportRequest = this.copy(state = newState)
   def withStatus(newStatus: FullExportStatus) = this.copy(status = newStatus)
+  def withEmail(email: EmailAddress) = this.copy(notifyEmail = Some(email))
 
   def isActive = state == FullExportRequestStates.ACTIVE
   def isInactive = state == FullExportRequestStates.INACTIVE
@@ -35,6 +39,13 @@ object FullExportStatus {
   case class InProgress(startedAt: DateTime) extends FullExportStatus
   case class Failed(startedAt: DateTime, failedAt: DateTime, message: String) extends FullExportStatus
   case class Finished(startedAt: DateTime, finishedAt: DateTime, uploadLocation: String) extends FullExportStatus
+
+  def finishedAtPrettyString(status: FullExportStatus.Finished): String = {
+    val format = DateTimeFormat.forPattern("d/M/yyyy 'at' h:mm")
+    val finishedAt = status.finishedAt.toDateTime(zones.PT)
+    val isAm = finishedAt.hourOfDay().get < 12
+    s"${finishedAt.toString(format)} ${if (isAm) "AM" else "PM"} PDT"
+  }
 }
 
 @ImplementedBy(classOf[FullExportRequestRepoImpl])
@@ -46,6 +57,7 @@ trait FullExportRequestRepo extends Repo[FullExportRequest] {
   def markAsProcessing(id: Id[FullExportRequest], overrideProcessesOlderThan: DateTime)(implicit session: RWSession): Boolean
   def markAsComplete(id: Id[FullExportRequest], uploadLocation: String)(implicit session: RWSession): Unit
   def markAsFailed(id: Id[FullExportRequest], failure: String)(implicit session: RWSession): Unit
+  def updateNotifyEmail(userId: Id[User], newEmail: EmailAddress)(implicit session: RWSession): Boolean
 }
 
 @Singleton
@@ -66,10 +78,11 @@ class FullExportRequestRepoImpl @Inject() (
     def finishedProcessingAt = column[Option[DateTime]]("finished_processing_at", O.Nullable)
     def failureMessage = column[Option[String]]("failure_message", O.Nullable)
     def uploadLocation = column[Option[String]]("upload_location", O.Nullable)
+    def notifyEmail = column[Option[EmailAddress]]("notify_email", O.Nullable)
 
     def * = (
       id.?, createdAt, updatedAt, state,
-      userId, startedProcessingAt, finishedProcessingAt, failureMessage, uploadLocation
+      userId, startedProcessingAt, finishedProcessingAt, failureMessage, uploadLocation, notifyEmail
     ) <> ((fromDbRow _).tupled, toDbRow)
 
     def availableForProcessing(threshold: DateTime) = {
@@ -82,7 +95,7 @@ class FullExportRequestRepoImpl @Inject() (
   }
 
   private def fromDbRow(id: Option[Id[FullExportRequest]], createdAt: DateTime, updatedAt: DateTime, state: State[FullExportRequest],
-    userId: Id[User], startedProcessingAt: Option[DateTime], finishedProcessingAt: Option[DateTime], failureMessage: Option[String], uploadLocation: Option[String]) = {
+    userId: Id[User], startedProcessingAt: Option[DateTime], finishedProcessingAt: Option[DateTime], failureMessage: Option[String], uploadLocation: Option[String], notifyEmail: Option[EmailAddress]) = {
 
     val status: FullExportStatus = (startedProcessingAt, finishedProcessingAt, failureMessage, uploadLocation) match {
       case (None, _, _, _) =>
@@ -96,7 +109,7 @@ class FullExportRequestRepoImpl @Inject() (
       case badStatus =>
         throw new IllegalArgumentException(s"Unknown status combination: $badStatus")
     }
-    FullExportRequest(id, createdAt, updatedAt, state, userId, status)
+    FullExportRequest(id, createdAt, updatedAt, state, userId, status, notifyEmail)
   }
 
   private def toDbRow(req: FullExportRequest) = {
@@ -110,7 +123,7 @@ class FullExportRequestRepoImpl @Inject() (
       case FullExportStatus.Finished(start, end, upload) =>
         (Some(start), Some(end), None, Some(upload))
     }
-    Some((req.id, req.createdAt, req.updatedAt, req.state, req.userId, startedAt, finishedAt, failMessage, uploadLocation))
+    Some((req.id, req.createdAt, req.updatedAt, req.state, req.userId, startedAt, finishedAt, failMessage, uploadLocation, req.notifyEmail))
   }
 
   def table(tag: Tag) = new FullExportRequestTable(tag)
@@ -160,5 +173,13 @@ class FullExportRequestRepoImpl @Inject() (
       .filter(_.id === id)
       .map(r => (r.updatedAt, r.finishedProcessingAt, r.uploadLocation))
       .update((now, Some(now), Some(uploadLocation)))
+  }
+
+  def updateNotifyEmail(userId: Id[User], newEmail: EmailAddress)(implicit session: RWSession): Boolean = {
+    val now = clock.now
+    activeRows
+      .filter(_.userId === userId)
+      .map(r => (r.updatedAt, r.notifyEmail))
+      .update((now, Some(newEmail))) > 0
   }
 }

@@ -248,7 +248,7 @@ class KeepRepoImpl @Inject() (
     } else {
       model.copy(seq = sequence.incrementAndGet())
     }
-    super.save(newModel.clean())
+    super.save(newModel.clean)
   }
 
   def saveAndIncrementSequenceNumber(model: Keep)(implicit session: RWSession): Keep = {

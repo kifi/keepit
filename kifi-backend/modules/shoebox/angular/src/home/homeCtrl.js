@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .controller('HomeCtrl', [
-  '$rootScope', '$scope', '$stateParams', 'profileService', 'messageTicker',
-  function($rootScope, $scope, $stateParams, profileService, messageTicker) {
+  '$rootScope', '$scope', '$stateParams', '$q', 'profileService', 'messageTicker',
+  function($rootScope, $scope, $stateParams, $q, profileService, messageTicker) {
 
     var error = $stateParams.error;
     if (error) {
@@ -25,14 +25,14 @@ angular.module('kifi')
       messageTicker({ text: text, type: 'red', delay: 5000 });
     }
 
-    $scope.showDelightedSurvey = profileService.prefs.show_delighted_question;
 
-    $scope.$on('$destroy', $rootScope.$on('prefsChanged', function () {
-      $scope.showDelightedSurvey = profileService.prefs.show_delighted_question;
-    }));
+    (Object.keys(profileService.prefs).length === 0 ? profileService.fetchPrefs() : $q.when(profileService.prefs)).then(function(prefs) {
+      $scope.showAnnouncement = prefs.show_announcement;
+    });
 
-    $scope.hideDelightedSurvey = function () {
-      $scope.showDelightedSurvey = false;
+    $scope.hideAnnouncement = function() {
+      $scope.showAnnouncement = false;
+      profileService.updateLastSeenAnnouncement();
     };
 
     if ($stateParams.openImportModal === 'importBookmarks') {

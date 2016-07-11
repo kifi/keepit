@@ -23,6 +23,7 @@ import com.keepit.notify.model.Recipient
 import com.keepit.notify.model.event.NewConnectionInvite
 import com.keepit.social.BasicUser
 import com.keepit.common.core._
+import org.joda.time.DateTime
 
 import play.api.data.Form
 import play.api.data.Forms._
@@ -39,6 +40,7 @@ class UserController @Inject() (
     db: Database,
     userRepo: UserRepo,
     userExperimentCommander: LocalUserExperimentCommander,
+    userExperimentRepo: UserExperimentRepo,
     userConnectionRepo: UserConnectionRepo,
     emailRepo: UserEmailAddressRepo,
     userEmailAddressCommander: UserEmailAddressCommander,
@@ -339,7 +341,8 @@ class UserController @Inject() (
       SLACK_UPSELL_WIDGET,
       SHOW_SLACK_CREATE_TEAM_POPUP,
       HIDE_EXTENSION_UPSELL,
-      TWITTER_SYNC_PROMO
+      TWITTER_SYNC_PROMO,
+      SHOW_ANNOUNCEMENT
     )
   }
 
@@ -505,6 +508,27 @@ class UserController @Inject() (
     } yield {
       Ok(JsObject(Seq("network" -> n, "abook" -> a)))
     }
+  }
+
+  def getBuzzState(userIdOpt: Option[Long]) = MaybeUserAction { implicit request =>
+    val userId = userIdOpt.map(Id[User]).orElse(request.userIdOpt)
+    val buzzState = userExperimentCommander.getBuzzState(userId).map(_.value).getOrElse("")
+
+    val message = {
+      if (buzzState == UserExperimentType.ANNOUNCED_WIND_DOWN.value) "Wikipedia is looking for fundraising! Please donate your money to our noble cause. How else will you look up random stuff you don't know about? Visit www.wikipedia.org for more info."
+      else if (buzzState == UserExperimentType.SYSTEM_EXPORT_ONLY.value) "Wikipedia is shutting down due to lack of fundraising. Thanks to free-loaders like you, we're down to a few nickels and a large order of french fries. Check out www.isitdownrightnow.com to see whether we're still kicking or not."
+      else ""
+    }
+
+    Ok(Json.obj("state" -> buzzState, "message" -> message))
+  }
+
+  def updateLastSeenAnnouncement() = UserAction { implicit request =>
+    db.readWriteAsync { implicit s =>
+      userValueRepo.setValue[DateTime](request.userId, UserValueName.LAST_SEEN_ANNOUNCEMENT, currentDateTime)
+    }
+
+    NoContent
   }
 
   def postDelightedAnswer = UserAction.async(parse.tolerantJson) { request =>

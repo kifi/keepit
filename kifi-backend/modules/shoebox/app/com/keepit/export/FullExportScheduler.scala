@@ -4,6 +4,7 @@ import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.logging.{ Logging, SlackLog }
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.slack.InhouseSlackChannel
@@ -12,11 +13,11 @@ import org.joda.time.{ Duration, DateTime }
 @ImplementedBy(classOf[FullExportSchedulerImpl])
 trait FullExportScheduler {
   def getExportRequest(userId: Id[User])(implicit session: RSession): Option[FullExportRequest]
-  def internExportRequest(userId: Id[User])(implicit session: RWSession): FullExportRequest
+  def internExportRequest(userId: Id[User], emailOpt: Option[EmailAddress])(implicit session: RWSession): FullExportRequest
 }
 
 object FullExportSchedulerConfig {
-  val COOLDOWN_AFTER_SUCCESSFUL_EXPORT = Duration.standardHours(24)
+  val COOLDOWN_AFTER_SUCCESSFUL_EXPORT = Duration.standardMinutes(5)
 
   def oldEnoughToBeReprocessed(old: FullExportRequest, now: DateTime): Boolean = {
     old.status match {
@@ -39,11 +40,11 @@ class FullExportSchedulerImpl @Inject() (
     requestRepo.getByUser(userId)
   }
 
-  def internExportRequest(userId: Id[User])(implicit session: RWSession): FullExportRequest = {
+  def internExportRequest(userId: Id[User], emailOpt: Option[EmailAddress])(implicit session: RWSession): FullExportRequest = {
     requestRepo.getByUser(userId)
       .filterNot(oldEnoughToBeReprocessed(_, clock.now))
       .getOrElse {
-        requestRepo.intern(FullExportRequest(userId = userId, status = FullExportStatus.NotStarted))
+        requestRepo.intern(FullExportRequest(userId = userId, status = FullExportStatus.NotStarted, notifyEmail = emailOpt))
       }
   }
 }

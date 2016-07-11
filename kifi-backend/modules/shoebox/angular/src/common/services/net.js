@@ -134,7 +134,9 @@ angular.module('kifi')
       getPageInfo: post(api, '/1/pages/info', 60),
 
       // twitter
-      twitterSync: post(shoebox, '/twitterSync')
+      twitterSync: post(shoebox, '/twitterSync'),
+
+      updateLastSeenAnnouncement: post(shoebox, '/user/updateLastSeenAnnouncement')
     };
 
     function get(base, pathSpec, cacheSec) {

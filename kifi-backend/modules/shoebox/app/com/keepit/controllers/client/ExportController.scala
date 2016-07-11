@@ -1,12 +1,16 @@
 package com.keepit.controllers.client
 
 import com.google.inject.Inject
+import com.keepit.commanders.LocalUserExperimentCommander
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
+import com.keepit.common.controller.{ NonUserRequest, UserRequest, ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.db.Id
+import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.SlackLog
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
 import com.keepit.export._
 import com.keepit.model.UserValues.UserValueIntHandler
@@ -17,14 +21,18 @@ import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.Json
 
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.{ Try, Success, Failure }
 
 class ExportController @Inject() (
   db: Database,
   val userActionsHelper: UserActionsHelper,
+  requestRepo: FullExportRequestRepo,
   exportScheduler: FullExportScheduler,
   exportStore: S3KifiExportStore,
   exportActor: ActorInstance[FullExportProcessingActor],
   userValueRepo: UserValueRepo,
+  userExperimentCommander: LocalUserExperimentCommander,
+  userEmailAddressRepo: UserEmailAddressRepo,
   clock: Clock,
   implicit val airbrake: AirbrakeNotifier,
   private implicit val defaultContext: ExecutionContext,
@@ -32,6 +40,17 @@ class ExportController @Inject() (
   private implicit val inhouseSlackClient: InhouseSlackClient)
     extends UserActions with ShoeboxServiceController {
   val slackLog = new SlackLog(InhouseSlackChannel.TEST_RYAN)
+
+  def addEmailToNotify() = UserAction(parse.tolerantJson) { request =>
+    val emailStr = (request.body \ "email").as[String]
+    EmailAddress.validate(emailStr) match {
+      case Failure(_) => BadRequest(Json.obj("error" -> "invalid_email"))
+      case Success(emailAddress) =>
+        val wasUpdated = db.readWrite(implicit s => requestRepo.updateNotifyEmail(request.userId, emailAddress))
+        if (wasUpdated) Ok(Json.obj("status" -> "success"))
+        else NotFound
+    }
+  }
 
   def downloadFullExport() = UserAction.async { request =>
     val status = db.readOnlyMaster { implicit s =>
@@ -69,9 +88,8 @@ class ExportController @Inject() (
   }
 
   def requestFullExport() = UserAction(parse.tolerantJson) { request =>
-    val req = db.readWrite { implicit s =>
-      exportScheduler.internExportRequest(request.userId)
-    }
+    val emailOpt = (request.body \ "email").asOpt[String].flatMap(EmailAddress.validate(_).toOption)
+    val req = db.readWrite(implicit s => exportScheduler.internExportRequest(request.userId, emailOpt))
     exportActor.ref ! IfYouCouldJustGoAhead
     req.status match {
       case FullExportStatus.NotStarted =>
@@ -82,6 +100,27 @@ class ExportController @Inject() (
         Ok(Json.obj("status" -> "failed", "failed" -> failedAt, "note" -> "automatically retrying"))
       case FullExportStatus.Finished(startedAt, finishedAt, _) =>
         Ok(Json.obj("status" -> "finished", "finished" -> finishedAt))
+    }
+  }
+
+  def getExportPage() = MaybeUserAction { request =>
+    request match {
+      case nur: NonUserRequest[_] => Redirect(com.keepit.controllers.website.routes.HomeController.home())
+      case ur: UserRequest[_] =>
+        val userId = ur.userId
+
+        val (export, systemState, userEmail) = db.readOnlyMaster { implicit s =>
+          val export = exportScheduler.getExportRequest(userId)
+          val systemState = userExperimentCommander.getBuzzState(Some(userId))
+          val userEmail = requestRepo.getByUser(userId).flatMap(_.notifyEmail) orElse Try(userEmailAddressRepo.getByUser(userId)).toOption filterNot { email =>
+            email.address.contains("+test") || email.address.contains("NoMailUser") || email.address.contains("tfbnw.net") || email.address.contains("mailinator")
+          }
+          (export, systemState, userEmail)
+        }
+
+        val allowReexport = export.exists(ep => FullExportSchedulerConfig.oldEnoughToBeReprocessed(ep, currentDateTime))
+
+        Ok(views.html.website.export(export.map(_.status), systemState, userEmail, allowReexport))
     }
   }
 }
