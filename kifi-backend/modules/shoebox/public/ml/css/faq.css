@@ -3,7 +3,13 @@
 }
 
 .page {
-  padding: 20px;
+  margin: auto;
+  width: 900px;
+  padding-bottom: 20px;
+}
+
+a {
+  color: green;
 }
 
 li {
@@ -15,7 +21,37 @@ li {
   text-align: center;
 }
 
+.faq-h3 {
+  text-align: center;
+}
+
 .bold-italics {
   font-weight: 600;
   font-style: italic;
+}
+
+.no-bullet {
+  list-style: none;
+}
+
+.question {
+  padding: 15px 30px;
+  border: 1px solid #EBEAEA;
+  border-radius: 25px;
+  margin: auto;
+  box-sizing: border-box;
+  //box-shadow: 0px 3px 5px rgba(235,235,235,0.5);
+}
+
+.question h4 {
+  margin: 0px auto;
+  margin-bottom: 10px;
+}
+
+.question ul {
+  padding-left: 20px;
+}
+
+.question + .question {
+  margin-top: 25px;
 }
