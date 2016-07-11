@@ -1084,15 +1084,13 @@ class AdminUserController @Inject() (
   }
 
   def announceToAllUsers() = AdminUserAction(parse.tolerantJson) { implicit request =>
-    val userIds = Set(1L, 3L, 61L, 35713L, 98082L).map(Id[User])
-
     val chunkSize = 100
-    val nUsers = userIds.size // db.readOnlyMaster(implicit s => userRepo.count)
+    val nUsers = db.readOnlyMaster(implicit s => userRepo.count)
     val numChunks = nUsers / chunkSize
 
     val enum = ChunkedResponseHelper.chunkedFuture(0 to numChunks) { chunk =>
-      //val userIds = db.readOnlyMaster(implicit s => userRepo.pageAscendingIds(chunk, chunkSize, excludeStates = UserStates.ALL - UserStates.ACTIVE))
-      eliza.sendAnnouncementToUsers(userIds).map { _ =>
+      val userIds = db.readOnlyMaster(implicit s => userRepo.pageAscendingIds(chunk, chunkSize, excludeStates = UserStates.ALL - UserStates.ACTIVE))
+      eliza.sendAnnouncementToUsers(userIds.toSet).map { _ =>
         s"sent to ${userIds.headOption}-${userIds.lastOption}"
       }
     }
@@ -1118,8 +1116,7 @@ class AdminUserController @Inject() (
     }
 
     val stms = db.readOnlyMaster { implicit request =>
-      //slackTeamMembershipRepo.getMembershipsOfKifiUsersWhoHaventExported(fromId) // ~4000 max
-      userId.map(slackTeamMembershipRepo.getByUserId).getOrElse(Seq.empty)
+      slackTeamMembershipRepo.getMembershipsOfKifiUsersWhoHaventExported(fromId) // ~4000 max
     }
 
     FutureHelpers.sequentialExec(stms.grouped(100).toSeq) { chunk =>
