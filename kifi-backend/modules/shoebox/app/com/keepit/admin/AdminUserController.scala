@@ -1105,13 +1105,13 @@ class AdminUserController @Inject() (
     val userId = (request.body \ "userId").asOpt[Id[User]]
     val fromId = (request.body \ "fromId").asOpt[Id[SlackTeamMembership]]
 
-    val exportUrl = "https://www.kifi.com/keepyourdata"
+    val exportUrl = "https://www.kifi.com/keepmykeeps"
     val blogPostUrl = "https://www.kifi.com" // todo(cam): get the blog post link
     val message = {
       import DescriptionElements._
       val msgText = DescriptionElements(
         "Kifi is joining Google", "(learn more)" --> LinkElement(blogPostUrl), "! The last day to use the Kifi service is August 22nd, 2016.",
-        "Please visit", "Kifi.com/keepyourdata" --> LinkElement(exportUrl), "on your desktop to export all of your data within Kifi.",
+        "Please visit", "Kifi.com/keepmykeeps" --> LinkElement(exportUrl), "on your desktop to export all of your data within Kifi.",
         "You can email support@kifi.com with questions."
       )
       SlackMessageRequest.fromKifi(formatForSlack(msgText))
