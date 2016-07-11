@@ -458,6 +458,7 @@ class AuthController @Inject() (
           }
         case requestNonUser: NonUserRequest[_] =>
           val kifiClosed = db.readOnlyMaster(3) { implicit s => systemValueRepo.ripKifi() }
+          val identityOpt = requestNonUser.identityId.flatMap(authCommander.getUserIdentity)
           if (kifiClosed) {
             Ok(views.html.authMinimal.signup(kifiClosed))
           } else if (identityOpt.isDefined) {
