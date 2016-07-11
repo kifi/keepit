@@ -42,7 +42,6 @@ object HackyExportAssets {
       |}
       |
       |function triggerNetscapeDownload(keepIds, filename) {
-      |  var dl = document.createElement("dl");
       |  var bookmarkDocument = (
       |    '<!DOCTYPE NETSCAPE-Bookmark-file-1>\n' +
       |    '<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">\n' +
@@ -95,6 +94,14 @@ object HackyExportAssets {
       |
       |  var tmp = document.createElement('A');
       |  tmp.href = getDownloadURL(bookmarkDocument, 'text/html');
+      |  tmp.download = filename;
+      |  tmp.click();
+      |  tmp.remove();
+      |}
+      |
+      |function triggerJsonDownload(payload, filename) {
+      |  var tmp = document.createElement('a');
+      |  tmp.href = getDownloadURL(JSON.stringify(payload, null, 2), 'text/json');
       |  tmp.download = filename;
       |  tmp.click();
       |  tmp.remove();
@@ -166,6 +173,19 @@ object HackyExportAssets {
       |function viewIndex() {
       |  clear(head);
       |  head.appendChild(drawMeHeader(index.me));
+      |
+      |  var downloadButton = document.createElement("button");
+      |  downloadButton.innerText = "Format all of your data into JSON";
+      |  downloadButton.onclick = function () {
+      |    triggerJsonDownload({
+      |      index: index,
+      |      users: users,
+      |      orgs: orgs,
+      |      libraries: libraries,
+      |      keeps: keeps
+      |    }, "Everything.json");
+      |  };
+      |  head.appendChild(downloadButton);
       |
       |  clear(body);
       |

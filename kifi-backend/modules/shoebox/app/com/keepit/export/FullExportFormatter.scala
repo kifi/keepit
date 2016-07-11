@@ -24,13 +24,10 @@ object FullExportFormatter {
 
 @ImplementedBy(classOf[FullExportFormatterImpl])
 trait FullExportFormatter {
-  type FilePath = String
-  type FileContents = String
   type EntityId = String
   type EntityContents = JsValue
   type HtmlLine = String
 
-  def json(export: FullStreamingExport.Root): Enumerator[(FilePath, FileContents)]
   def assignments(export: FullStreamingExport.Root): Enumerator[(EntityId, EntityContents)]
   def bookmarks(export: FullStreamingExport.Root): Enumerator[HtmlLine]
 }
@@ -39,80 +36,6 @@ class FullExportFormatterImpl @Inject() (
   implicit val defaultContext: ExecutionContext,
   implicit val publicIdConfig: PublicIdConfiguration)
     extends FullExportFormatter {
-
-  def json(export: FullStreamingExport.Root): Enumerator[(FilePath, FileContents)] = {
-    val enum = export.spaces.flatMap { space =>
-      space.libraries.flatMap { library =>
-        library.keeps.flatMap { keep =>
-          fullKeepPage(keep)
-        } andThen fullLibraryPage(library)
-      } andThen fullSpacePage(space)
-    } andThen fullIndexPage(export)
-    enum.map {
-      case (path, contents) => path -> Json.prettyPrint(contents)
-    }
-  }
-
-  private def fullIndexPage(export: FullStreamingExport.Root): Enumerator[(String, JsValue)] = {
-    implicit val spaceWrites = EitherFormat.keyedWrites[BasicUser, BasicOrganization]("user", "org")
-    export.spaces.map(_.space).through(Enumeratee.grouped(Iteratee.getChunks)).through(Enumeratee.map { spaces =>
-      "index.json" -> Json.obj(
-        "me" -> export.user,
-        "spaces" -> JsArray(spaces.map { space =>
-          val partialSpace = spaceWrites.writes(space)
-          partialSpace
-        })
-      )
-    })
-  }
-  private def fullSpacePage(space: FullStreamingExport.SpaceExport): Enumerator[(String, JsValue)] = {
-    implicit val spaceWrites = EitherFormat.keyedWrites[BasicUser, BasicOrganization]("user", "org")
-    val path = space.space.fold(u => "users/" + u.externalId.id, o => "orgs/" + o.orgId.id) + ".json"
-    space.libraries.map(_.library).through(Enumeratee.grouped(Iteratee.getChunks)).through(Enumeratee.map { libs =>
-      val fullSpace = spaceWrites.writes(space.space)
-      path -> Json.obj(
-        "space" -> fullSpace,
-        "libraries" -> JsArray(libs.map { lib =>
-          val partialLibrary = Json.obj(
-            "id" -> Library.publicId(lib.id.get),
-            "name" -> lib.name,
-            "description" -> lib.description
-          )
-          partialLibrary
-        })
-      )
-    })
-  }
-  private def fullLibraryPage(library: FullStreamingExport.LibraryExport): Enumerator[(String, JsValue)] = {
-    val path = "libraries/" + Library.publicId(library.library.id.get).id + ".json"
-    val fullLibrary = Json.obj("name" -> library.library.name)
-    library.keeps.map(_.keep).through(Enumeratee.grouped(Iteratee.getChunks)).through(Enumeratee.map { keeps =>
-      path -> Json.obj(
-        "library" -> fullLibrary,
-        "keeps" -> JsArray(keeps.map { keep =>
-          val partialKeep = Json.obj(
-            "id" -> Keep.publicId(keep.id.get),
-            "title" -> keep.title,
-            "url" -> keep.url,
-            "keptAt" -> keep.keptAt
-          )
-          partialKeep
-        })
-      )
-    })
-  }
-
-  private def fullKeepPage(keep: FullStreamingExport.KeepExport): Enumerator[(String, JsValue)] = {
-    val path = "keeps/" + Keep.publicId(keep.keep.id.get).id + ".json"
-    if (keep.messages.isEmpty) Enumerator.empty
-    else Enumerator {
-      path -> Json.obj(
-        "id" -> Keep.publicId(keep.keep.id.get),
-        "summary" -> keep.uri.flatMap(_.article.description),
-        "messages" -> keep.messages
-      )
-    }
-  }
 
   def assignments(export: FullStreamingExport.Root): Enumerator[(String, JsValue)] = {
     val init: Enumerator[(String, JsValue)] = Enumerator(
