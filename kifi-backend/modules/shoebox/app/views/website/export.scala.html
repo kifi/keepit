@@ -14,6 +14,8 @@
     <link rel="stylesheet" type="text/css" href="/assets/ml/css/authentication.css">
     <link rel="stylesheet" type="text/css" href="/assets/ml/css/export.css">
     <link rel="stylesheet" type="text/css" href="/assets/ml/css/normalize.css">
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script src="/assets/ml/js/export.js"></script>
   </head>
 
   <body>
@@ -38,32 +40,30 @@
           <span>Data included for each keep will be the URL, date kept, notes, comments, and tags. The export files will include:</span>
           <ul>
             <li>HTML export that can be imported by your browser and many other bookmarking services</li>
-            <li>JSON file</li>
-            <li>Interactive and explorable page that you can render locally and via your browser</li>
+            <li>JSON file including structured data about your keeps and libraries</li>
+            <li>Interactive page that allows you to explore your libraries and generate exports for single libraries</li>
           </ul>
           <div class="export-container-cta">
             @{
             if(exportStatus.isEmpty) {
             <div class="export-container-cta-btns">
-              <form action="/api/2/exports" method="POST">
-                <button class="export-cta-btn export-submit-btn" type="submit">Export Your Keeps</button>
+              <form class="export-form">
+                <div class="export-newemail-txt">Where should we send your export?</div>
+                <input class="export-newemail-input" type="text" placeholder="Enter an email address..."/>
+                <button class="export-cta-btn export-submit-btn">Export Your Keeps</button>
+                <div class="export-newemail-error"></div>
               </form>
             </div>
             } else if (exportStatus.exists { case status: FullExportStatus.InProgress => true; case FullExportStatus.NotStarted => true; case _ => false }) {
             if(userEmail.isDefined) {
-            if(!systemState.contains(UserExperimentType.SYSTEM_EXPORT_ONLY)) {
-            <span class="export-progress-btn">Currently exporting... This may take several hours.</span>
+            <span class="export-cta-btn export-progress-btn">Currently exporting... This may take several days.</span>
             <span class="export-progress-txt">We'll send an email to <span class="green-txt">{userEmail.get.address}</span> when we're done.</span>
-            <span>Go to <a href="/settings">settings</a> if you'd like to update your email address.</span>
-            } else {
-            <span class="export-cta-btn export-progress-btn">Currently exporting... This may take several hours.</span>
-            <span class="export-progress-txt">We'll send an email to <span class="green-txt">{userEmail.get.address}</span> when we're done.</span>
-            }
-            } else {
-            <span class="export-cta-btn export-progress-btn">Currently exporting... This may take several hours.</span>
-                <span class="export-progress-noemail">
-                  We don't have an email on file for your account, and we need one to send to once your export is complete. Please contact support@kifi.com to resolve this issue.
-                </span>
+            <a class="export-newemail-preclick green-txt">Send to a different email address?</a>
+            <form class="export-form export-newemail-form">
+              <input class="export-newemail-input" type="text" placeholder="Enter an email address..."/>
+              <button class="export-newemail-btn">Send to this email</button>
+              <div class="export-newemail-error"></div>
+            </form>
             }
             } else if (exportStatus.exists { case status: FullExportStatus.Failed => true; case _ => false })  {
               <span class="export-failed-txt">
@@ -74,9 +74,11 @@
             case finished: FullExportStatus.Finished =>
             <div class="export-container-cta-btns">
               <a class="export-cta-btn export-download-btn" href="/api/1/exports">Download</a>
-              <form class="export-resubmit-form" action="/api/2/exports" method="POST">
-                {if(allowReexport) <button class="export-cta-btn export-resubmit-btn" type="submit">Re-export</button>}
-              </form>
+              {if(allowReexport) {
+                <form class="export-resubmit-form">
+                  <button class="export-cta-btn export-resubmit-btn" type="submit">Re-export</button>
+                </form>
+              }}
             </div>
                   <span class="export-download-timestamp">Last export generated on
                     {finishedAtPrettyString(finished)}
@@ -88,7 +90,7 @@
           </div>
         </div>
       </div>
-      <h4 class="export-footer-txt">You can learn more about the <a href="/">next phase of our journey</a> or read the <a href="/">FAQs</a> regarding the shut down.</h4>
+      <h4 class="export-footer-txt">You can learn more about the <a href="https://medium.com/p/f1cd2f2e116c/">next phase of our journey</a> or read the <a href="/faq">FAQs</a> regarding the shut down.</h4>
     </div>
   </body>
 </html>

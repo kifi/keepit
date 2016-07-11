@@ -6,14 +6,14 @@ import com.keepit.commanders.gen.BasicOrganizationGen
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick._
-import com.keepit.common.logging.{ Logging, SlackLog }
+import com.keepit.common.logging.Logging
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time._
 import com.keepit.discussion.Message
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 import com.keepit.rover.RoverServiceClient
-import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
+import com.keepit.slack.InhouseSlackClient
 import com.keepit.social.BasicUserLikeEntity
 import play.api.libs.iteratee.{ Enumeratee, Enumerator }
 
@@ -34,7 +34,6 @@ object FullExportCommanderConfig {
 @Singleton
 class FullExportProducerImpl @Inject() (
   db: Database,
-  userRepo: UserRepo,
   basicUserGen: BasicUserRepo,
   basicOrgGen: BasicOrganizationGen,
   orgMemberRepo: OrganizationMembershipRepo,
@@ -51,12 +50,10 @@ class FullExportProducerImpl @Inject() (
   implicit val publicIdConfig: PublicIdConfiguration,
   implicit val inhouseSlackClient: InhouseSlackClient)
     extends FullExportProducer with Logging {
-  val slackLog = new SlackLog(InhouseSlackChannel.TEST_RYAN)
   import FullExportCommanderConfig._
 
   def fullExport(userId: Id[User]): FullStreamingExport.Root = {
-    slackLog.info(s"[${clock.now}] Export for user $userId")
-    val user = db.readOnlyMaster { implicit s => userRepo.get(userId) }
+    val user = db.readOnlyMaster { implicit s => basicUserGen.load(userId) }
     val spaces = spacesExport(userId)
     val keeps = looseKeepsExport(userId)
     FullStreamingExport.Root(user, spaces, keeps)

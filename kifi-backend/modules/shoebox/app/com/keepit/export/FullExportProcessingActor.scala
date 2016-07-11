@@ -14,6 +14,7 @@ import com.keepit.common.logging.SlackLog
 import com.keepit.common.mail.{ SystemEmailAddress, ElectronicMail, LocalPostOffice }
 import com.keepit.common.strings.StringSplit
 import com.keepit.common.time._
+import com.keepit.common.util.{ LinkElement, DescriptionElements }
 import com.keepit.model._
 import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
 import com.kifi.juggle.ConcurrentTaskProcessingActor
@@ -73,8 +74,8 @@ class FullExportProcessingActor @Inject() (
   }
 
   private def doExport(id: Id[FullExportRequest]): Future[Unit] = {
-    slackLog.info(s"Processing export request $id")
     val request = db.readOnlyMaster { implicit s => exportRequestRepo.get(id) }
+    slackLog.info(s"Processing export request $id for user ${request.userId}")
     val enum = exportCommander.fullExport(request.userId)
     val user = db.readOnlyMaster { implicit s => userRepo.get(request.userId) }
     val exportBase = s"[Kifi Export]${user.fullName.words.mkString("-")}-${user.externalId.id}"
@@ -98,23 +99,11 @@ class FullExportProcessingActor @Inject() (
       case _ =>
         zip.closeEntry()
         zip.putNextEntry(new ZipEntry(s"$exportBase/importableBookmarks.html"))
-        zip.write(FullExportFormatter.beforeHtml.getBytes("UTF-8"))
         exportFormatter.bookmarks(enum).run(Iteratee.foreach { line =>
           zip.write((line + "\n").getBytes("UTF-8"))
         }).map { _ =>
           zip.closeEntry()
         }
-    }.flatMap {
-      case _ =>
-        exportFormatter.json(enum).run(Iteratee.fold(Set.empty[String]) {
-          case (existingEntries, (path, content)) =>
-            if (!existingEntries.contains(path)) {
-              zip.putNextEntry(new ZipEntry(s"$exportBase/json/$path"))
-              zip.write(content.getBytes("UTF-8"))
-              zip.closeEntry
-            }
-            existingEntries + path
-        })
     }.andThen {
       case Failure(fail) =>
         slackLog.error(s"[${clock.now}] Failed while writing user ${request.userId}'s export: ${fail.getMessage}")
@@ -135,30 +124,28 @@ class FullExportProcessingActor @Inject() (
     }.map(_ => ())
   }
 
-  private def sendSuccessEmail(user: User, request: FullExportRequest): Future[Unit] = {
-    db.readOnlyMasterAsync { implicit s =>
-      exportRequestRepo.getByUser(user.id.get).flatMap(_.notifyEmail) orElse Try(userEmailAddressRepo.getByUser(user.id.get)).toOption
-    }.map {
-      _.fold(ifEmpty = ()) { userEmailAddress =>
-        val email = ElectronicMail(
+  private def sendSuccessEmail(user: User, request: FullExportRequest): Unit = {
+    import DescriptionElements._
+    db.readWrite { implicit s =>
+      val emailAddressOpt = exportRequestRepo.getByUser(user.id.get).flatMap(_.notifyEmail) orElse Try(userEmailAddressRepo.getByUser(user.id.get)).toOption
+      emailAddressOpt.foreach { userEmailAddress =>
+        val body = DescriptionElements.unlines(Seq(
+          DescriptionElements("Visit", "www.kifi.com/keepmykeeps" --> LinkElement("https://www.kifi.com/keepmykeeps"), "to download the file for your export."),
+          DescriptionElements("You can refresh your exported keeps up until the last day the Kifi service is fully operational on August 22nd, 2016."),
+          DescriptionElements(
+            "After that, an export file will be available for several weeks. The latest status is available on", "Kifi.com" --> LinkElement("https://www.kifi.com"),
+            "and you can", "learn more on our blog" --> LinkElement("https://medium.com/on-the-same-page-with-kifi"), "."
+          )
+        ))
+        postOffice.sendMail(ElectronicMail(
           from = SystemEmailAddress.NOTIFICATIONS,
           fromName = Some("Kifi"),
           to = Seq(userEmailAddress),
           subject = s"Your Kifi export is ready!",
-          htmlBody = s"""
-            |Visit <a href="https://www.kifi.com/keepmykeeps">www.kifi.com/keepmykeeps</a> to download the file for your export.
-            |You can refresh your exported keeps up until the last day the Kifi service is fully operational on August 22nd, 2016.
-            |After that, an export file will be available for several weeks. The latest status is available on <a href="https://www.kifi.com">Kifi.com</a> and you can <a href="https://medium.com/on-the-same-page-with-kifi">learn more on our blog</a>.
-          """.stripMargin,
-          textBody = Some(s"""
-            |Visit www.kifi.com/keepmykeeps to download the file for your export.
-            |You can refresh your exported keeps up until the last day the Kifi service is fully operational on August 22nd, 2016.
-            |After that, an export file will be available for several weeks. The latest status is available on Kifi.com and you can learn more on our blog (medium.com/on-the-same-page-with-kifi).
-          """.stripMargin),
+          htmlBody = DescriptionElements.formatAsHtml(body).body,
+          textBody = Some(DescriptionElements.formatPlain(body)),
           category = NotificationCategory.User.EXPORT_READY
-        )
-
-        db.readWriteAsync(implicit s => postOffice.sendMail(email)).map(_ => ())
+        ))
       }
     }
   }
