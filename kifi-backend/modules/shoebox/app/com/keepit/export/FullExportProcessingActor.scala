@@ -134,7 +134,7 @@ class FullExportProcessingActor @Inject() (
           DescriptionElements("You can refresh your exported keeps up until the last day the Kifi service is fully operational on August 22nd, 2016."),
           DescriptionElements(
             "After that, an export file will be available for several weeks. The latest status is available on", "Kifi.com" --> LinkElement("https://www.kifi.com"),
-            "and you can", "learn more on our blog" --> LinkElement("https://medium.com/p/f1cd2f2e116c/"), "."
+            "and you can", "learn more on our blog" --> LinkElement("https://medium.com/@kifi/f1cd2f2e116c"), "."
           )
         ))
         postOffice.sendMail(ElectronicMail(
