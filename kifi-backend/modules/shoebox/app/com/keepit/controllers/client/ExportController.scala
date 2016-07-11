@@ -112,7 +112,9 @@ class ExportController @Inject() (
         val (export, systemState, userEmail) = db.readOnlyMaster { implicit s =>
           val export = exportScheduler.getExportRequest(userId)
           val systemState = userExperimentCommander.getBuzzState(Some(userId))
-          val userEmail = requestRepo.getByUser(userId).flatMap(_.notifyEmail) orElse Try(userEmailAddressRepo.getByUser(userId)).toOption
+          val userEmail = requestRepo.getByUser(userId).flatMap(_.notifyEmail) orElse Try(userEmailAddressRepo.getByUser(userId)).toOption filterNot { email =>
+            email.address.contains("+test") || email.address.contains("NoMailUser") || email.address.contains("tfbnw.net") || email.address.contains("mailinator")
+          }
           (export, systemState, userEmail)
         }
 
