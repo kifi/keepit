@@ -1,5 +1,10 @@
+body {
+  background: #fdfdfd;
+}
+
 #header_bar, #footer {
  position: relative;
+ background: white;
 }
 
 .page {
@@ -35,17 +40,19 @@ li {
 }
 
 .question {
-  padding: 15px 30px;
+  padding: 20px 30px;
   border: 1px solid #EBEAEA;
   border-radius: 25px;
   margin: auto;
   box-sizing: border-box;
-  //box-shadow: 0px 3px 5px rgba(235,235,235,0.5);
+  box-shadow: 0px 3px 5px rgba(235,235,235,0.5);
+  background: white;
 }
 
 .question h4 {
   margin: 0px auto;
   margin-bottom: 10px;
+  border-bottom: 1px solid #b3b3b3;
 }
 
 .question ul {
