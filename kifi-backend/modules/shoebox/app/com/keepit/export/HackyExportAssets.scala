@@ -53,8 +53,10 @@ object HackyExportAssets {
       |  );
       |
       |  var keepLibraries = [];
+      |  var orgsToLibraries = {};
       |  var keepsWithoutLibraries = [];
       |  var seenLibraryIds = {};
+      |  var librariesWithoutOrgs;
       |
       |  keepIds.forEach(function (keepId) {
       |    var keep = keeps[keepId];
@@ -68,7 +70,7 @@ object HackyExportAssets {
       |        if (!wasSeen) {
       |          var library = libraries[libraryId];
       |          if (library) {
-      |            keepLibraries.push(library);
+      |            keepLibraries.push(libraryId);
       |          } else {
       |            keepsWithoutLibraries.push(keep);
       |          }
@@ -77,20 +79,22 @@ object HackyExportAssets {
       |    }
       |  });
       |
-      |  keepLibraries.forEach(function (library) {
-      |    var libraryKeeps = library.keeps.filter(isMemberOf(keepIds)).map(getPropertyOf(keeps));
-      |    bookmarkDocument += '<DT><H3 FOLDED ADD_DATE="' + libraryKeeps[0].keptAt + '">' + library.name + '</H3>\n';
-      |    bookmarkDocument += '<DL><p>\n';
-      |    bookmarkDocument += libraryKeeps.map(renderKeep).join('');
-      |    bookmarkDocument += '</DL><p>\n'
+      |  librariesWithoutOrgs = keepLibraries.slice();
+      |  Object.keys(orgs).forEach(function (k) {
+      |    var org = orgs[k];
+      |    var index;
+      |    for (var i = 0; i < keepLibraries.length; i++) {
+      |      if (org.libraries.indexOf(keepLibraries[i]) !== -1) {
+      |        (orgsToLibraries[k] = orgsToLibraries[k] || []).push(keepLibraries[i]);
+      |        index = librariesWithoutOrgs.indexOf(keepLibraries[i]);
+      |        if (index !== -1) {
+      |          librariesWithoutOrgs.splice(index, 1);
+      |        }
+      |      }
+      |    }
       |  });
       |
-      |  if (keepsWithoutLibraries.length) {
-      |    bookmarkDocument += '<DT><H3 FOLDED ADD_DATE="' + keepsWithoutLibraries[0].keptAt + '">Keeps without libraries</H3>\n';
-      |    bookmarkDocument += '<DL><p>\n';
-      |    bookmarkDocument += keepsWithoutLibraries.map(renderKeep).join('');
-      |    bookmarkDocument += '</DL><p>\n'
-      |  }
+      |  bookmarkDocument += renderFolder(nowSeconds(), 'Kifi', renderBookmarkContent(libraries, keeps, keepIds, orgsToLibraries, librariesWithoutOrgs, keepsWithoutLibraries));
       |
       |  var tmp = document.createElement('A');
       |  tmp.href = getDownloadURL(bookmarkDocument, 'text/html');
@@ -105,6 +109,38 @@ object HackyExportAssets {
       |  tmp.download = filename;
       |  tmp.click();
       |  tmp.remove();
+      |}
+      |
+      |function renderBookmarkContent(libraries, keeps, keepIds, orgsToLibraries, librariesWithoutOrgs, keepsWithoutLibraries) {
+      |  var renderedOrgs = '';
+      |  var renderedLibraries = '';
+      |  var renderedKeeps = '';
+      |
+      |  renderedOrgs = Object.keys(orgsToLibraries).map(function (k) {
+      |    var org = orgs[k];
+      |    var firstLib = libraries[org.libraries[0]];
+      |    var firstKeep = keeps[firstLib.keeps[0]];
+      |    var keptAt = (firstKeep && firstKeep.keptAt) || nowSeconds();
+      |    return renderFolder(keptAt, org.name, orgsToLibraries[k].map(renderLibrary.bind(null, libraries, keeps, keepIds)).join(''));
+      |  }).join('');
+      |
+      |  if (librariesWithoutOrgs.length) {
+      |    var firstLib = libraries[librariesWithoutOrgs[0]];
+      |    var firstKeep = keeps[firstLib.keeps[0]];
+      |    var keptAt = (firstKeep && firstKeep.keptAt) || nowSeconds();
+      |
+      |    renderedLibraries = renderFolder(keptAt, 'My Libraries', librariesWithoutOrgs.map(renderLibrary.bind(null, libraries, keeps, keepIds)).join(''));
+      |  }
+      |
+      |  if (keepsWithoutLibraries.length) {
+      |    renderedKeeps = renderFolder(keepsWithoutLibraries[0].keptAt, 'Discussions', keepsWithoutLibraries.map(renderKeep).join(''))
+      |  }
+      |
+      |  return renderedOrgs + renderedLibraries + renderedKeeps;
+      |}
+      |
+      |function nowSeconds() {
+      |  return Date.now() / 1000;
       |}
       |
       |var existingBlobUrl = null;
@@ -128,6 +164,13 @@ object HackyExportAssets {
       |  return function (o) { return set.indexOf(o) !== -1; };
       |}
       |
+      |function renderLibrary(libraries, keeps, keepIds, id) {
+      |  var library = libraries[id];
+      |  var libraryKeeps = libraries[id].keeps.filter(isMemberOf(keepIds)).map(getPropertyOf(keeps));
+      |  var keptAt = (libraryKeeps[0] && libraryKeeps[0].keptAt) || nowSeconds();
+      |  return renderFolder(keptAt, library.name, libraryKeeps.map(renderKeep).join(''));
+      |}
+      |
       |function renderKeep(keep) {
       |  var keepElement = document.createElement("a");
       |  var tags = getTags(keep);
@@ -138,6 +181,15 @@ object HackyExportAssets {
       |    keepElement.setAttribute("tags", tags.join(","));
       |  }
       |  return "<DT>" + keepElement.outerHTML + "\n";
+      |}
+      |
+      |function renderFolder(addDate, title, contents) {
+      |  return (
+      |    '<DT><H3 FOLDED ADD_DATE="' + addDate + '">' + title + '</H3>\n' +
+      |    '<DL><p>\n' +
+      |    contents +
+      |    '</DL><p>\n'
+      |  );
       |}
       |
       |function getTags(keep) {
