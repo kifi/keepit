@@ -299,22 +299,6 @@ POST    /m/1/libraries/:id/members/:uId/access  @com.keepit.controllers.mobile.M
 POST    /m/1/content/flagUrl                @com.keepit.controllers.mobile.MobileUriController.flagContent()
 GET     /m/1/inviteInfo                     @com.keepit.controllers.website.InviteController.getGeneralInviteInfo()
 
-GET     /m/1/user/:id/organizations                      @com.keepit.controllers.mobile.MobileOrganizationController.getOrganizationsForUser(id: ExternalId[User])
-GET     /m/1/organizations/invites                       @com.keepit.controllers.mobile.MobileOrganizationInviteController.getPendingOrganizationsForUser()
-POST    /m/1/organizations/create                        @com.keepit.controllers.mobile.MobileOrganizationController.createOrganization()
-GET     /m/1/organizations/sendCreateTeamEmail           @com.keepit.controllers.mobile.MobileOrganizationController.sendCreateTeamEmail(email: String)
-GET     /m/1/organizations/:id                           @com.keepit.controllers.mobile.MobileOrganizationController.getOrganization(id: PublicId[Organization])
-POST    /m/1/organizations/:id/modify                    @com.keepit.controllers.mobile.MobileOrganizationController.modifyOrganization(id: PublicId[Organization])
-DELETE  /m/1/organizations/:id/delete                    @com.keepit.controllers.mobile.MobileOrganizationController.deleteOrganization(id: PublicId[Organization])
-GET     /m/1/organizations/:id/members                   @com.keepit.controllers.mobile.MobileOrganizationMembershipController.getMembers(id: PublicId[Organization], offset: Int ?= 0, limit: Int ?= 20)
-POST    /m/1/organizations/:id/members/invite            @com.keepit.controllers.mobile.MobileOrganizationInviteController.inviteUsers(id: PublicId[Organization])
-POST    /m/1/organizations/:id/members/invites/accept    @com.keepit.controllers.mobile.MobileOrganizationInviteController.acceptInvitation(id: PublicId[Organization], authToken: Option[String] ?= None)
-POST    /m/1/organizations/:id/members/invites/decline   @com.keepit.controllers.mobile.MobileOrganizationInviteController.declineInvitation(id: PublicId[Organization])
-POST    /m/1/organizations/:id/members/invites/link      @com.keepit.controllers.mobile.MobileOrganizationInviteController.createAnonymousInviteToOrganization(id: PublicId[Organization])
-POST    /m/1/organizations/:id/members/modify            @com.keepit.controllers.mobile.MobileOrganizationMembershipController.modifyMember(id: PublicId[Organization])
-POST    /m/1/organizations/:id/members/remove            @com.keepit.controllers.mobile.MobileOrganizationMembershipController.removeMember(id: PublicId[Organization])
-GET     /m/1/organizations/:id/libraries                 @com.keepit.controllers.mobile.MobileOrganizationController.getOrganizationLibraries(id: PublicId[Organization], offset: Int, limit: Int)
-
 ##########################################
 # Website
 ##########################################
