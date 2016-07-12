@@ -131,7 +131,7 @@ class FullExportProcessingActor @Inject() (
       emailAddressOpt.foreach { userEmailAddress =>
         val body = DescriptionElements.unlines(Seq(
           DescriptionElements("Visit", "www.kifi.com/keepmykeeps" --> LinkElement("https://www.kifi.com/keepmykeeps"), "to download the file for your export."),
-          DescriptionElements("You can refresh your exported keeps up until the last day the Kifi service is fully operational on August 22nd, 2016."),
+          DescriptionElements("You can refresh your exported keeps while Kifi is fully operational. The service will shut down after a few weeks."),
           DescriptionElements(
             "After that, an export file will be available for several weeks. The latest status is available on", "Kifi.com" --> LinkElement("https://www.kifi.com"),
             "and you can", "learn more on our blog" --> LinkElement("https://medium.com/@kifi/f1cd2f2e116c"), "."
