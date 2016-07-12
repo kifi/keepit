@@ -515,7 +515,7 @@ class UserController @Inject() (
     val buzzState = userExperimentCommander.getBuzzState(userId).map(_.value).getOrElse("")
 
     val message = {
-      if (buzzState != "") "The Kifi Team is joining Google! The Kifi service will be fully operational until August 22nd, 2016. After that you'll be able to export your data for a few more weeks. Thank you for being a part of Kifi."
+      if (buzzState != "") "The Kifi Team is joining Google! The Kifi service will be fully operational for a few more weeks. After that you'll be able to export your data for a few more weeks. Thank you for being a part of Kifi."
       else ""
     }
 
