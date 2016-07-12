@@ -6,7 +6,7 @@ import com.keepit.discussion.{ DiscussionFail, Message }
 import com.keepit.eliza.model._
 import com.keepit.eliza.controllers._
 import com.keepit.eliza.commanders._
-import com.keepit.common.db.{ ExternalId, State }
+import com.keepit.common.db.{ Id, ExternalId, State }
 import com.keepit.model._
 import com.keepit.common.controller.{ UserActions, UserActionsHelper }
 import com.keepit.notify.LegacyNotificationCheck
@@ -59,6 +59,18 @@ class SharedWsMessagingController @Inject() (
 
   protected def onConnect(socket: SocketInfo): Unit = {
     websocketRouter.registerUserSocket(socket)
+    sendAnnouncementIfUnseen(socket.userId)
+  }
+
+  private def sendAnnouncementIfUnseen(userId: Id[User]): Unit = {
+    shoebox.getUserValue(userId, UserValueName.SEEN_ANNOUNCEMENT_NOTIF).map { valueOpt =>
+      val hasSeen = valueOpt.contains("true")
+      if (!hasSeen) {
+        Thread.sleep(5000L)
+        notificationCommander.sendAnnouncementToUsers(Set(userId))
+        shoebox.setUserValue(userId, UserValueName.SEEN_ANNOUNCEMENT_NOTIF, "true")
+      }
+    }
   }
 
   protected def onDisconnect(socket: SocketInfo): Unit = {
