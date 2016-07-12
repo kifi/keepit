@@ -1110,7 +1110,7 @@ class AdminUserController @Inject() (
     val message = {
       import DescriptionElements._
       val msgText = DescriptionElements(
-        "The Kifi team is joining Google", "(learn more)" --> LinkElement(blogPostUrl), "! The last day to use the Kifi service is August 22nd, 2016.",
+        "The Kifi team is joining Google", "(learn more)" --> LinkElement(blogPostUrl), "! The service will be fully operational for just a few more weeks.",
         "Please visit", "Kifi.com/keepmykeeps" --> LinkElement(exportUrl), "on your desktop to export all of your data within Kifi.",
         "You can email support@kifi.com with questions."
       )

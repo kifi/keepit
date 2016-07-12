@@ -169,7 +169,7 @@ class NotificationCommanderImpl @Inject() (
   def sendAnnouncementToUsers(userIds: Set[Id[User]]): Unit = {
     import com.keepit.common.time._
     val notifJson = Json.obj(
-      "bodyHtml" -> "The last day to use the Kifi service will be August 22nd, 2016. Click to learn how to export all of your personal data and thank you for being a part of Kifi.",
+      "bodyHtml" -> "Kifi will be fully operational for just a few more weeks. Click to learn how to export all of your personal data and thank you for being a part of Kifi.",
       "category" -> "global",
       "fullCategory" -> NotificationCategory.User.ANNOUNCEMENT,
       "id" -> "",
