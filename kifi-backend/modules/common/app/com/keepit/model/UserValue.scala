@@ -112,6 +112,7 @@ object UserValueName {
 
   val LAST_SEEN_ANNOUNCEMENT = UserValueName("last_seen_announcement")
   val SHOW_ANNOUNCEMENT = UserValueName("show_announcement")
+  val SEEN_ANNOUNCEMENT_NOTIF = UserValueName("seen_announcement_notif")
 
   // Please use lower_underscore_case for new value names (and not lowerCamelCase)
 
