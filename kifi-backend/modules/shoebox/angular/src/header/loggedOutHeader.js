@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .controller('LoggedOutHeaderCtrl', [
   '$scope', '$rootScope', '$state', '$stateParams', '$timeout', '$location', '$document',
-  'signupService', 'platformService', 'libraryService', 'orgProfileService', 'util',
+  'platformService', 'libraryService', 'orgProfileService', 'util',
   function ($scope, $rootScope, $state, $stateParams, $timeout, $location, $document,
-            signupService, platformService, libraryService, orgProfileService, util) {
+            platformService, libraryService, orgProfileService, util) {
     $scope.library = null;
     $scope.search = {text: '', focused: false};
 

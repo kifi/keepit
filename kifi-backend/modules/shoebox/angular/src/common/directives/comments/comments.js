@@ -3,8 +3,8 @@
 angular.module('kifi')
 
   .directive('kfKeepComments', [
-    '$window', '$timeout', '$rootScope', '$stateParams', 'profileService', 'keepService', 'signupService',
-    function ($window, $timeout, $rootScope, $stateParams, profileService, keepService, signupService) {
+    '$window', '$timeout', '$rootScope', '$stateParams', 'profileService', 'keepService',
+    function ($window, $timeout, $rootScope, $stateParams, profileService, keepService) {
       var MARK_READ_TIMEOUT = 3000;
 
       function bySentAt(a, b) {
@@ -102,12 +102,7 @@ angular.module('kifi')
             }
           };
 
-          $scope.clickedInputBox = function(event) {
-            var commentBox = getCommentBox(element);
-            if (!$rootScope.userLoggedIn && commentBox && event.which === 1) {
-              signupService.register({ intent: 'joinKeep', keepId: $scope.keep.pubId, keepAuthToken: $stateParams.authToken || null });
-            }
-          };
+          $scope.clickedInputBox = function() {};
 
           // functions
 

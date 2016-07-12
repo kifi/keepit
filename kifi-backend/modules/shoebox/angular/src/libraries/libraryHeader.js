@@ -4,10 +4,10 @@ angular.module('kifi')
 
 .directive('kfLibraryHeader', [
   '$http', '$location', '$q', '$rootScope', '$state', '$stateParams', '$timeout', '$window', '$$rAF',
-  '$filter', 'env', 'libraryService', 'modalService','profileService', 'platformService', 'signupService',
+  '$filter', 'env', 'libraryService', 'modalService','profileService', 'platformService',
   'routeService', 'linkify', 'LIB_PERMISSION', 'ORG_PERMISSION', 'ORG_SETTING_VALUE',
   function ($http, $location, $q, $rootScope, $state, $stateParams, $timeout, $window, $$rAF,
-            $filter, env, libraryService, modalService, profileService, platformService, signupService,
+            $filter, env, libraryService, modalService, profileService, platformService,
             routeService, linkify, LIB_PERMISSION, ORG_PERMISSION, ORG_SETTING_VALUE) {
     return {
       restrict: 'A',
@@ -36,10 +36,6 @@ angular.module('kifi')
         var descEl = descWrapEl.find('.kf-lh-desc');
         var smallWindowLimit = 479;
         var smallWindow = $window.innerWidth <= smallWindowLimit;
-
-        if (!profileService.userLoggedIn() && scope.library && scope.library.invite && scope.library.invite.access==='read_write') {
-          signupService.register({libraryId: scope.library.id, intent: 'follow', libAuthToken: authToken, invite: scope.library.invite});
-        }
 
         //
         // Scope data.
@@ -97,10 +93,6 @@ angular.module('kifi')
               scope.library.invite = null;
             });
           }
-        };
-
-        scope.signupFromInvitation = function () {
-          signupService.register({libraryId: scope.library.id, intent: 'follow', libAuthToken: authToken, invite: scope.library.invite});
         };
 
         scope.changeSubscription = function () {
@@ -547,8 +539,6 @@ angular.module('kifi')
             var url = $location.absUrl();
             platformService.goToAppOrStore(url + (url.indexOf('?') > 0 ? '&' : '?') + 'follow=true');
             return;
-          } else if (!$rootScope.userLoggedIn) {
-            return signupService.register({libraryId: scope.library.id, intent: 'follow', libAuthToken: authToken});
           }
 
           scope.followBtnJustClicked = (opts && opts.via) === 'followBtn';

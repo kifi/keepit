@@ -457,8 +457,11 @@ class AuthController @Inject() (
             Redirect("/logout")
           }
         case requestNonUser: NonUserRequest[_] =>
+          val kifiClosed = db.readOnlyMaster(3) { implicit s => systemValueRepo.ripKifi() }
           val identityOpt = requestNonUser.identityId.flatMap(authCommander.getUserIdentity)
-          if (identityOpt.isDefined) {
+          if (kifiClosed) {
+            Ok(views.html.authMinimal.signup(kifiClosed))
+          } else if (identityOpt.isDefined) {
             val identity = identityOpt.get
             if (identity.identityId.userId.trim.isEmpty) {
               throw new Exception(s"got an identity [$identity] with empty user id for non user from request ${requestNonUser.path} headers ${requestNonUser.headers.toSimpleMap.mkString(",")} body [${requestNonUser.body}]")
@@ -507,8 +510,7 @@ class AuthController @Inject() (
             }
           } else {
             temporaryReportSignupLoad()(requestNonUser)
-            val kifiClosed = db.readOnlyMaster(3) { implicit s => systemValueRepo.ripKifi() }
-            Ok(views.html.authMinimal.signup(kifiClosed))
+            Ok(views.html.authMinimal.signup(false))
           }
 
       }

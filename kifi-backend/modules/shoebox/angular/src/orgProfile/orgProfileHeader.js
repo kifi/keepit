@@ -4,10 +4,10 @@ angular.module('kifi')
 
 .directive('kfOrgProfileHeader', [
   '$state', '$http', '$location', 'modalService', 'orgProfileService',
-  '$timeout', 'profileService', 'signupService', 'billingService', 'messageTicker',
+  '$timeout', 'profileService', 'billingService', 'messageTicker',
   'ORG_PERMISSION', 'ORG_SETTING_VALUE',
   function ($state, $http, $location, modalService, orgProfileService,
-            $timeout, profileService, signupService, billingService, messageTicker,
+            $timeout, profileService, billingService, messageTicker,
             ORG_PERMISSION, ORG_SETTING_VALUE) {
 
   return {
@@ -42,9 +42,6 @@ angular.module('kifi')
       scope.acknowledgedInvite = false;
       scope.isKifiAdmin = profileService.me.experiments && profileService.me.experiments.indexOf('admin') > -1;
 
-      if (!profileService.userLoggedIn() && scope.profile && scope.viewer.invite) {
-        signupService.register({orgId: scope.profile.id, intent: 'joinOrg', orgAuthToken: authToken, invite: scope.viewer.invite});
-      }
 
       scope.goToMemberInvite = function () {
         orgProfileService.trackEvent('user_clicked_page', scope.profile, { type: 'org_profile', action: 'invite' });
@@ -151,16 +148,6 @@ angular.module('kifi')
                 scope.acknowledgedInvite = true;
                 $state.reload('orgProfile');
               });
-          }
-        }
-      ];
-
-      scope.signupBannerButtons = [
-        {
-          label: 'Accept',
-          className: 'kf-accept',
-          click: function () {
-            signupService.register({orgId: scope.profile.id, intent: 'joinOrg', orgAuthToken: authToken, invite: scope.viewer.invite });
           }
         }
       ];
