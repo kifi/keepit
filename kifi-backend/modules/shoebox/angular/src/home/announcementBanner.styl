@@ -3,6 +3,7 @@
   overflow: hidden
   flex: 1 100%
   margin: 0 10%
+  max-width: 800px
 
   &.ng-leave
     transition: opacity .4s, max-height .4s
@@ -16,7 +17,7 @@
 
 .kf-announcement-title
   padding: 8px 28px // make sure the title doesn't underlap the cancel button
-  font-size: 18px
+  font-size: 16px
 
 .kf-announcement-body
   background-color: #fff
@@ -55,3 +56,19 @@
   top: 10px
   right: 10px
   cursor: pointer
+
+.kf-announcement-btn
+  display: block
+  margin: 5px auto 0px
+  width: 120px
+  color: white
+  background: libraryGreen
+  padding: 6px
+  border-radius: 5px
+
+  &:hover
+    opacity: .85
+
+  &:active
+    opacity: 1
+

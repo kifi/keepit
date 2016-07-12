@@ -515,8 +515,7 @@ class UserController @Inject() (
     val buzzState = userExperimentCommander.getBuzzState(userId).map(_.value).getOrElse("")
 
     val message = {
-      if (buzzState == UserExperimentType.ANNOUNCED_WIND_DOWN.value) "Wikipedia is looking for fundraising! Please donate your money to our noble cause. How else will you look up random stuff you don't know about? Visit www.wikipedia.org for more info."
-      else if (buzzState == UserExperimentType.SYSTEM_EXPORT_ONLY.value) "Wikipedia is shutting down due to lack of fundraising. Thanks to free-loaders like you, we're down to a few nickels and a large order of french fries. Check out www.isitdownrightnow.com to see whether we're still kicking or not."
+      if (buzzState != "") "The Kifi Team is joining Google! The Kifi service will be fully operational until August 22nd, 2016. After that you'll be able to export your data for a few more weeks. Thank you for being a part of Kifi."
       else ""
     }
 
