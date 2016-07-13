@@ -1,5 +1,7 @@
 package com.keepit.eliza.controllers.shared
 
+import java.util.concurrent.TimeUnit
+
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.net.HttpClient
 import com.keepit.discussion.{ DiscussionFail, Message }
@@ -19,18 +21,20 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.heimdal._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.commanders.RemoteUserExperimentCommander
+import org.jboss.netty.util.{ Timeout, TimerTask, HashedWheelTimer }
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 
 import akka.actor.ActorSystem
 
-import com.google.inject.Inject
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.store.KifiInstallationStore
 
 import scala.concurrent.Future
 
+@Singleton
 class SharedWsMessagingController @Inject() (
   discussionCommander: ElizaDiscussionCommander,
   messagingCommander: MessagingCommander,
@@ -62,13 +66,18 @@ class SharedWsMessagingController @Inject() (
     sendAnnouncementIfUnseen(socket.userId)
   }
 
+  private val timer = new HashedWheelTimer(100, TimeUnit.MILLISECONDS)
+  private val lock = new Object
+
   private def sendAnnouncementIfUnseen(userId: Id[User]): Unit = {
     shoebox.getUserValue(userId, UserValueName.SEEN_ANNOUNCEMENT_NOTIF).map { valueOpt =>
       val hasSeen = valueOpt.contains("true")
       if (!hasSeen) {
-        Thread.sleep(5000L)
-        notificationCommander.sendAnnouncementToUsers(Set(userId))
         shoebox.setUserValue(userId, UserValueName.SEEN_ANNOUNCEMENT_NOTIF, "true")
+
+        timer.newTimeout(new TimerTask {
+          override def run(timeout: Timeout): Unit = lock.synchronized { notificationCommander.sendAnnouncementToUsers(Set(userId)) }
+        }, 5, TimeUnit.SECONDS)
       }
     }
   }
