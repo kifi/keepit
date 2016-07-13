@@ -248,57 +248,6 @@ POST    /m/1/attribution/appsflyer              @com.keepit.controllers.mobile.M
 
 POST    /m/1/disconnect/:provider               @com.keepit.controllers.mobile.MobileUserController.disconnect(provider)
 
-GET     /m/2/recos/top                          @com.keepit.controllers.mobile.MobileRecommendationsController.topRecosV2(recency: Float, more: Boolean ?= false)
-GET     /m/3/recos/top                          @com.keepit.controllers.mobile.MobileRecommendationsController.topRecosV3(recency: Float, uriContext: Option[String] ?= None, libContext: Option[String] ?= None, uctx: Option[String] ?= None, lctx: Option[String] ?= None)
-POST    /m/3/recos/top                          @com.keepit.controllers.mobile.MobileRecommendationsController.topRecosV3Post()
-GET     /m/1/recos/public                       @com.keepit.controllers.mobile.MobileRecommendationsController.topPublicRecos()
-POST    /m/1/recos/trash                        @com.keepit.controllers.mobile.MobileRecommendationsController.trash(id: ExternalId[NormalizedURI])
-POST    /m/1/recos/feedback                     @com.keepit.controllers.website.RecommendationsController.updateUriRecommendationFeedback(id: ExternalId[NormalizedURI])
-
-#DEPRECATED: use instead /m/1/keeps/stream
-GET     /m/1/recos/keepUpdates                  @com.keepit.controllers.mobile.MobileRecommendationsController.keepUpdates(limit: Int ?= 10, beforeId: Option[String], afterId: Option[String])
-
-POST    /m/1/feed                               @com.keepit.controllers.mobile.MobileRecommendationsController.feedV1Post()
-
-GET     /m/1/libraries/marketing-suggestions    @com.keepit.controllers.mobile.MobileLibraryController.marketingSiteSuggestedLibraries()
-
-GET     /m/1/users/:handle/libraries/:slug     @com.keepit.controllers.mobile.MobileLibraryController.getLibraryByPathV1(handle: Handle, slug: LibrarySlug, is: Option[String] ?= None)
-GET     /m/2/users/:handle/libraries/:slug     @com.keepit.controllers.mobile.MobileLibraryController.getLibraryByPathV2(handle: Handle, slug: LibrarySlug, is: Option[String] ?= None)
-POST    /m/1/libraries/add                      @com.keepit.controllers.mobile.MobileLibraryController.createLibrary()
-POST    /m/1/libraries/:id/modify               @com.keepit.controllers.mobile.MobileLibraryController.modifyLibrary(id: PublicId[Library])
-POST    /m/2/libraries/:id/modify               @com.keepit.controllers.mobile.MobileLibraryController.modifyLibraryV2(id: PublicId[Library])
-POST    /m/1/libraries/:id/delete               @com.keepit.controllers.mobile.MobileLibraryController.deleteLibrary(id: PublicId[Library])
-GET     /m/1/libraries                          @com.keepit.controllers.mobile.MobileLibraryController.getLibrarySummariesByUser()
-POST    /m/1/libraries                          @com.keepit.controllers.mobile.MobileLibraryController.getWriteableLibrariesWithUrlV1()
-POST    /m/2/libraries                          @com.keepit.controllers.mobile.MobileLibraryController.getWriteableLibrariesWithUrlV2()
-POST    /m/3/libraries                          @com.keepit.controllers.mobile.MobileLibraryController.getWriteableLibrariesWithUrlV3()
-GET     /m/1/libraries/:id                      @com.keepit.controllers.mobile.MobileLibraryController.getLibraryByIdV1(id: PublicId[Library], is: Option[String] ?= None)
-GET     /m/2/libraries/:id                      @com.keepit.controllers.mobile.MobileLibraryController.getLibraryByIdV2(id: PublicId[Library], is: Option[String] ?= None)
-POST    /m/1/libraries/:id/join                 @com.keepit.controllers.mobile.MobileLibraryController.joinLibrary(id: PublicId[Library])
-POST    /m/1/libraries/joinMultiple             @com.keepit.controllers.mobile.MobileLibraryController.joinLibraries()
-POST    /m/1/libraries/:id/decline              @com.keepit.controllers.mobile.MobileLibraryController.declineLibrary(id: PublicId[Library])
-POST    /m/1/libraries/:id/leave                @com.keepit.controllers.mobile.MobileLibraryController.leaveLibrary(id: PublicId[Library])
-GET     /m/1/libraries/:id/keeps                @com.keepit.controllers.mobile.MobileLibraryController.getKeepsV1(id: PublicId[Library], offset: Int ?= 0, limit: Int ?= 10, imageWidth: Option[Int] ?= None, imageHeight: Option[Int] ?= None, maxMessagesShown: Int ?= 8)
-GET     /m/2/libraries/:id/keeps                @com.keepit.controllers.mobile.MobileLibraryController.getKeepsV2(id: PublicId[Library], offset: Int ?= 0, limit: Int ?= 10, imageWidth: Option[Int] ?= None, imageHeight: Option[Int] ?= None, maxMessagesShown: Int ?= 8)
-POST    /m/2/libraries/:id/keeps                @com.keepit.controllers.mobile.MobileLibraryController.keepToLibraryV2(id: PublicId[Library])
-DELETE  /m/1/libraries/:id/keeps/:kId           @com.keepit.controllers.mobile.MobileLibraryController.unkeepFromLibrary(id: PublicId[Library], kId: ExternalId[Keep])
-DELETE  /m/1/libraries/:id/invite               @com.keepit.controllers.mobile.MobileLibraryController.revokeLibraryInvitation(id: PublicId[Library])
-POST    /m/1/libraries/:id/invite               @com.keepit.controllers.mobile.MobileLibraryController.inviteUsersToLibrary(id: PublicId[Library])
-POST    /m/1/libraries/:id/invite/link          @com.keepit.controllers.mobile.MobileLibraryController.createAnonymousInviteToLibrary(id: PublicId[Library])
-# ↓↓↓ deprecated, do not use anymore ↓↓↓
-GET     /m/1/libraries/:id/inviteInfo           @com.keepit.controllers.website.InviteController.getLibraryInviteInfo(id: PublicId[Library])
-POST    /m/1/libraries/:id/subscription         @com.keepit.controllers.mobile.MobileLibraryController.setSubscribedToUpdates(id: PublicId[Library], subscribed: Boolean)
-POST    /m/1/libraries/:id/image/upload         @com.keepit.controllers.mobile.MobileLibraryImageController.uploadLibraryImage(id: PublicId[Library], imageSize: Option[String] ?= None, posX: Option[Int] ?= None, posY: Option[Int] ?= None)
-DELETE  /m/1/libraries/:id/image                @com.keepit.controllers.mobile.MobileLibraryImageController.removeLibraryImage(id: PublicId[Library])
-
-GET     /m/1/libraries/:id/members              @com.keepit.controllers.mobile.MobileLibraryController.getLibraryMembersV1(id: PublicId[Library], offset: Int ?= 0, limit: Int ?= 20)
-GET     /m/2/libraries/:id/members              @com.keepit.controllers.mobile.MobileLibraryController.getLibraryMembersV2(id: PublicId[Library], offset: Int ?= 0, limit: Int ?= 20)
-GET     /m/1/libraries/:id/members/suggest      @com.keepit.controllers.mobile.MobileLibraryController.suggestMembers(id: PublicId[Library], q: Option[String] ?= None, n: Int ?= 5)
-POST    /m/1/libraries/:id/members/:uId/access  @com.keepit.controllers.mobile.MobileLibraryController.updateLibraryMembership(id: PublicId[Library], uId: ExternalId[User])
-
-POST    /m/1/content/flagUrl                @com.keepit.controllers.mobile.MobileUriController.flagContent()
-GET     /m/1/inviteInfo                     @com.keepit.controllers.website.InviteController.getGeneralInviteInfo()
-
 ##########################################
 # Website
 ##########################################
