@@ -83,9 +83,12 @@ class FullExportFormatterImpl @Inject() (
     val entity = s"""libraries["${Library.publicId(library.library.id.get).id}"]"""
     val fullLibrary = Json.obj(
       "id" -> Library.publicId(library.library.id.get),
-      "name" -> library.library.name,
       "description" -> library.library.description,
-      "numKeeps" -> library.library.keepCount
+      "kind" -> library.library.kind,
+      "name" -> library.library.name,
+      "numKeeps" -> library.library.keepCount,
+      "slug" -> library.library.slug,
+      "visibility" -> library.library.visibility
     )
     library.keeps.map(_.keep.id.get).through(Enumeratee.grouped(Iteratee.getChunks)).through(Enumeratee.map { keepIds =>
       entity -> (fullLibrary ++ Json.obj("keeps" -> keepIds.map(Keep.publicId)))

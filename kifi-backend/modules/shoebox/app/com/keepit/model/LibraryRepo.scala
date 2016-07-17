@@ -90,6 +90,7 @@ class LibraryRepoImpl @Inject() (
   val clock: Clock,
   val libraryInviteRepo: Provider[LibraryInviteRepoImpl],
   val libraryMembershipRepo: Provider[LibraryMembershipRepoImpl],
+  val orgMembershipRepo: Provider[OrganizationMembershipRepoImpl],
   val libraryMetadataCache: LibraryMetadataCache,
   val basicLibraryCache: BasicLibraryByIdCache,
   val topLibsCache: TopFollowedLibrariesCache,
@@ -99,6 +100,8 @@ class LibraryRepoImpl @Inject() (
     extends DbRepo[Library] with LibraryRepo with SeqNumberDbFunction[Library] with Logging {
 
   lazy val lmRows = libraryMembershipRepo.get.activeRows
+  lazy val omRows = orgMembershipRepo.get.activeRows
+
   import com.keepit.common.db.slick.DBSession._
   import db.Driver.simple._
 
@@ -215,24 +218,21 @@ class LibraryRepoImpl @Inject() (
     }
   }
   def pageBySpace(viewer: Id[User], space: LibrarySpace, offset: Int, limit: Int)(implicit session: RSession): Seq[Library] = {
-    val orgVisibilities: Set[LibraryVisibility] = Set(LibraryVisibility.ORGANIZATION, LibraryVisibility.PUBLISHED)
-    val libsBySpace = space match {
-      case UserSpace(userId) if userId == viewer => for {
-        // All libraries in the space
-        l <- activeRows if l.ownerId === userId && l.orgId.isEmpty
-      } yield l
-      case UserSpace(userId) if userId != viewer => for {
-        // Libraries in the space where the viewer is a member
-        l <- activeRows if l.ownerId === userId && l.orgId.isEmpty &&
-          lmRows.filter(lm => lm.libraryId === l.id && lm.userId === viewer).exists
-      } yield l
-      case OrganizationSpace(orgId) => for {
-        // Libraries in the space where the library is visible OR the viewer is a member
-        l <- activeRows if l.orgId === orgId &&
-          (l.visibility.inSet(orgVisibilities) || lmRows.filter(lm => lm.userId === viewer && lm.libraryId === l.id).exists)
-      } yield l
+    def isViewerInOrg(orgId: Id[Organization]): Boolean = omRows.filter(om => om.userId === viewer && om.organizationId === orgId).exists.run
+    val librariesInSpace = space match {
+      case UserSpace(userId) => activeRows.filter(l => l.ownerId === userId && l.orgId.isEmpty)
+      case OrganizationSpace(orgId) => activeRows.filter(l => l.orgId === orgId)
     }
-    libsBySpace.sortBy(_.id).drop(offset).take(limit).list
+    val librariesViewerCanSee = space match {
+      case UserSpace(userId) if userId == viewer =>
+        librariesInSpace
+      case OrganizationSpace(orgId) if isViewerInOrg(orgId) =>
+        val inOrgVisible: Set[LibraryVisibility] = Set(LibraryVisibility.PUBLISHED, LibraryVisibility.ORGANIZATION)
+        librariesInSpace.filter(l => l.visibility.inSet(inOrgVisible) || lmRows.filter(lm => lm.libraryId === l.id && lm.userId === viewer).exists)
+      case _ =>
+        librariesInSpace.filter(l => lmRows.filter(lm => lm.libraryId === l.id && lm.userId === viewer).exists)
+    }
+    librariesViewerCanSee.sortBy(_.id).drop(offset).take(limit).list
   }
 
   def getLibraryIdsForQuery(query: LibraryQuery, extraInfo: LibraryQuery.ExtraInfo)(implicit session: RSession): Seq[Id[Library]] = {
