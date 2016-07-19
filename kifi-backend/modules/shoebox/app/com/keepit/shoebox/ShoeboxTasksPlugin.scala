@@ -35,20 +35,20 @@ class ShoeboxTasksPlugin @Inject() (
     paymentProcessingCommander: PaymentProcessingCommander,
     val scheduling: SchedulingProperties) extends SchedulerPlugin {
 
-  override def onStart() {
+  override def onStart() { //keep me alive - ish!
     log.info("ShoeboxTasksPlugin onStart")
-    scheduleTaskOnOneMachine(system, 3 minute, 1 minutes, "twitter sync") {
+    scheduleTaskOnOneMachine(system, 33 minute, 1 hours, "twitter sync") {
       twitterSyncCommander.syncAll()
     }
 
-    scheduleTaskOnLeader(system, 66 seconds, 13 seconds, "twitter waitlist accept") {
-      twitterWaitListCommander.processQueue()
-    }
+    //    scheduleTaskOnLeader(system, 66 seconds, 13 seconds, "twitter waitlist accept") {
+    //      twitterWaitListCommander.processQueue()
+    //    }
 
-    scheduleTaskOnLeader(system, 30 minutes, 30 minutes, "payments processing") {
-      planRenewalCommander.processDueRenewals()
-      paymentProcessingCommander.processDuePayments()
-    }
+    //    scheduleTaskOnLeader(system, 30 minutes, 30 minutes, "payments processing") {
+    //      planRenewalCommander.processDueRenewals()
+    //      paymentProcessingCommander.processDuePayments()
+    //    }
 
     scheduleTaskOnLeader(articleIngestionActor.system, 3 minutes, 1 minute, articleIngestionActor.ref, ShoeboxArticleIngestionActor.StartIngestion)
     scheduleTaskOnLeader(messageIngestionActor.system, 500 seconds, 3 minute, messageIngestionActor.ref, IfYouCouldJustGoAhead)

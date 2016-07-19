@@ -176,11 +176,11 @@ class HealthcheckPluginImpl @Inject() (
 
   // plugin lifecycle methods
   override def enabled: Boolean = true
-  override def onStart() {
-    scheduleTaskOnAllMachines(actor.system, 0 seconds, 30 minutes, actor.ref, ReportErrorsAction)
+  override def onStart() { //keep me alive - ish!
+    scheduleTaskOnAllMachines(actor.system, 0 seconds, 3 hours, actor.ref, ReportErrorsAction)
     scheduleTaskOnAllMachines(actor.system, 0 seconds, 60 minutes, actor.ref, CheckDiskSpace)
-    scheduleTaskOnAllMachines(actor.system, 10 days, 2 day, actor.ref, CheckUpdateStatusOfService)
-    scheduleTaskOnAllMachines(actor.system, 1 hour, 1 day, actor.ref, CheckCacheMissRatio)
+    //    scheduleTaskOnAllMachines(actor.system, 10 days, 2 day, actor.ref, CheckUpdateStatusOfService)
+    //    scheduleTaskOnAllMachines(actor.system, 1 hour, 1 day, actor.ref, CheckCacheMissRatio)
   }
 
   def errorCount(): Int = Await.result((actor.ref ? ErrorCount).mapTo[Int], 1 seconds)

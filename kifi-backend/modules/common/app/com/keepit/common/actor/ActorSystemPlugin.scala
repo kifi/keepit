@@ -20,7 +20,7 @@ class ActorSystemPlugin(system: ActorSystem)
 
   override def enabled: Boolean = true
 
-  override def onStart() {
+  override def onStart() { //keep me alive!
     log.info(s"loaded actor system with:\n$system.config")
   }
 

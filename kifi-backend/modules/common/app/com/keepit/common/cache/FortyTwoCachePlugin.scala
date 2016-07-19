@@ -258,7 +258,7 @@ class EhCacheCache @Inject() (
     manager.addCache(cache)
     (manager, cache)
   }
-  override def onStart() { cache }
+  override def onStart() { cache } //keep me alive!
   override def onStop() {
     super.onStop()
     //shutting down the cache plugin will cause problems to mid flight requests

@@ -40,9 +40,9 @@ class DelightedPluginImpl @Inject() (
     ) extends DelightedPlugin with Logging {
 
   override def enabled: Boolean = true
-  override def onStart() {
-    log.info("Starting DelightedPluginImpl")
-    scheduleTaskOnOneMachine(actor.system, 10 seconds, 15 seconds, actor.ref, FetchNewDelightedAnswers, FetchNewDelightedAnswers.getClass.getSimpleName)
+  override def onStart() { //kill
+    //    log.info("Starting DelightedPluginImpl")
+    //    scheduleTaskOnOneMachine(actor.system, 10 seconds, 15 seconds, actor.ref, FetchNewDelightedAnswers, FetchNewDelightedAnswers.getClass.getSimpleName)
   }
 
   def fetchNewDelightedAnswers() {

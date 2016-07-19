@@ -165,7 +165,7 @@ class RawKeepImporterPluginImpl @Inject() (
     }
   }
 
-  override def onStart() {
+  override def onStart() { //keep me alive!
     scheduleTaskOnOneMachine(system, 127 seconds, 11 seconds, actor.ref, ProcessKeeps, ProcessKeeps.getClass.getSimpleName)
     super.onStart()
   }

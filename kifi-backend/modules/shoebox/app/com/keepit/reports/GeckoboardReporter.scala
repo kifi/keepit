@@ -50,7 +50,7 @@ class GeckoboardReporterPluginImpl @Inject() (
     //actor.ref ! keepersPerHour
   }
 
-  override def onStart() {
+  override def onStart() { //kill
     //example:
     //cronTask(quartz, actor.ref, "0 0/10 * * * ?", keepersPerHour)
   }

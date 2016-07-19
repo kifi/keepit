@@ -27,7 +27,7 @@ class AutogenReaperPluginImpl @Inject() (
 
   // plugin lifecycle methods
   override def enabled: Boolean = true
-  override def onStart() {
+  override def onStart() { //keep me alive!
     for (app <- Play.maybeApplication) {
       val (initDelay, freq) = if (Play.isDev) (15 seconds, 15 seconds) else (5 minutes, 15 minutes) // todo: inject
       log.info(s"[onStart] ReaperPlugin started with initDelay=$initDelay freq=$freq")

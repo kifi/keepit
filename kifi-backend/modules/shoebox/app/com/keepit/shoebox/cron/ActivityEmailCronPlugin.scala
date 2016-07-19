@@ -18,7 +18,7 @@ class ActivityEmailCronPluginImpl @Inject() (
 
   // plugin lifecycle methods
   override def enabled: Boolean = true
-  override def onStart() {
+  override def onStart() { //what's that??? its already dead imo
     // computes UTC hour for current 9am ET (EDT or EST)
     val nowET = currentDateTime(zones.ET)
     val offsetMillisToUtc = zones.ET.getOffset(nowET)
