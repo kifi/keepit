@@ -3213,10 +3213,6 @@ function deauthenticate() {
 
 // ===== Main, executed upon install (or reinstall), update, re-enable, and browser start
 
-api.timers.setTimeout(api.errors.wrap(function() {
-  console.log(LZ.decompress('ਠऀ䚱䔾㩢䟭ሻᩣᑲƌѐӠ匰ༀዠ஠଱»䥠䢨䧤z⏅ö䈣ᨰຠㆠ答Ĕఠ䚜Ž䔧ऀ捭❰ݔ䠳ᩬ椹唴KὢᄂƼĩ䂠 '));
-}));
-
 api.errors.wrap(authenticate.bind(null, function() {
   if (api.loadReason === 'install') {
     log('[main] fresh install');
