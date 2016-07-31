@@ -224,8 +224,7 @@ angular.module('kifi')
           }, function fail() {
             $timeout.cancel(tooSlowTimer);
             $scope.disableBookmarkImport = false;
-            $scope.importFileStatus = 'We may have had problems with your links. Reload the page to see if they’re coming in. ' +
-              'If not, please contact support so we can fix it.';
+            $scope.importFileStatus = 'We may have had problems with your links. Reload the page to see if they’re coming in.';
           });
         } else {
           $scope.importFileStatus = 'Hm, couldn’t upload your file. Try picking it again.';
