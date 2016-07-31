@@ -60,7 +60,7 @@ angular.module('kifi')
                   $scope.$error.general = 'Referral code has already been used';
                   break;
                 case 'no_paid_account':
-                  $scope.$error.general = 'Account not found. Contact support@kifi.com.';
+                  $scope.$error.general = 'Account not found.';
                   break;
                 case 'unrepeatable_reward':
                   $scope.$error.general = 'You\'ve already redeemed a similar promotion.';
