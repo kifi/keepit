@@ -27,7 +27,7 @@ angular.module('kifi')
         action: 'clicked_install_extension'
       });
       installService.triggerInstall(function onError() {
-        messageTicker({ text: 'Oops, that didn’t work.', type: 'red' });
+        messageTicker({ text: 'Oops, that didn’t work. Contact support if the problem persists.', type: 'red' });
       });
     };
 
