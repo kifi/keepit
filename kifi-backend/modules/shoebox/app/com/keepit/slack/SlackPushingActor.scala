@@ -63,10 +63,11 @@ class SlackPushingActor @Inject() (
   protected val maxConcurrentTasks = maxPushConcurrency
 
   protected def pullTasks(limit: Int): Future[Seq[Id[LibraryToSlackChannel]]] = {
-    db.readWrite { implicit session =>
-      val integrationIds = integrationRepo.getRipeForPushing(limit, pushTimeout)
-      Future.successful(integrationIds.filter(integrationRepo.markAsPushing(_, pushTimeout)))
-    }
+    // db.readWrite { implicit session =>
+    //   val integrationIds = integrationRepo.getRipeForPushing(limit, pushTimeout)
+    //   Future.successful(integrationIds.filter(integrationRepo.markAsPushing(_, pushTimeout)))
+    // }
+    Future { Seq.empty }
   }
 
   protected def processTasks(integrationIds: Seq[Id[LibraryToSlackChannel]]): Map[Id[LibraryToSlackChannel], Future[Unit]] = {
@@ -141,13 +142,14 @@ class SlackPushingActor @Inject() (
   }
 
   private def doPush(integration: LibraryToSlackChannel, channel: SlackChannel, settings: Option[OrganizationSettings]): Future[Unit] = {
-    generator.getPushItems(integration).flatMap { implicit pushItems =>
-      for {
-        _ <- pushNewItems(integration, channel, pushItems.sortedNewItems, settings)
-        _ <- updatePushedKeeps(integration, pushItems.oldKeeps)
-        _ <- updatePushedMessages(integration, pushItems.oldMsgs)
-      } yield ()
-    }
+    // generator.getPushItems(integration).flatMap { implicit pushItems =>
+    //   for {
+    //     _ <- pushNewItems(integration, channel, pushItems.sortedNewItems, settings)
+    //     _ <- updatePushedKeeps(integration, pushItems.oldKeeps)
+    //     _ <- updatePushedMessages(integration, pushItems.oldMsgs)
+    //   } yield ()
+    // }
+    Future {}
   }
 
   private def pushNewItems(integration: LibraryToSlackChannel, channel: SlackChannel, sortedItems: Seq[PushItem], settings: Option[OrganizationSettings])(implicit pushItems: PushItems): Future[Unit] = {
