@@ -114,6 +114,7 @@ if (searchUrlRe.test(document.URL)) !function () {
   }
 
   function search(useLocation, newFilter, isFirst) {
+    return; // Kifi is shut down.
     if (isVertical) return;
 
     var q = ($qp.val() || $q.val() || useLocation && (parseQ(location.hash) || parseQ(location.search)) || '').trim().replace(/\s+/g, ' ');  // TODO: also detect "Showing results for" and prefer that

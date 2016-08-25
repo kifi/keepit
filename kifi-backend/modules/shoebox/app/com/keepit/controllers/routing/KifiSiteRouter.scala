@@ -61,7 +61,12 @@ class KifiSiteRouter @Inject() (
   implicit val publicIdConfiguration: PublicIdConfiguration)
     extends UserActions with ShoeboxServiceController {
 
-  def redirectUserTo(path: String) = WebAppPage { implicit request =>
+  def redirectUserToWithIgnored(path: String, ignored: String) = {
+    log.info(s"[ishdnr] Requested $path, $ignored")
+    redirectUserTo(path)
+  }
+
+  def redirectUserTo(path: String, ignored: String = "") = WebAppPage { implicit request =>
     request match {
       case _: UserRequest[_] => Redirect(path)
       case r: NonUserRequest[_] => redirectToLogin(path, r)

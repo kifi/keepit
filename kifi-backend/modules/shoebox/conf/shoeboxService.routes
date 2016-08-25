@@ -335,41 +335,38 @@ GET     /about/join_us              @com.keepit.controllers.website.HomeControll
 GET     /about/join_us.html         @com.keepit.controllers.website.HomeController.moved(uri = "/")
 GET     /about/user_feedback        @com.keepit.controllers.website.HomeController.moved(uri = "/getting-started")
 GET     /how_it_works               @com.keepit.controllers.website.HomeController.moved(uri = "/getting-started")
-GET     /integrations/slack         @com.keepit.controllers.website.HomeController.slackIntegration
-GET     /about/love                 @com.keepit.controllers.website.HomeController.route(path = "about/love")
-GET     /getting-started/slack      @com.keepit.controllers.website.HomeController.route(path = "integrations/slack")
-GET     /imports/pinboard           @com.keepit.controllers.website.HomeController.route(path = "imports/pinboard")
-GET     /imports/kippt              @com.keepit.controllers.website.HomeController.route(path = "imports/kippt")
-GET     /imports/instapaper         @com.keepit.controllers.website.HomeController.route(path = "imports/instapaper")
-GET     /imports/evernote           @com.keepit.controllers.website.HomeController.route(path = "imports/evernote")
-GET     /imports/diigo              @com.keepit.controllers.website.HomeController.route(path = "imports/diigo")
-GET     /imports/pocket             @com.keepit.controllers.website.HomeController.route(path = "imports/pocket")
-GET     /imports/delicious          @com.keepit.controllers.website.HomeController.route(path = "imports/delicious")
-GET     /getting-started            @com.keepit.controllers.website.HomeController.route(path = "getting-started/users")
-GET     /teams                      @com.keepit.controllers.website.HomeController.moved(uri = "/")
-GET     /teams-confirmation         @com.keepit.controllers.website.HomeController.route(path = "teams-confirmation")
-GET     /install                    @com.keepit.controllers.website.HomeController.install
-GET     /getting-started            @com.keepit.controllers.website.HomeController.gettingStarted
+GET         /ishdnr/integrations/slack         @com.keepit.controllers.website.HomeController.slackIntegration
+GET         /ishdnr/about/love                 @com.keepit.controllers.website.HomeController.route(path = "about/love")
+GET         /ishdnr/getting-started/slack      @com.keepit.controllers.website.HomeController.route(path = "integrations/slack")
+GET         /ishdnr/imports/pinboard           @com.keepit.controllers.website.HomeController.route(path = "imports/pinboard")
+GET         /ishdnr/imports/kippt              @com.keepit.controllers.website.HomeController.route(path = "imports/kippt")
+GET         /ishdnr/imports/instapaper         @com.keepit.controllers.website.HomeController.route(path = "imports/instapaper")
+GET         /ishdnr/imports/evernote           @com.keepit.controllers.website.HomeController.route(path = "imports/evernote")
+GET         /ishdnr/imports/diigo              @com.keepit.controllers.website.HomeController.route(path = "imports/diigo")
+GET         /ishdnr/imports/pocket             @com.keepit.controllers.website.HomeController.route(path = "imports/pocket")
+GET         /ishdnr/imports/delicious          @com.keepit.controllers.website.HomeController.route(path = "imports/delicious")
+GET         /ishdnr/getting-started            @com.keepit.controllers.website.HomeController.route(path = "getting-started/users")
+GET         /ishdnr/teams                      @com.keepit.controllers.website.HomeController.moved(uri = "/")
+GET         /ishdnr/teams-confirmation         @com.keepit.controllers.website.HomeController.route(path = "teams-confirmation")
+GET         /ishdnr/install                    @com.keepit.controllers.website.HomeController.install
+GET         /ishdnr/getting-started            @com.keepit.controllers.website.HomeController.gettingStarted
 GET     /terms                      @com.keepit.controllers.website.HomeController.route(path = "terms")
 GET     /about/pricing              @com.keepit.controllers.website.HomeController.route(path = "about/pricing")
-GET     /privacy                    @com.keepit.controllers.website.HomeController.route(path = "privacy")
-GET     /parenting                  @com.keepit.controllers.website.HomeController.route(path = "parenting")
-GET     /iphone                     @com.keepit.controllers.website.HomeController.iPhoneAppStoreRedirect
-GET     /unsupported                @com.keepit.controllers.website.HomeController.unsupported
-GET     /libraries/featured         @com.keepit.controllers.website.HomeController.route(path = "libraries/featured")
+GET         /ishdnr/privacy                    @com.keepit.controllers.website.HomeController.route(path = "privacy")
+GET         /ishdnr/parenting                  @com.keepit.controllers.website.HomeController.route(path = "parenting")
+GET         /ishdnr/iphone                     @com.keepit.controllers.website.HomeController.iPhoneAppStoreRedirect
+GET         /ishdnr/unsupported                @com.keepit.controllers.website.HomeController.unsupported
+GET         /ishdnr/libraries/featured         @com.keepit.controllers.website.HomeController.route(path = "libraries/featured")
 
-POST    /invite                     @com.keepit.controllers.website.InviteController.inviteConnection
-GET     /invite/:id                 @com.keepit.controllers.website.InviteController.acceptInvite(id: ExternalId[Invitation])
-GET     /invite/confirm/:id         @com.keepit.controllers.website.InviteController.confirmInvite(id:ExternalId[Invitation], source: String, error_msg: Option[String], error_code: Option[Int])
+# KifiShutdown - POST    /invite                     @com.keepit.controllers.website.InviteController.inviteConnection
+GET         /ishdnr/invite/:id                 @com.keepit.controllers.website.InviteController.acceptInvite(id: ExternalId[Invitation])
+GET         /ishdnr/invite/confirm/:id         @com.keepit.controllers.website.InviteController.confirmInvite(id:ExternalId[Invitation], source: String, error_msg: Option[String], error_code: Option[Int])
 
-GET     /feedback                   @com.keepit.controllers.website.FeedbackController.feedback
-GET     /feedback/form              @com.keepit.controllers.website.FeedbackController.feedbackForm
+GET         /ishdnr/feedback                   @com.keepit.controllers.website.FeedbackController.feedback
+GET         /ishdnr/feedback/form              @com.keepit.controllers.website.FeedbackController.feedbackForm
 
-POST    /waitlist                   @com.keepit.controllers.website.FeatureWaitlistController.waitList
+# KifiShutdown - POST    /waitlist                   @com.keepit.controllers.website.FeatureWaitlistController.waitList
 POST    /friends/invite/refresh     @com.keepit.controllers.website.InviteController.refreshAllSocialInfo
-
-GET     /get-the-kifi-extension-on-your-iphone @com.keepit.controllers.website.HomeController.getKifiExtensionIPhone(s: String ?= "the other one is wrong")
-GET     /get-the-kifi-extension-on-you-iphone @com.keepit.controllers.website.HomeController.getKifiExtensionIPhone(s: String ?= "this is wrong")
 
 # This should match the output format of S3ImageConfig#keyByExternalId
 GET     /users/:id/pics/:size/0.jpg @com.keepit.controllers.assets.UserPictureController.get(size: Int, id: ExternalId[User])
@@ -380,8 +377,8 @@ GET     /default-pic/:name          @com.keepit.controllers.assets.UserPictureCo
 ##########################################
 # Feeds (RSS)
 ##########################################
-GET     /feeds/libraries/top        @com.keepit.controllers.website.FeedController.getTopLibraries()
-GET     /feeds/libraries/new        @com.keepit.controllers.website.FeedController.getNewLibraries()
+GET         /ishdnr/feeds/libraries/top        @com.keepit.controllers.website.FeedController.getTopLibraries()
+GET         /ishdnr/feeds/libraries/new        @com.keepit.controllers.website.FeedController.getNewLibraries()
 
 ##########################################
 # Web API
@@ -389,9 +386,9 @@ GET     /feeds/libraries/new        @com.keepit.controllers.website.FeedControll
 
 POST    /site/events                @com.keepit.controllers.tracking.EventProxyController.track()
 
-GET     /assets/sitemap.xml                     @com.keepit.controllers.website.SiteMapController.librariesSitemapLegacy()
-GET     /assets/sitemap-libraries-0.xml         @com.keepit.controllers.website.SiteMapController.librariesSitemap()
-GET     /assets/sitemap-users-0.xml             @com.keepit.controllers.website.SiteMapController.usersSitemap()
+GET         /ishdnr/assets/sitemap.xml                     @com.keepit.controllers.website.SiteMapController.librariesSitemapLegacy()
+GET         /ishdnr/assets/sitemap-libraries-0.xml         @com.keepit.controllers.website.SiteMapController.librariesSitemap()
+GET         /ishdnr/assets/sitemap-users-0.xml             @com.keepit.controllers.website.SiteMapController.usersSitemap()
 
 GET     /site/keeps/stream                    @com.keepit.controllers.website.KeepsController.getKeepStream(limit: Option[Int] ?= None, beforeId: Option[String], afterId: Option[String], filterKind: Option[String] ?= None, filterId: Option[String] ?= None, maxMessagesShown: Int ?= 8)
 POST    /site/keeps/personalExport            @com.keepit.controllers.website.KeepsController.exportPersonalKeeps()
