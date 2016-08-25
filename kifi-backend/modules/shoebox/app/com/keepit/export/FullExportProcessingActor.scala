@@ -26,7 +26,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Try, Failure, Success }
 
 object FullExportProcessingConfig {
-  val MAX_PROCESSING_DURATION = Duration.standardHours(4)
+  val MAX_PROCESSING_DURATION = Duration.standardHours(2)
   val MIN_CONCURRENCY = 1
   val MAX_CONCURRENCY = 1
 }
