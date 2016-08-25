@@ -88,90 +88,92 @@ class SlackPushGenerator @Inject() (
   import SlackPushGenerator._
 
   def getPushItems(lts: LibraryToSlackChannel): Future[PushItems] = {
-    val (lib, changedKeeps) = db.readOnlyMaster { implicit s =>
-      val lib = libRepo.get(lts.libraryId)
-      val changedKeeps = keepRepo.getChangedKeepsFromLibrary(lts.libraryId, lts.lastProcessedKeepSeq getOrElse SequenceNumber.ZERO)
-      (lib, changedKeeps)
-    }
-    val changedKeepIds = changedKeeps.map(_.id.get).toSet
+    // val (lib, changedKeeps) = db.readOnlyMaster { implicit s =>
+    //   val lib = libRepo.get(lts.libraryId)
+    //   val changedKeeps = keepRepo.getChangedKeepsFromLibrary(lts.libraryId, lts.lastProcessedKeepSeq getOrElse SequenceNumber.ZERO)
+    //   (lib, changedKeeps)
+    // }
+    // val changedKeepIds = changedKeeps.map(_.id.get).toSet
 
-    val keepAndKtlByKeep = db.readOnlyMaster { implicit s =>
-      val keepById = keepRepo.getActiveByIds(changedKeepIds)
-      val ktlsByKeepId = ktlRepo.getAllByKeepIds(changedKeepIds).flatMapValues { ktls => ktls.find(_.libraryId == lts.libraryId) }
-      changedKeepIds.flatAugmentWith(kId => for (k <- keepById.get(kId); ktl <- ktlsByKeepId.get(kId)) yield (k, ktl)).toMap
-    }
+    // val keepAndKtlByKeep = db.readOnlyMaster { implicit s =>
+    //   val keepById = keepRepo.getActiveByIds(changedKeepIds)
+    //   val ktlsByKeepId = ktlRepo.getAllByKeepIds(changedKeepIds).flatMapValues { ktls => ktls.find(_.libraryId == lts.libraryId) }
+    //   changedKeepIds.flatAugmentWith(kId => for (k <- keepById.get(kId); ktl <- ktlsByKeepId.get(kId)) yield (k, ktl)).toMap
+    // }
 
-    val keepsToPushFut = db.readOnlyReplicaAsync { implicit s =>
-      (keepSourceAttributionRepo.getByKeepIds(changedKeepIds.toSet), lts.lastProcessedKeep.map(ktlRepo.get))
-    }.map {
-      case (attributionByKeepId, lastPushedKtl) =>
-        def shouldKeepBePushed(keep: Keep, ktl: KeepToLibrary): Boolean = {
-          keep.source != KeepSource.Slack && (ktl.addedAt isAfter lts.changedStatusAt.minusSeconds(5))
-        }
+    // val keepsToPushFut = db.readOnlyReplicaAsync { implicit s =>
+    //   (keepSourceAttributionRepo.getByKeepIds(changedKeepIds.toSet), lts.lastProcessedKeep.map(ktlRepo.get))
+    // }.map {
+    //   case (attributionByKeepId, lastPushedKtl) =>
+    //     def shouldKeepBePushed(keep: Keep, ktl: KeepToLibrary): Boolean = {
+    //       keep.source != KeepSource.Slack && (ktl.addedAt isAfter lts.changedStatusAt.minusSeconds(5))
+    //     }
 
-        def hasAlreadyBeenPushed(ktl: KeepToLibrary) = lastPushedKtl.exists { last =>
-          ktl.addedAt.isBefore(last.addedAt) || (ktl.addedAt.isEqual(last.addedAt) && ktl.id.get.id <= last.id.get.id)
-        }
-        val (oldKeeps, newKeeps) = keepAndKtlByKeep.values.toSeq.partition { case (k, ktl) => hasAlreadyBeenPushed(ktl) }
-        (oldKeeps, newKeeps.filter { case (k, ktl) => shouldKeepBePushed(k, ktl) }, attributionByKeepId)
-    }
-    val msgsToPushFut = eliza.getChangedMessagesFromKeeps(changedKeepIds, lts.lastProcessedMsgSeq getOrElse SequenceNumber.ZERO).map { changedMsgs =>
-      def hasAlreadyBeenPushed(msg: CrossServiceMessage) = lts.lastProcessedMsg.exists(msg.id.id <= _.id)
-      def shouldMessageBePushed(msg: CrossServiceMessage) = keepAndKtlByKeep.get(msg.keep).exists {
-        case (k, ktl) =>
-          def messageWasSentAfterKeepWasAddedToThisLibrary = msg.sentAt isAfter ktl.addedAt.minusSeconds(5)
-          def messageWasSentAfterIntegrationWasActivated = msg.sentAt isAfter lts.changedStatusAt.minusSeconds(5)
-          messageWasSentAfterKeepWasAddedToThisLibrary && messageWasSentAfterIntegrationWasActivated
-      }
-      val msgsWithKeep = changedMsgs.flatAugmentWith(msg => keepAndKtlByKeep.get(msg.keep).map(_._1)).map(_.swap)
-      msgsWithKeep
-        .filter { case (k, msg) => shouldMessageBePushed(msg) }
-        .partition { case (k, msg) => hasAlreadyBeenPushed(msg) }
-    }
+    //     def hasAlreadyBeenPushed(ktl: KeepToLibrary) = lastPushedKtl.exists { last =>
+    //       ktl.addedAt.isBefore(last.addedAt) || (ktl.addedAt.isEqual(last.addedAt) && ktl.id.get.id <= last.id.get.id)
+    //     }
+    //     val (oldKeeps, newKeeps) = keepAndKtlByKeep.values.toSeq.partition { case (k, ktl) => hasAlreadyBeenPushed(ktl) }
+    //     (oldKeeps, newKeeps.filter { case (k, ktl) => shouldKeepBePushed(k, ktl) }, attributionByKeepId)
+    // }
+    // val msgsToPushFut = eliza.getChangedMessagesFromKeeps(changedKeepIds, lts.lastProcessedMsgSeq getOrElse SequenceNumber.ZERO).map { changedMsgs =>
+    //   def hasAlreadyBeenPushed(msg: CrossServiceMessage) = lts.lastProcessedMsg.exists(msg.id.id <= _.id)
+    //   def shouldMessageBePushed(msg: CrossServiceMessage) = keepAndKtlByKeep.get(msg.keep).exists {
+    //     case (k, ktl) =>
+    //       def messageWasSentAfterKeepWasAddedToThisLibrary = msg.sentAt isAfter ktl.addedAt.minusSeconds(5)
+    //       def messageWasSentAfterIntegrationWasActivated = msg.sentAt isAfter lts.changedStatusAt.minusSeconds(5)
+    //       messageWasSentAfterKeepWasAddedToThisLibrary && messageWasSentAfterIntegrationWasActivated
+    //   }
+    //   val msgsWithKeep = changedMsgs.flatAugmentWith(msg => keepAndKtlByKeep.get(msg.keep).map(_._1)).map(_.swap)
+    //   msgsWithKeep
+    //     .filter { case (k, msg) => shouldMessageBePushed(msg) }
+    //     .partition { case (k, msg) => hasAlreadyBeenPushed(msg) }
+    // }
 
-    for {
-      (oldKeeps, newKeeps, attributionByKeepId) <- keepsToPushFut
-      (oldMsgs, newMsgs) <- msgsToPushFut
-      users <- db.readOnlyReplicaAsync { implicit s =>
-        val userIds = oldKeeps.flatMap(_._2.addedBy) ++ newKeeps.flatMap(_._2.addedBy) ++ oldMsgs.flatMap(_._2.sentBy.flatMap(_.left.toOption)) ++ newMsgs.flatMap(_._2.sentBy.flatMap(_.left.toOption))
-        basicUserRepo.loadAll(userIds.toSet)
-      }
-    } yield {
-      PushItems(
-        oldKeeps = oldKeeps.map { case (k, ktl) => KeepToPush(k, ktl) },
-        newKeeps = newKeeps.map { case (k, ktl) => KeepToPush(k, ktl) },
-        oldMsgs = oldMsgs.map { case (k, msg) => MessageToPush(k, msg) },
-        newMsgs = newMsgs.map { case (k, msg) => MessageToPush(k, msg) },
-        lib = lib,
-        slackTeamId = lts.slackTeamId,
-        slackChannelId = lts.slackChannelId,
-        attribution = attributionByKeepId,
-        users = users
-      )
-    }
+    // for {
+    //   (oldKeeps, newKeeps, attributionByKeepId) <- keepsToPushFut
+    //   (oldMsgs, newMsgs) <- msgsToPushFut
+    //   users <- db.readOnlyReplicaAsync { implicit s =>
+    //     val userIds = oldKeeps.flatMap(_._2.addedBy) ++ newKeeps.flatMap(_._2.addedBy) ++ oldMsgs.flatMap(_._2.sentBy.flatMap(_.left.toOption)) ++ newMsgs.flatMap(_._2.sentBy.flatMap(_.left.toOption))
+    //     basicUserRepo.loadAll(userIds.toSet)
+    //   }
+    // } yield {
+    //   PushItems(
+    //     oldKeeps = oldKeeps.map { case (k, ktl) => KeepToPush(k, ktl) },
+    //     newKeeps = newKeeps.map { case (k, ktl) => KeepToPush(k, ktl) },
+    //     oldMsgs = oldMsgs.map { case (k, msg) => MessageToPush(k, msg) },
+    //     newMsgs = newMsgs.map { case (k, msg) => MessageToPush(k, msg) },
+    //     lib = lib,
+    //     slackTeamId = lts.slackTeamId,
+    //     slackChannelId = lts.slackChannelId,
+    //     attribution = attributionByKeepId,
+    //     users = users
+    //   )
+    // }
+    Future { throw new Exception() }
   }
 
   // Figures out what the appropriate method is, based on the type of `item`, and generates the slack push for it
   def slackMessageForItem(item: PushItem, orgSettings: Option[OrganizationSettings])(implicit items: PushItems): Option[ContextSensitiveSlackPush] = {
-    import DescriptionElements._
-    item match {
-      case PushItem.Digest(since) =>
-        val libraryLink = LinkElement(pathCommander.libraryPageViaSlack(items.lib, items.slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(items.slackChannelId, NotificationCategory.NonUser.LIBRARY_DIGEST)))
-        Some(ContextSensitiveSlackPush(asUser = None, asBot = SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements(
-          items.lib.name, "has", (items.newKeeps.length, items.newMsgs.length) match {
-            case (numKeeps, numMsgs) if numMsgs < 2 => DescriptionElements(numKeeps, "new keeps since", since, ".")
-            case (numKeeps, numMsgs) if numKeeps < 2 => DescriptionElements(numMsgs, "new comments since", since, ".")
-            case (numKeeps, numMsgs) => DescriptionElements(numKeeps, "new keeps and", numMsgs, "new comments since", since, ".")
-          },
-          "It's a bit too much to post here, but you can check it all out", "here" --> libraryLink
-        )))))
-      case PushItem.KeepToPush(k, ktl) =>
-        Some(keepAsSlackMessage(k, items.lib, items.slackTeamId, items.attribution.get(k.id.get), ktl.addedBy.flatMap(items.users.get)))
-      case PushItem.MessageToPush(k, msg) if msg.text.nonEmpty && orgSettings.exists(_.settingFor(StaticFeature.SlackCommentMirroring).safely.contains(StaticFeatureSetting.ENABLED)) =>
-        Some(messageAsSlackMessage(msg, k, items.lib, items.slackTeamId, items.attribution.get(k.id.get), msg.sentBy.flatMap(_.left.toOption.flatMap(items.users.get))))
-      case messageToSwallow: PushItem.MessageToPush =>
-        None
-    }
+    // import DescriptionElements._
+    // item match {
+    //   case PushItem.Digest(since) =>
+    //     val libraryLink = LinkElement(pathCommander.libraryPageViaSlack(items.lib, items.slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(items.slackChannelId, NotificationCategory.NonUser.LIBRARY_DIGEST)))
+    //     Some(ContextSensitiveSlackPush(asUser = None, asBot = SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements(
+    //       items.lib.name, "has", (items.newKeeps.length, items.newMsgs.length) match {
+    //         case (numKeeps, numMsgs) if numMsgs < 2 => DescriptionElements(numKeeps, "new keeps since", since, ".")
+    //         case (numKeeps, numMsgs) if numKeeps < 2 => DescriptionElements(numMsgs, "new comments since", since, ".")
+    //         case (numKeeps, numMsgs) => DescriptionElements(numKeeps, "new keeps and", numMsgs, "new comments since", since, ".")
+    //       },
+    //       "It's a bit too much to post here, but you can check it all out", "here" --> libraryLink
+    //     )))))
+    //   case PushItem.KeepToPush(k, ktl) =>
+    //     Some(keepAsSlackMessage(k, items.lib, items.slackTeamId, items.attribution.get(k.id.get), ktl.addedBy.flatMap(items.users.get)))
+    //   case PushItem.MessageToPush(k, msg) if msg.text.nonEmpty && orgSettings.exists(_.settingFor(StaticFeature.SlackCommentMirroring).safely.contains(StaticFeatureSetting.ENABLED)) =>
+    //     Some(messageAsSlackMessage(msg, k, items.lib, items.slackTeamId, items.attribution.get(k.id.get), msg.sentBy.flatMap(_.left.toOption.flatMap(items.users.get))))
+    //   case messageToSwallow: PushItem.MessageToPush =>
+    //     None
+    // }
+    None
   }
 
   trait PushGenerator {
