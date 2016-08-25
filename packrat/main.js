@@ -1323,12 +1323,12 @@ api.port.on({
       var th = notificationsById[id];
       if (!th) {
         //socket.send(['get_one_thread', id], function (th) {
-          if (th) {
-            standardizeNotification(th);
-            updateIfJustRead(th);
-            notificationsById[th.thread] = th;
-          }
-        });
+        //   if (th) {
+        //     standardizeNotification(th);
+        //     updateIfJustRead(th);
+        //     notificationsById[th.thread] = th;
+        //   }
+        // });
       }
 
       var msgs = messageData[id];
@@ -1393,20 +1393,20 @@ api.port.on({
       }[o.kind];
       socketMessage.push(THREAD_BATCH_SIZE, o.time);
       //socket.send(socketMessage, function (arr) {
-        arr.forEach(function (th) {
-          standardizeNotification(th);
-          updateIfJustRead(th);
-          notificationsById[th.thread] = th;
-        });
-        var includesOldest = arr.length < THREAD_BATCH_SIZE;
-        var list = notificationLists[o.kind === 'page' ? tab.nUri : o.kind];
-        if (list && list.ids[list.ids.length - 1] === o.threadId) {
-          list.insertOlder(arr.map(getThreadId));
-          list.includesOldest = includesOldest;
-        }
-        // TODO: may also want to append/update sent & unread if this is the all kind
-        respond({threads: arr, includesOldest: includesOldest});
-      });
+      //   arr.forEach(function (th) {
+      //     standardizeNotification(th);
+      //     updateIfJustRead(th);
+      //     notificationsById[th.thread] = th;
+      //   });
+      //   var includesOldest = arr.length < THREAD_BATCH_SIZE;
+      //   var list = notificationLists[o.kind === 'page' ? tab.nUri : o.kind];
+      //   if (list && list.ids[list.ids.length - 1] === o.threadId) {
+      //     list.insertOlder(arr.map(getThreadId));
+      //     list.includesOldest = includesOldest;
+      //   }
+      //   // TODO: may also want to append/update sent & unread if this is the all kind
+      //   respond({threads: arr, includesOldest: includesOldest});
+      // });
     }
   },
   'pane?': function (_, respond) {
