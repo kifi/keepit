@@ -38,6 +38,8 @@ import securesocial.core.SecureSocial
 
 class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
 
+  args(skipAll = true)
+
   val modules = Seq(
     FakeExecutionContextModule(),
     FakeActorSystemModule(),
