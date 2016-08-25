@@ -314,7 +314,7 @@ class ElizaServiceClientImpl @Inject() (
   def getCrossServiceDiscussionsForKeeps(keepIds: Set[Id[Keep]], fromTime: Option[DateTime], maxMessagesShown: Int): Future[Map[Id[Keep], CrossServiceDiscussion]] = {
     import GetCrossServiceDiscussionsForKeeps._
     val request = Request(keepIds, fromTime, maxMessagesShown)
-    call(Eliza.internal.getCrossServiceDiscussionsForKeeps, body = Json.toJson(request)).map { response =>
+    call(Eliza.internal.getCrossServiceDiscussionsForKeeps, body = Json.toJson(request), callTimeouts = longTimeout).map { response =>
       response.json.as[Response].discussions
     }
   }
