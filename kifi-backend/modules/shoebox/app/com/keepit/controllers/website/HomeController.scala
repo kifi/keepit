@@ -43,7 +43,8 @@ class HomeController @Inject() (
     val special = promoCodeHandler(request)
     request match {
       case _: NonUserRequest[_] => Future.successful(MarketingSiteRouter.marketingSite())
-      case _: UserRequest[_] => kifiSiteRouter.serveWebAppToUser(PreloadSet.userHome)(request)
+      case _: UserRequest[_] => //kifiSiteRouter.serveWebAppToUser(PreloadSet.userHome)(request)
+        Future.successful(Redirect("/keepyourkeeps"))
     }
   }
 

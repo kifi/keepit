@@ -178,6 +178,7 @@ class SlackIntegrationCommanderImpl @Inject() (
   }
 
   def ingestFromChannelPlease(teamId: SlackTeamId, channelId: SlackChannelId): Unit = db.readWrite { implicit session =>
+    return ; // ewwww
     channelToLibRepo.ingestFromChannelWithin(teamId, channelId, SlackIngestionConfig.maxIngestionDelayAfterCommand)
   }
 

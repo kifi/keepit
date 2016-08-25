@@ -162,6 +162,7 @@ class TwitterSyncCommander @Inject() (
   private val safeBacklogBuffer = 10
   private val fetchEveryMins = 15
   def syncAll(): Unit = {
+    return ; // ewwww
     val states = db.readOnlyReplica { implicit session =>
       syncStateRepo.getSyncsToUpdate(clock.now.minusMinutes(fetchEveryMins))
     }
