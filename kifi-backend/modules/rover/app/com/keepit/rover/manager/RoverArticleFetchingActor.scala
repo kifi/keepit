@@ -36,32 +36,35 @@ class RoverArticleFetchingActor @Inject() (
   protected val minConcurrentTasks: Int = 1 + maxConcurrentTasks / 2
 
   protected def pullTasks(limit: Int): Future[Seq[SQSMessage[FetchTask]]] = {
-    taskQueue.nextBatchWithLock(limit, RoverArticleFetchingActor.lockTimeOut)
+    //taskQueue.nextBatchWithLock(limit, RoverArticleFetchingActor.lockTimeOut)
+    Future(Seq.empty)
   }
 
   protected def processTasks(tasks: Seq[SQSMessage[FetchTask]]): Map[SQSMessage[FetchTask], Future[Unit]] = {
-    val articleInfosById = db.readOnlyMaster { implicit session =>
-      articleInfoRepo.getAll(tasks.map(_.body.id).toSet)
-    }
-    tasks.map { task =>
-      val articleInfo = articleInfosById(task.body.id)
-      task -> process(task, articleInfo)
-    }.toMap
+    // val articleInfosById = db.readOnlyMaster { implicit session =>
+    //   articleInfoRepo.getAll(tasks.map(_.body.id).toSet)
+    // }
+    // tasks.map { task =>
+    //   val articleInfo = articleInfosById(task.body.id)
+    //   task -> process(task, articleInfo)
+    // }.toMap
+    Map.empty
   }
 
   private def process(task: SQSMessage[FetchTask], articleInfo: RoverArticleInfo): Future[Unit] = {
-    shouldFetch(articleInfo) match {
-      case false => Future.successful(())
-      case true => {
-        articleCommander.fetchAndPersist(articleInfo) imap { fetched =>
-          if (fetched.isDefined && articleInfo.lastImageProcessingVersion.isEmpty) {
-            SafeFuture { imageProcessingCommander.processArticleImagesAsap(articleInfo.id.toSet) }
-          }
-          ()
-        }
-      }
-    }
-  } andThen { case _ => task.consume() } // failures are handled and persisted to the database, always consume
+    // shouldFetch(articleInfo) match {
+    //   case false => Future.successful(())
+    //   case true => {
+    //     articleCommander.fetchAndPersist(articleInfo) imap { fetched =>
+    //       if (fetched.isDefined && articleInfo.lastImageProcessingVersion.isEmpty) {
+    //         SafeFuture { imageProcessingCommander.processArticleImagesAsap(articleInfo.id.toSet) }
+    //       }
+    //       ()
+    //     }
+    //   }
+    // }
+    Future {}
+  } /* andThen { case _ => task.consume() } // failures are handled and persisted to the database, always consume*/
 
   private def shouldFetch(info: RoverArticleInfo) = info.isActive && info.lastFetchingAt.isDefined
 }
