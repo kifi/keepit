@@ -9,14 +9,14 @@ import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick._
 import com.keepit.common.json.EnumFormat
 import com.keepit.common.core.anyExtensionOps
-import com.keepit.common.oauth.SlackIdentity
 import com.keepit.common.performance.StatsdTiming
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.time._
 import com.keepit.export.FullExportRequestRepo
 import com.keepit.slack.SlackActionFail
-import com.keepit.model.User
-import com.keepit.social.{ IdentityUserIdCache, IdentityUserIdKey, UserIdentity }
+import com.keepit.model.{ UserValueRepo, KeepRepo, User }
+import com.keepit.social.{ IdentityUserIdCache, IdentityUserIdKey }
+import com.keepit.model.UserValueName
 import org.joda.time.{ DateTime, Duration }
 import play.api.libs.json.{ Format, JsValue, Json }
 
@@ -155,6 +155,8 @@ class SlackTeamMembershipRepoImpl @Inject() (
     val clock: Clock,
     slackTeamRepo: SlackTeamRepo, // implicit dependency based in manual SQL query
     exportRequestRepo: FullExportRequestRepo,
+    keepRepo: KeepRepo,
+    userValueRepo: UserValueRepo,
     userIdentityCache: IdentityUserIdCache) extends DbRepo[SlackTeamMembership] with SeqNumberDbFunction[SlackTeamMembership] with SlackTeamMembershipRepo {
   // Don't put a cache on the whole model. There's a bunch of
   // scheduling garbage that is changed via update statements.
@@ -413,10 +415,13 @@ class SlackTeamMembershipRepoImpl @Inject() (
 
   def getMembershipsOfKifiUsersWhoHaventExported(fromId: Option[Id[SlackTeamMembership]])(implicit session: RSession): Seq[SlackTeamMembership] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    val _ = userValueRepo.count // we get a "user_value not found" exception in testing unless we query the object directly (guice instantiation issue?)
     val ids = sql"""
       select stm.id from slack_team_membership stm
       where state = 'active' and user_id is not null and slack_username is not null and id >= ${fromId.map(_.id).getOrElse(0L)}
-      and not exists (select id from export_request er where er.user_id = stm.user_id);
+      and not exists (select id from export_request er where er.user_id = stm.user_id)
+      and (select count(*) from bookmark k where k.user_id = stm.user_id) >= 10
+      and (select value from user_value uv where stm.user_id = uv.user_id and name = 'last_active') >= ${currentDateTime.minusMonths(2)};
     """.as[Id[SlackTeamMembership]].list
 
     getAllByIds(ids.toSet).toSeq.sortBy(_.id.get.id)

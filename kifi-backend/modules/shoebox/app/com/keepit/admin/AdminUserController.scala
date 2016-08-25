@@ -1100,7 +1100,6 @@ class AdminUserController @Inject() (
 
   def sendWindDownSlackDM() = AdminUserAction.async(parse.tolerantJson) { implicit request =>
     val dryRun = (request.body \ "dryRun").asOpt[Boolean].getOrElse(true)
-    val userId = (request.body \ "userId").asOpt[Id[User]]
     val fromId = (request.body \ "fromId").asOpt[Id[SlackTeamMembership]]
 
     val exportUrl = "https://www.kifi.com/keepmykeeps"
@@ -1108,15 +1107,16 @@ class AdminUserController @Inject() (
     val message = {
       import DescriptionElements._
       val msgText = DescriptionElements(
-        "The Kifi team is joining Google", "(learn more)" --> LinkElement(blogPostUrl), "! The service will be fully operational for just a few more weeks.",
-        "Please visit", "Kifi.com/keepmykeeps" --> LinkElement(exportUrl), "on your desktop to export all of your data within Kifi.",
-        "You can email support@kifi.com with questions."
+        "The Kifi team is joining Google", "(learn more)" --> LinkElement(blogPostUrl), "!", "Currently, the site only supports exporting data.",
+        "Take your data with you by visiting", "www.kifi.com/keepmykeeps" --> LinkElement(exportUrl), "on your desktop to export it.",
+        "You can email eishay.smith@kifi.com with questions."
       )
       SlackMessageRequest.fromKifi(formatForSlack(msgText))
     }
 
     val stms = db.readOnlyMaster { implicit request =>
-      slackTeamMembershipRepo.getMembershipsOfKifiUsersWhoHaventExported(fromId) // ~4000 max
+      if (dryRun) slackTeamMembershipRepo.getByUserIdAndSlackTeam(Id[User](35713), SlackTeamId("T02A81H50")).toSeq
+      else slackTeamMembershipRepo.getMembershipsOfKifiUsersWhoHaventExported(fromId) // ~600 max
     }
 
     FutureHelpers.sequentialExec(stms.grouped(100).toSeq) { chunk =>

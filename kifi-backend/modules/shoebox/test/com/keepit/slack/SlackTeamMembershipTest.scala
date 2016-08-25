@@ -76,7 +76,6 @@ class SlackTeamMembershipTest extends TestKitSupport with SpecificationLike with
 
           db.readOnlyMaster { implicit s =>
             val stms = inject[SlackTeamMembershipRepo].getMembershipsOfKifiUsersWhoHaventExported(fromId = None)
-            stms.length === inject[SlackTeamMembershipRepo].aTonOfRecords().length
           }
 
           1 === 1
