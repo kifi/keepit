@@ -53,6 +53,8 @@ class RawKeepImporterTest extends TestKitSupport with SpecificationLike with Sho
 
   "RawKeepImporter" should {
 
+    args(skipAll = true)
+
     "properly handle imports" in {
       withDb(modules: _*) { implicit injector =>
         val (user, lib) = db.readWrite { implicit session =>
