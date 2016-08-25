@@ -259,7 +259,7 @@ var tracker = {
   sendBatch: function () {
     if (this.batch.length > 0) {
       if (api.isPackaged() || api.mode.isDev()) {
-        ajax('POST', '/ext/events', this.batch);
+        //ajax('POST', '/ext/events', this.batch);
       }
       this.batch.length = 0;
     }
@@ -329,7 +329,7 @@ function logEvent(eventFamily, eventName, metaData) {
   };
   log("#aaa", "[logEvent] %s %o", ev.eventName, ev);
   if (socket) {
-    socket.send(["log_event", ev]);
+    //socket.send(["log_event", ev]);
   } else {
     ev.time = Date.now();
     logEvent.queue.push(ev);
@@ -345,7 +345,7 @@ logEvent.catchUp = function() {
     var ev = logEvent.queue.shift();
     ev.msAgo = t - ev.time;
     delete ev.time;
-    socket.send(["log_event", ev]);
+    //socket.send(["log_event", ev]);
   }
 }
 
@@ -363,7 +363,7 @@ function onSocketDisconnect(why, sec) {
 }
 
 function getLatestThreads() {
-  socket.send(['get_latest_threads', THREAD_BATCH_SIZE], gotLatestThreads);
+  //socket.send(['get_latest_threads', THREAD_BATCH_SIZE], gotLatestThreads);
 }
 
 function gotLatestThreads(arr, numUnreadUnmuted, numUnread, serverTime) {
@@ -403,7 +403,7 @@ function gotLatestThreads(arr, numUnreadUnmuted, numUnread, serverTime) {
       emitThreadsToTabsViewing(kind, tl);
     }
     if (!tl.includesOldest && tl.ids.length <= (kind === 'unread' ? 1 : 0)) {  // precaution to avoid ever having 0 of N unread threads loaded
-      socket.send(['get_' + kind + '_threads', THREAD_BATCH_SIZE], gotFilteredThreads.bind(null, kind, tl));
+      //socket.send(['get_' + kind + '_threads', THREAD_BATCH_SIZE], gotFilteredThreads.bind(null, kind, tl));
     }
   });
 
@@ -413,7 +413,7 @@ function gotLatestThreads(arr, numUnreadUnmuted, numUnread, serverTime) {
   keepData = {};
   activityData = {};
   forEachThreadOpenInPane(function (threadId) {
-    socket.send(['get_thread', threadId]);
+    //socket.send(['get_thread', threadId]);
   });
 
   api.tabs.eachSelected(kifify);
@@ -702,6 +702,7 @@ api.port.on({
     });
   },
   keep: function (data, respond, tab) {
+    return;
     log('[keep]', data);
     var d = pageData[tab.nUri];
     if (!d) {
@@ -749,6 +750,7 @@ api.port.on({
     }
   },
   unkeep: function (data, respond, tab) {
+    return;
     log('[unkeep]', data);
     var d = pageData[tab.nUri];
     ajax('DELETE', '/ext/libraries/' + data.libraryId + '/keeps/' + data.keepId, function done() {
@@ -881,15 +883,18 @@ api.port.on({
     .catch(respond);
   },
   get_library: function (id, respond) {
+    return;
     ajax('GET', '/ext/libraries/' + id, respond, respond.bind(null, null));
   },
   create_library: function (data, respond) {
+    return;
     ajax('POST', '/ext/libraries', data, function (library) {
       respond(library);
       notifyKifiAppTabs({type: 'create_library', libraryId: library.id});
     }, respond.bind(null, null));
   },
   delete_library: function (libraryId, respond, tab) {
+    return;
     ajax('DELETE', '/ext/libraries/' + libraryId, function () {
       respond(true);
       for (var nUri in pageData) {
@@ -908,9 +913,11 @@ api.port.on({
     }, respond.bind(null, false));
   },
   follow_library: function (id, respond) {
+    return;
     ajax('POST', '/ext/libraries/' + id + '/join', respond.bind(null, true), respond.bind(null, false));
   },
   unfollow_library: function (id, respond) {
+    return;
     ajax('POST', '/ext/libraries/' + id + '/leave', respond.bind(null, true), respond.bind(null, false));
   },
   get_keep: function (keepId, respond, tab) {
@@ -922,6 +929,7 @@ api.port.on({
     }
   },
   save_keep_title: function (data, respond, tab) {
+    return;
     var d = pageData[tab.nUri];
     if (d) {
       var keep = d.keeps.find(libraryIdIs(data.libraryId));
@@ -944,6 +952,7 @@ api.port.on({
     }
   },
   save_keep_image: function (data, respond, tab) {
+    return;
     var d = pageData[tab.nUri];
     if (d) {
       var keep = d.keeps.find(libraryIdIs(data.libraryId));
@@ -954,6 +963,7 @@ api.port.on({
     }
   },
   save_keep_note: function (data, respond, tab) {
+    return;
     var d = pageData[tab.nUri];
     if (d) {
       var keep = d.keeps.find(libraryIdIs(data.libraryId));
@@ -964,9 +974,11 @@ api.port.on({
     }
   },
   suggest_tags: function (data, respond) {
+    return;
     ajax('GET', '/api/1/keeps/suggestTags', { query: data.q, limit: data.n, keepId: data.keepId }, respond, respond.bind(null, []));
   },
   suppress_on_site: function(data, _, tab) {
+    return;
     ajax('POST', '/ext/pref/keeperHidden', {url: tab.url, suppress: data});
     pageData[tab.nUri].neverOnSite = !!data;
     if (!!data) {
@@ -997,6 +1009,7 @@ api.port.on({
   },
   unsilence: unsilence.bind(null, false),
   set_keeper_pos: function(o, _, tab) {
+    return;
     for (var nUri in pageData) {
       if (nUri.match(hostRe)[1] == o.host) {
         pageData[nUri].position = o.pos;
@@ -1005,21 +1018,25 @@ api.port.on({
     ajax("POST", "/ext/pref/keeperPosition", {host: o.host, pos: o.pos});
   },
   set_look_here_mode: function (o) {
+    return;
     ajax('POST', '/ext/pref/lookHereMode?on=' + o.on);
     if (prefs) prefs.lookHereMode = o.on;
     tracker.track('user_clicked_pane', {type: o.from, action: o.on ? 'toggledLookHereOn' : 'toggledLookHereOff'});
     emitAllTabs('look_here_mode', o.on);
   },
   set_enter_to_send: function(data) {
+    return;
     ajax('POST', '/ext/pref/enterToSend?enterToSend=' + data);
     if (prefs) prefs.enterToSend = data;
   },
   set_max_results: function(n, respond) {
+    return;
     ajax('POST', '/ext/pref/maxResults?n=' + n, respond);
     tracker.track('user_changed_setting', {category: 'search', type: 'maxResults', value: n});
     if (prefs) prefs.maxResults = n;
   },
   get_show_move_intro: function (data, respond) {
+    return;
     data = data || {};
     data.domain = data.domain;
     if (data.domain) {
@@ -1090,6 +1107,7 @@ api.port.on({
     }
   },
   log_search_event: function(data) {
+    return;
     ajax('search', 'POST', '/ext/search/events/' + data[0], data[1]);
   },
   import_contacts: function (data) {
@@ -1239,12 +1257,12 @@ api.port.on({
   activity_event_rendered: function(o, _, tab) {
     whenTabFocused(tab, o.keepId, function (tab) {
       markRead(o.keepId, o.eventId, o.time);
-      socket.send(['set_message_read', o.eventId, o.keepId]);
+      //socket.send(['set_message_read', o.eventId, o.keepId]);
     });
   },
   set_message_read: function (o, _, tab) {
     markRead(o.threadId, o.messageId, o.time);
-    socket.send(['set_message_read', o.messageId, o.threadId]);
+    //socket.send(['set_message_read', o.messageId, o.threadId]);
     if (o.from === 'toggle') {
       tracker.track('user_clicked_pane', {type: trackingLocatorFor(tab.id), action: 'markedRead', category: trackingCategory(o.category)});
     } else if (o.from === 'notice') {
@@ -1253,7 +1271,7 @@ api.port.on({
   },
   set_message_unread: function (o, _, tab) {
     markUnread(o.threadId, o.messageId);
-    socket.send(['set_message_unread', o.messageId]);
+    //socket.send(['set_message_unread', o.messageId]);
     tracker.track('user_clicked_pane', {type: trackingLocatorFor(tab.id), action: 'markedUnread', category: trackingCategory(o.category)});
   },
   get_page_thread_count: function(_, __, tab) {
@@ -1304,7 +1322,7 @@ api.port.on({
     function doThread(id, keep, keepActivity) {
       var th = notificationsById[id];
       if (!th) {
-        socket.send(['get_one_thread', id], function (th) {
+        //socket.send(['get_one_thread', id], function (th) {
           if (th) {
             standardizeNotification(th);
             updateIfJustRead(th);
@@ -1317,7 +1335,7 @@ api.port.on({
       if (msgs) {
         emitThreadToTab(id, keep, keepActivity, tab);
       } else {
-        socket.send(['get_thread', id]);
+        //socket.send(['get_thread', id]);
       }
     }
   },
@@ -1335,7 +1353,7 @@ api.port.on({
           }});
           return;
         } else if (tl.ids.length === 0 && tl.numTotal > 0) {
-          socket.send(['get_unread_threads', THREAD_BATCH_SIZE], gotFilteredThreads.bind(null, 'unread', tl));
+          //socket.send(['get_unread_threads', THREAD_BATCH_SIZE], gotFilteredThreads.bind(null, 'unread', tl));
           api.errors.push({error: Error('No unread threads available to show'), params: {threadList: tl}});
           return;
         }
@@ -1344,7 +1362,7 @@ api.port.on({
       if (o.kind === 'page') {  // prefetch
         tl.ids.forEach(function (id) {
           if (!messageData[id]) {
-            socket.send(['get_thread', id]);
+            //socket.send(['get_thread', id]);
           }
         });
       }
@@ -1374,7 +1392,7 @@ api.port.on({
         page: ['get_page_threads_before', tab.nUri]
       }[o.kind];
       socketMessage.push(THREAD_BATCH_SIZE, o.time);
-      socket.send(socketMessage, function (arr) {
+      //socket.send(socketMessage, function (arr) {
         arr.forEach(function (th) {
           standardizeNotification(th);
           updateIfJustRead(th);
@@ -1429,7 +1447,7 @@ api.port.on({
       msgId = threadId && notificationsById[threadId].id;
     }
     if (msgId) {
-      socket.send(['set_all_notifications_visited', msgId]);
+      //socket.send(['set_all_notifications_visited', msgId]);
     }
   },
   load_image: function (path, respond, tab) {
@@ -1463,6 +1481,7 @@ api.port.on({
     respond(api.browser);
   },
   save_setting: function(o, respond, tab) {
+    return;
     if (o.name === 'emails') {
       ajax('POST', '/ext/pref/email/message/' + o.value, function () {
         if (prefs) {
@@ -1531,6 +1550,7 @@ api.port.on({
     .catch(respond.bind(null, null));
   },
   delete_contact: function (email, respond) {
+    return;
     ajax('POST', '/ext/contacts/hide', {email: email}, function (status) {
       log('[delete_contact] resp:', status);
       contactSearchCache = null;
@@ -1642,7 +1662,7 @@ api.port.on({
     }
   },
   add_participants: function(data) {
-    socket.send(['add_participants_to_thread', data.threadId, data.ids.map(makeObjectsForEmailAddresses)]);
+    //socket.send(['add_participants_to_thread', data.threadId, data.ids.map(makeObjectsForEmailAddresses)]);
   },
   is_muted: function(threadId, respond) {
     var th = notificationsById[threadId];
@@ -1652,11 +1672,11 @@ api.port.on({
     });
   },
   mute_thread: function(threadId) {
-    socket.send(['mute_thread', threadId]);
+    //socket.send(['mute_thread', threadId]);
     setMuted(threadId, true);
   },
   unmute_thread: function(threadId) {
-    socket.send(['unmute_thread', threadId]);
+    //socket.send(['unmute_thread', threadId]);
     setMuted(threadId, false);
   },
   count_bookmarks: function(_, respond) {
@@ -1684,6 +1704,7 @@ api.port.on({
     }
   },
   start_guide: function (_, __, tab) {
+    return;
     ajax('GET', '/ext/guide', function (data) {
       guideData = data;
       data.keep.image.width /= 2;
@@ -1699,6 +1720,7 @@ api.port.on({
     tracker.track('user_clicked_pane', {type: 'guide01', action: 'chooseExamplePage', subaction: guideData.keep.track});
   },
   resume_guide: function (step, _, tab) {
+    return;
     if (guideData) {
       resume(guideData);
     } else {
@@ -1890,7 +1912,7 @@ function markRead(threadId, messageId, time) {
         if (tl.numTotal === tl.ids.length) {
           tl.includesOldest = true;
         } else if (tl.ids.length <= 1) {
-          socket.send(['get_unread_threads', THREAD_BATCH_SIZE], gotFilteredThreads.bind(null, 'unread', tl));
+          //socket.send(['get_unread_threads', THREAD_BATCH_SIZE], gotFilteredThreads.bind(null, 'unread', tl));
         }
       }
     }(notificationLists.unread));
@@ -2002,7 +2024,7 @@ function sendPageThreadCount(tab, tl, load) {
   if (tl) {
     api.tabs.emit(tab, 'page_thread_count', {count: tl.numTotal, id: tl.numTotal === 1 ? tl.ids[0] : undefined}, {queue: 1});
   } else if (load) {
-    socket.send(['get_page_threads', tab.url, THREAD_BATCH_SIZE], gotPageThreads.bind(null, uri));
+    //socket.send(['get_page_threads', tab.url, THREAD_BATCH_SIZE], gotPageThreads.bind(null, uri));
   } // will be pushed to tab when known
 }
 
@@ -2042,7 +2064,7 @@ function awaitDeepLink(link, tabId, retrySec) {
     if (loc.lastIndexOf('/messages/', 0) === 0) {
       var threadId = loc.substr(10);
       if (!messageData[threadId]) {
-        socket.send(['get_thread', threadId]);  // a head start
+        //socket.send(['get_thread', threadId]);  // a head start
       }
     }
   } else {
@@ -2177,6 +2199,7 @@ function searchOnServer(request, respond) {
   }
 
   ajax('search', 'GET', '/ext/search', params, function (text) {
+    return;
     if (!o1) {
       tryParseChunks(text);
     } else if (!o2) {
@@ -2248,6 +2271,7 @@ function kifify(tab) {
   }
 
   if (!me) {
+    return;
     if (!stored('logout') || tab.url.indexOf(webBaseUri()) === 0) {
       ajax('GET', '/ext/auth', function (loggedIn) {
         if (loggedIn !== false) {
@@ -2278,6 +2302,7 @@ function kifify(tab) {
     }
     kififyWithPageData(tab, d);
   } else {
+    return;
     ajax('POST', '/ext/page', {url: url}, gotPageDetailsFor.bind(null, url, tab), function fail(xhr) {
       if (xhr.status === 403) {
         clearSession();
@@ -2394,14 +2419,14 @@ function gotPageThreads(uri, nUri, threads, numTotal) {
   // updating tabs currently displaying any updated threads
   var requested = {};
   updatedThreadIds.forEach(function (threadId) {
-    socket.send(['get_thread', threadId]);
+    //socket.send(['get_thread', threadId]);
     requested[threadId] = true;
   });
 
   // prefetch any unread threads
   pt.forEachUnread(function (threadId) {
     if (!messageData[threadId] && !requested[threadId]) {
-      socket.send(['get_thread', threadId]);
+      //socket.send(['get_thread', threadId]);
       requested[threadId] = true;
     }
   });
@@ -2464,6 +2489,7 @@ function updateIconSilence(tab) {
 }
 
 function postBookmarks(supplyBookmarks, bookmarkSource, libraryId) {
+  return;
   log('[postBookmarks]', libraryId);
   supplyBookmarks(function (bookmarks) {
     ajax('POST', '/ext/libraries/' + libraryId + '/bookmarks', {bookmarks: bookmarks, source: bookmarkSource}, function (o) {
@@ -2552,6 +2578,7 @@ api.tabs.on.unload.add(function(tab, historyApi) {
 
 api.on.beforeSearch.add(throttle(primeSearch, 50000));
 function primeSearch(whence) {
+  return;
   if (me && enabled('search')) {
     ajax('search', 'POST', '/ext/search/prime' + ('agos'.indexOf(whence) >= 0 ? '?w=' + whence : ''));
   }
@@ -2751,6 +2778,7 @@ function compilePatterns(arr) {
 }
 
 function dontShowFtueAgain(type) {
+  return;
   var prefName = {
     e: 'showExtMsgIntro',
     m: 'showExtMoveIntro',
@@ -2929,13 +2957,14 @@ var webBaseUri = devUriOr.bind(null, 'https://www.kifi.com');
 var admBaseUri = devUriOr.bind(null, 'https://admin.kifi.com');
 
 function getPrefs(next) {
+  return;
   ajax('GET', '/ext/prefs?version=2', function gotPrefs(o) {
     log('[gotPrefs]', o);
     if (me) {
       me = standardizeUser(o.user, organizations);
       prefs = o.prefs;
       eip = o.eip;
-      socket.send(['eip', eip]);
+      //socket.send(['eip', eip]);
     }
     if (next) next();
   });
@@ -3022,6 +3051,7 @@ function updateKeepReciepients(keepId, data) {
 }
 
 function getUrlPatterns(next) {
+  return;
   ajax('GET', '/ext/pref/rules', function gotUrlPatterns(o) {
     log('[gotUrlPatterns]', o);
     if (o && o.url_patterns) {
@@ -3099,6 +3129,7 @@ function verySimilarUrls(url1, url2) {
 var me, mySysLibIds, organizations, prefs, experiments, eip, socket, silence, onLoadingTemp;
 
 function authenticate(callback, retryMs) {
+  return;
   var origInstId = stored('installation_id');
   if (!origInstId) {
     store('prompt_to_import_bookmarks', true);
@@ -3118,9 +3149,7 @@ function authenticate(callback, retryMs) {
     organizations = data.orgs;
     experiments = data.experiments;
     eip = data.eip;
-    socket = socket || api.socket.open(
-      elizaBaseUri().replace(/^http/, 'ws') + '/eliza/ext/ws?version=' + api.version + (eip ? '&eip=' + eip : ''),
-      socketHandlers, onSocketConnect, onSocketDisconnect);
+    socket = null;
     logEvent.catchUp();
     tracker.catchUp();
 
@@ -3196,7 +3225,7 @@ function clearSession() {
     silence = null;
   }
   if (socket) {
-    socket.close();
+    // socket.close();
     socket = null;
   }
 }
@@ -3214,30 +3243,30 @@ function deauthenticate() {
 // ===== Main, executed upon install (or reinstall), update, re-enable, and browser start
 
 api.errors.wrap(authenticate.bind(null, function() {
-  if (api.loadReason === 'install') {
-    log('[main] fresh install');
-    var baseUri = webBaseUri();
-    var focused = api.tabs.getFocused();
+  // if (api.loadReason === 'install') {
+  //   log('[main] fresh install');
+  //   var baseUri = webBaseUri();
+  //   var focused = api.tabs.getFocused();
 
-    var currentKifiTab;
-    if (focused && focused.url && focused.url.indexOf('https://www.kifi.com') === 0) {
-      currentKifiTab = focused;
-    }
+  //   var currentKifiTab;
+  //   if (focused && focused.url && focused.url.indexOf('https://www.kifi.com') === 0) {
+  //     currentKifiTab = focused;
+  //   }
 
-    var primaryKifiTab = api.tabs.anyAt(baseUri + '/install') || api.tabs.anyAt(baseUri + '/');
+  //   var primaryKifiTab = api.tabs.anyAt(baseUri + '/install') || api.tabs.anyAt(baseUri + '/');
 
-    var otherKifiSiteTab;
-    api.tabs.each(function (tab) {
-      if (tab.url.indexOf('https://www.kifi.com') === 0) { // Order doesn't matter at this point, just grab one.
-        otherKifiSiteTab = tab;
-      }
-    });
+  //   var otherKifiSiteTab;
+  //   api.tabs.each(function (tab) {
+  //     if (tab.url.indexOf('https://www.kifi.com') === 0) { // Order doesn't matter at this point, just grab one.
+  //       otherKifiSiteTab = tab;
+  //     }
+  //   });
 
-    var tab = currentKifiTab || primaryKifiTab || otherKifiSiteTab;
-    if (tab) {
-      api.tabs.select(tab.id);
-    } else {
-      api.tabs.open(baseUri + '/signup');
-    }
-  }
+  //   var tab = currentKifiTab || primaryKifiTab || otherKifiSiteTab;
+  //   if (tab) {
+  //     api.tabs.select(tab.id);
+  //   } else {
+  //     api.tabs.open(baseUri + '/signup');
+  //   }
+  // }
 }, 3000))();
