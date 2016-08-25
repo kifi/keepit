@@ -24,6 +24,8 @@ import scala.xml._
 
 class FeedControllerTest extends Specification with ShoeboxTestInjector {
 
+  args(skipAll = true)
+
   val modules = Seq(
     FakeCryptoModule(),
     FakeShoeboxStoreModule(),

@@ -31,6 +31,8 @@ import com.keepit.model.UserFactory
 
 class InviteControllerTest extends Specification with ShoeboxApplicationInjector {
 
+  args(skipAll = true)
+
   val modules = Seq(
     FakeShoeboxServiceModule(),
     FakeMailModule(),
