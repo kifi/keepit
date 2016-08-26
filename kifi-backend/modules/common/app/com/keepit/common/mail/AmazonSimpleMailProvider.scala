@@ -1,7 +1,7 @@
 package com.keepit.common.mail
 
+import com.google.inject.Inject
 import com.keepit.common.logging.Logging
-import com.keepit.common.healthcheck.AirbrakeNotifier
 
 import com.amazonaws.services.simpleemail._
 import com.amazonaws.services.simpleemail.model._
@@ -19,9 +19,8 @@ trait AmazonSimpleMailProvider {
  * http://docs.aws.amazon.com/ses/latest/DeveloperGuide/send-email-api.html
  * http://docs.aws.amazon.com/ses/latest/DeveloperGuide/send-email-formatted.html
  */
-class AmazonSimpleMailProviderImpl(
-  client: AmazonSimpleEmailServiceClient)
-    extends AmazonSimpleMailProvider with Logging {
+class AmazonSimpleMailProviderImpl @Inject() (client: AmazonSimpleEmailServiceClient)
+    extends MailProvider with AmazonSimpleMailProvider with Logging {
 
   private def isSystemEmail(mail: ElectronicMail): Boolean =
     NotificationCategory.System.all.contains(NotificationCategory.fromElectronicMailCategory(mail.category))

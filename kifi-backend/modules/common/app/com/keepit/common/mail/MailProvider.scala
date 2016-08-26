@@ -7,7 +7,7 @@ object MailProvider {
   val MESSAGE_ID = "Message-ID"
 }
 
-@ImplementedBy(classOf[SendgridMailProvider])
+@ImplementedBy(classOf[AmazonSimpleMailProviderImpl])
 trait MailProvider {
   def sendMail(mail: ElectronicMail)
 }
