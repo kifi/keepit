@@ -34,24 +34,27 @@ class RoverArticleImageSchedulingActor @Inject() (
 
   protected def nextBatch: Future[Seq[RoverArticleInfo]] = {
     SafeFuture {
-      imageProcessingCommander.getArticleInfosForImageProcessing(maxBatchSize, dueAfterRequestedWithin, maxQueuedFor)
+      //imageProcessingCommander.getArticleInfosForImageProcessing(maxBatchSize, dueAfterRequestedWithin, maxQueuedFor)
+      Seq()
     }
   }
 
   protected def processBatch(batch: Seq[RoverArticleInfo]): Future[Unit] = {
-    val maybeQueuedFutures = batch.groupBy(getRelevantQueue).map {
-      case (queue, articleInfos) =>
-        val tasks = articleInfos.map { articleInfo => ArticleImageProcessingTask(articleInfo.id.get) }
-        imageProcessingCommander.add(tasks, queue)
-    }
-    Future.sequence(maybeQueuedFutures).imap { maybeQueuedByQueue =>
-      val maybeQueued = maybeQueuedByQueue.flatten
-      val queuedCount = maybeQueued.count(_._2.isSuccess)
-      (queuedCount, maybeQueued.size)
-    } andThen {
-      case Failure(error) => log.error(s"Failed to add article image processing tasks.", error)
-    }
-  } imap { _ => () }
+
+    // val maybeQueuedFutures = batch.groupBy(getRelevantQueue).map {
+    //   case (queue, articleInfos) =>
+    //     val tasks = articleInfos.map { articleInfo => ArticleImageProcessingTask(articleInfo.id.get) }
+    //     imageProcessingCommander.add(tasks, queue)
+    // }
+    // Future.sequence(maybeQueuedFutures).imap { maybeQueuedByQueue =>
+    //   val maybeQueued = maybeQueuedByQueue.flatten
+    //   val queuedCount = maybeQueued.count(_._2.isSuccess)
+    //   (queuedCount, maybeQueued.size)
+    // } andThen {
+    //   case Failure(error) => log.error(s"Failed to add article image processing tasks.", error)
+    // }
+    Future {}
+  } /* imap { _ => () }*/
 
   private def getRelevantQueue(articleInfo: RoverArticleInfo): ArticleImageProcessingTaskQueue = {
     if (articleInfo.lastImageProcessingVersion.isEmpty) fastFollowQueue

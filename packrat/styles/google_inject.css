@@ -70,10 +70,6 @@
 .kifi-loading>.kifi-res-bar-status::after {
   content: 'Loading relevant keeps...';
 }
-.kifi-res-bar-status[href][data-n]::after {
-  content: 'Top keeps for you';
-  margin-left: 3px;
-}
 .kifi-res-bar-status[href][data-n='1']::after {
   content: 'Top keep for you';
 }

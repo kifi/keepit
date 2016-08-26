@@ -26,7 +26,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Try, Failure, Success }
 
 object FullExportProcessingConfig {
-  val MAX_PROCESSING_DURATION = Duration.standardHours(4)
+  val MAX_PROCESSING_DURATION = Duration.standardHours(2)
   val MIN_CONCURRENCY = 1
   val MAX_CONCURRENCY = 1
 }
@@ -128,7 +128,10 @@ class FullExportProcessingActor @Inject() (
     import DescriptionElements._
     db.readWrite { implicit s =>
       exportRequestRepo.getByUser(user.id.get).flatMap(_.notifyEmail).foreach { userEmailAddress =>
-        val body = DescriptionElements.unlines(Seq(DescriptionElements("Visit", "www.kifi.com/keepmykeeps" --> LinkElement("https://www.kifi.com/keepmykeeps"), "to download the file for your export.")))
+        val body = DescriptionElements.unlines(Seq(DescriptionElements("Visit", "www.kifi.com/keepmykeeps" --> LinkElement("https://www.kifi.com/keepmykeeps"), "to download the file for your export."),
+          DescriptionElements(
+            "The Kifi service has shut down, but your export file will be available for several weeks. The latest status is available on", "Kifi.com" --> LinkElement("https://www.kifi.com"),
+            "and you can", "learn more on our blog" --> LinkElement("https://medium.com/@kifi/f1cd2f2e116c"), ".")))
         postOffice.sendMail(ElectronicMail(
           from = SystemEmailAddress.NOTIFICATIONS,
           fromName = Some("Kifi"),

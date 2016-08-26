@@ -44,6 +44,7 @@ k.tile = k.tile || (function () {
     compose: loadAndDo.bind(null, 'keeper', 'compose'),
     auto_engage: loadAndDo.bind(null, 'keeper', 'engage'),
     init: function(o) {
+      o.hide = true; // Kifi is shut down.
       var pos = o.position;
       if (pos) {
         tile.style.top = pos.top >= 0 ? pos.top + "px" : "auto";

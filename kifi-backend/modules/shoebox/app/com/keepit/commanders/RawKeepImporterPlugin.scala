@@ -49,6 +49,7 @@ private class RawKeepImporterActor @Inject() (
   private val batchSize = 500
   def receive = {
     case ProcessKeeps =>
+      throw new Exception()
       log.info(s"[RawKeepImporterActor] Running raw keep process")
       val activeBatch = fetchActiveBatch()
       processBatch(activeBatch, "active")
@@ -61,7 +62,7 @@ private class RawKeepImporterActor @Inject() (
       val totalProcessed = activeBatch.length + oldBatchSize
       if (totalProcessed >= batchSize / 2) { // batch was pretty full, so there may be more to process
         log.info(s"[RawKeepImporterActor] Looks like there may be more. Self-calling myself.")
-        self ! ProcessKeeps
+        //self ! ProcessKeeps
       }
     case m => throw new UnsupportedActorMessage(m)
   }
@@ -156,18 +157,18 @@ class RawKeepImporterPluginImpl @Inject() (
     ) extends SchedulerPlugin with RawKeepImporterPlugin {
 
   def processKeeps(broadcastToOthers: Boolean = false): Unit = {
-    if (serviceDiscovery.isLeader()) {
-      log.info(s"[RawKeepImporterPluginImpl] Need to process raw keeps. I'm leader.")
-      actor.ref ! ProcessKeeps
-    } else if (broadcastToOthers) {
-      log.info(s"[RawKeepImporterPluginImpl] Need to process raw keeps. Sending to leader.")
-      shoeboxServiceClient.triggerRawKeepImport()
-    }
+    // if (serviceDiscovery.isLeader()) {
+    //   log.info(s"[RawKeepImporterPluginImpl] Need to process raw keeps. I'm leader.")
+    //   actor.ref ! ProcessKeeps
+    // } else if (broadcastToOthers) {
+    //   log.info(s"[RawKeepImporterPluginImpl] Need to process raw keeps. Sending to leader.")
+    //   shoeboxServiceClient.triggerRawKeepImport()
+    // }
   }
 
-  override def onStart() {
-    scheduleTaskOnOneMachine(system, 127 seconds, 11 seconds, actor.ref, ProcessKeeps, ProcessKeeps.getClass.getSimpleName)
-    super.onStart()
+  override def onStart() { //keep me alive!
+    // scheduleTaskOnOneMachine(system, 127 seconds, 11 seconds, actor.ref, ProcessKeeps, ProcessKeeps.getClass.getSimpleName)
+    // super.onStart()
   }
 }
 
@@ -212,34 +213,34 @@ class RawKeepInterner @Inject() (
 
     val deduped = rawKeeps.distinctBy(_.url) map (_.copy(importId = Some(newImportId)))
 
-    if (deduped.nonEmpty) {
-      val userId = deduped.head.userId
-      val total = deduped.size
+    // if (deduped.nonEmpty) {
+    //   val userId = deduped.head.userId
+    //   val total = deduped.size
 
-      keepsAbuseMonitor.inspect(userId, total)
-      libraryAnalytics.keepImport(userId, clock.now, context, total, deduped.headOption.map(_.source).getOrElse(KeepSource.BookmarkImport))
+    //   keepsAbuseMonitor.inspect(userId, total)
+    //   libraryAnalytics.keepImport(userId, clock.now, context, total, deduped.headOption.map(_.source).getOrElse(KeepSource.BookmarkImport))
 
-      deduped.grouped(500).foreach { rawKeepGroup =>
-        // insertAll fails if any of the inserts failed
-        log.info(s"[persistRawKeeps] Persisting ${rawKeepGroup.length} raw keeps")
-        val bulkAttempt = db.readWrite(attempts = 4) { implicit session =>
-          rawKeepRepo.insertAll(rawKeepGroup)
-        }
-        if (bulkAttempt.isFailure) { // fyi, this doesn't really happen in prod often
-          log.info(s"[persistRawKeeps] Failed bulk. Trying one at a time")
-          val singleAttempt = db.readWrite { implicit session =>
-            rawKeepGroup.toList.map { rawKeep =>
-              rawKeep -> rawKeepRepo.insertOne(rawKeep)
-            }
-          }
-          val (_, failuresWithRaws) = singleAttempt.partition(_._2.isSuccess)
-          val failedUrls = failuresWithRaws.map(_._1.url)
-          if (failedUrls.nonEmpty) {
-            airbrake.notify(AirbrakeError(message = Some(s"failed to persist ${failedUrls.size} raw keeps: ${failedUrls mkString ","}"), userId = Some(userId)))
-          }
-        }
-      }
-      rawKeepImporterPlugin.processKeeps(broadcastToOthers = true)
-    }
+    //   deduped.grouped(500).foreach { rawKeepGroup =>
+    //     // insertAll fails if any of the inserts failed
+    //     log.info(s"[persistRawKeeps] Persisting ${rawKeepGroup.length} raw keeps")
+    //     val bulkAttempt = db.readWrite(attempts = 4) { implicit session =>
+    //       //rawKeepRepo.insertAll(rawKeepGroup)
+    //     }
+    //     if (bulkAttempt.isFailure) { // fyi, this doesn't really happen in prod often
+    //       log.info(s"[persistRawKeeps] Failed bulk. Trying one at a time")
+    //       val singleAttempt = db.readWrite { implicit session =>
+    //         rawKeepGroup.toList.map { rawKeep =>
+    //           rawKeep -> rawKeepRepo.insertOne(rawKeep)
+    //         }
+    //       }
+    //       val (_, failuresWithRaws) = singleAttempt.partition(_._2.isSuccess)
+    //       val failedUrls = failuresWithRaws.map(_._1.url)
+    //       if (failedUrls.nonEmpty) {
+    //         airbrake.notify(AirbrakeError(message = Some(s"failed to persist ${failedUrls.size} raw keeps: ${failedUrls mkString ","}"), userId = Some(userId)))
+    //       }
+    //     }
+    //   }
+    //   rawKeepImporterPlugin.processKeeps(broadcastToOthers = true)
+    // }
   }
 }

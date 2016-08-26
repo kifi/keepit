@@ -37,7 +37,8 @@ class EmbedlyArticleFetcher @Inject() (
   private val consolidate = new RequestConsolidator[String, EmbedlyArticle](2 minutes)
 
   def fetch(request: ArticleFetchRequest[EmbedlyArticle])(implicit ec: ExecutionContext): Future[Option[EmbedlyArticle]] = {
-    consolidate(request.url)(doFetch).imap(Some(_))
+    //consolidate(request.url)(doFetch).imap(Some(_))
+    Future(None)
   }
 
   private def doFetch(url: String)(implicit ec: ExecutionContext): Future[EmbedlyArticle] = {

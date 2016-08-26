@@ -50,7 +50,7 @@ class C3P0Plugin(app: Application) extends DBPlugin {
   /**
    * Reads the configuration and connects to every data source.
    */
-  override def onStart() {
+  override def onStart() { //keep me alive!
     // Try to connect to each, this should be the first access to dbApi
     dbApi.datasources.map { ds =>
       try {

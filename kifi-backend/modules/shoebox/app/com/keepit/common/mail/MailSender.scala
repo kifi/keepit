@@ -29,7 +29,7 @@ class MailSenderPluginImpl @Inject() (
 
   // plugin lifecycle methods
   override def enabled: Boolean = true
-  override def onStart() {
+  override def onStart() { //keep me alive!
     scheduleTaskOnLeader(actor.system, 30 seconds, 7 seconds, actor.ref, ProcessOutbox)
   }
 

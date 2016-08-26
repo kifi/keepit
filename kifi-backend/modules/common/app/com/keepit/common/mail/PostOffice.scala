@@ -70,7 +70,7 @@ class RemotePostOfficePluginImpl @Inject() (
 
   implicit val actorTimeout = Timeout(5 seconds)
   override def enabled: Boolean = true
-  override def onStart() {
+  override def onStart() { //keep me alive!
     scheduleTaskOnAllMachines(actor.system, 30 seconds, 3 minutes, actor.ref, SendQueuedEmails)
   }
   def sendMail(mail: ElectronicMail) = actor.ref ! SendEmail(mail)
