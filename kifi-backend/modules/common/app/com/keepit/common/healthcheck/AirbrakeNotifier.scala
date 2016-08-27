@@ -27,8 +27,7 @@ object AirbrakeDeploymentNotice
 private[healthcheck] class AirbrakeNotifierActor @Inject() (
   airbrakeSender: AirbrakeSender,
   healthcheck: HealthcheckPlugin,
-  formatter: JsonAirbrakeFormatter,
-  pagerDutySender: PagerDutySender)
+  formatter: JsonAirbrakeFormatter)
     extends AlertingActor with Logging {
 
   def alert(reason: Throwable, message: Option[Any]) = self ! AirbrakeErrorNotice(error(reason, message), true)
@@ -40,17 +39,13 @@ private[healthcheck] class AirbrakeNotifierActor @Inject() (
       airbrakeSender.sendDeployment(formatter.deploymentMessage)
     case AirbrakeErrorNotice(error, selfError) =>
       try {
-        if (error.panic) pagerDutySender.openIncident(error.message.getOrElse(error.exception.toString), error.exception, Some(error.signature.value))
-        if (!error.aggregateOnly) {
-          val json: JsValue = formatter.format(error)
-          airbrakeSender.sendError(json)
-          val toLog = error.message.getOrElse(error.exception.toString)
-          log.error(s"[airbrake] $toLog")
-        }
+        val json: JsValue = formatter.format(error)
+        airbrakeSender.sendError(error)
+        val toLog = error.message.getOrElse(error.exception.toString)
+        log.error(s"[airbrake] $toLog")
       } catch {
         case e: Throwable =>
           log.error(s"can't format or send error $error")
-          pagerDutySender.openIncident("Airbrake Error!", e)
           if (!selfError) throw e
           else {
             System.err.println(s"Airbrake Notifier exception: ${e.toString}")
@@ -70,7 +65,6 @@ private[healthcheck] class AirbrakeNotifierActor @Inject() (
 class AirbrakeSender @Inject() (
   httpClient: HttpClient,
   healthcheck: HealthcheckPlugin,
-  pagerDutySender: PagerDutySender,
   service: FortyTwoServices,
   implicit val defaultContext: ExecutionContext,
   systemAdminMailSender: SystemAdminMailSender)
@@ -88,32 +82,6 @@ class AirbrakeSender @Inject() (
           firstErrorReported = true
           val he = healthcheck.addError(AirbrakeError(ex, message = Some("Fail to send airbrake message")))
           log.error(s"can't deal with error: $he")
-          if (ex.getMessage.contains("Project is rate limited")) {
-            pagerDutySender.openIncident(s"[${service.currentService}] Airbrake over Rate Limit!", ex)
-          } else if (ex.getMessage.contains("Request exceeds")) {
-            /**
-             * https://help.airbrake.io/kb/api-2/notifier-api-v23
-             * Error messages, files, components, actions, environment names, request URLs, and error class names are truncated after 255 characters.
-             * Any incoming element with text content over 2 kilobytes (not chars) will be truncated.
-             */
-            val bodyString = body.toString
-            systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG42,
-              to = Seq(SystemEmailAddress.ENG42),
-              category = NotificationCategory.System.HEALTHCHECK,
-              subject = s"[${service.currentService}] [WARNING] Error was too big",
-              htmlBody =
-                s"""${ex.getMessage}
-                   |<br/>
-                   |<h1>Body with ${bodyString.size} total chars, may be trimmed at 70k</h1>
-                   |<br/>
-                   |${bodyString.abbreviate(70 * 1024)}""".stripMargin))
-          } else {
-            systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG42,
-              to = Seq(SystemEmailAddress.ENG42),
-              category = NotificationCategory.System.HEALTHCHECK,
-              subject = s"[${service.currentService}] [WARNING] Could not send airbrake error (Airbrake down?)",
-              htmlBody = ex.getMessage))
-          }
         }
       }
   }
@@ -126,50 +94,12 @@ class AirbrakeSender @Inject() (
       postTextFuture(DirectUrl("http://api.airbrake.io/deploys.txt"), payload, httpClient.ignoreFailure)
   }
 
-  def sendError(json: JsValue): Unit = {
-    val futureResult = httpClient
-      .withHeaders("Content-Type" -> "application/json")
-      .withTimeout(CallTimeouts(responseTimeout = Some(60000)))
-      .postFuture(DirectUrl(s"https://airbrake.io/api/v3/projects/$projectId/notices?key=$apiKey"), json, defaultFailureHandler(json))
-    futureResult.onSuccess {
-      case res: ClientResponse =>
-        try {
-          val jsonRes = res.json
-          val id = (jsonRes \ "id").as[String]
-          val url = (jsonRes \ "url").as[String]
-          log.info(s"sent airbrake error $id, more info at $url")
-        } catch {
-          case t: Throwable => {
-            pagerDutySender.openIncident("Airbrake Response Deserialization Error!", t, moreInfo = Some(res.body.take(1000)))
-            throw t
-          }
-        }
-    }
-
-    futureResult.onFailure {
-      case exception =>
-        log.error(s"error sending airbrake json: ${json.toString.take(500)}", exception)
-    }
-  }
-}
-
-class PagerDutySender @Inject() (httpClient: HttpClient, serviceDiscovery: ServiceDiscovery) {
-
-  def openIncident(description: String, exception: Throwable, signature: Option[String] = None, moreInfo: Option[String] = None): Unit = {
-    val incidentKey: String = signature.getOrElse(description)
-    val service = serviceDiscovery.thisService.name
-    val moreInfoMessage: String = moreInfo.getOrElse("See Airbrake/Healthcheck for more.")
-    val payload = Json.obj(
-      "service_key" -> "7785f2cc14ec44e49ae3bb8186400cc7",
-      "event_type" -> "trigger",
-      "description" -> s"[$service] $description".take(1000),
-      "incident_key" -> incidentKey,
-      "details" -> Json.obj(
-        "exceptionInfo" -> exception.getMessage,
-        "moreInfo" -> moreInfoMessage
-      )
-    )
-    httpClient.postFuture(DirectUrl("https://events.pagerduty.com/generic/2010-04-15/create_event.json"), payload)
+  def sendError(error: AirbrakeError): Unit = {
+    systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG42,
+      to = Seq(SystemEmailAddress.ENG42),
+      category = NotificationCategory.System.HEALTHCHECK,
+      subject = s"[${service.currentService}] ${error.message.getOrElse("")} ${error.exception.toString}}",
+      htmlBody = error.exception.getStackTrace.mkString("</br>\n")))
   }
 }
 
