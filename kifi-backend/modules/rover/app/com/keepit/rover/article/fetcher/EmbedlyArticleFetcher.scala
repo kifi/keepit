@@ -44,7 +44,7 @@ class EmbedlyArticleFetcher @Inject() (
   private def doFetch(url: String)(implicit ec: ExecutionContext): Future[EmbedlyArticle] = {
     val request = {
       val embedlyUrl = embedlyExtractAPI(url)
-      ws.url(embedlyUrl).withRequestTimeout(timeout)
+      ws.url("").withRequestTimeout(timeout)
     }
     WebServiceUtils.getWithRetry(request, attempts).map { response =>
       try {
