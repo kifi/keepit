@@ -18,179 +18,179 @@ case class ElizaCacheModule(cachePluginModules: CachePluginModule*) extends Cach
 
   @Singleton
   @Provides
-  def messageThreadExternalIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new MessageThreadKeepIdCache(stats, accessLog, (outerRepo, 30 days))
+  def messageThreadExternalIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin) =
+    new MessageThreadKeepIdCache(stats, accessLog, (innerRepo, 1 second))
 
   @Singleton
   @Provides
-  def messagesForThreadIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new MessagesByKeepIdCache(stats, accessLog, (outerRepo, 30 days))
+  def messagesForThreadIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin) =
+    new MessagesByKeepIdCache(stats, accessLog, (innerRepo, 1 second))
 
   @Singleton
   @Provides
-  def userThreadStatsForUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new UserThreadStatsForUserIdCache(stats, accessLog, (innerRepo, 1 minute), (outerRepo, 30 days))
+  def userThreadStatsForUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin) =
+    new UserThreadStatsForUserIdCache(stats, accessLog, (innerRepo, 1 second))
 
   @Singleton
   @Provides
-  def playCacheApi(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new PlayCacheApi(stats, accessLog, (innerRepo, 1 second), (outerRepo, 1 hour))
+  def playCacheApi(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin) =
+    new PlayCacheApi(stats, accessLog, (innerRepo, 1 second))
 
   @Singleton
   @Provides
-  def basicUserUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new BasicUserUserIdCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 7 days))
+  def basicUserUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin) =
+    new BasicUserUserIdCache(stats, accessLog, (innerRepo, 1 second))
 
   @Singleton
   @Provides
-  def bookmarkUriUserCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new KeepUriUserCache(stats, accessLog, (outerRepo, 7 days))
+  def bookmarkUriUserCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin) =
+    new KeepUriUserCache(stats, accessLog, (innerRepo, 1 second))
 
   @Singleton
   @Provides
-  def bookmarkCountCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new KeepCountCache(stats, accessLog, (outerRepo, 1 day))
+  def bookmarkCountCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin) =
+    new KeepCountCache(stats, accessLog, (innerRepo, 1 second))
 
   @Singleton
   @Provides
-  def normalizedURICache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new NormalizedURICache(stats, accessLog, (outerRepo, 7 days))
+  def normalizedURICache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin) =
+    new NormalizedURICache(stats, accessLog, (innerRepo, 1 second))
 
   @Singleton
   @Provides
-  def searchIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new InitialSearchIdCache(stats, accessLog, (outerRepo, 1 hour))
+  def searchIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin) =
+    new InitialSearchIdCache(stats, accessLog, (innerRepo, 1 second))
 
   @Singleton
   @Provides
-  def searchArticleCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new ArticleSearchResultCache(stats, accessLog, (outerRepo, 1 hour))
+  def searchArticleCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin) =
+    new ArticleSearchResultCache(stats, accessLog, (innerRepo, 1 second))
 
   @Singleton
   @Provides
-  def socialUserInfoUserCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new SocialUserInfoUserCache(stats, accessLog, (outerRepo, 30 days))
+  def socialUserInfoUserCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin) =
+    new SocialUserInfoUserCache(stats, accessLog, (innerRepo, 1 second))
 
   @Singleton
   @Provides
-  def socialUserInfoNetworkCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new SocialUserInfoNetworkCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 30 days))
+  def socialUserInfoNetworkCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin) =
+    new SocialUserInfoNetworkCache(stats, accessLog, (innerRepo, 1 second))
 
   @Provides @Singleton
-  def userIdentityCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new IdentityUserIdCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 30 days))
+  def userIdentityCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin) =
+    new IdentityUserIdCache(stats, accessLog, (innerRepo, 1 second))
 
   @Singleton
   @Provides
-  def userExternalIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new UserExternalIdCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 30 days))
+  def userExternalIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin) =
+    new UserExternalIdCache(stats, accessLog, (innerRepo, 1 second))
 
   @Singleton
   @Provides
-  def userSessionExternalIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new UserSessionViewExternalIdCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 3 days))
+  def userSessionExternalIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin) =
+    new UserSessionViewExternalIdCache(stats, accessLog, (innerRepo, 1 second))
 
   @Singleton
   @Provides
-  def externalUserIdCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new ExternalUserIdCache(stats, accessLog, (outerRepo, 24 hours))
+  def externalUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin) =
+    new ExternalUserIdCache(stats, accessLog, (innerRepo, 1 second))
 
   @Singleton
   @Provides
-  def userIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new UserIdCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 7 days))
+  def userIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin) =
+    new UserIdCache(stats, accessLog, (innerRepo, 1 second))
 
   @Singleton
   @Provides
-  def userExperimentCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new UserExperimentCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 7 days))
+  def userExperimentCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin) =
+    new UserExperimentCache(stats, accessLog, (innerRepo, 1 second))
 
   @Singleton
   @Provides
-  def userConnectionIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new UserConnectionIdCache(stats, accessLog, (innerRepo, 10 seconds), (outerRepo, 7 days))
+  def userConnectionIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin) =
+    new UserConnectionIdCache(stats, accessLog, (innerRepo, 1 second))
 
   @Singleton
   @Provides
-  def userConnectionCountCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new UserConnectionCountCache(stats, accessLog, (innerRepo, 10 seconds), (outerRepo, 7 days))
+  def userConnectionCountCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin) =
+    new UserConnectionCountCache(stats, accessLog, (innerRepo, 1 second))
 
   @Singleton
   @Provides
-  def searchFriendsCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new SearchFriendsCache(stats, accessLog, (innerRepo, 10 seconds), (outerRepo, 7 days))
+  def searchFriendsCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin) =
+    new SearchFriendsCache(stats, accessLog, (innerRepo, 1 second))
 
   @Singleton
   @Provides
-  def activeExperimentsCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new ActiveExperimentsCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 7 days))
+  def activeExperimentsCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin) =
+    new ActiveExperimentsCache(stats, accessLog, (innerRepo, 1 second))
 
   @Singleton
   @Provides
-  def normalizedURIUrlHashCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new NormalizedURIUrlHashCache(stats, accessLog, (outerRepo, 30 days))
+  def normalizedURIUrlHashCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin) =
+    new NormalizedURIUrlHashCache(stats, accessLog, (innerRepo, 1 second))
 
   @Provides
   @Singleton
-  def userValueCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new UserValueCache(stats, accessLog, (outerRepo, 7 days))
+  def userValueCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin) =
+    new UserValueCache(stats, accessLog, (innerRepo, 1 second))
 
   @Singleton
   @Provides
-  def userSegmentCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new UserSegmentCache(stats, accessLog, (innerRepo, 12 hours), (outerRepo, 1 day))
+  def userSegmentCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin) =
+    new UserSegmentCache(stats, accessLog, (innerRepo, 1 second))
 
   @Provides
   @Singleton
-  def extensionVersionCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new ExtensionVersionInstallationIdCache(stats, accessLog, (outerRepo, 7 days))
+  def extensionVersionCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin) =
+    new ExtensionVersionInstallationIdCache(stats, accessLog, (innerRepo, 1 second))
 
   @Singleton
   @Provides
-  def probabilisticExperimentGeneratorAllCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new ProbabilisticExperimentGeneratorAllCache(stats, accessLog, (outerRepo, 30 days))
+  def probabilisticExperimentGeneratorAllCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin) =
+    new ProbabilisticExperimentGeneratorAllCache(stats, accessLog, (innerRepo, 1 second))
 
   @Provides @Singleton
-  def allFakeUsersCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new AllFakeUsersCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 7 days))
+  def allFakeUsersCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin) =
+    new AllFakeUsersCache(stats, accessLog, (innerRepo, 1 second))
 
   @Provides @Singleton
-  def librariesWithWriteAccessCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new LibrariesWithWriteAccessCache(stats, accessLog, (outerRepo, 10 minutes))
+  def librariesWithWriteAccessCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin) =
+    new LibrariesWithWriteAccessCache(stats, accessLog, (innerRepo, 1 second))
 
   @Provides @Singleton
-  def roverArticleSummaryCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new RoverArticleSummaryCache(stats, accessLog, (outerRepo, 30 days))
+  def roverArticleSummaryCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin) =
+    new RoverArticleSummaryCache(stats, accessLog, (innerRepo, 1 second))
 
   @Provides @Singleton
-  def roverArticleImagesCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new RoverArticleImagesCache(stats, accessLog, (outerRepo, 30 days))
+  def roverArticleImagesCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin) =
+    new RoverArticleImagesCache(stats, accessLog, (innerRepo, 1 second))
 
   @Provides @Singleton
-  def keepImagesCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new KeepImagesCache(stats, accessLog, (outerRepo, 30 days))
+  def keepImagesCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin) =
+    new KeepImagesCache(stats, accessLog, (innerRepo, 1 second))
 
   @Provides @Singleton
-  def primaryOrgForUserCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new PrimaryOrgForUserCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 14 days))
+  def primaryOrgForUserCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin) =
+    new PrimaryOrgForUserCache(stats, accessLog, (innerRepo, 1 second))
 
   @Provides @Singleton
-  def organizationMembersCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new OrganizationMembersCache(stats, accessLog, (outerRepo, 7 days))
+  def organizationMembersCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin) =
+    new OrganizationMembersCache(stats, accessLog, (innerRepo, 1 second))
 
   @Provides @Singleton
-  def basicOrganizationIdCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new BasicOrganizationIdCache(stats, accessLog, (outerRepo, 7 days))
+  def basicOrganizationIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin) =
+    new BasicOrganizationIdCache(stats, accessLog, (innerRepo, 1 second))
 
   @Provides @Singleton
-  def slackIntegrationsCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new SlackChannelIntegrationsCache(stats, accessLog, (outerRepo, 30 days))
+  def slackIntegrationsCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin) =
+    new SlackChannelIntegrationsCache(stats, accessLog, (innerRepo, 1 second))
 
   @Provides @Singleton
-  def sourceAttributionKeepIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new SourceAttributionKeepIdCache(stats, accessLog, (innerRepo, 1 minute), (outerRepo, 30 days))
+  def sourceAttributionKeepIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin) =
+    new SourceAttributionKeepIdCache(stats, accessLog, (innerRepo, 1 second))
 
   @Provides @Singleton
-  def slackTeamIdOrgIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new SlackTeamIdOrgIdCache(stats, accessLog, (outerRepo, 7 days))
+  def slackTeamIdOrgIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin) =
+    new SlackTeamIdOrgIdCache(stats, accessLog, (innerRepo, 1 second))
 }

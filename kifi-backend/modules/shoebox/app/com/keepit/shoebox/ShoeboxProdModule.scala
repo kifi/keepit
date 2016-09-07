@@ -2,7 +2,7 @@ package com.keepit.shoebox
 
 import com.keepit.abook.ProdABookServiceClientModule
 import com.keepit.commanders.emails.activity.ProdActivityEmailQueueModule
-import com.keepit.common.cache.{ EhCacheCacheModule, MemcachedCacheModule, ShoeboxCacheModule }
+import com.keepit.common.cache.{ EhCacheCacheModule, HashMapMemoryCacheModule, ShoeboxCacheModule }
 import com.keepit.common.controller.ProdShoeboxUserActionsModule
 import com.keepit.common.oauth.ProdOAuthConfigurationModule
 import com.keepit.common.seo.{ ProdSiteMapGeneratorModule }
@@ -41,7 +41,7 @@ case class ShoeboxProdModule() extends ShoeboxModule with CommonProdModule {
   val fjMonitorModule = ProdForkJoinContextMonitorModule()
   val twilioCredentialsModule = ProdTwilioCredentialsModule()
   val dataPipelineExecutorModule = ProdDataPipelineExecutorModule()
-  val cacheModule = ShoeboxCacheModule(MemcachedCacheModule(), EhCacheCacheModule())
+  val cacheModule = ShoeboxCacheModule(HashMapMemoryCacheModule(), EhCacheCacheModule())
 
   // Service clients
   val searchServiceClientModule = ProdSearchServiceClientModule()
