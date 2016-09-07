@@ -41,7 +41,7 @@ case class ShoeboxProdModule() extends ShoeboxModule with CommonProdModule {
   val fjMonitorModule = ProdForkJoinContextMonitorModule()
   val twilioCredentialsModule = ProdTwilioCredentialsModule()
   val dataPipelineExecutorModule = ProdDataPipelineExecutorModule()
-  val cacheModule = ShoeboxCacheModule(HashMapMemoryCacheModule(), EhCacheCacheModule())
+  val cacheModule = ShoeboxCacheModule(EhCacheCacheModule())
 
   // Service clients
   val searchServiceClientModule = ProdSearchServiceClientModule()
