@@ -38,7 +38,7 @@ class ShoeboxTasksPlugin @Inject() (
   override def onStart() { //keep me alive - ish!
     log.info("ShoeboxTasksPlugin onStart")
     //scheduleTaskOnOneMachine(system, 33 minute, 1 hours, "twitter sync") {
-      //twitterSyncCommander.syncAll()
+    //twitterSyncCommander.syncAll()
     //}
 
     //    scheduleTaskOnLeader(system, 66 seconds, 13 seconds, "twitter waitlist accept") {
@@ -59,7 +59,7 @@ class ShoeboxTasksPlugin @Inject() (
     //scheduleTaskOnLeader(slackPersonalDigestActor.system, 3 minute, 1 minute, slackPersonalDigestActor.ref, IfYouCouldJustGoAhead)
 
     scheduleTaskOnAllMachines(exportingActor.system, 3 minute, 1 minute, exportingActor.ref, IfYouCouldJustGoAhead)
-    scheduleTaskOnAllMachines(normalizationUpdatingActor.system, 3 minute, 1 minute, normalizationUpdatingActor.ref, IfYouCouldJustGoAhead)
+    //    scheduleTaskOnAllMachines(normalizationUpdatingActor.system, 3 minute, 1 minute, normalizationUpdatingActor.ref, IfYouCouldJustGoAhead)
   }
 
   override def onStop() {

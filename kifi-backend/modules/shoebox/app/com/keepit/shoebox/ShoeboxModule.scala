@@ -33,7 +33,8 @@ import com.keepit.social.SecureSocialModule
 
 case class ShoeboxServiceTypeModule() extends ServiceTypeModule {
   val serviceType = ServiceType.SHOEBOX
-  val servicesToListenOn = ServiceType.SEARCH :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.CORTEX :: ServiceType.GRAPH :: ServiceType.ROVER :: Nil
+  val servicesToListenOn = Nil
+  //  val servicesToListenOn = ServiceType.SEARCH :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.CORTEX :: ServiceType.GRAPH :: ServiceType.ROVER :: Nil
 }
 
 trait ShoeboxModule extends ConfigurationModule with CommonServiceModule {
