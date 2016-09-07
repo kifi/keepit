@@ -119,18 +119,7 @@ class SearchServiceClientImpl(
   }
 
   def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[SharingUserInfo]] = {
-    if (uriIds.isEmpty) {
-      Future.successful(Seq.empty)
-    } else {
-      val items = uriIds.map(AugmentableItem(_))
-      val request = ItemAugmentationRequest.uniform(userId, SearchFilter.default, items: _*)
-      augmentation(request).map { response =>
-        items.map { item =>
-          val info = response.infos(item)
-          SharingUserInfo(info.keeps.map(_.owner).flatten.toSet - userId, info.keeps.size + info.otherDiscoverableKeeps + info.otherPublishedKeeps)
-        }
-      }
-    }
+    Future.successful(Seq.empty)
   }
 
   def articleIndexerSequenceNumber(): Future[Int] = {
@@ -153,49 +142,15 @@ class SearchServiceClientImpl(
   }
 
   def searchUsersByName(userId: Id[User], query: String, limit: Int = 10, acceptLangs: Seq[String], userExperiments: Set[UserExperimentType]): Future[Seq[UserPrefixSearchHit]] = {
-    val payload = Json.toJson(UserPrefixSearchRequest(userId, query, limit, acceptLangs, userExperiments))
-    call(Search.internal.searchUsersByName(), payload).map { r =>
-      Json.fromJson[Seq[UserPrefixSearchHit]](r.json).get
-    }
+    Future.successful(Seq.empty)
   }
 
   def userTypeahead(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[BasicUser]]] = {
-    val payload = Json.toJson(DeprecatedUserSearchRequest(Some(userId), query, maxHits, context, filter))
-    call(Search.internal.userTypeahead(), payload).map { r =>
-      val userSearchResult = Json.fromJson[DeprecatedUserSearchResult](r.json).get
-      if (userSearchResult.hits.isEmpty) Seq[TypeaheadHit[BasicUser]]()
-      else {
-        val queryTerms = PrefixFilter.normalize(query).split("\\s+")
-        var ordinal = 0
-        userSearchResult.hits.map { hit =>
-          val name = hit.basicUser.firstName + " " + hit.basicUser.lastName
-          val normalizedName = PrefixFilter.normalize(name)
-          val score = PrefixMatching.distance(normalizedName, queryTerms)
-          ordinal += 1
-          new TypeaheadHit[BasicUser](score, name, ordinal, hit.basicUser)
-        }
-      }
-    }
+    Future.successful(Seq.empty)
   }
 
   def userTypeaheadWithUserId(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[TypeaheadUserHit]]] = {
-    val payload = Json.toJson(DeprecatedUserSearchRequest(Some(userId), query, maxHits, context, filter))
-    call(Search.internal.userTypeahead(), payload).map { r =>
-      val userSearchResult = Json.fromJson[DeprecatedUserSearchResult](r.json).get
-      if (userSearchResult.hits.isEmpty) Seq()
-      else {
-        val queryTerms = PrefixFilter.normalize(query).split("\\s+")
-        var ordinal = 0
-        userSearchResult.hits.map { hit =>
-          val name = hit.basicUser.firstName + " " + hit.basicUser.lastName
-          val normalizedName = PrefixFilter.normalize(name)
-          val score = PrefixMatching.distance(normalizedName, queryTerms)
-          ordinal += 1
-          val basicUserWithUserId = TypeaheadUserHit.fromBasicUserAndId(hit.basicUser, hit.id)
-          TypeaheadHit(score, name, ordinal, basicUserWithUserId)
-        }
-      }
-    }
+    Future.successful(Seq.empty)
   }
 
   def explainUriResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], libraryId: Option[Id[Library]], lang: String, debug: Option[String], disablePrefixSearch: Boolean, disableFullTextSearch: Boolean): Future[Html] = {
@@ -274,9 +229,7 @@ class SearchServiceClientImpl(
 
   //the return values here are external id's of threads, a model that is not available here. Need to rethink this a bit. -Stephen
   def searchMessages(userId: Id[User], query: String, page: Int): Future[Seq[PublicId[Keep]]] = {
-    call(Search.internal.searchMessages(userId, query, page)).map { r =>
-      Json.fromJson[Seq[PublicId[Keep]]](r.json).get
-    }
+    Future.successful(Seq.empty[PublicId[Keep]])
   }
 
   def augmentation(request: ItemAugmentationRequest): Future[ItemAugmentationResponse] = {
@@ -284,12 +237,7 @@ class SearchServiceClientImpl(
   }
 
   def augment(userId: Option[Id[User]], filter: SearchFilter, hideOtherPublishedKeeps: Boolean, maxKeepsShown: Int, maxKeepersShown: Int, maxLibrariesShown: Int, maxTagsShown: Int, items: Seq[AugmentableItem]): Future[Seq[LimitedAugmentationInfo]] = {
-    if (items.isEmpty) Future.successful(Seq.empty[LimitedAugmentationInfo])
-    else {
-      // This should stay in sync with SearchController.augment
-      val payload = Json.obj("userId" -> userId, "filter" -> filter, "hideOtherPublishedKeeps" -> hideOtherPublishedKeeps, "maxKeepsShown" -> maxKeepsShown, "maxKeepersShown" -> maxKeepersShown, "maxLibrariesShown" -> maxLibrariesShown, "maxTagsShown" -> maxTagsShown, "items" -> items)
-      call(Search.internal.augment(), payload).map(_.json.as[Seq[LimitedAugmentationInfo]])
-    }
+    Future.successful(Seq.empty[LimitedAugmentationInfo])
   }
 
   def call(instance: ServiceInstance, url: ServiceRoute, body: JsValue): Future[ClientResponse] = {
