@@ -64,45 +64,9 @@ class PageCommander @Inject() (
   }
 
   def getPageInfo(uri: URI, userId: Id[User], experiments: Set[UserExperimentType]): Future[KeeperPageInfo] = {
-    val host: Option[NormalizedHostname] = uri.host.flatMap(host => NormalizedHostname.fromHostname(host.name, allowInvalid = true))
-    val domainF = db.readOnlyMasterAsync { implicit session =>
-      val domainOpt = host.flatMap(domainRepo.get(_))
-      domainOpt.map { dom =>
-        val position = userToDomainRepo.get(userId, dom.id.get, UserToDomainKinds.KEEPER_POSITION).map(_.value.get.as[JsObject]).orElse(inferKeeperPosition(dom.id.get))
-        val neverShow = userToDomainRepo.get(userId, dom.id.get, UserToDomainKinds.NEVER_SHOW).exists(_.state == UserToDomainStates.ACTIVE)
-        (position, neverShow)
-      }.getOrElse((None, false))
+    Future.successful {
+      KeeperPageInfo(uri.raw.getOrElse(""), None, true, true, Seq.empty[BasicUserWithUrlIntersection], 0, Seq.empty[JsObject], Seq.empty[SourceAttribution], Seq.empty)
     }
-    val uriInfoF = db.readOnlyMasterAsync { implicit session =>
-      val (nUriStr, nUri) = normalizedURIInterner.getByUriOrPrenormalize(uri.raw.get) match {
-        case Success(Left(n)) => (n.url, Some(n))
-        case Success(Right(pUri)) => (pUri, None)
-        case Failure(ex) => (uri.raw.get, None)
-      }
-      (nUri, nUriStr)
-    }
-
-    val infoF = for {
-      (position, neverOnSite) <- domainF
-      (nUriOpt, nUriStr) <- uriInfoF
-    } yield {
-      val shown = nUriOpt.exists { normUri =>
-        historyTracker.getMultiHashFilter(userId).mayContain(normUri.id.get.id)
-      }
-
-      nUriOpt.map { normUri =>
-        augmentUriInfo(normUri, userId).map { info =>
-          if (filteredPage(normUri.url)) {
-            KeeperPageInfo(nUriStr, position, neverOnSite, shown, Seq.empty[BasicUserWithUrlIntersection], 0, Seq.empty[JsObject], Seq.empty[SourceAttribution], info.keeps)
-          } else {
-            KeeperPageInfo(nUriStr, position, neverOnSite, shown, info.keepers, info.keepersTotal, info.libraries, info.sources, info.keeps)
-          }
-        }
-      }.getOrElse {
-        Future.successful(KeeperPageInfo(nUriStr, position, neverOnSite, shown, Seq.empty[BasicUserWithUrlIntersection], 0, Seq.empty[JsObject], Seq.empty[SourceAttribution], Seq.empty[KeepData]))
-      }
-    }
-    infoF.flatten
   }
 
   private def filteredPage(url: String): Boolean = {
