@@ -147,13 +147,13 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
     resetRoutingList()
     if (instances.size < serviceType.minInstances) {
       if (scheduledPanic.isEmpty) {
-        scheduledPanic = Some(scheduler.scheduleOnce(3 minutes) {
+        scheduledPanic = Some(scheduler.scheduleOnce(1 hours) {
           airbrake.get.panic(s"Service cluster for $serviceType way too small!")
         })
       }
     } else if (instances.size < serviceType.warnInstances) {
       if (scheduledWarning.isEmpty) {
-        scheduledWarning = Some(scheduler.scheduleOnce(20 minutes) {
+        scheduledWarning = Some(scheduler.scheduleOnce(2 hours) {
           airbrake.get.notify(s"Service cluster for $serviceType too small!")
         })
       }
