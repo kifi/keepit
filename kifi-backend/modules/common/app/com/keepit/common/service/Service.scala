@@ -27,7 +27,7 @@ sealed abstract class ServiceType(val name: String, val shortName: String, val l
   override def toString: String = name
 
   val minInstances: Int = 1
-  val warnInstances: Int = 2
+  val warnInstances: Int = 1
 }
 
 object ServiceType {
@@ -37,19 +37,19 @@ object ServiceType {
       if (capabilities.contains(ServiceStatus.OFFLINE.name)) ServiceStatus.OFFLINE else ServiceStatus.UP
     }
     override val minInstances = 1
-    override val warnInstances = 2
+    override val warnInstances = 1
   }
   case object ELIZA extends ServiceType("ELIZA", "EZ") {
     override val minInstances = 1
-    override val warnInstances = 2
+    override val warnInstances = 1
   }
   case object HEIMDAL extends ServiceType("HEIMDAL", "HD", loadFactor = 2) {
     override val minInstances = 0
     override val warnInstances = 0
   }
   case object ABOOK extends ServiceType("ABOOK", "AB", loadFactor = 2) {
-    override val minInstances = 1
-    override val warnInstances = 1
+    override val minInstances = 0
+    override val warnInstances = 0
   }
   case object DEV_MODE extends ServiceType("DEV_MODE", "DM")
   case object TEST_MODE extends ServiceType("TEST_MODE", "TM")
@@ -59,8 +59,8 @@ object ServiceType {
       if (capabilities.contains("backup") && !capabilities.contains("search")) ServiceStatus.BACKING_UP else ServiceStatus.UP
     }
 
-    override val minInstances = 2
-    override val warnInstances = 3
+    override val minInstances = 0
+    override val warnInstances = 0
   }
 
   case object GRAPH extends ServiceType("GRAPH", "GR", loadFactor = 2) {
@@ -83,8 +83,8 @@ object ServiceType {
   }
 
   case object ROVER extends ServiceType("ROVER", "RO", loadFactor = 5) {
-    override val minInstances = 2
-    override val warnInstances = 3
+    override val minInstances = 0
+    override val warnInstances = 0
   }
 
   // Possible initialization cycle/deadlock when one of the case objects above is first dereferenced before the ServiceType object
