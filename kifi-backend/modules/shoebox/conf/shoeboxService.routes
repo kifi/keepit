@@ -574,9 +574,9 @@ POST          /site/organizations/:id/slack/sync/public         @com.keepit.cont
 POST          /site/organizations/:id/slack/sync/private        @com.keepit.controllers.website.SlackController.syncPrivateChannels(id: PublicId[Organization])
 POST          /site/organizations/:id/slack/mirrorComments      @com.keepit.controllers.website.SlackController.mirrorComments(id: PublicId[Organization], turnOn: Boolean)
 
-GET           /site/user-or-org/:handle                   @com.keepit.controllers.website.UserOrOrganizationController.getByHandle(handle: Handle, authToken: Option[String] ?= None)
-GET           /site/user-or-org/:handle/libraries         @com.keepit.controllers.website.UserOrOrganizationController.getLibrariesByHandle(handle: Handle, page: Int ?= 0, size: Int ?= 12, filter: String ?= "own")
-GET           /site/user-or-org/:handle/libraries/:slug   @com.keepit.controllers.website.LibraryController.getLibraryByHandleAndSlug(handle: Handle, slug: LibrarySlug, authToken: Option[String] ?= None)
+# GET           /site/user-or-org/:handle                   @com.keepit.controllers.website.UserOrOrganizationController.getByHandle(handle: Handle, authToken: Option[String] ?= None)
+# GET           /site/user-or-org/:handle/libraries         @com.keepit.controllers.website.UserOrOrganizationController.getLibrariesByHandle(handle: Handle, page: Int ?= 0, size: Int ?= 12, filter: String ?= "own")
+# GET           /site/user-or-org/:handle/libraries/:slug   @com.keepit.controllers.website.LibraryController.getLibraryByHandleAndSlug(handle: Handle, slug: LibrarySlug, authToken: Option[String] ?= None)
 
 GET           /site/admin/billing/state                         @com.keepit.controllers.website.PaymentsController.getAccountState(pubId: PublicId[Organization])
 POST          /site/admin/billing/state                         @com.keepit.controllers.website.PaymentsController.updateAccountState(pubId: PublicId[Organization], newPlanId: PublicId[com.keepit.payments.PaidPlan], newCardId: PublicId[com.keepit.payments.PaymentMethod])
