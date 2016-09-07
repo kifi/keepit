@@ -19,6 +19,8 @@ class ActivityLogCommanderTest extends SpecificationLike with ShoeboxTestInjecto
     FakeStripeClientModule()
   )
 
+  args(skipAll = true)
+
   "ActivityLogCommanderTest" should {
     def display(event: AccountEvent)(implicit injector: Injector): String = {
       DescriptionElements.formatPlain(activityLogCommander.buildSimpleEventInfo(event).description)

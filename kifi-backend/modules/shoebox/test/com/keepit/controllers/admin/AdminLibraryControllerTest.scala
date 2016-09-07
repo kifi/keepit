@@ -26,6 +26,8 @@ class AdminLibraryControllerTest extends Specification with ShoeboxTestInjector 
     FakeSocialGraphModule()
   )
 
+  args(skipAll = true)
+
   "AdminLibraryController" should {
     "inject" in {
       withDb(modules: _*) { implicit injector =>
