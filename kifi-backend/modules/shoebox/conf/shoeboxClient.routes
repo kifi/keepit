@@ -8,29 +8,29 @@
 ##
 
 # Creation/modification
-POST    /api/1/keeps/markAsRead      @com.keepit.controllers.client.KeepMutationController.markKeepsAsRead()
+POST    /ishdnr/api/1/keeps/markAsRead      @com.keepit.controllers.client.KeepMutationController.markKeepsAsRead()
 
-POST    /api/1/keeps                              @com.keepit.controllers.client.KeepMutationController.createKeep()
-DELETE  /api/1/keeps/:id                          @com.keepit.controllers.client.KeepMutationController.deleteKeep(id: PublicId[Keep])
-POST    /api/1/keeps/:id/title                    @com.keepit.controllers.client.KeepMutationController.editKeepTitle(id: PublicId[Keep])
-POST    /api/1/keeps/:id/recipients               @com.keepit.controllers.client.KeepMutationController.modifyKeepRecipients(id: PublicId[Keep])
-POST    /api/1/keeps/:id/messages                 @com.keepit.controllers.client.KeepMutationController.sendMessageOnKeep(id: PublicId[Keep])
-DELETE  /api/1/keeps/:id/messages/:msgId          @com.keepit.controllers.client.KeepMutationController.deleteMessageOnKeep(id: PublicId[Keep], msgId: PublicId[Message])
-POST    /api/1/keeps/:id/messages/:msgId/edit     @com.keepit.controllers.client.KeepMutationController.editMessageOnKeep(id: PublicId[Keep], msgId: PublicId[Message])
+POST    /ishdnr/api/1/keeps                              @com.keepit.controllers.client.KeepMutationController.createKeep()
+DELETE  /ishdnr/api/1/keeps/:id                          @com.keepit.controllers.client.KeepMutationController.deleteKeep(id: PublicId[Keep])
+POST    /ishdnr/api/1/keeps/:id/title                    @com.keepit.controllers.client.KeepMutationController.editKeepTitle(id: PublicId[Keep])
+POST    /ishdnr/api/1/keeps/:id/recipients               @com.keepit.controllers.client.KeepMutationController.modifyKeepRecipients(id: PublicId[Keep])
+POST    /ishdnr/api/1/keeps/:id/messages                 @com.keepit.controllers.client.KeepMutationController.sendMessageOnKeep(id: PublicId[Keep])
+DELETE  /ishdnr/api/1/keeps/:id/messages/:msgId          @com.keepit.controllers.client.KeepMutationController.deleteMessageOnKeep(id: PublicId[Keep], msgId: PublicId[Message])
+POST    /ishdnr/api/1/keeps/:id/messages/:msgId/edit     @com.keepit.controllers.client.KeepMutationController.editMessageOnKeep(id: PublicId[Keep], msgId: PublicId[Message])
 
 # Info
-GET    /api/1/keeps/stream           @com.keepit.controllers.client.KeepInfoController.getKeepStream(fromId: Option[String] ?= None, limit: Option[Int], config: KeepViewAssemblyOptions)
-GET    /api/1/keeps/suggestRecipients @com.keepit.controllers.client.KeepInfoController.suggestRecipient(keepId: Option[String] ?= None, query: Option[String], limit: Option[Int], offset: Option[Int], requested: Option[String])
-GET    /api/1/keeps/suggestTags     @com.keepit.controllers.client.KeepInfoController.suggestTags(keepId: Option[String], query: Option[String], limit: Option[Int])
+GET    /ishdnr/api/1/keeps/stream           @com.keepit.controllers.client.KeepInfoController.getKeepStream(fromId: Option[String] ?= None, limit: Option[Int], config: KeepViewAssemblyOptions)
+GET    /ishdnr/api/1/keeps/suggestRecipients @com.keepit.controllers.client.KeepInfoController.suggestRecipient(keepId: Option[String] ?= None, query: Option[String], limit: Option[Int], offset: Option[Int], requested: Option[String])
+GET    /ishdnr/api/1/keeps/suggestTags     @com.keepit.controllers.client.KeepInfoController.suggestTags(keepId: Option[String], query: Option[String], limit: Option[Int])
 
 
-GET    /api/1/keeps/:id              @com.keepit.controllers.client.KeepInfoController.getKeepView(id: PublicId[Keep], config: KeepViewAssemblyOptions)
-GET    /api/1/keeps/:id/activity     @com.keepit.controllers.client.KeepInfoController.getActivityOnKeep(id: PublicId[Keep], limit: Int ?= 10, fromTime: Option[DateTime] ?= None)
+GET    /ishdnr/api/1/keeps/:id              @com.keepit.controllers.client.KeepInfoController.getKeepView(id: PublicId[Keep], config: KeepViewAssemblyOptions)
+GET    /ishdnr/api/1/keeps/:id/activity     @com.keepit.controllers.client.KeepInfoController.getActivityOnKeep(id: PublicId[Keep], limit: Int ?= 10, fromTime: Option[DateTime] ?= None)
 
 
 # Exports
-GET    /api/1/keeps/export/personal  @com.keepit.controllers.client.KeepExportController.exportPersonalKeeps()
-GET    /api/1/keeps/export/org       @com.keepit.controllers.client.KeepExportController.exportOrganizationKeeps()
+GET    /ishdnr/api/1/keeps/export/personal  @com.keepit.controllers.client.KeepExportController.exportPersonalKeeps()
+GET    /ishdnr/api/1/keeps/export/org       @com.keepit.controllers.client.KeepExportController.exportOrganizationKeeps()
 
 POST   /api/1/exports      @com.keepit.controllers.client.ExportController.requestFullExport()
 GET    /api/1/exports      @com.keepit.controllers.client.ExportController.downloadFullExport()
@@ -42,7 +42,7 @@ POST   /api/1/exports/addEmailToNotify  @com.keepit.controllers.client.ExportCon
 # LIBRARIES
 ##
 
-GET    /api/1/libraries/:id/keeps              @com.keepit.controllers.client.LibraryKeepsInfoController.getKeepsInLibrary(id: PublicId[Library], order: Option[KeepOrdering] ?= None, dir: Option[SortDirection] ?= None, from: Option[String] ?= None, offset: Int ?= 0, limit: Int ?= 10)
+GET    /ishdnr/api/1/libraries/:id/keeps              @com.keepit.controllers.client.LibraryKeepsInfoController.getKeepsInLibrary(id: PublicId[Library], order: Option[KeepOrdering] ?= None, dir: Option[SortDirection] ?= None, from: Option[String] ?= None, offset: Int ?= 0, limit: Int ?= 10)
 
 
 
@@ -50,7 +50,7 @@ GET    /api/1/libraries/:id/keeps              @com.keepit.controllers.client.Li
 # PAGES
 ##
 
-POST    /api/1/pages/query              @com.keepit.controllers.client.PageInfoController.getFirstOrderLibrariesForUserByUri()
-POST    /api/1/pages/context            @com.keepit.controllers.client.PageInfoController.getKeepsByUri()
-POST    /api/1/pages/intersection       @com.keepit.controllers.client.PageInfoController.getKeepsByUriAndRecipients()
-POST    /api/1/pages/info               @com.keepit.controllers.client.PageInfoController.getPageInfo()
+POST    /ishdnr/api/1/pages/query              @com.keepit.controllers.client.PageInfoController.getFirstOrderLibrariesForUserByUri()
+POST    /ishdnr/api/1/pages/context            @com.keepit.controllers.client.PageInfoController.getKeepsByUri()
+POST    /ishdnr/api/1/pages/intersection       @com.keepit.controllers.client.PageInfoController.getKeepsByUriAndRecipients()
+POST    /ishdnr/api/1/pages/info               @com.keepit.controllers.client.PageInfoController.getPageInfo()
