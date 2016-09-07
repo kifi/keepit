@@ -43,7 +43,6 @@ class FullExportProducerImpl @Inject() (
   ktuRepo: KeepToUserRepo,
   libraryRepo: LibraryRepo,
   tagCommander: TagCommander,
-  rover: RoverServiceClient,
   eliza: ElizaServiceClient,
   clock: Clock,
   implicit val defaultContext: ExecutionContext,
@@ -124,10 +123,8 @@ class FullExportProducerImpl @Inject() (
     val uriIds = keeps.map(_.uriId).toSet
     val discussionsFut = eliza.getCrossServiceDiscussionsForKeeps(keepIds, fromTime = None, maxMessagesShown = 100)
     val tagsFut = db.readOnlyReplicaAsync { implicit s => tagCommander.getTagsForKeeps(keepIds) }
-    val summariesFut = rover.getUriSummaryByUris(uriIds)
     for {
       discussions <- discussionsFut
-      summaries <- summariesFut
       tags <- tagsFut
       users <- db.readOnlyReplicaAsync { implicit s =>
         val relevantUsers = keeps.flatMap(_.recipients.users).toSet ++ discussions.values.flatMap(_.messages.flatMap(_.sentBy.flatMap(_.left.toOption))).toSet
@@ -155,7 +152,7 @@ class FullExportProducerImpl @Inject() (
         keep.recipients.users.toSeq.sorted.flatMap(users.get),
         tags.getOrElse(keep.id.get, Seq.empty),
         messages,
-        summaries.get(keep.uriId)
+        None
       )
     }
   }
