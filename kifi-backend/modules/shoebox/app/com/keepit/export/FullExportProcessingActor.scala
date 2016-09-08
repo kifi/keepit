@@ -27,8 +27,8 @@ import scala.util.{ Try, Failure, Success }
 
 object FullExportProcessingConfig {
   val MAX_PROCESSING_DURATION = Duration.standardHours(2)
-  val MIN_CONCURRENCY = 1
-  val MAX_CONCURRENCY = 1
+  val MIN_CONCURRENCY = 5
+  val MAX_CONCURRENCY = 10
 }
 
 class FullExportProcessingActor @Inject() (
@@ -74,7 +74,7 @@ class FullExportProcessingActor @Inject() (
     ids.map(id => id -> doExport(id)).toMap
   }
 
-  private def doExport(id: Id[FullExportRequest]): Future[Unit] = {
+  private def doExport(id: Id[FullExportRequest]): Future[Unit] = Try {
     val request = db.readOnlyMaster { implicit s => exportRequestRepo.get(id) }
     slackLog.info(s"Processing export request $id for user ${request.userId}")
     val enum = exportCommander.fullExport(request.userId)
@@ -123,7 +123,11 @@ class FullExportProcessingActor @Inject() (
             airbrake.notify(s"export failed for userId=${request.userId}. reason: $aww")
         }
     }.map(_ => ())
-  }
+  }.recoverWith {
+    case exportFail =>
+      slackLog.error(s"Failed processing export $id:", exportFail.getMessage)
+      Failure(exportFail)
+  }.get
 
   private def sendSuccessEmail(user: User, request: FullExportRequest): Unit = {
     import DescriptionElements._
