@@ -162,8 +162,8 @@ class FullExportRequestRepoImpl @Inject() (
     val now = clock.now
     activeRows
       .filter(_.id === id)
-      .map(r => (r.updatedAt, r.finishedProcessingAt, r.failureMessage))
-      .update((now, Some(now), Some(failure)))
+      .map(r => (r.updatedAt, r.finishedProcessingAt, r.failureMessage, r.uploadLocation))
+      .update((now, Some(now), Some(failure), None))
   }
 
   def markAsComplete(id: Id[FullExportRequest], uploadLocation: String)(implicit session: RWSession): Unit = {
@@ -171,8 +171,8 @@ class FullExportRequestRepoImpl @Inject() (
     val now = clock.now
     activeRows
       .filter(_.id === id)
-      .map(r => (r.updatedAt, r.finishedProcessingAt, r.uploadLocation))
-      .update((now, Some(now), Some(uploadLocation)))
+      .map(r => (r.updatedAt, r.finishedProcessingAt, r.failureMessage, r.uploadLocation))
+      .update((now, Some(now), None, Some(uploadLocation)))
   }
 
   def updateNotifyEmail(userId: Id[User], newEmail: EmailAddress)(implicit session: RWSession): Boolean = {
