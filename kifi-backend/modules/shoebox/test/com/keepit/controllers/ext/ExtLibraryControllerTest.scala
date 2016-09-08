@@ -43,6 +43,8 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
     FakeHttpClientModule()
   )
 
+  args(skipAll = true)
+
   "ExtLibraryController" should {
     "format a library properly" in {
       withDb(controllerTestModules: _*) { implicit injector =>

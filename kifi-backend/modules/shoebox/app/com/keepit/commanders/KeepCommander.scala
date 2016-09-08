@@ -142,69 +142,19 @@ class KeepCommanderImpl @Inject() (
   }
 
   def getKeep(libraryId: Id[Library], keepExtId: ExternalId[Keep], userId: Id[User]): Either[(Int, String), Keep] = {
-    db.readOnlyMaster { implicit session =>
-      if (libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId).isDefined) {
-        val oldWay = keepRepo.getByExtIdandLibraryId(keepExtId, libraryId) match {
-          case Some(k) => Right(k)
-          case None => Left(NOT_FOUND, "keep_not_found")
-        }
-        val newWay = keepRepo.getOpt(keepExtId) match {
-          case Some(k) if ktlCommander.isKeepInLibrary(k.id.get, libraryId) => Right(k)
-          case _ => Left(NOT_FOUND, "keep_not_found")
-        }
-        if (newWay != oldWay) log.info(s"[KTL-MATCH] getKeep: $newWay != $oldWay")
-
-        oldWay
-      } else {
-        Left(FORBIDDEN, "library_access_denied")
-      }
-    }
+    Left(NOT_FOUND, "keep_not_found")
   }
 
   def getKeepInfo(internalOrExternalId: Either[Id[Keep], ExternalId[Keep]], userIdOpt: Option[Id[User]], maxMessagesShown: Int, authTokenOpt: Option[String]): Future[KeepInfo] = {
-    val keepFut = db.readOnlyReplica { implicit s =>
-      internalOrExternalId.fold[Option[Keep]](
-        { id: Id[Keep] => keepRepo.getActive(id) }, { extId: ExternalId[Keep] => keepRepo.getByExtId(extId) }
-      )
-    } match {
-      case None => Future.failed(KeepFail.KEEP_NOT_FOUND)
-      case Some(keep) => {
-        val canViewShoebox = db.readOnlyReplica { implicit s =>
-          permissionCommander.getKeepPermissions(keep.id.get, userIdOpt).contains(KeepPermission.VIEW_KEEP)
-        }
-        val canViewFut = {
-          if (!canViewShoebox && authTokenOpt.isDefined) eliza.keepHasThreadWithAccessToken(keep.id.get, authTokenOpt.get)
-          else Future.successful(canViewShoebox)
-        }
-        canViewFut.flatMap { canView =>
-          if (canView) Future.successful(keep)
-          else Future.failed(KeepFail.INSUFFICIENT_PERMISSIONS)
-        }
-      }
-    }
-
-    keepFut.flatMap { keep =>
-      keepDecorator.decorateKeepsIntoKeepInfos(userIdOpt, hidePublishedLibraries = true, Seq(keep), ProcessedImageSize.Large.idealSize, maxMessagesShown = maxMessagesShown, sanitizeUrls = false)
-        .imap { case Seq(keepInfo) => keepInfo }
-    }
+    Future.failed(new Exception("Service closed."))
   }
 
   def getRelevantKeepsByUserAndUri(userId: Id[User], nUriId: Id[NormalizedURI], beforeDate: Option[DateTime], limit: Int): Seq[Keep] = {
-    val personalKeeps = getPersonalKeepsOnUris(userId, Set(nUriId), excludeAccess = Some(LibraryAccess.READ_ONLY)).getOrElse(nUriId, Set.empty)
-    val sorted = personalKeeps.toSeq.sortBy(_.keptAt)(implicitly[Ordering[DateTime]].reverse)
-    val filtered = beforeDate match {
-      case Some(date) => sorted.filter(_.keptAt.isBefore(date))
-      case None => sorted
-    }
-    filtered.take(limit)
+    Seq.empty
   }
 
   def getPersonalKeepsOnUris(userId: Id[User], uriIds: Set[Id[NormalizedURI]], excludeAccess: Option[LibraryAccess] = None): Map[Id[NormalizedURI], Set[Keep]] = {
-    db.readOnlyMaster { implicit session =>
-      val keepIdsByUriIds = keepRepo.getPersonalKeepsOnUris(userId, uriIds, excludeAccess)
-      val keepsById = keepRepo.getActiveByIds(keepIdsByUriIds.values.flatten.toSet)
-      keepIdsByUriIds.map { case (uriId, keepIds) => uriId -> keepIds.flatMap(keepsById.get) }
-    }
+    Map.empty
   }
 
   // Please do not add to this. It mixes concerns and data sources.
