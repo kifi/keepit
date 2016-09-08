@@ -57,6 +57,7 @@ class FullExportProcessingActor @Inject() (
 
   protected def pullTasks(limit: Int): Future[Seq[Id[FullExportRequest]]] = {
     db.readWriteAsync { implicit session =>
+      log.info(s"[FullExportProcessingActor] Pulling $limit tasks")
       val threshold = clock.now minus MAX_PROCESSING_DURATION
       val ids = exportRequestRepo.getRipeIds(limit, threshold)
       ids.filter(exportRequestRepo.markAsProcessing(_, threshold))
