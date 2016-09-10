@@ -6,44 +6,44 @@
 # Extension API
 ##########################################
 
-# GET     /eliza/ext/ws                     @com.keepit.eliza.controllers.shared.SharedWsMessagingController.websocket(version: Option[String], eip: Option[String])
-# POST    /eliza/messages                   @com.keepit.eliza.controllers.ext.ExtMessagingController.sendMessageAction()
-# POST    /eliza/messages/:keepId         @com.keepit.eliza.controllers.ext.ExtMessagingController.sendMessageReplyAction(keepId: PublicId[Keep])
-# GET     /eliza/emailPreview/:messageId     @com.keepit.eliza.controllers.ext.ExtMessagingController.getEmailPreview(messageId: PublicId[Message])
+GET     /eliza/ext/ws                     @com.keepit.eliza.controllers.shared.SharedWsMessagingController.websocket(version: Option[String], eip: Option[String])
+POST    /eliza/messages                   @com.keepit.eliza.controllers.ext.ExtMessagingController.sendMessageAction()
+POST    /eliza/messages/:keepId         @com.keepit.eliza.controllers.ext.ExtMessagingController.sendMessageReplyAction(keepId: PublicId[Keep])
+GET     /eliza/emailPreview/:messageId     @com.keepit.eliza.controllers.ext.ExtMessagingController.getEmailPreview(messageId: PublicId[Message])
 
 ##########################################
 # Mobile V1
 ##########################################
 
-# GET     /m/1/eliza/ws                     @com.keepit.eliza.controllers.shared.SharedWsMessagingController.websocket(version: Option[String], eip: Option[String])
-# GET     /m/1/eliza/notifications          @com.keepit.eliza.controllers.mobile.MobileMessagingController.getNotifications(n: Int, before: Option[String] ?= None)
-# GET     /m/1/eliza/notifications/unread          @com.keepit.eliza.controllers.mobile.MobileMessagingController.getUnreadNotifications(n: Int, before: Option[String] ?= None)
-# GET     /m/1/eliza/notifications/sent          @com.keepit.eliza.controllers.mobile.MobileMessagingController.getSentNotifications(n: Int, before: Option[String] ?= None)
-# POST    /m/1/eliza/notifications/markAsRead @com.keepit.eliza.controllers.mobile.MobileMessagingController.markUnreadNotifications(kind: Option[String] ?= None)
-# POST    /m/1/eliza/messages               @com.keepit.eliza.controllers.mobile.MobileMessagingController.sendMessageAction()
-# GET     /m/1/eliza/messages/unreadNotificationsCount @com.keepit.eliza.controllers.mobile.MobileMessagingController.getUnreadNotificationsCount()
-# POST    /m/1/eliza/messages/:keepId     @com.keepit.eliza.controllers.mobile.MobileMessagingController.sendMessageReplyAction(keepId: PublicId[Keep])
-# POST    /m/1/eliza/devices/:deviceType    @com.keepit.eliza.controllers.mobile.MobileDevicesController.registerDevice(deviceType:String)
-# GET     /m/1/eliza/thread/:keepId       @com.keepit.eliza.controllers.mobile.MobileMessagingController.getCompactThread(keepId: PublicId[Keep])
-# POST    /m/1/eliza/thread/:keepId/addParticipantsToThread  @com.keepit.eliza.controllers.mobile.MobileMessagingController.addParticipantsToThread(keepId: PublicId[Keep], users: String, emailContacts: String)
-# POST    /m/2/eliza/thread/:keepId/addParticipantsToThread  @com.keepit.eliza.controllers.mobile.MobileMessagingController.addParticipantsToThreadV2(keepId: PublicId[Keep])
-# GET     /m/1/eliza/getThreadsByUrl        @com.keepit.eliza.controllers.mobile.MobileMessagingController.getThreadsByUrl(url: String)
-# GET     /m/1/eliza/searchMessages         @com.keepit.eliza.controllers.mobile.MobileMessagingController.searchMessages(q: String, p: Int ?= 0, storeInHistory: Boolean ?= true)
-# GET     /m/1/eliza/messageSearchHistory   @com.keepit.eliza.controllers.mobile.MobileMessagingController.getMessageSearchHistory()
-# GET     /m/1/eliza/messageSearchHistoryOptOut   @com.keepit.eliza.controllers.mobile.MobileMessagingController.getMessageSearchHistoryOptOut()
-# POST    /m/1/eliza/messageSearchHistoryOptOut  @com.keepit.eliza.controllers.mobile.MobileMessagingController.setMessageSearchHistoryOptOut()
-# GET     /m/1/eliza/clearMessageSearchHistory  @com.keepit.eliza.controllers.mobile.MobileMessagingController.clearMessageSearchHistory()
+GET     /m/1/eliza/ws                     @com.keepit.eliza.controllers.shared.SharedWsMessagingController.websocket(version: Option[String], eip: Option[String])
+GET     /m/1/eliza/notifications          @com.keepit.eliza.controllers.mobile.MobileMessagingController.getNotifications(n: Int, before: Option[String] ?= None)
+GET     /m/1/eliza/notifications/unread          @com.keepit.eliza.controllers.mobile.MobileMessagingController.getUnreadNotifications(n: Int, before: Option[String] ?= None)
+GET     /m/1/eliza/notifications/sent          @com.keepit.eliza.controllers.mobile.MobileMessagingController.getSentNotifications(n: Int, before: Option[String] ?= None)
+POST    /m/1/eliza/notifications/markAsRead @com.keepit.eliza.controllers.mobile.MobileMessagingController.markUnreadNotifications(kind: Option[String] ?= None)
+POST    /m/1/eliza/messages               @com.keepit.eliza.controllers.mobile.MobileMessagingController.sendMessageAction()
+GET     /m/1/eliza/messages/unreadNotificationsCount @com.keepit.eliza.controllers.mobile.MobileMessagingController.getUnreadNotificationsCount()
+POST    /m/1/eliza/messages/:keepId     @com.keepit.eliza.controllers.mobile.MobileMessagingController.sendMessageReplyAction(keepId: PublicId[Keep])
+POST    /m/1/eliza/devices/:deviceType    @com.keepit.eliza.controllers.mobile.MobileDevicesController.registerDevice(deviceType:String)
+GET     /m/1/eliza/thread/:keepId       @com.keepit.eliza.controllers.mobile.MobileMessagingController.getCompactThread(keepId: PublicId[Keep])
+POST    /m/1/eliza/thread/:keepId/addParticipantsToThread  @com.keepit.eliza.controllers.mobile.MobileMessagingController.addParticipantsToThread(keepId: PublicId[Keep], users: String, emailContacts: String)
+POST    /m/2/eliza/thread/:keepId/addParticipantsToThread  @com.keepit.eliza.controllers.mobile.MobileMessagingController.addParticipantsToThreadV2(keepId: PublicId[Keep])
+GET     /m/1/eliza/getThreadsByUrl        @com.keepit.eliza.controllers.mobile.MobileMessagingController.getThreadsByUrl(url: String)
+GET     /m/1/eliza/searchMessages         @com.keepit.eliza.controllers.mobile.MobileMessagingController.searchMessages(q: String, p: Int ?= 0, storeInHistory: Boolean ?= true)
+GET     /m/1/eliza/messageSearchHistory   @com.keepit.eliza.controllers.mobile.MobileMessagingController.getMessageSearchHistory()
+GET     /m/1/eliza/messageSearchHistoryOptOut   @com.keepit.eliza.controllers.mobile.MobileMessagingController.getMessageSearchHistoryOptOut()
+POST    /m/1/eliza/messageSearchHistoryOptOut  @com.keepit.eliza.controllers.mobile.MobileMessagingController.setMessageSearchHistoryOptOut()
+GET     /m/1/eliza/clearMessageSearchHistory  @com.keepit.eliza.controllers.mobile.MobileMessagingController.clearMessageSearchHistory()
 
 ## Deprecated, kill after Eduardo gives an OK
-# POST    /eliza/devices/:deviceType        @com.keepit.eliza.controllers.mobile.MobileDevicesController.registerDevice(deviceType:String)
+POST    /eliza/devices/:deviceType        @com.keepit.eliza.controllers.mobile.MobileDevicesController.registerDevice(deviceType:String)
 
 ##########################################
 # Mobile V2
 ##########################################
-# GET     /m/2/eliza/thread/:keepId        @com.keepit.eliza.controllers.mobile.MobileMessagingController.getPagedThread(keepId: PublicId[Keep], pageSize: Int ?= 1000, fromMessageId: Option[String] ?= None)
-# GET     /m/2/eliza/notifications/messages  @com.keepit.eliza.controllers.mobile.MobileMessagingController.getMessageNotifications(n: Int, before: Option[String] ?= None)
-# GET     /m/2/eliza/notifications/system    @com.keepit.eliza.controllers.mobile.MobileMessagingController.getSystemNotifications(n: Int, before: Option[String] ?= None)
-# GET     /m/2/eliza/unreadCounts           @com.keepit.eliza.controllers.mobile.MobileMessagingController.getUnreadCounts()
+GET     /m/2/eliza/thread/:keepId        @com.keepit.eliza.controllers.mobile.MobileMessagingController.getPagedThread(keepId: PublicId[Keep], pageSize: Int ?= 1000, fromMessageId: Option[String] ?= None)
+GET     /m/2/eliza/notifications/messages  @com.keepit.eliza.controllers.mobile.MobileMessagingController.getMessageNotifications(n: Int, before: Option[String] ?= None)
+GET     /m/2/eliza/notifications/system    @com.keepit.eliza.controllers.mobile.MobileMessagingController.getSystemNotifications(n: Int, before: Option[String] ?= None)
+GET     /m/2/eliza/unreadCounts           @com.keepit.eliza.controllers.mobile.MobileMessagingController.getUnreadCounts()
 
 
 ##########################################
