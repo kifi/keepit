@@ -79,7 +79,10 @@ class FullExportProcessingActor @Inject() (
     slackLog.info(s"Processing export request $id for user ${request.userId}")
     val enum = exportCommander.fullExport(request.userId)
     val user = db.readOnlyMaster { implicit s => userRepo.get(request.userId) }
-    val exportBase = s"[Kifi Export]${user.fullName.words.mkString("-")}-${user.externalId.id}"
+    val exportBase = {
+      val sanitizedName = user.fullName.words.map(_.filter(_.isLetter)).mkString("-")
+      s"[Kifi Export]$sanitizedName-${user.externalId.id}"
+    }
     val exportFile = new File(exportBase + ".zip")
     val zip = {
       val zip = new ZipOutputStream(new FileOutputStream(exportFile))
