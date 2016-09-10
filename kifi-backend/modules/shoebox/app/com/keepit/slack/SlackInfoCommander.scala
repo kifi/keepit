@@ -143,7 +143,7 @@ class SlackInfoCommanderImpl @Inject() (
     libraryIds.map { libId =>
       val pubLibId = Library.publicId(libId)
       libId -> FullLibrarySlackInfo(
-        link = "whatever",//com.keepit.controllers.website.routes.SlackController.setupLibraryIntegrations(pubLibId).url,
+        link = "whatever", //com.keepit.controllers.website.routes.SlackController.setupLibraryIntegrations(pubLibId).url,
         integrations = integrationInfosByLib.getOrElse(libId, Seq.empty)
       )
     }.toMap
