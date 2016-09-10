@@ -604,7 +604,7 @@ GET     /ir/:token                  @com.keepit.controllers.email.EmailDeepLinkC
 ##########################################
 # External Services API
 ##########################################
-# POST    /api/sendgrid/webhook       @com.keepit.controllers.api.SendgridController.parseEvent()
+POST    /api/sendgrid/webhook       @com.keepit.controllers.api.SendgridController.parseEvent()
 
 ##########################################
 # Routes for testing purposes only
