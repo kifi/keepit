@@ -32,7 +32,6 @@ GET    /ishdnr/api/1/keeps/:id/activity     @com.keepit.controllers.client.KeepI
 GET    /ishdnr/api/1/keeps/export/personal  @com.keepit.controllers.client.KeepExportController.exportPersonalKeeps()
 GET    /ishdnr/api/1/keeps/export/org       @com.keepit.controllers.client.KeepExportController.exportOrganizationKeeps()
 
-POST   /api/1/exports      @com.keepit.controllers.client.ExportController.requestFullExport()
 GET    /api/1/exports      @com.keepit.controllers.client.ExportController.downloadFullExport()
 GET    /keepmykeeps       @com.keepit.controllers.client.ExportController.getExportPage()
 
