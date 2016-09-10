@@ -18,9 +18,7 @@ class ElizaTasksPlugin @Inject() (
     extends SchedulerPlugin {
 
   private def taskActors = Seq(
-//    keepIngestingActor -> 1.minute,
-//    messageThreadByMessageIntegrityActor -> 3.minutes,
-//    messageByMessageIntegrityActor -> 1.minutes
+    keepIngestingActor -> 1.day
   )
 
   override def onStart() { //keep me alive!
