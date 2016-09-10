@@ -29,7 +29,7 @@ class FeedController @Inject() (
     db.readOnlyReplicaAsync { implicit ro =>
       libraryRepo.getNewPublishedLibraries()
     } flatMap { libs =>
-      val feedUrl = s"${fortyTwoConfig.applicationBaseUrl}${com.keepit.controllers.website.routes.FeedController.getNewLibraries().url.toString()}"
+      val feedUrl = "whatever" //s"${fortyTwoConfig.applicationBaseUrl}${com.keepit.controllers.website.routes.FeedController.getNewLibraries().url.toString()}"
       feedCommander.rss("New Libraries on Kifi", feedUrl, libs) map { rss =>
         Result(
           header = ResponseHeader(200, Map(CONTENT_TYPE -> "application/rss+xml")),
@@ -49,7 +49,7 @@ class FeedController @Inject() (
       val libMap = libraryRepo.getActiveByIds(libIds.toSet)
       libIds.flatMap(libMap.get)
     }.flatMap { libs =>
-      val feedUrl = s"${fortyTwoConfig.applicationBaseUrl}${com.keepit.controllers.website.routes.FeedController.getTopLibraries().url.toString()}"
+      val feedUrl = "whatever" //s"${fortyTwoConfig.applicationBaseUrl}${com.keepit.controllers.website.routes.FeedController.getTopLibraries().url.toString()}"
       feedCommander.rss("Top Libraries on Kifi", feedUrl, libs) map { rss =>
         Result(
           header = ResponseHeader(200, Map(CONTENT_TYPE -> "application/rss+xml")),
