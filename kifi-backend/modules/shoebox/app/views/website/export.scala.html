@@ -83,11 +83,6 @@
             case finished: FullExportStatus.Finished =>
             <div class="export-container-cta-btns">
               <a class="export-cta-btn export-download-btn" href="/api/1/exports">Download</a>
-              {if(allowReexport) {
-                <form class="export-resubmit-form">
-                  <button class="export-cta-btn export-resubmit-btn" type="submit">Re-export</button>
-                </form>
-              }}
             </div>
                   <span class="export-download-timestamp">Last export generated on
                     {finishedAtPrettyString(finished)}
