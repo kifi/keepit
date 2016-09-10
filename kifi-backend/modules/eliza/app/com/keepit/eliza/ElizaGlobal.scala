@@ -28,10 +28,10 @@ trait ElizaServices { self: FortyTwoGlobal =>
     require(injector.instance[HealthcheckPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[FortyTwoCachePlugin] != null) //make sure its not lazy loaded
     require(injector.instance[InMemoryCachePlugin] != null) //make sure its not lazy loaded
-    require(injector.instance[ElizaEmailNotifierPlugin] != null) //make sure its not lazy loaded
-    require(injector.instance[ElizaTasksPlugin] != null) //make sure its not lazy loaded
-    require(injector.instance[MailMessageReceiverPlugin] != null) //make sure its not lazy loaded
-    require(injector.instance[LoadBalancerCheckPlugin] != null) //make sure its not lazy loaded
-    require(injector.instance[MessageSequencingPlugin] != null) // make sure its not lazy loaded
+//    require(injector.instance[ElizaEmailNotifierPlugin] != null) //make sure its not lazy loaded
+//    require(injector.instance[ElizaTasksPlugin] != null) //make sure its not lazy loaded
+//    require(injector.instance[MailMessageReceiverPlugin] != null) //make sure its not lazy loaded
+//    require(injector.instance[LoadBalancerCheckPlugin] != null) //make sure its not lazy loaded
+//    require(injector.instance[MessageSequencingPlugin] != null) // make sure its not lazy loaded
   }
 }
