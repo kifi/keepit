@@ -59,7 +59,7 @@ trait CommonProdModule extends CommonServiceModule {
   val fortyTwoModule = ProdFortyTwoModule()
 
   val actorSystemModule = ProdActorSystemModule()
-  val discoveryModule = ProdDiscoveryModule()
+  val discoveryModule = new ProdDiscoveryModule()
 
   val airbrakeModule = ProdAirbrakeModule()
   val memoryUsageModule = ProdMemoryUsageModule()
