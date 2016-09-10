@@ -37,6 +37,8 @@ class SlackIngestionTest extends TestKitSupport with SpecificationLike with Shoe
     inject[WatchableExecutionContext].drain()
   }
 
+  args(skipAll = true)
+
   "SlackIngestionCommander" should {
     "create keeps for integrations that need to be processed" in {
       "create keeps and leave the integrations in a good state" in {

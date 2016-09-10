@@ -48,6 +48,8 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
     FakeHeimdalServiceClientModule()
   )
 
+  args(skipAll = true)
+
   def randomEmails(n: Int): Seq[EmailAddress] = {
     (for (i <- 1 to 20) yield {
       RandomStringUtils.randomAlphabetic(15) + "@" + RandomStringUtils.randomAlphabetic(5) + ".com"
