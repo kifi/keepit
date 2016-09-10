@@ -26,8 +26,8 @@ sealed abstract class ServiceType(val name: String, val shortName: String, val l
   def healthyStatus(instance: AmazonInstanceInfo): ServiceStatus = ServiceStatus.UP
   override def toString: String = name
 
-  val minInstances: Int = 1
-  val warnInstances: Int = 1
+  val minInstances: Int = 0
+  val warnInstances: Int = 0
 }
 
 object ServiceType {
@@ -40,8 +40,8 @@ object ServiceType {
     override val warnInstances = 1
   }
   case object ELIZA extends ServiceType("ELIZA", "EZ") {
-    override val minInstances = 1
-    override val warnInstances = 1
+    override val minInstances = 0
+    override val warnInstances = 0
   }
   case object HEIMDAL extends ServiceType("HEIMDAL", "HD", loadFactor = 2) {
     override val minInstances = 0
