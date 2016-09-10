@@ -88,77 +88,77 @@ POST    /up/report                  @com.keepit.controllers.tracking.EventProxyC
 # Special projects
 ##########################################
 
-GET     /site/twitterQueuePosition  @com.keepit.controllers.website.TwitterWaitlistController.getFakeWaitlistPosition()
+# GET     /site/twitterQueuePosition  @com.keepit.controllers.website.TwitterWaitlistController.getFakeWaitlistPosition()
 
-GET     /integrations/twitter         @com.keepit.controllers.website.TwitterWaitlistController.twitterWaitlistLandingRedirectHack()
-GET     /integrations/twitter/request @com.keepit.controllers.website.TwitterWaitlistController.requestToTwitterWaitlistRedirectHack()
-GET     /integrations/twitter/thanks  @com.keepit.controllers.website.TwitterWaitlistController.thanksForTwitterWaitlistRedirectHack()
+# GET     /integrations/twitter         @com.keepit.controllers.website.TwitterWaitlistController.twitterWaitlistLandingRedirectHack()
+# GET     /integrations/twitter/request @com.keepit.controllers.website.TwitterWaitlistController.requestToTwitterWaitlistRedirectHack()
+# GET     /integrations/twitter/thanks  @com.keepit.controllers.website.TwitterWaitlistController.thanksForTwitterWaitlistRedirectHack()
 
-GET     /twitter                    @com.keepit.controllers.website.TwitterWaitlistController.twitterWaitlistLanding()
-GET     /twitter/request            @com.keepit.controllers.website.TwitterWaitlistController.requestToTwitterWaitlist()
-GET     /twitter/thanks             @com.keepit.controllers.website.TwitterWaitlistController.thanksForTwitterWaitlist(target: Option[String])
-GET     /twitter/sync-favorites     @com.keepit.controllers.website.TwitterWaitlistController.createFavoritesSync(k: String)
+# GET     /twitter                    @com.keepit.controllers.website.TwitterWaitlistController.twitterWaitlistLanding()
+# GET     /twitter/request            @com.keepit.controllers.website.TwitterWaitlistController.requestToTwitterWaitlist()
+# GET     /twitter/thanks             @com.keepit.controllers.website.TwitterWaitlistController.thanksForTwitterWaitlist(target: Option[String])
+# GET     /twitter/sync-favorites     @com.keepit.controllers.website.TwitterWaitlistController.createFavoritesSync(k: String)
 
-GET     /i/:id                      @com.keepit.controllers.website.InviteController.userInvite(id: ExternalId[User])
-GET     /join/:creditCodeStr        @com.keepit.controllers.website.InviteController.creditInvite(creditCodeStr: String)
-GET     /k/cached                   @com.keepit.controllers.website.KeepCacheController.getCachedKeep(id: ExternalId[Keep])
+# GET     /i/:id                      @com.keepit.controllers.website.InviteController.userInvite(id: ExternalId[User])
+# GET     /join/:creditCodeStr        @com.keepit.controllers.website.InviteController.creditInvite(creditCodeStr: String)
+# GET     /k/cached                   @com.keepit.controllers.website.KeepCacheController.getCachedKeep(id: ExternalId[Keep])
 
 ##########################################
 # Extension API
 ##########################################
 
-POST    /ext/events                 @com.keepit.controllers.tracking.EventProxyController.track()
-GET     /ext/guide                  @com.keepit.controllers.ext.ExtUserController.getGuideInfo
+# POST    /ext/events                 @com.keepit.controllers.tracking.EventProxyController.track()
+# GET     /ext/guide                  @com.keepit.controllers.ext.ExtUserController.getGuideInfo
 
-POST    /ext/start                  @com.keepit.controllers.ext.ExtAuthController.start
-POST    /ext/auth/:provider         @com.keepit.controllers.ext.ExtAuthController.jsTokenLogin(provider: String)
-GET     /ext/auth                   @com.keepit.controllers.ext.ExtAuthController.getLoggedIn()
-DELETE  /ext/auth                   @com.keepit.controllers.ext.ExtAuthController.logOut
+# POST    /ext/start                  @com.keepit.controllers.ext.ExtAuthController.start
+# POST    /ext/auth/:provider         @com.keepit.controllers.ext.ExtAuthController.jsTokenLogin(provider: String)
+# GET     /ext/auth                   @com.keepit.controllers.ext.ExtAuthController.getLoggedIn()
+# DELETE  /ext/auth                   @com.keepit.controllers.ext.ExtAuthController.logOut
 
-POST    /ext/page                   @com.keepit.controllers.ext.ExtPageController.getPageInfo()
+# POST    /ext/page                   @com.keepit.controllers.ext.ExtPageController.getPageInfo()
 
-POST    /ext/keeps/new              @com.keepit.controllers.ext.ExtKeepController.createKeep()
-POST    /ext/keeps/:id/messages     @com.keepit.controllers.ext.ExtKeepController.sendMessageOnKeep(id: PublicId[Keep])
+# POST    /ext/keeps/new              @com.keepit.controllers.ext.ExtKeepController.createKeep()
+# POST    /ext/keeps/:id/messages     @com.keepit.controllers.ext.ExtKeepController.sendMessageOnKeep(id: PublicId[Keep])
 
-GET     /ext/pref/rules             @com.keepit.controllers.ext.ExtPreferenceController.getRules()
-GET     /ext/prefs                  @com.keepit.controllers.ext.ExtPreferenceController.getPrefs(version: Int ?= 1)
-POST    /ext/pref/keeperPosition    @com.keepit.controllers.ext.ExtPreferenceController.setKeeperPositionOnSite()
-POST    /ext/pref/keeperHidden      @com.keepit.controllers.ext.ExtPreferenceController.setKeeperHiddenOnSite()
-POST    /ext/pref/lookHereMode      @com.keepit.controllers.ext.ExtPreferenceController.setLookHereMode(on: Boolean)
-POST    /ext/pref/enterToSend       @com.keepit.controllers.ext.ExtPreferenceController.setEnterToSend(enterToSend: Boolean)
-POST    /ext/pref/maxResults        @com.keepit.controllers.ext.ExtPreferenceController.setMaxResults(n: Int)
-POST    /ext/pref/showExtMsgIntro   @com.keepit.controllers.ext.ExtPreferenceController.setShowExtMsgIntro(show: Boolean)
-POST    /ext/pref/showLibraryIntro  @com.keepit.controllers.ext.ExtPreferenceController.setShowLibraryIntro(show: Boolean)
-POST    /ext/pref/showExtMoveIntro  @com.keepit.controllers.ext.ExtPreferenceController.setShowExtMoveIntro(show: Boolean)
-POST    /ext/pref/quoteAnywhereFtue @com.keepit.controllers.ext.ExtPreferenceController.setQuoteAnywhereFtue(show: Boolean)
-POST    /ext/pref/hideSocialTooltip @com.keepit.controllers.ext.ExtPreferenceController.setHideSocialTooltip(hideTooltips: Boolean)
-POST    /ext/pref/email/:kind/:send @com.keepit.controllers.ext.ExtPreferenceController.setEmailNotifyPreference(kind: com.keepit.common.mail.ElectronicMailCategory, send: Boolean)
+# GET     /ext/pref/rules             @com.keepit.controllers.ext.ExtPreferenceController.getRules()
+# GET     /ext/prefs                  @com.keepit.controllers.ext.ExtPreferenceController.getPrefs(version: Int ?= 1)
+# POST    /ext/pref/keeperPosition    @com.keepit.controllers.ext.ExtPreferenceController.setKeeperPositionOnSite()
+# POST    /ext/pref/keeperHidden      @com.keepit.controllers.ext.ExtPreferenceController.setKeeperHiddenOnSite()
+# POST    /ext/pref/lookHereMode      @com.keepit.controllers.ext.ExtPreferenceController.setLookHereMode(on: Boolean)
+# POST    /ext/pref/enterToSend       @com.keepit.controllers.ext.ExtPreferenceController.setEnterToSend(enterToSend: Boolean)
+# POST    /ext/pref/maxResults        @com.keepit.controllers.ext.ExtPreferenceController.setMaxResults(n: Int)
+# POST    /ext/pref/showExtMsgIntro   @com.keepit.controllers.ext.ExtPreferenceController.setShowExtMsgIntro(show: Boolean)
+# POST    /ext/pref/showLibraryIntro  @com.keepit.controllers.ext.ExtPreferenceController.setShowLibraryIntro(show: Boolean)
+# POST    /ext/pref/showExtMoveIntro  @com.keepit.controllers.ext.ExtPreferenceController.setShowExtMoveIntro(show: Boolean)
+# POST    /ext/pref/quoteAnywhereFtue @com.keepit.controllers.ext.ExtPreferenceController.setQuoteAnywhereFtue(show: Boolean)
+# POST    /ext/pref/hideSocialTooltip @com.keepit.controllers.ext.ExtPreferenceController.setHideSocialTooltip(hideTooltips: Boolean)
+# POST    /ext/pref/email/:kind/:send @com.keepit.controllers.ext.ExtPreferenceController.setEmailNotifyPreference(kind: com.keepit.common.mail.ElectronicMailCategory, send: Boolean)
 
-GET     /ext/contacts/search        @com.keepit.controllers.ext.ExtUserController.searchForContacts(query:Option[String], limit: Option[Int])
-POST    /ext/contacts/hide          @com.keepit.controllers.ext.ExtNonUserSearchController.hideEmailFromUser()
-GET     /ext/keeps/suggestRecipients @com.keepit.controllers.ext.ExtUserController.suggestRecipient(query:Option[String], limit: Option[Int], drop: Option[Int], requested: Option[String])
+# GET     /ext/contacts/search        @com.keepit.controllers.ext.ExtUserController.searchForContacts(query:Option[String], limit: Option[Int])
+# POST    /ext/contacts/hide          @com.keepit.controllers.ext.ExtNonUserSearchController.hideEmailFromUser()
+# GET     /ext/keeps/suggestRecipients @com.keepit.controllers.ext.ExtUserController.suggestRecipient(query:Option[String], limit: Option[Int], drop: Option[Int], requested: Option[String])
 
-POST    /ext/keeps/:id/recipients   @com.keepit.controllers.ext.ExtKeepController.modifyConnectionsForKeep(id: PublicId[Keep])
+# POST    /ext/keeps/:id/recipients   @com.keepit.controllers.ext.ExtKeepController.modifyConnectionsForKeep(id: PublicId[Keep])
 
-GET     /ext/libraries              @com.keepit.controllers.ext.ExtLibraryController.getLibraries(allowOpenCollab: Boolean ?= false)
-POST    /ext/libraries              @com.keepit.controllers.ext.ExtLibraryController.createLibrary()
-GET     /ext/libraries/:id          @com.keepit.controllers.ext.ExtLibraryController.getLibrary(id: PublicId[Library])
-DELETE  /ext/libraries/:id          @com.keepit.controllers.ext.ExtLibraryController.deleteLibrary(id: PublicId[Library])
-POST    /ext/libraries/:id/join     @com.keepit.controllers.ext.ExtLibraryController.joinLibrary(id: PublicId[Library])
-POST    /ext/libraries/:id/leave    @com.keepit.controllers.ext.ExtLibraryController.leaveLibrary(id: PublicId[Library])
-POST    /ext/libraries/:id/bookmarks @com.keepit.controllers.ext.ExtLibraryController.importBrowserBookmarks(id: PublicId[Library])
-POST    /ext/libraries/:id/keeps    @com.keepit.controllers.ext.ExtLibraryController.addKeep(id: PublicId[Library])
-GET     /ext/libraries/:id/keeps/:k @com.keepit.controllers.ext.ExtLibraryController.getKeep(id: PublicId[Library], k: ExternalId[Keep], is: Option[String] = None)
-POST    /ext/libraries/:id/keeps/:k @com.keepit.controllers.ext.ExtLibraryController.updateKeep(id: PublicId[Library], k: ExternalId[Keep])
-DELETE  /ext/libraries/:id/keeps/:k @com.keepit.controllers.ext.ExtLibraryController.removeKeep(id: PublicId[Library], k: ExternalId[Keep])
-POST    /ext/libraries/:id/keeps/:k/note  @com.keepit.controllers.ext.ExtLibraryController.editKeepNote(id: PublicId[Library], k: ExternalId[Keep])
-POST    /ext/libraries/:id/subscription @com.keepit.controllers.ext.ExtLibraryController.setSubscribedToUpdates(id: PublicId[Library], subscribed: Boolean)
+# GET     /ext/libraries              @com.keepit.controllers.ext.ExtLibraryController.getLibraries(allowOpenCollab: Boolean ?= false)
+# POST    /ext/libraries              @com.keepit.controllers.ext.ExtLibraryController.createLibrary()
+# GET     /ext/libraries/:id          @com.keepit.controllers.ext.ExtLibraryController.getLibrary(id: PublicId[Library])
+# DELETE  /ext/libraries/:id          @com.keepit.controllers.ext.ExtLibraryController.deleteLibrary(id: PublicId[Library])
+# POST    /ext/libraries/:id/join     @com.keepit.controllers.ext.ExtLibraryController.joinLibrary(id: PublicId[Library])
+# POST    /ext/libraries/:id/leave    @com.keepit.controllers.ext.ExtLibraryController.leaveLibrary(id: PublicId[Library])
+# POST    /ext/libraries/:id/bookmarks @com.keepit.controllers.ext.ExtLibraryController.importBrowserBookmarks(id: PublicId[Library])
+# POST    /ext/libraries/:id/keeps    @com.keepit.controllers.ext.ExtLibraryController.addKeep(id: PublicId[Library])
+# GET     /ext/libraries/:id/keeps/:k @com.keepit.controllers.ext.ExtLibraryController.getKeep(id: PublicId[Library], k: ExternalId[Keep], is: Option[String] = None)
+# POST    /ext/libraries/:id/keeps/:k @com.keepit.controllers.ext.ExtLibraryController.updateKeep(id: PublicId[Library], k: ExternalId[Keep])
+# DELETE  /ext/libraries/:id/keeps/:k @com.keepit.controllers.ext.ExtLibraryController.removeKeep(id: PublicId[Library], k: ExternalId[Keep])
+# POST    /ext/libraries/:id/keeps/:k/note  @com.keepit.controllers.ext.ExtLibraryController.editKeepNote(id: PublicId[Library], k: ExternalId[Keep])
+# POST    /ext/libraries/:id/subscription @com.keepit.controllers.ext.ExtLibraryController.setSubscribedToUpdates(id: PublicId[Library], subscribed: Boolean)
 
 
-GET     /ext/libraries/:id/keeps/:k/tags/suggest  @com.keepit.controllers.ext.ExtLibraryController.suggestTags(id: PublicId[Library], k: ExternalId[Keep],  q: Option[String] ?= None, n: Int ?= 5)
-POST    /ext/libraries/:id/keeps/:k/image/upload @com.keepit.controllers.ext.ExtKeepImageController.uploadKeepImage(id: PublicId[Library], k: ExternalId[Keep])
-GET     /ext/libraries/:id/keeps/:k/image/:token @com.keepit.controllers.ext.ExtKeepImageController.checkImageStatus(id: PublicId[Library], k: ExternalId[Keep], token: String)
-POST    /ext/libraries/:id/keeps/:k/image @com.keepit.controllers.ext.ExtKeepImageController.changeKeepImage(id: PublicId[Library], k: ExternalId[Keep], is: Option[String] = None)
+# GET     /ext/libraries/:id/keeps/:k/tags/suggest  @com.keepit.controllers.ext.ExtLibraryController.suggestTags(id: PublicId[Library], k: ExternalId[Keep],  q: Option[String] ?= None, n: Int ?= 5)
+# POST    /ext/libraries/:id/keeps/:k/image/upload @com.keepit.controllers.ext.ExtKeepImageController.uploadKeepImage(id: PublicId[Library], k: ExternalId[Keep])
+# GET     /ext/libraries/:id/keeps/:k/image/:token @com.keepit.controllers.ext.ExtKeepImageController.checkImageStatus(id: PublicId[Library], k: ExternalId[Keep], token: String)
+# POST    /ext/libraries/:id/keeps/:k/image @com.keepit.controllers.ext.ExtKeepImageController.changeKeepImage(id: PublicId[Library], k: ExternalId[Keep], is: Option[String] = None)
 
 ##########################################
 # Mobile
@@ -377,18 +377,18 @@ GET     /default-pic/:name          @com.keepit.controllers.assets.UserPictureCo
 ##########################################
 # Feeds (RSS)
 ##########################################
-GET         /ishdnr/feeds/libraries/top        @com.keepit.controllers.website.FeedController.getTopLibraries()
-GET         /ishdnr/feeds/libraries/new        @com.keepit.controllers.website.FeedController.getNewLibraries()
+# GET         /ishdnr/feeds/libraries/top        @com.keepit.controllers.website.FeedController.getTopLibraries()
+# GET         /ishdnr/feeds/libraries/new        @com.keepit.controllers.website.FeedController.getNewLibraries()
 
 ##########################################
 # Web API
 ##########################################
 
-POST    /site/events                @com.keepit.controllers.tracking.EventProxyController.track()
+# POST    /site/events                @com.keepit.controllers.tracking.EventProxyController.track()
 
-GET         /ishdnr/assets/sitemap.xml                     @com.keepit.controllers.website.SiteMapController.librariesSitemapLegacy()
-GET         /ishdnr/assets/sitemap-libraries-0.xml         @com.keepit.controllers.website.SiteMapController.librariesSitemap()
-GET         /ishdnr/assets/sitemap-users-0.xml             @com.keepit.controllers.website.SiteMapController.usersSitemap()
+# GET         /ishdnr/assets/sitemap.xml                     @com.keepit.controllers.website.SiteMapController.librariesSitemapLegacy()
+# GET         /ishdnr/assets/sitemap-libraries-0.xml         @com.keepit.controllers.website.SiteMapController.librariesSitemap()
+# GET         /ishdnr/assets/sitemap-users-0.xml             @com.keepit.controllers.website.SiteMapController.usersSitemap()
 
 GET     /site/keeps/stream                    @com.keepit.controllers.website.KeepsController.getKeepStream(limit: Option[Int] ?= None, beforeId: Option[String], afterId: Option[String], filterKind: Option[String] ?= None, filterId: Option[String] ?= None, maxMessagesShown: Int ?= 8)
 POST    /site/keeps/personalExport            @com.keepit.controllers.website.KeepsController.exportPersonalKeeps()
