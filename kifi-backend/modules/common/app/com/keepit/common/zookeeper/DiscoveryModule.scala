@@ -63,7 +63,7 @@ object DiscoveryModule {
     tags = Map("Capabilities" -> "foo, bar", "ShardSpec" -> "0/1"))
 }
 
-case class ProdDiscoveryModule() extends DiscoveryModule with Logging {
+case class UsedToBeProdDiscoveryModule() extends DiscoveryModule with Logging {
 
   def configure() {
     install(ProdActorSystemModule())
@@ -160,7 +160,11 @@ case class ProdDiscoveryModule() extends DiscoveryModule with Logging {
 
 }
 
-abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryModule {
+class ProdDiscoveryModule(serviceType: ServiceType = ServiceType.SHOEBOX) extends DiscoveryModule {
+
+  def configure() {
+    install(ProdActorSystemModule())
+  }
 
   @Singleton
   @Provides
@@ -211,7 +215,7 @@ abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryM
   def fakeZooKeeperClient: ZooKeeperClient = new FakeZooKeeperClient()
 }
 
-case class DevDiscoveryModule() extends LocalDiscoveryModule(ServiceType.DEV_MODE) {
+case class DevDiscoveryModule() extends ProdDiscoveryModule(ServiceType.DEV_MODE) {
   override def configure() {
     install(DevActorSystemModule())
   }
