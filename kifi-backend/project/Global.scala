@@ -36,13 +36,12 @@ object Global {
   )
 
   val _commonResolvers = Seq(
-    Resolver.url("sbt-plugin-snapshots",
-      new URL("http://repo.42go.com:4242/fortytwo/content/groups/public/"))(Resolver.ivyStylePatterns),
+//??    Resolver.url("sbt-plugin-snapshots", new URL("http://repo.42go.com:4242/fortytwo/content/groups/public/"))(Resolver.ivyStylePatterns),
     // new URL("http://repo.scala-sbt.org/scalasbt/sbt-plugin-snapshots/"))(Resolver.ivyStylePatterns),
     "Typesafe Repository" at "https://repo.typesafe.com/typesafe/releases/",
     // "kevoree Repository" at "http://maven2.kevoree.org/release/",
-    "FortyTwo Public Repository" at "http://repo.42go.com:4242/fortytwo/content/groups/public/",
-    "FortyTwo Towel Repository" at "http://repo.42go.com:4242/fortytwo/content/repositories/towel",
+//??    "FortyTwo Public Repository" at "http://repo.42go.com:4242/fortytwo/content/groups/public/",
+//??    "FortyTwo Towel Repository" at "http://repo.42go.com:4242/fortytwo/content/repositories/towel",
     //for org.mongodb#casb
     // "snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
     // "releases"  at "https://oss.sonatype.org/content/groups/scala-tools",
