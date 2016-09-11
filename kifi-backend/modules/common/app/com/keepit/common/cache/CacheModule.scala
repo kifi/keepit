@@ -41,14 +41,18 @@ case class HashMapMemoryCacheModule(bindsFortyTwoCache: Boolean = true) extends 
 }
 
 case class MemcachedCacheModule() extends CachePluginModule {
-  def configure(): Unit = {
-    bind[FortyTwoCachePlugin].to[MemcachedCache].in[AppScoped]
+  def configure {
+    bind[FortyTwoCachePlugin].to[HashMapMemoryCache]
   }
 
-  @Singleton
-  @Provides
-  def spyMemcachedClient(): MemcachedClientProvider = {
-    if (Play.isTest) throw new IllegalStateException("memcached client should not be loaded in test!")
-    new MemcachedClientProvider()
-  }
+  //  def configure(): Unit = {
+  //    bind[FortyTwoCachePlugin].to[MemcachedCache].in[AppScoped]
+  //  }
+  //
+  //  @Singleton
+  //  @Provides
+  //  def spyMemcachedClient(): MemcachedClientProvider = {
+  //    if (Play.isTest) throw new IllegalStateException("memcached client should not be loaded in test!")
+  //    new MemcachedClientProvider()
+  //  }
 }
