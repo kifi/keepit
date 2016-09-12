@@ -58,7 +58,7 @@ class ShoeboxTasksPlugin @Inject() (
     //scheduleTaskOnLeader(slackTeamDigestActor.system, 3 minute, 5 minutes, slackTeamDigestActor.ref, IfYouCouldJustGoAhead)
     //scheduleTaskOnLeader(slackPersonalDigestActor.system, 3 minute, 1 minute, slackPersonalDigestActor.ref, IfYouCouldJustGoAhead)
 
-    scheduleTaskOnAllMachines(exportingActor.system, 3 minute, 1 minute, exportingActor.ref, IfYouCouldJustGoAhead)
+//    scheduleTaskOnAllMachines(exportingActor.system, 3 minute, 1 minute, exportingActor.ref, IfYouCouldJustGoAhead)
     //    scheduleTaskOnAllMachines(normalizationUpdatingActor.system, 3 minute, 1 minute, normalizationUpdatingActor.ref, IfYouCouldJustGoAhead)
   }
 
