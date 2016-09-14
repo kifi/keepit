@@ -74,7 +74,7 @@ case class UserIpAddressEvent(userId: Id[User], ip: IpAddress, userAgent: UserAg
 class UserIpAddressActor @Inject() (userIpAddressEventLogger: UserIpAddressEventLogger, airbrake: AirbrakeNotifier) extends FortyTwoActor(airbrake) {
 
   def receive = {
-    case event: UserIpAddressEvent => userIpAddressEventLogger.logUser(event)
+    case event: UserIpAddressEvent => // do nothing... //userIpAddressEventLogger.logUser(event)
     case m => throw new UnsupportedActorMessage(m)
   }
 }
@@ -296,15 +296,17 @@ class UserIpAddressCommander @Inject() (
     actor: ActorInstance[UserIpAddressActor]) extends Logging {
 
   def logUserByRequest[T](request: UserRequest[T]): Unit = {
-    val userId = request.userId
-    val userAgent = UserAgent(request.headers.get("user-agent").getOrElse(""))
-    val ip = IpAddress.fromRequest(request)
-    try {
-      actor.ref ! UserIpAddressEvent(userId, ip, userAgent)
-    } catch {
-      case e: Exception =>
-        airbrake.notify(s"error logging user $userId with headers: ${request.headers.toMap.mkString(", ")}", e)
-    }
+    //not feeling like it...
+
+    //    val userId = request.userId
+    //    val userAgent = UserAgent(request.headers.get("user-agent").getOrElse(""))
+    //    val ip = IpAddress.fromRequest(request)
+    //    try {
+    //      actor.ref ! UserIpAddressEvent(userId, ip, userAgent)
+    //    } catch {
+    //      case e: Exception =>
+    //        airbrake.notify(s"error logging user $userId with headers: ${request.headers.toMap.mkString(", ")}", e)
+    //    }
   }
 
   def countByUser(userId: Id[User]): Int = {
