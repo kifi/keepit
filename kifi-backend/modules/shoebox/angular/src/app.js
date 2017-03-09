@@ -158,6 +158,92 @@ angular.module('kifi', [
   }
 ])
 
+.config([
+  '$provide',
+  function ($provide) {
+    $provide.decorator('$http', [
+      '$delegate', '$q', '$window',
+      function ($delegate, $q, $window) {
+        var parser = $window.document.createElement('a');
+        function getPathname(url) {
+          parser.href = url;
+          return parser.pathname + parser.search;
+        }
+
+        if (!($window.preload && $window.preload.data)) {
+          // Preload hasn't run yet, so we can mock it
+          $window.preload = function (path, data) {
+            $window.preload.data = $window.preload.data || {};
+
+            var alreadyRequestedDeferred = $window.preload.data[path];
+            if (alreadyRequestedDeferred) {
+              alreadyRequestedDeferred.resolve({ data : data });
+            } else {
+              $window.preload.data[path] = data;
+            }
+          };
+        }
+
+        $window.preload.get = function get(path) {
+          $window.preload.data = $window.preload.data || {};
+
+          var alreadyLoadedData = $window.preload.data[path];
+          var deferred = $q.defer();
+          if (alreadyLoadedData) {
+            return $q.when({ data: alreadyLoadedData }); // (it expects a response object)
+          } else {
+            $window.preload.data[path] = deferred;
+            return deferred.promise;
+          }
+        };
+
+        function firstPromiseToFinish(promises) {
+          promises = (arguments.length === 1 ? promises : Array.prototype.slice.call(arguments));
+          var deferred = $q.defer();
+
+          promises.forEach(function (p) {
+            p
+            .then(deferred.resolve)
+            ['catch'](deferred.reject);
+          });
+
+          return deferred.promise;
+        }
+
+        var $http = $delegate;
+
+        var wrapper = function (options) {
+          var url = options.url;
+          var pathname = getPathname(url);
+
+          return firstPromiseToFinish([
+            $window.preload.get(pathname),
+            $http.apply($http, arguments)
+          ]);
+        };
+
+        // $http has convenience methods such as $http.get() that we have
+        // to pass through as well.
+        Object.keys($http).filter(function (key) {
+          return (typeof $http[key] === 'function');
+        }).forEach(function (key) {
+          wrapper[key] = function () {
+            var url = arguments[0];
+            var pathname = getPathname(url);
+
+            return firstPromiseToFinish([
+              $window.preload.get(pathname),
+              $http[key].apply($http, arguments)
+            ]);
+          };
+        });
+
+        return wrapper;
+      }
+    ]);
+  }
+])
+
 .controller('AppCtrl', [
   '$scope', '$rootScope', '$rootElement', '$window', '$timeout', '$log', '$analytics', '$location', '$state',
   'profileService', 'platformService', 'libraryService',

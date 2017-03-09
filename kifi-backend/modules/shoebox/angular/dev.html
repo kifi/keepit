@@ -15,41 +15,6 @@
   <div ng-if="$root.userLoggedIn != null" ng-include="'layout/body.tpl.html'"></div>
 </div>
 <script>
-  // Uncomment this to see micrologger reports in the console.
-  window.ml = {
-    pass: function(fn) { fn(); },
-    fail: function(fn) { fn(); }
-  }
-</script>
-<script>
-function makeRequest (method, url) {
-  return new Promise(function (resolve, reject) {
-    var xhr = new XMLHttpRequest();
-    xhr.responseType = 'json';
-    xhr.withCredentials = true;
-    xhr.open(method, url);
-    xhr.onload = function () {
-      if (this.status >= 200 && this.status < 300) {
-        resolve(this.response);
-      } else {
-        reject({
-          status: this.status,
-          statusText: xhr.statusText
-        });
-      }
-    };
-    xhr.onerror = function () {
-      reject({
-        status: this.status,
-        statusText: xhr.statusText
-      });
-    };
-    xhr.send();
-  });
-}
-window.initialMePromise = makeRequest('GET', 'https://www.kifi.com/site/user/me');
-</script>
-<script>
 //   amplitude: Feel free to uncomment if you're testing analytics:
 //  (function(e,t){var r=e.amplitude||{};var n=t.createElement("script");n.type="text/javascript";n.async=true;n.src="https://d24n15hnbwhuhn.cloudfront.net/libs/amplitude-2.2.0-min.gz.js";var s=t.getElementsByTagName("script")[0];s.parentNode.insertBefore(n,s);r._q=[];function a(e){r[e]=function(){r._q.push([e].concat(Array.prototype.slice.call(arguments,0)));}}var i=["init","logEvent","logRevenue","setUserId","setUserProperties","setOptOut","setVersionName","setDomain","setDeviceId","setGlobalUserProperties"];for(var o=0;o<i.length;o++){a(i[o])}e.amplitude=r})(window,document);
 //  amplitude.init('5a7a940f68887487129b20a4cbf0622d');
